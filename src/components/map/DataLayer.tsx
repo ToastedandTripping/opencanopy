@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
 import type { LayerDefinition, BBox } from "@/types/layers";
 import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
@@ -17,6 +18,146 @@ const EMPTY_FC: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
   features: [],
 };
+
+/**
+ * Imperative PMTiles layer manager.
+ * Adds the vector tile source and layers directly via the MapLibre API
+ * after the source has loaded. This avoids the react-map-gl timing bug
+ * where declarative <Layer> components fail when the PMTiles source
+ * resolves asynchronously from a remote URL.
+ */
+function PmtilesLayers({
+  layer,
+  tileMaxZoom,
+  visible,
+  opacity,
+}: {
+  layer: LayerDefinition;
+  tileMaxZoom: number;
+  visible: boolean;
+  opacity: number;
+}) {
+  const { current: map } = useMap();
+
+  // Add source and layers once the map is ready
+  useEffect(() => {
+    if (!map || !layer.tileSource) return;
+
+    const mapInstance = map.getMap();
+    const sourceId = `source-${layer.id}-tiles`;
+
+    function addLayers() {
+      if (!mapInstance.getSource(sourceId)) {
+        mapInstance.addSource(sourceId, {
+          type: "vector",
+          url: layer.tileSource!.url,
+          attribution: layer.source.attribution,
+        });
+      }
+
+      const sourceLayer = layer.tileSource!.sourceLayer;
+      const maxzoom = tileMaxZoom + 1;
+
+      if (layer.style.type === "fill") {
+        if (!mapInstance.getLayer(`layer-${layer.id}-tiles-fill`)) {
+          // Extract only valid fill paint properties (no undefined values)
+          const fillPaint: Record<string, unknown> = {
+            "fill-antialias": false,
+            "fill-opacity": opacity,
+            "fill-opacity-transition": { duration: 300 },
+          };
+          if (layer.style.paint["fill-color"] != null) {
+            fillPaint["fill-color"] = layer.style.paint["fill-color"];
+          }
+          if (layer.style.paint["fill-outline-color"] != null) {
+            fillPaint["fill-outline-color"] = layer.style.paint["fill-outline-color"];
+          }
+
+          mapInstance.addLayer({
+            id: `layer-${layer.id}-tiles-fill`,
+            type: "fill",
+            source: sourceId,
+            "source-layer": sourceLayer,
+            maxzoom,
+            paint: fillPaint as maplibregl.FillLayerSpecification["paint"],
+          });
+        }
+        if (!mapInstance.getLayer(`layer-${layer.id}-tiles-outline`)) {
+          mapInstance.addLayer({
+            id: `layer-${layer.id}-tiles-outline`,
+            type: "line",
+            source: sourceId,
+            "source-layer": sourceLayer,
+            maxzoom,
+            paint: {
+              "line-color":
+                (layer.style.paint["fill-outline-color"] as string) ??
+                "rgba(255,255,255,0.2)",
+              "line-width": 0.5,
+              "line-opacity": visible ? 0.4 : 0,
+              "line-opacity-transition": { duration: 300 },
+            },
+          });
+        }
+      } else if (layer.style.type === "line") {
+        if (!mapInstance.getLayer(`layer-${layer.id}-tiles-line`)) {
+          mapInstance.addLayer({
+            id: `layer-${layer.id}-tiles-line`,
+            type: "line",
+            source: sourceId,
+            "source-layer": sourceLayer,
+            maxzoom,
+            paint: {
+              ...(layer.style.paint as Record<string, unknown>),
+              "line-opacity": visible
+                ? (layer.style.paint["line-opacity"] as number) ?? 0.8
+                : 0,
+              "line-opacity-transition": { duration: 300 },
+            } as maplibregl.LineLayerSpecification["paint"],
+          });
+        }
+      }
+    }
+
+    // Wait for source to load before adding layers
+    if (mapInstance.isStyleLoaded()) {
+      addLayers();
+    } else {
+      mapInstance.on("load", addLayers);
+    }
+
+    return () => {
+      mapInstance.off("load", addLayers);
+      // Don't remove layers on unmount -- they persist across re-renders
+    };
+  }, [map, layer.id, layer.tileSource, layer.style, layer.source.attribution, tileMaxZoom]);
+
+  // Update opacity and visibility reactively
+  useEffect(() => {
+    if (!map || !layer.tileSource) return;
+    const mapInstance = map.getMap();
+
+    const fillId = `layer-${layer.id}-tiles-fill`;
+    const outlineId = `layer-${layer.id}-tiles-outline`;
+    const lineId = `layer-${layer.id}-tiles-line`;
+
+    if (mapInstance.getLayer(fillId)) {
+      mapInstance.setPaintProperty(fillId, "fill-opacity", opacity);
+    }
+    if (mapInstance.getLayer(outlineId)) {
+      mapInstance.setPaintProperty(outlineId, "line-opacity", visible ? 0.4 : 0);
+    }
+    if (mapInstance.getLayer(lineId)) {
+      mapInstance.setPaintProperty(
+        lineId,
+        "line-opacity",
+        visible ? (layer.style.paint["line-opacity"] as number) ?? 0.8 : 0
+      );
+    }
+  }, [map, layer.id, layer.tileSource, layer.style.paint, visible, opacity]);
+
+  return null; // No DOM output -- layers managed imperatively
+}
 
 /**
  * Generic data layer component.
@@ -180,76 +321,16 @@ export function DataLayer({ layer, visible, yearFilter }: DataLayerProps) {
   if (layer.source.type === "wfs") {
     return (
       <>
-        {/* PMTiles vector tile source (low zoom) */}
+        {/* PMTiles vector tile source (low zoom) -- added imperatively
+            because react-map-gl's declarative <Layer> fails for fill types
+            when the PMTiles source loads asynchronously from a remote URL */}
         {hasTileSource && layer.tileSource && (
-          <Source
-            id={`source-${layer.id}-tiles`}
-            type="vector"
-            url={layer.tileSource.url}
-            attribution={layer.source.attribution}
-          >
-            {layer.style.type === "fill" && (
-              <>
-                <Layer
-                  id={`layer-${layer.id}-tiles-fill`}
-                  type="fill"
-                  source-layer={layer.tileSource.sourceLayer}
-                  maxzoom={tileMaxZoom + 1}
-                  paint={{
-                    ...(layer.style.paint as Record<string, unknown>),
-                    "fill-antialias": false,
-                    "fill-opacity": tileTargetOpacity,
-                    "fill-opacity-transition": { duration: 300 },
-                  }}
-                />
-                <Layer
-                  id={`layer-${layer.id}-tiles-outline`}
-                  type="line"
-                  source-layer={layer.tileSource.sourceLayer}
-                  maxzoom={tileMaxZoom + 1}
-                  paint={{
-                    "line-color":
-                      (layer.style.paint["fill-outline-color"] as string) ??
-                      "rgba(255,255,255,0.2)",
-                    "line-width": 0.5,
-                    "line-opacity": visible && !timelineHidesTiles ? 0.4 : 0,
-                    "line-opacity-transition": { duration: 300 },
-                  }}
-                />
-              </>
-            )}
-            {layer.style.type === "line" && (
-              <Layer
-                id={`layer-${layer.id}-tiles-line`}
-                type="line"
-                source-layer={layer.tileSource.sourceLayer}
-                maxzoom={tileMaxZoom + 1}
-                paint={{
-                  ...(layer.style.paint as Record<string, unknown>),
-                  "line-opacity": visible && !timelineHidesTiles
-                    ? (layer.style.paint["line-opacity"] as number) ?? 0.8
-                    : 0,
-                  "line-opacity-transition": { duration: 300 },
-                }}
-              />
-            )}
-            {layer.style.type === "circle" && (
-              <Layer
-                id={`layer-${layer.id}-tiles-circle`}
-                type="circle"
-                source-layer={layer.tileSource.sourceLayer}
-                maxzoom={tileMaxZoom + 1}
-                paint={{
-                  ...(layer.style.paint as Record<string, unknown>),
-                  "circle-opacity": visible && !timelineHidesTiles
-                    ? (layer.style.paint["circle-opacity"] as number) ?? 0.7
-                    : 0,
-                  "circle-stroke-opacity": visible && !timelineHidesTiles ? 1 : 0,
-                  "circle-opacity-transition": { duration: 300 },
-                }}
-              />
-            )}
-          </Source>
+          <PmtilesLayers
+            layer={layer}
+            tileMaxZoom={tileMaxZoom}
+            visible={visible && !timelineHidesTiles}
+            opacity={tileTargetOpacity}
+          />
         )}
 
         {/* WFS GeoJSON source (high zoom, or full range if no tile source) */}
