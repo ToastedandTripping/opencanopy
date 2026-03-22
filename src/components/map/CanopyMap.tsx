@@ -54,6 +54,7 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
 ) {
   const mapRef = useRef<MapRef>(null);
   const [popup, setPopup] = useState<PopupInfo | null>(null);
+  const [zoom, setZoom] = useState(INITIAL_VIEW_STATE.zoom);
 
   useImperativeHandle(ref, () => mapRef.current!);
 
@@ -149,6 +150,7 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
         onClick={onClick}
         interactiveLayerIds={interactiveLayerIds}
         cursor={cursor}
+        onZoom={(e) => setZoom(e.viewState.zoom)}
         canvasContextAttributes={{ preserveDrawingBuffer: true }}
         maxPitch={70}
         minZoom={4}
@@ -187,6 +189,23 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
         {/* Child components (DrawTool, etc.) that need useMap() context */}
         {children}
       </Map>
+      <div
+        style={{
+          position: "absolute",
+          bottom: 8,
+          right: 8,
+          background: "rgba(0,0,0,0.6)",
+          color: "rgba(255,255,255,0.7)",
+          padding: "2px 6px",
+          borderRadius: 4,
+          fontSize: 11,
+          fontFamily: "monospace",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      >
+        z{zoom.toFixed(1)}
+      </div>
     </div>
   );
 });
