@@ -21,6 +21,7 @@ import { LAYER_REGISTRY, getLayer } from "@/lib/layers";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import { DataLayer } from "./DataLayer";
 import { MapPopup } from "./MapPopup";
+import { TileProgress } from "./TileProgress";
 
 // Register PMTiles protocol globally (idempotent, runs once)
 initPMTiles();
@@ -165,6 +166,8 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
           showAccuracyCircle={false}
         />
         {/* Attribution collapsed by default to reduce bottom clutter */}
+
+        <TileProgress enabledLayers={enabledLayers} />
 
         {/* Render only enabled layers (avoids mounting unused DataLayer instances) */}
         {LAYER_REGISTRY.filter((layer) => enabledLayers.includes(layer.id)).map((layer) => (
