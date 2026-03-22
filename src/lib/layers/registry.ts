@@ -209,6 +209,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       typeName: "pub:WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW",
       attribution: "BC Forest Tenure (FLNRORD)",
     },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "tenure-cutblocks",
+      maxZoom: 10,
+    },
     style: {
       type: "fill",
       paint: {
@@ -256,6 +261,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       url: WFS_ENDPOINTS.fireHistory,
       typeName: "pub:WHSE_LAND_AND_NATURAL_RESOURCE.PROT_HISTORICAL_FIRE_POLYS_SP",
       attribution: "BC Wildfire Service",
+    },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "fire-history",
+      maxZoom: 10,
     },
     style: {
       type: "fill",
@@ -392,6 +402,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       typeName: "pub:WHSE_LAND_USE_PLANNING.RMP_OGMA_LEGAL_CURRENT_SVW",
       attribution: "BC FLNRORD",
     },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "ogma",
+      maxZoom: 10,
+    },
     style: {
       type: "line",
       paint: {
@@ -419,6 +434,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       url: WFS_ENDPOINTS.conservationPriority,
       typeName: "pub:WHSE_LAND_USE_PLANNING.OGSR_TAP_PRIORITY_DEF_AREA_CUR_SP",
       attribution: "BC OGSR (FLNRORD)",
+    },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "conservation-priority",
+      maxZoom: 10,
     },
     style: {
       type: "fill",
@@ -492,6 +512,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       url: WFS_ENDPOINTS.communityWatersheds,
       typeName: "pub:WHSE_WATER_MANAGEMENT.WLS_COMMUNITY_WS_PUB_SVW",
       attribution: "BC FLNRORD",
+    },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "community-watersheds",
+      maxZoom: 10,
     },
     style: {
       type: "fill",
@@ -570,6 +595,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       typeName: "pub:WHSE_WILDLIFE_MANAGEMENT.WCP_WILDLIFE_HABITAT_AREA_POLY",
       attribution: "BC MOE",
     },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "wildlife-habitat-areas",
+      maxZoom: 10,
+    },
     style: {
       type: "fill",
       paint: {
@@ -604,6 +634,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       url: WFS_ENDPOINTS.ungulateWinterRange,
       typeName: "pub:WHSE_WILDLIFE_MANAGEMENT.WCP_UNGULATE_WINTER_RANGE_SP",
       attribution: "BC MOE",
+    },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "ungulate-winter-range",
+      maxZoom: 10,
     },
     style: {
       type: "fill",
@@ -664,6 +699,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       typeName: "pub:WHSE_MINERAL_TENURE.MTA_ACQUIRED_TENURE_SVW",
       attribution: "BC EMLI",
     },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "mining-claims",
+      maxZoom: 10,
+    },
     style: {
       type: "fill",
       paint: {
@@ -698,6 +738,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       url: WFS_ENDPOINTS.forestryRoads,
       typeName: "pub:WHSE_FOREST_TENURE.FTEN_ROAD_SECTION_LINES_SVW",
       attribution: "BC FLNRORD",
+    },
+    tileSource: {
+      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      sourceLayer: "forestry-roads",
+      maxZoom: 10,
     },
     style: {
       type: "line",

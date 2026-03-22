@@ -31,6 +31,7 @@ import {
   mkdirSync,
   statSync,
   appendFileSync,
+  unlinkSync,
 } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -48,6 +49,24 @@ const WFS_ENDPOINTS = {
     "https://openmaps.gov.bc.ca/geo/pub/WHSE_TANTALIS.TA_PARK_ECORES_PA_SVW/ows",
   conservancies:
     "https://openmaps.gov.bc.ca/geo/pub/WHSE_TANTALIS.TA_CONSERVANCY_AREAS_SVW/ows",
+  tenureCutblocks:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW/ows",
+  fireHistory:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_LAND_AND_NATURAL_RESOURCE.PROT_HISTORICAL_FIRE_POLYS_SP/ows",
+  ogma:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_LAND_USE_PLANNING.RMP_OGMA_LEGAL_CURRENT_SVW/ows",
+  wildlifeHabitatAreas:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_WILDLIFE_MANAGEMENT.WCP_WILDLIFE_HABITAT_AREA_POLY/ows",
+  ungulateWinterRange:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_WILDLIFE_MANAGEMENT.WCP_UNGULATE_WINTER_RANGE_SP/ows",
+  communityWatersheds:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_WATER_MANAGEMENT.WLS_COMMUNITY_WS_PUB_SVW/ows",
+  miningClaims:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_MINERAL_TENURE.MTA_ACQUIRED_TENURE_SVW/ows",
+  forestryRoads:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FTEN_ROAD_SECTION_LINES_SVW/ows",
+  conservationPriority:
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_LAND_USE_PLANNING.OGSR_TAP_PRIORITY_DEF_AREA_CUR_SP/ows",
 } as const;
 
 // BC extent in EPSG:3005 (BC Albers)
@@ -175,6 +194,152 @@ function getAllParksGridCells(): GridCell[] {
 
 function cellKey(cell: GridCell): string {
   return `${cell.col},${cell.row}`;
+}
+
+// -- Company lookup (mirrors wfs-proxy.ts) ------------------------------------
+
+const COMPANY_MAP: Record<string, string> = {
+  "00001271": "canfor",
+  "00142662": "west-fraser",
+  "00147603": "tolko",
+  "00002176": "interfor",
+  "00149081": "western-forest-products",
+  "00109260": "bc-timber-sales",
+  "00160953": "mosaic",
+  "00000230": "weyerhaeuser",
+  "00007629": "teal-jones",
+  "00148968": "san-group",
+  "00155498": "conifex",
+  "00001701": "dunkley",
+  "00001297": "carrier",
+  "00003248": "gorman",
+  "00166320": "canoe-forest",
+};
+
+// -- Per-layer property extractors --------------------------------------------
+// Each takes raw WFS properties and returns the subset to keep in NDJSON,
+// or null to skip the feature entirely.
+
+type PropertyExtractor = (
+  props: Record<string, unknown>
+) => Record<string, unknown> | null;
+
+const extractTenureCutblocks: PropertyExtractor = (props) => {
+  const clientNum = String(props.CLIENT_NUMBER ?? "").padStart(8, "0");
+  return {
+    company_id: COMPANY_MAP[clientNum] ?? "other",
+    DISTURBANCE_START_DATE: props.DISTURBANCE_START_DATE ?? null,
+    PLANNED_GROSS_BLOCK_AREA: props.PLANNED_GROSS_BLOCK_AREA ?? null,
+  };
+};
+
+const extractFireHistory: PropertyExtractor = (props) => ({
+  FIRE_YEAR: props.FIRE_YEAR ?? null,
+  FIRE_SIZE_HECTARES: props.FIRE_SIZE_HECTARES ?? null,
+  FIRE_CAUSE: props.FIRE_CAUSE ?? null,
+});
+
+const extractOgma: PropertyExtractor = (props) => ({
+  OGMA_TYPE: props.OGMA_TYPE ?? null,
+  LANDSCAPE_UNIT_NAME: props.LANDSCAPE_UNIT_NAME ?? null,
+});
+
+const extractWildlifeHabitatAreas: PropertyExtractor = (props) => ({
+  COMMON_SPECIES_NAME: props.COMMON_SPECIES_NAME ?? null,
+  HABITAT_AREA_ID: props.HABITAT_AREA_ID ?? null,
+});
+
+const extractUngulateWinterRange: PropertyExtractor = (props) => ({
+  SPECIES_1: props.SPECIES_1 ?? null,
+  UWR_TAG: props.UWR_TAG ?? null,
+});
+
+const extractCommunityWatersheds: PropertyExtractor = (props) => ({
+  CW_NAME: props.CW_NAME ?? null,
+  AREA_HA: props.AREA_HA ?? null,
+});
+
+const extractMiningClaims: PropertyExtractor = (props) => ({
+  TENURE_TYPE_DESCRIPTION: props.TENURE_TYPE_DESCRIPTION ?? null,
+  OWNER_NAME: props.OWNER_NAME ?? null,
+  TENURE_STATUS: props.TENURE_STATUS ?? null,
+});
+
+const extractForestryRoads: PropertyExtractor = (props) => ({
+  ROAD_SECTION_NAME: props.ROAD_SECTION_NAME ?? null,
+  CLIENT_NAME: props.CLIENT_NAME ?? null,
+});
+
+const extractConservationPriority: PropertyExtractor = (props) => ({
+  DEFERRAL_STATUS: props.DEFERRAL_STATUS ?? null,
+  LANDSCAPE_UNIT_NAME: props.LANDSCAPE_UNIT_NAME ?? null,
+  ANCIENT_FLAG: props.ANCIENT_FLAG ?? null,
+});
+
+// -- Generic layer download ---------------------------------------------------
+
+async function downloadLayerCells(
+  endpoint: string,
+  typeName: string,
+  layerName: string,
+  outputPath: string,
+  grid: GridCell[],
+  extractProperties: PropertyExtractor,
+): Promise<number> {
+  let total = 0;
+
+  for (let i = 0; i < grid.length; i++) {
+    const cell = grid[i];
+    const bbox = `${cell.west},${cell.south},${cell.east},${cell.north},EPSG:3005`;
+    let startIndex = 0;
+    let hasMore = true;
+
+    console.log(
+      `  [${i + 1}/${grid.length}] ${layerName} cell [${cell.col},${cell.row}]`
+    );
+
+    while (hasMore) {
+      const data = await fetchLayerBatch(
+        endpoint,
+        typeName,
+        `${layerName} cell [${cell.col},${cell.row}] offset ${startIndex}`,
+        startIndex,
+        bbox,
+      );
+
+      if (!data || !data.features) break;
+
+      const features: GeoJSON.Feature[] = [];
+      for (const f of data.features) {
+        if (!f.geometry) continue;
+        const extracted = extractProperties(f.properties);
+        if (!extracted) continue;
+        features.push({
+          type: "Feature",
+          geometry: f.geometry,
+          properties: extracted,
+        });
+      }
+
+      if (features.length > 0) {
+        appendFeaturesNDJSON(outputPath, features);
+        total += features.length;
+      }
+
+      if (data.features.length < BATCH_SIZE) {
+        hasMore = false;
+      } else {
+        startIndex += BATCH_SIZE;
+        await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
+      }
+    }
+
+    if (i < grid.length - 1) {
+      await new Promise((r) => setTimeout(r, INTER_CELL_DELAY_MS));
+    }
+  }
+
+  return total;
 }
 
 // -- Progress tracking --------------------------------------------------------
@@ -657,20 +822,32 @@ function appendFeaturesNDJSON(
 // -- tippecanoe runner --------------------------------------------------------
 
 function runTippecanoe(): boolean {
-  const forestPath = resolve(GEOJSON_DIR, "forest-age.ndjson");
-  const parksPath = resolve(GEOJSON_DIR, "parks.ndjson");
-  const conservanciesPath = resolve(GEOJSON_DIR, "conservancies.ndjson");
   const outputPath = resolve(TILES_DIR, "opencanopy.pmtiles");
+  const overviewPath = resolve(TILES_DIR, "overview.pmtiles");
+  const detailPath = resolve(TILES_DIR, "detail.pmtiles");
+
+  // Build layer inputs from ALL available NDJSON files
+  const layerFiles = [
+    "forest-age",
+    "parks",
+    "conservancies",
+    "tenure-cutblocks",
+    "fire-history",
+    "ogma",
+    "wildlife-habitat-areas",
+    "ungulate-winter-range",
+    "community-watersheds",
+    "mining-claims",
+    "forestry-roads",
+    "conservation-priority",
+  ];
 
   const inputs: string[] = [];
-  if (existsSync(forestPath)) {
-    inputs.push("-l", "forest-age", forestPath);
-  }
-  if (existsSync(parksPath)) {
-    inputs.push("-l", "parks", parksPath);
-  }
-  if (existsSync(conservanciesPath)) {
-    inputs.push("-l", "conservancies", conservanciesPath);
+  for (const name of layerFiles) {
+    const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
+    if (existsSync(p) && statSync(p).size > 0) {
+      inputs.push("-l", name, p);
+    }
   }
 
   if (inputs.length === 0) {
@@ -678,11 +855,13 @@ function runTippecanoe(): boolean {
     return false;
   }
 
+  // Check tippecanoe + tile-join exist
   try {
     execSync("which tippecanoe", { stdio: "pipe" });
+    execSync("which tile-join", { stdio: "pipe" });
   } catch {
     console.error(
-      "\ntippecanoe not found. Install it:\n" +
+      "\ntippecanoe or tile-join not found. Install tippecanoe:\n" +
         "  Ubuntu/Debian: sudo apt-get install -y tippecanoe\n" +
         "  macOS: brew install tippecanoe\n" +
         "  From source: https://github.com/felt/tippecanoe\n"
@@ -690,33 +869,58 @@ function runTippecanoe(): boolean {
     return false;
   }
 
-  console.log("\nRunning tippecanoe...");
-  const cmd = [
-    "tippecanoe",
-    "-o",
-    outputPath,
-    "-P", // parallel read / line-delimited (NDJSON) input
-    "-Z",
-    "0",
-    "-z",
-    "10", // WFS takes over at zoom 11+; no need for tile detail above 10
-    "--drop-densest-as-needed",
-    "--coalesce-smallest-as-needed",
-    "-M",
-    "500000",
-    "--simplification=12",
-    "--extend-zooms-if-still-dropping",
-    "--force",
-    ...inputs,
-  ].join(" ");
-
-  console.log(`  $ ${cmd}\n`);
-
   try {
-    execSync(cmd, { stdio: "inherit", timeout: 600_000 });
+    // Run 1: Overview tiles (zoom 0-7) -- keep ALL features, extreme simplification
+    console.log("\nRunning tippecanoe (overview, zoom 0-7)...");
+    const overviewCmd = [
+      "tippecanoe",
+      "-o", overviewPath,
+      "-P",
+      "-Z", "0", "-z", "7",
+      "--no-feature-limit", "--no-tile-size-limit",
+      "--simplification=20",
+      "--force",
+      ...inputs,
+    ].join(" ");
+    console.log(`  $ ${overviewCmd}\n`);
+    execSync(overviewCmd, { stdio: "inherit", timeout: 1_200_000 });
+
+    // Run 2: Detail tiles (zoom 8-12) -- normal dropping for manageable tiles
+    console.log("\nRunning tippecanoe (detail, zoom 8-12)...");
+    const detailCmd = [
+      "tippecanoe",
+      "-o", detailPath,
+      "-P",
+      "-Z", "8", "-z", "12",
+      "--drop-smallest-as-needed",
+      "-M", "2500000",
+      "--simplification=10",
+      "--extend-zooms-if-still-dropping",
+      "--force",
+      ...inputs,
+    ].join(" ");
+    console.log(`  $ ${detailCmd}\n`);
+    execSync(detailCmd, { stdio: "inherit", timeout: 1_200_000 });
+
+    // Merge overview + detail into final archive
+    console.log("\nMerging overview + detail tiles...");
+    const joinCmd = [
+      "tile-join",
+      "-o", outputPath,
+      "-pk", "--force",
+      overviewPath, detailPath,
+    ].join(" ");
+    console.log(`  $ ${joinCmd}\n`);
+    execSync(joinCmd, { stdio: "inherit", timeout: 300_000 });
+
+    // Cleanup intermediate files
+    unlinkSync(overviewPath);
+    unlinkSync(detailPath);
+
     const stats = statSync(outputPath);
-    const sizeMB = (stats.size / 1024 / 1024).toFixed(1);
-    console.log(`\nPMTiles output: ${outputPath} (${sizeMB} MB)`);
+    console.log(
+      `\nPMTiles output: ${outputPath} (${(stats.size / 1024 / 1024).toFixed(1)} MB)`
+    );
     return true;
   } catch (err) {
     console.error("tippecanoe failed:", (err as Error).message);
@@ -857,8 +1061,108 @@ async function main() {
     console.log("  No conservancies features downloaded.");
   }
 
+  // Secondary layer downloads -- generic grid-cell pagination
+  console.log("\n=== Secondary Layer Downloads ===\n");
+
+  const secondaryLayers: Array<{
+    endpoint: string;
+    typeName: string;
+    name: string;
+    grid: GridCell[];
+    extract: PropertyExtractor;
+  }> = [
+    {
+      endpoint: WFS_ENDPOINTS.tenureCutblocks,
+      typeName: "pub:WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW",
+      name: "tenure-cutblocks",
+      grid: getAllGridCells(),
+      extract: extractTenureCutblocks,
+    },
+    {
+      endpoint: WFS_ENDPOINTS.fireHistory,
+      typeName: "pub:WHSE_LAND_AND_NATURAL_RESOURCE.PROT_HISTORICAL_FIRE_POLYS_SP",
+      name: "fire-history",
+      grid: getAllGridCells(),
+      extract: extractFireHistory,
+    },
+    {
+      endpoint: WFS_ENDPOINTS.ogma,
+      typeName: "pub:WHSE_LAND_USE_PLANNING.RMP_OGMA_LEGAL_CURRENT_SVW",
+      name: "ogma",
+      grid: getAllParksGridCells(),
+      extract: extractOgma,
+    },
+    {
+      endpoint: WFS_ENDPOINTS.wildlifeHabitatAreas,
+      typeName: "pub:WHSE_WILDLIFE_MANAGEMENT.WCP_WILDLIFE_HABITAT_AREA_POLY",
+      name: "wildlife-habitat-areas",
+      grid: getAllParksGridCells(),
+      extract: extractWildlifeHabitatAreas,
+    },
+    {
+      endpoint: WFS_ENDPOINTS.ungulateWinterRange,
+      typeName: "pub:WHSE_WILDLIFE_MANAGEMENT.WCP_UNGULATE_WINTER_RANGE_SP",
+      name: "ungulate-winter-range",
+      grid: getAllParksGridCells(),
+      extract: extractUngulateWinterRange,
+    },
+    {
+      endpoint: WFS_ENDPOINTS.communityWatersheds,
+      typeName: "pub:WHSE_WATER_MANAGEMENT.WLS_COMMUNITY_WS_PUB_SVW",
+      name: "community-watersheds",
+      grid: getAllParksGridCells(),
+      extract: extractCommunityWatersheds,
+    },
+    {
+      endpoint: WFS_ENDPOINTS.miningClaims,
+      typeName: "pub:WHSE_MINERAL_TENURE.MTA_ACQUIRED_TENURE_SVW",
+      name: "mining-claims",
+      grid: getAllGridCells(),
+      extract: extractMiningClaims,
+    },
+    {
+      endpoint: WFS_ENDPOINTS.forestryRoads,
+      typeName: "pub:WHSE_FOREST_TENURE.FTEN_ROAD_SECTION_LINES_SVW",
+      name: "forestry-roads",
+      grid: getAllGridCells(),
+      extract: extractForestryRoads,
+    },
+    {
+      endpoint: WFS_ENDPOINTS.conservationPriority,
+      typeName: "pub:WHSE_LAND_USE_PLANNING.OGSR_TAP_PRIORITY_DEF_AREA_CUR_SP",
+      name: "conservation-priority",
+      grid: getAllParksGridCells(),
+      extract: extractConservationPriority,
+    },
+  ];
+
+  for (const layer of secondaryLayers) {
+    const outputPath = resolve(GEOJSON_DIR, `${layer.name}.ndjson`);
+    if (existsSync(outputPath) && statSync(outputPath).size > 0) {
+      console.log(`  ${layer.name}: NDJSON exists, skipping download`);
+    } else {
+      writeFileSync(outputPath, "");
+      const count = await downloadLayerCells(
+        layer.endpoint,
+        layer.typeName,
+        layer.name,
+        outputPath,
+        layer.grid,
+        layer.extract,
+      );
+      console.log(`  ${layer.name}: ${count} features`);
+    }
+  }
+
   console.log("\n=== NDJSON Summary ===");
-  for (const name of ["forest-age", "parks", "conservancies"]) {
+  const allLayerNames = [
+    "forest-age", "parks", "conservancies",
+    "tenure-cutblocks", "fire-history", "ogma",
+    "wildlife-habitat-areas", "ungulate-winter-range",
+    "community-watersheds", "mining-claims", "forestry-roads",
+    "conservation-priority",
+  ];
+  for (const name of allLayerNames) {
     const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
     if (existsSync(p)) {
       const stats = statSync(p);
