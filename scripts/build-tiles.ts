@@ -31,7 +31,6 @@ import {
   mkdirSync,
   statSync,
   appendFileSync,
-  unlinkSync,
 } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -823,8 +822,6 @@ function appendFeaturesNDJSON(
 
 function runTippecanoe(): boolean {
   const outputPath = resolve(TILES_DIR, "opencanopy.pmtiles");
-  const overviewPath = resolve(TILES_DIR, "overview.pmtiles");
-  const detailPath = resolve(TILES_DIR, "detail.pmtiles");
 
   // Build layer inputs from ALL available NDJSON files
   const layerFiles = [
@@ -855,13 +852,12 @@ function runTippecanoe(): boolean {
     return false;
   }
 
-  // Check tippecanoe + tile-join exist
+  // Check tippecanoe exists
   try {
     execSync("which tippecanoe", { stdio: "pipe" });
-    execSync("which tile-join", { stdio: "pipe" });
   } catch {
     console.error(
-      "\ntippecanoe or tile-join not found. Install tippecanoe:\n" +
+      "\ntippecanoe not found. Install tippecanoe:\n" +
         "  Ubuntu/Debian: sudo apt-get install -y tippecanoe\n" +
         "  macOS: brew install tippecanoe\n" +
         "  From source: https://github.com/felt/tippecanoe\n"
@@ -870,52 +866,33 @@ function runTippecanoe(): boolean {
   }
 
   try {
-    // Run 1: Overview tiles (zoom 0-7) -- keep ALL features, extreme simplification
-    console.log("\nRunning tippecanoe (overview, zoom 0-7)...");
-    const overviewCmd = [
+    // Single run with progressive drop rate for smooth disclosure:
+    //   -B 5          base zoom: features guaranteed present at z5+
+    //   -r 2          drop rate: halve features per zoom below base
+    //   -M 750000     750KB max tile size for fast loading
+    //   --drop-smallest-as-needed  drop sub-pixel features when tile overflows
+    //   --simplification=10        aggressive geometry simplification at low zoom
+    //   --extend-zooms-if-still-dropping  don't cap if tiles still too dense
+    //
+    // Result: z0-4 very few features (largest only), z5-7 progressive fill,
+    // z8-10 most features, z11-12 full detail, z13+ WFS takes over.
+    console.log("\nRunning tippecanoe (progressive drop, zoom 0-12)...");
+    const cmd = [
       "tippecanoe",
-      "-o", overviewPath,
+      "-o", outputPath,
       "-P",
-      "-Z", "0", "-z", "7",
-      "--no-feature-limit", "--no-tile-size-limit",
-      "--simplification=20",
-      "--force",
-      ...inputs,
-    ].join(" ");
-    console.log(`  $ ${overviewCmd}\n`);
-    execSync(overviewCmd, { stdio: "inherit", timeout: 1_200_000 });
-
-    // Run 2: Detail tiles (zoom 8-12) -- normal dropping for manageable tiles
-    console.log("\nRunning tippecanoe (detail, zoom 8-12)...");
-    const detailCmd = [
-      "tippecanoe",
-      "-o", detailPath,
-      "-P",
-      "-Z", "8", "-z", "12",
+      "-Z", "0", "-z", "12",
       "--drop-smallest-as-needed",
-      "-M", "2500000",
+      "-B", "5",
+      "-r", "2",
+      "-M", "750000",
       "--simplification=10",
       "--extend-zooms-if-still-dropping",
       "--force",
       ...inputs,
     ].join(" ");
-    console.log(`  $ ${detailCmd}\n`);
-    execSync(detailCmd, { stdio: "inherit", timeout: 1_200_000 });
-
-    // Merge overview + detail into final archive
-    console.log("\nMerging overview + detail tiles...");
-    const joinCmd = [
-      "tile-join",
-      "-o", outputPath,
-      "-pk", "--force",
-      overviewPath, detailPath,
-    ].join(" ");
-    console.log(`  $ ${joinCmd}\n`);
-    execSync(joinCmd, { stdio: "inherit", timeout: 300_000 });
-
-    // Cleanup intermediate files
-    unlinkSync(overviewPath);
-    unlinkSync(detailPath);
+    console.log(`  $ ${cmd}\n`);
+    execSync(cmd, { stdio: "inherit", timeout: 1_200_000 });
 
     const stats = statSync(outputPath);
     console.log(
