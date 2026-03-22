@@ -196,8 +196,11 @@ export function DataLayer({ layer, visible, yearFilter }: DataLayerProps) {
                   source-layer={layer.tileSource.sourceLayer}
                   maxzoom={tileMaxZoom + 1}
                   paint={{
-                    "fill-color": layer.style.paint["fill-color"] as string,
-                    "fill-outline-color": (layer.style.paint["fill-outline-color"] as string) ?? undefined,
+                    ...(Object.fromEntries(
+                      Object.entries(layer.style.paint).filter(
+                        ([k]) => k === "fill-color" || k === "fill-outline-color"
+                      )
+                    ) as Record<string, unknown>),
                     "fill-antialias": false,
                     "fill-opacity": tileTargetOpacity,
                     "fill-opacity-transition": { duration: 300 },
