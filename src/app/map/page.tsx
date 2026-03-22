@@ -15,6 +15,7 @@ import { HotSpotPanel } from "@/components/panels/HotSpotPanel";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import type { HotSpot } from "@/data/hotspots";
 import { TimelineControl } from "@/components/map/TimelineControl";
+import { MapLegend } from "@/components/map/MapLegend";
 import { getLayer } from "@/lib/layers";
 import { useLayerState } from "@/hooks/useLayerState";
 import { useMapState } from "@/hooks/useMapState";
@@ -552,6 +553,13 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* On-map legend / active layer indicator */}
+      <MapLegend
+        enabledLayers={enabledLayers}
+        onToggleLayer={toggleLayer}
+        layerPanelOpen={layerPanelOpen}
+      />
 
       {/* Bottom bar cluster: timeline control + preset chips */}
       <div className="absolute bottom-8 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 z-10 md:max-w-[calc(100vw-10rem)] flex flex-col gap-2">
