@@ -39,14 +39,16 @@ function PmtilesLayers({
 }) {
   const { current: map } = useMap();
 
-  // Add source and layers once the map is ready
+  // Add source and layers once the map style + PMTiles source are ready
   useEffect(() => {
     if (!map || !layer.tileSource) return;
 
     const mapInstance = map.getMap();
     const sourceId = `source-${layer.id}-tiles`;
+    let sourcedataHandler: ((e: maplibregl.MapSourceDataEvent) => void) | null = null;
 
-    function addLayers() {
+    /** Register the vector tile source (idempotent). */
+    function addSource() {
       if (!mapInstance.getSource(sourceId)) {
         mapInstance.addSource(sourceId, {
           type: "vector",
@@ -54,85 +56,151 @@ function PmtilesLayers({
           attribution: layer.source.attribution,
         });
       }
+    }
 
-      const sourceLayer = layer.tileSource!.sourceLayer;
-      const maxzoom = tileMaxZoom + 1;
+    /**
+     * Add map layers for this data source.
+     * Called only after the source has confirmed loaded (header resolved).
+     */
+    function addLayersToMap() {
+      try {
+        const sourceLayer = layer.tileSource!.sourceLayer;
+        const maxzoom = tileMaxZoom + 1;
 
-      if (layer.style.type === "fill") {
-        if (!mapInstance.getLayer(`layer-${layer.id}-tiles-fill`)) {
-          // Extract only valid fill paint properties (no undefined values)
-          const fillPaint: Record<string, unknown> = {
-            "fill-antialias": false,
-            "fill-opacity": opacity,
-            "fill-opacity-transition": { duration: 300 },
-          };
-          if (layer.style.paint["fill-color"] != null) {
-            fillPaint["fill-color"] = layer.style.paint["fill-color"];
+        // Bug 4 fix: insert data layers below basemap labels
+        const firstSymbolId = mapInstance.getStyle().layers.find(
+          (l: maplibregl.LayerSpecification) => l.type === "symbol"
+        )?.id;
+
+        if (layer.style.type === "fill") {
+          if (!mapInstance.getLayer(`layer-${layer.id}-tiles-fill`)) {
+            // Extract only valid fill paint properties (no undefined values)
+            const fillPaint: Record<string, unknown> = {
+              "fill-antialias": false,
+              "fill-opacity-transition": { duration: 300 },
+            };
+            // Bug 2 fix: pass through the registry expression directly
+            // (may be a scalar or a MapLibre interpolation expression array)
+            if (layer.style.paint["fill-opacity"] != null) {
+              fillPaint["fill-opacity"] = layer.style.paint["fill-opacity"];
+            }
+            if (layer.style.paint["fill-color"] != null) {
+              fillPaint["fill-color"] = layer.style.paint["fill-color"];
+            }
+            if (layer.style.paint["fill-outline-color"] != null) {
+              fillPaint["fill-outline-color"] = layer.style.paint["fill-outline-color"];
+            }
+
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-tiles-fill`,
+                type: "fill",
+                source: sourceId,
+                "source-layer": sourceLayer,
+                maxzoom,
+                layout: { visibility: visible ? "visible" : "none" },
+                paint: fillPaint as maplibregl.FillLayerSpecification["paint"],
+              },
+              firstSymbolId,
+            );
           }
-          if (layer.style.paint["fill-outline-color"] != null) {
-            fillPaint["fill-outline-color"] = layer.style.paint["fill-outline-color"];
+          if (!mapInstance.getLayer(`layer-${layer.id}-tiles-outline`)) {
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-tiles-outline`,
+                type: "line",
+                source: sourceId,
+                "source-layer": sourceLayer,
+                maxzoom,
+                layout: { visibility: visible ? "visible" : "none" },
+                paint: {
+                  "line-color":
+                    (layer.style.paint["fill-outline-color"] as string) ??
+                    "rgba(255,255,255,0.2)",
+                  "line-width": 0.5,
+                  "line-opacity": 0.4,
+                  "line-opacity-transition": { duration: 300 },
+                },
+              },
+              firstSymbolId,
+            );
           }
-
-          mapInstance.addLayer({
-            id: `layer-${layer.id}-tiles-fill`,
-            type: "fill",
-            source: sourceId,
-            "source-layer": sourceLayer,
-            maxzoom,
-            paint: fillPaint as maplibregl.FillLayerSpecification["paint"],
-          });
+        } else if (layer.style.type === "line") {
+          if (!mapInstance.getLayer(`layer-${layer.id}-tiles-line`)) {
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-tiles-line`,
+                type: "line",
+                source: sourceId,
+                "source-layer": sourceLayer,
+                maxzoom,
+                paint: {
+                  ...(layer.style.paint as Record<string, unknown>),
+                  "line-opacity": visible
+                    ? (layer.style.paint["line-opacity"] as number) ?? 0.8
+                    : 0,
+                  "line-opacity-transition": { duration: 300 },
+                } as maplibregl.LineLayerSpecification["paint"],
+              },
+              firstSymbolId,
+            );
+          }
         }
-        if (!mapInstance.getLayer(`layer-${layer.id}-tiles-outline`)) {
-          mapInstance.addLayer({
-            id: `layer-${layer.id}-tiles-outline`,
-            type: "line",
-            source: sourceId,
-            "source-layer": sourceLayer,
-            maxzoom,
-            paint: {
-              "line-color":
-                (layer.style.paint["fill-outline-color"] as string) ??
-                "rgba(255,255,255,0.2)",
-              "line-width": 0.5,
-              "line-opacity": visible ? 0.4 : 0,
-              "line-opacity-transition": { duration: 300 },
-            },
-          });
-        }
-      } else if (layer.style.type === "line") {
-        if (!mapInstance.getLayer(`layer-${layer.id}-tiles-line`)) {
-          mapInstance.addLayer({
-            id: `layer-${layer.id}-tiles-line`,
-            type: "line",
-            source: sourceId,
-            "source-layer": sourceLayer,
-            maxzoom,
-            paint: {
-              ...(layer.style.paint as Record<string, unknown>),
-              "line-opacity": visible
-                ? (layer.style.paint["line-opacity"] as number) ?? 0.8
-                : 0,
-              "line-opacity-transition": { duration: 300 },
-            } as maplibregl.LineLayerSpecification["paint"],
-          });
-        }
+      } catch (err) {
+        // Bug 3 fix: surface errors instead of crashing silently
+        console.error(`[OpenCanopy] Failed to add PMTiles layers for ${layer.id}:`, err);
       }
     }
 
-    // Wait for source to load before adding layers
+    /**
+     * Bug 1 fix: after registering the source, wait for the PMTiles header
+     * to resolve before adding layers. `isStyleLoaded()` only confirms the
+     * map style, not that an async PMTiles source has its metadata ready.
+     */
+    function initSource() {
+      addSource();
+
+      // If the source is already loaded (e.g. re-render), add layers immediately
+      if (mapInstance.isSourceLoaded(sourceId)) {
+        addLayersToMap();
+        return;
+      }
+
+      // Otherwise, listen for the sourcedata event to confirm the source is ready
+      sourcedataHandler = (e: maplibregl.MapSourceDataEvent) => {
+        if (e.sourceId === sourceId && mapInstance.isSourceLoaded(sourceId)) {
+          mapInstance.off("sourcedata", sourcedataHandler!);
+          sourcedataHandler = null;
+          addLayersToMap();
+        }
+      };
+      mapInstance.on("sourcedata", sourcedataHandler);
+    }
+
+    // Wait for map style to load before registering the source
     if (mapInstance.isStyleLoaded()) {
-      addLayers();
+      initSource();
     } else {
-      mapInstance.on("load", addLayers);
+      const onLoad = () => initSource();
+      mapInstance.on("load", onLoad);
+      // Store for cleanup
+      return () => {
+        mapInstance.off("load", onLoad);
+        if (sourcedataHandler) {
+          mapInstance.off("sourcedata", sourcedataHandler);
+        }
+      };
     }
 
     return () => {
-      mapInstance.off("load", addLayers);
+      if (sourcedataHandler) {
+        mapInstance.off("sourcedata", sourcedataHandler);
+      }
       // Don't remove layers on unmount -- they persist across re-renders
     };
   }, [map, layer.id, layer.tileSource, layer.style, layer.source.attribution, tileMaxZoom]);
 
-  // Update opacity and visibility reactively
+  // Update visibility reactively
   useEffect(() => {
     if (!map || !layer.tileSource) return;
     const mapInstance = map.getMap();
@@ -141,12 +209,15 @@ function PmtilesLayers({
     const outlineId = `layer-${layer.id}-tiles-outline`;
     const lineId = `layer-${layer.id}-tiles-line`;
 
+    // Bug 2 fix: use layout visibility for fill/outline show/hide
+    // instead of overriding the paint opacity expression with a scalar
     if (mapInstance.getLayer(fillId)) {
-      mapInstance.setPaintProperty(fillId, "fill-opacity", opacity);
+      mapInstance.setLayoutProperty(fillId, "visibility", visible ? "visible" : "none");
     }
     if (mapInstance.getLayer(outlineId)) {
-      mapInstance.setPaintProperty(outlineId, "line-opacity", visible ? 0.4 : 0);
+      mapInstance.setLayoutProperty(outlineId, "visibility", visible ? "visible" : "none");
     }
+    // Line layers still use paint opacity (no expression to preserve)
     if (mapInstance.getLayer(lineId)) {
       mapInstance.setPaintProperty(
         lineId,
