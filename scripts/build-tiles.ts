@@ -818,85 +818,24 @@ function runTippecanoe(): boolean {
   }
 
   try {
-    // ── Tier 1: Overview (z4-z7) ──
-    // Keep ALL features with moderate simplification.
-    // Ensures full province coverage at low zoom (no feature dropping).
-    // simplification=8 preserves polygons down to ~200m at z7 (was 20 = ~700m,
-    // which collapsed 5-20 ha forest stands in the fragmented interior).
-    console.log("\nTier 1: Overview tiles (z4-z7, no feature limit)...");
-    const overviewCmd = [
+    // Single-pass: no feature limits, no tile size limits, moderate simplification.
+    // Previous two-tier approach (overview + detail + tile-join) caused coverage
+    // gaps at z8+ because the detail tier's 5MB tile cap dropped features via
+    // coalescing. Single pass with no limits guarantees every tile at every zoom
+    // has complete data. Tiles will be large at low zoom but R2 handles it fine.
+    console.log("\nSingle-pass tile build (z4-z10, no limits)...");
+    const cmd = [
       "tippecanoe",
-      "-o", overviewPath,
+      "-o", outputPath,
       "-P",
-      "-Z", "4", "-z", "7",
+      "-Z", "4", "-z", "10",
       "--no-feature-limit", "--no-tile-size-limit",
       "--simplification=8",
       "--force",
       ...inputs,
     ].join(" ");
-    console.log(`  $ ${overviewCmd}\n`);
-    execSync(overviewCmd, { stdio: "inherit", timeout: 3_600_000 });
-
-    // ── Tier 2: Detail (z8-z12) ──
-    // Normal coalescing for manageable tiles at high zoom.
-    console.log("\nTier 2: Detail tiles (z8-z12, coalesce mode)...");
-    const detailCmd = [
-      "tippecanoe",
-      "-o", detailPath,
-      "-P",
-      "-Z", "8", "-z", "10",
-      "--no-feature-limit",
-      "-M", "5000000",
-      "--coalesce-smallest-as-needed",
-      "--simplification=10",
-      "--extend-zooms-if-still-dropping",
-      "--force",
-      ...inputs,
-    ].join(" ");
-    console.log(`  $ ${detailCmd}\n`);
-    execSync(detailCmd, { stdio: "inherit", timeout: 3_600_000 });
-
-    // ── Merge ──
-    console.log("\nMerging overview + detail...");
-    const mergeCmd = [
-      "tile-join",
-      "-o", outputPath,
-      "-pk",
-      "--force",
-      overviewPath,
-      detailPath,
-    ].join(" ");
-    console.log(`  $ ${mergeCmd}\n`);
-    execSync(mergeCmd, { stdio: "inherit", timeout: 600_000 });
-
-    // Clean up intermediate files
-    try { unlinkSync(overviewPath); } catch { /* may not exist on failure */ }
-    try { unlinkSync(detailPath); } catch { /* may not exist on failure */ }
-
-    // ── Verify: confirm tile-join preserved named layers ──
-    // (Razor checklist: "verify PMTiles metadata after build")
-    console.log("\nVerifying merged PMTiles metadata...");
-    const inspectOutput = execSync(
-      `tippecanoe-decode --stats ${outputPath} 2>&1 || echo "inspect-failed"`,
-      { encoding: "utf-8", timeout: 30_000, maxBuffer: 50 * 1024 * 1024 }
-    );
-    const expectedLayers = layerFiles.filter((name) => {
-      const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
-      return existsSync(p) && statSync(p).size > 0;
-    });
-    const missingLayers = expectedLayers.filter(
-      (name) => !inspectOutput.includes(name)
-    );
-    if (missingLayers.length > 0) {
-      console.warn(
-        `\n⚠ WARNING: tile-join may have merged layers. Missing: ${missingLayers.join(", ")}`
-      );
-      console.warn(
-        "  If layers were merged, rebuild with a single tippecanoe pass instead of tile-join."
-      );
-    } else {
-      console.log(`  ✓ All ${expectedLayers.length} named layers found in merged output.`);
-    }
+    console.log(`  $ ${cmd}\n`);
+    execSync(cmd, { stdio: "inherit", timeout: 7_200_000 }); // 2 hour timeout
 
     const stats = statSync(outputPath);
     console.log(
