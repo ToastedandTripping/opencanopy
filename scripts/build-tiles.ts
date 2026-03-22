@@ -842,7 +842,7 @@ function runTippecanoe(): boolean {
       "tippecanoe",
       "-o", detailPath,
       "-P",
-      "-Z", "8", "-z", "12",
+      "-Z", "8", "-z", "10",
       "--no-feature-limit",
       "-M", "5000000",
       "--coalesce-smallest-as-needed",
@@ -868,8 +868,33 @@ function runTippecanoe(): boolean {
     execSync(mergeCmd, { stdio: "inherit", timeout: 600_000 });
 
     // Clean up intermediate files
-    unlinkSync(overviewPath);
-    unlinkSync(detailPath);
+    try { unlinkSync(overviewPath); } catch { /* may not exist on failure */ }
+    try { unlinkSync(detailPath); } catch { /* may not exist on failure */ }
+
+    // ── Verify: confirm tile-join preserved named layers ──
+    // (Razor checklist: "verify PMTiles metadata after build")
+    console.log("\nVerifying merged PMTiles metadata...");
+    const inspectOutput = execSync(
+      `tippecanoe-decode --stats ${outputPath} 2>&1 || echo "inspect-failed"`,
+      { encoding: "utf-8", timeout: 30_000 }
+    );
+    const expectedLayers = layerFiles.filter((name) => {
+      const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
+      return existsSync(p) && statSync(p).size > 0;
+    });
+    const missingLayers = expectedLayers.filter(
+      (name) => !inspectOutput.includes(name)
+    );
+    if (missingLayers.length > 0) {
+      console.warn(
+        `\n⚠ WARNING: tile-join may have merged layers. Missing: ${missingLayers.join(", ")}`
+      );
+      console.warn(
+        "  If layers were merged, rebuild with a single tippecanoe pass instead of tile-join."
+      );
+    } else {
+      console.log(`  ✓ All ${expectedLayers.length} named layers found in merged output.`);
+    }
 
     const stats = statSync(outputPath);
     console.log(
