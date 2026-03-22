@@ -192,7 +192,7 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
       <div
         style={{
           position: "absolute",
-          bottom: 8,
+          bottom: 36,
           right: 8,
           background: "rgba(0,0,0,0.6)",
           color: "rgba(255,255,255,0.7)",
