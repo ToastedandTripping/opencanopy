@@ -171,10 +171,20 @@ function PmtilesLayers({
         if (e.sourceId === sourceId && mapInstance.isSourceLoaded(sourceId)) {
           mapInstance.off("sourcedata", sourcedataHandler!);
           sourcedataHandler = null;
+          if (timeoutId) clearTimeout(timeoutId);
           addLayersToMap();
         }
       };
       mapInstance.on("sourcedata", sourcedataHandler);
+
+      // Timeout: if source doesn't load in 15s, give up and log a warning
+      const timeoutId = setTimeout(() => {
+        if (sourcedataHandler) {
+          mapInstance.off("sourcedata", sourcedataHandler);
+          sourcedataHandler = null;
+          console.warn(`[OpenCanopy] PMTiles source for ${layer.id} failed to load within 15s`);
+        }
+      }, 15_000);
     }
 
     // Wait for map style to load before registering the source
@@ -225,7 +235,7 @@ function PmtilesLayers({
         visible ? (layer.style.paint["line-opacity"] as number) ?? 0.8 : 0
       );
     }
-  }, [map, layer.id, layer.tileSource, layer.style.paint, visible, opacity]);
+  }, [map, layer.id, layer.tileSource, layer.style.paint, visible]);
 
   return null; // No DOM output -- layers managed imperatively
 }
