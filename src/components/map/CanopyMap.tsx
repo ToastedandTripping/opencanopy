@@ -169,12 +169,12 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
 
         <TileProgress enabledLayers={enabledLayers} />
 
-        {/* Render only enabled layers (avoids mounting unused DataLayer instances) */}
-        {LAYER_REGISTRY.filter((layer) => enabledLayers.includes(layer.id)).map((layer) => (
+        {/* Render each registered layer */}
+        {LAYER_REGISTRY.map((layer) => (
           <DataLayer
             key={layer.id}
             layer={layer}
-            visible={true}
+            visible={enabledLayers.includes(layer.id)}
             yearFilter={yearFilter}
           />
         ))}
