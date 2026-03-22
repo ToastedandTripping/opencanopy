@@ -108,14 +108,15 @@ function LegendRow({
         {/* Clickable name area with chevron */}
         <button
           onClick={onToggleExpand}
-          className="flex items-center gap-1.5 flex-1 min-w-0 text-left group"
+          aria-expanded={expanded}
+          className="flex items-center gap-1.5 flex-1 min-w-0 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-sm"
         >
           <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
-            className={`w-2.5 h-2.5 text-zinc-500 shrink-0 transition-transform duration-200 ${
+            className={`w-2.5 h-2.5 text-zinc-500 shrink-0 transition-transform duration-200 motion-reduce:transition-none ${
               expanded ? "rotate-180" : ""
             }`}
           >
@@ -132,7 +133,7 @@ function LegendRow({
         {/* Dismiss button */}
         <button
           onClick={onDismiss}
-          className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white transition-colors shrink-0"
+          className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-sm"
           aria-label={`Remove ${layer.label}`}
           title={`Remove ${layer.label}`}
         >
@@ -151,7 +152,7 @@ function LegendRow({
 
       {/* Expanded items with CSS grid animation */}
       <div
-        className="grid transition-[grid-template-rows] duration-200 ease-out"
+        className="grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none"
         style={{
           gridTemplateRows: expanded ? "1fr" : "0fr",
         }}
@@ -205,9 +206,11 @@ export function MapLegend({
 
   return (
     <div
+      role="region"
+      aria-label="Map legend"
       className="
         absolute left-3 bottom-24 z-10 max-w-[180px]
-        md:bottom-20 md:max-w-[220px]
+        md:bottom-24 md:max-w-[220px]
         bg-black/70 backdrop-blur-md border border-white/10 rounded-xl
         max-h-[25vh] md:max-h-[40vh] overflow-y-auto
         scrollbar-none
