@@ -818,75 +818,36 @@ function runTippecanoe(): boolean {
   }
 
   try {
-    // Two-pass approach to preserve full coverage at low zoom:
+    // Single-pass with coalesce: preserves full coverage at low zoom by
+    // merging tiny adjacent polygons instead of dropping them. The 10MB
+    // tile limit is generous enough for detail at high zoom while the
+    // coalescing keeps low-zoom tiles from being empty.
     //
-    // Pass 1 -- Overview (z4-z7): Keep all features, coalesce tiny polygons
-    //   --no-feature-limit     don't cap feature count per tile
-    //   -M 10000000            10MB max tile size (bounded, not unlimited)
-    //   --coalesce-smallest-as-needed  merge tiny adjacent polygons (preserves coverage)
-    //   --simplification=20    extreme vertex reduction (3-4 vertices per polygon at z5)
-    //
-    // Pass 2 -- Detail (z8-z12): Normal dropping with larger budget
-    //   --drop-smallest-as-needed  standard feature reduction
-    //   -M 2500000             2.5MB max tile size
-    //   --simplification=10    moderate vertex reduction
+    //   --no-feature-limit               don't cap feature count per tile
+    //   -M 10000000                      10MB max tile size (bounded)
+    //   --coalesce-smallest-as-needed    merge tiny polygons (preserves coverage)
+    //   --simplification=10              moderate vertex reduction
     //   --extend-zooms-if-still-dropping  don't cap if tiles still too dense
-
-    // Pass 1: Overview tiles
-    console.log("\nPass 1: Building overview tiles (z4-z7, coalesce mode)...");
-    const overviewCmd = [
+    //   -B 5                             base zoom: features guaranteed at z5+
+    //   -r 1                             minimal drop rate below base zoom
+    console.log("\nRunning tippecanoe (coalesce mode, zoom 4-12)...");
+    const cmd = [
       "tippecanoe",
-      "-o", overviewPath,
+      "-o", outputPath,
       "-P",
-      "-Z", "4", "-z", "7",
+      "-Z", "4", "-z", "12",
       "--no-feature-limit",
       "-M", "10000000",
       "--coalesce-smallest-as-needed",
-      "--simplification=20",
-      "--force",
-      ...inputs,
-    ].join(" ");
-    console.log(`  $ ${overviewCmd}\n`);
-    execSync(overviewCmd, { stdio: "inherit", timeout: 1_800_000 });
-
-    // Pass 2: Detail tiles
-    console.log("\nPass 2: Building detail tiles (z8-z12, drop mode)...");
-    const detailCmd = [
-      "tippecanoe",
-      "-o", detailPath,
-      "-P",
-      "-Z", "8", "-z", "12",
-      "--drop-smallest-as-needed",
-      "-M", "2500000",
       "--simplification=10",
       "--extend-zooms-if-still-dropping",
+      "-B", "5",
+      "-r", "1",
       "--force",
       ...inputs,
     ].join(" ");
-    console.log(`  $ ${detailCmd}\n`);
-    execSync(detailCmd, { stdio: "inherit", timeout: 1_800_000 });
-
-    // Merge: tile-join combines overview + detail into final output
-    console.log("\nMerging overview + detail tiles...");
-    const mergeCmd = [
-      "tile-join",
-      "-o", outputPath,
-      "-pk",
-      "-f",
-      overviewPath,
-      detailPath,
-    ].join(" ");
-    console.log(`  $ ${mergeCmd}\n`);
-    execSync(mergeCmd, { stdio: "inherit", timeout: 600_000 });
-
-    // Clean up intermediate files
-    try {
-      unlinkSync(overviewPath);
-      unlinkSync(detailPath);
-      console.log("  Cleaned up intermediate tile files.");
-    } catch {
-      console.log("  Warning: could not clean up intermediate tile files.");
-    }
+    console.log(`  $ ${cmd}\n`);
+    execSync(cmd, { stdio: "inherit", timeout: 3_600_000 });
 
     const stats = statSync(outputPath);
     console.log(
