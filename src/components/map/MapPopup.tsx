@@ -140,7 +140,6 @@ const PRIORITY_KEYS = [
   "ROAD_CLASS",
   // Conservation priority
   "DEFERRAL_STATUS",
-  "LANDSCAPE_UNIT_NAME",
 ];
 
 /** Keys to exclude from display */

@@ -556,7 +556,14 @@ export default async function handler(
 
     try {
       const responseText = await fetchWithRetry(wfsUrl);
-      const geojson = JSON.parse(responseText) as GeoJSON.FeatureCollection;
+
+      let geojson: GeoJSON.FeatureCollection;
+      try {
+        geojson = JSON.parse(responseText) as GeoJSON.FeatureCollection;
+      } catch {
+        console.error(`WFS proxy JSON parse error (point query, layer ${layerId}):`, responseText.slice(0, 200));
+        return errorResponse("Data source returned invalid JSON", 502);
+      }
 
       // No simplification for point queries -- we need accurate boundaries
       return new Response(JSON.stringify(geojson), {
@@ -628,7 +635,14 @@ export default async function handler(
 
   try {
     const responseText = await fetchWithRetry(wfsUrl);
-    const geojson = JSON.parse(responseText) as GeoJSON.FeatureCollection;
+
+    let geojson: GeoJSON.FeatureCollection;
+    try {
+      geojson = JSON.parse(responseText) as GeoJSON.FeatureCollection;
+    } catch {
+      console.error(`WFS proxy JSON parse error (bbox query, layer ${layerId}):`, responseText.slice(0, 200));
+      return errorResponse("Data source returned invalid JSON", 502);
+    }
 
     // Process features
     const processedFeatures = [];

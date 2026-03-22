@@ -166,12 +166,12 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
         />
         {/* Attribution collapsed by default to reduce bottom clutter */}
 
-        {/* Render each registered layer */}
-        {LAYER_REGISTRY.map((layer) => (
+        {/* Render only enabled layers (avoids mounting unused DataLayer instances) */}
+        {LAYER_REGISTRY.filter((layer) => enabledLayers.includes(layer.id)).map((layer) => (
           <DataLayer
             key={layer.id}
             layer={layer}
-            visible={enabledLayers.includes(layer.id)}
+            visible={true}
             yearFilter={yearFilter}
           />
         ))}
