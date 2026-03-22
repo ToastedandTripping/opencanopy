@@ -782,7 +782,7 @@ function runTippecanoe(): boolean {
   for (const name of layerFiles) {
     const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
     if (existsSync(p) && statSync(p).size > 0) {
-      inputs.push("-l", name, p);
+      inputs.push("-L", `${name}:${p}`);
     } else if (existsSync(p) && statSync(p).size === 0) {
       console.log(`  Skipping ${name}: NDJSON exists but is empty (0 bytes)`);
     } else {
