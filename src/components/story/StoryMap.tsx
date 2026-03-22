@@ -256,7 +256,7 @@ export function StoryMap({
     if (!map.getSource("story-pmtiles")) {
       map.addSource("story-pmtiles", {
         type: "vector",
-        url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+        url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       });
     }
 

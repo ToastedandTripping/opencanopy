@@ -56,7 +56,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC VRI (FLNRORD)",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "forest-age",
       maxZoom: 10,
     },
@@ -119,7 +119,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC VRI (FLNRORD)",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "forest-age",
       maxZoom: 10,
     },
@@ -212,7 +212,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC Forest Tenure (FLNRORD)",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "tenure-cutblocks",
       maxZoom: 10,
     },
@@ -266,7 +266,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC Wildfire Service",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "fire-history",
       maxZoom: 10,
     },
@@ -338,7 +338,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC Parks (TANTALIS)",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "parks",
       maxZoom: 10,
     },
@@ -371,7 +371,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC Conservancies (TANTALIS)",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "conservancies",
       maxZoom: 10,
     },
@@ -407,7 +407,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC FLNRORD",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "ogma",
       maxZoom: 10,
     },
@@ -440,7 +440,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC OGSR (FLNRORD)",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "conservation-priority",
       maxZoom: 10,
     },
@@ -519,7 +519,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC FLNRORD",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "community-watersheds",
       maxZoom: 10,
     },
@@ -602,7 +602,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC MOE",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "wildlife-habitat-areas",
       maxZoom: 10,
     },
@@ -643,7 +643,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC MOE",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "ungulate-winter-range",
       maxZoom: 10,
     },
@@ -708,7 +708,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC EMLI",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "mining-claims",
       maxZoom: 10,
     },
@@ -749,7 +749,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       attribution: "BC FLNRORD",
     },
     tileSource: {
-      url: "pmtiles:///data/tiles/opencanopy.pmtiles",
+      url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy.pmtiles",
       sourceLayer: "forestry-roads",
       maxZoom: 10,
     },
