@@ -157,7 +157,7 @@ function LegendRow({
         }}
       >
         <div className="overflow-hidden">
-          {expanded && <ExpandedItems layer={layer} />}
+          <ExpandedItems layer={layer} />
         </div>
       </div>
     </div>
