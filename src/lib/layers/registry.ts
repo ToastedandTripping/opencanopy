@@ -788,9 +788,3 @@ export function getDefaultLayers(): string[] {
   return LAYER_REGISTRY.filter((l) => l.defaultEnabled).map((l) => l.id);
 }
 
-/** Get all layers in a category */
-export function getLayersByCategory(
-  category: LayerDefinition["category"]
-): LayerDefinition[] {
-  return LAYER_REGISTRY.filter((l) => l.category === category);
-}

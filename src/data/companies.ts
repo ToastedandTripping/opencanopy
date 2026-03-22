@@ -44,26 +44,6 @@ export const COMPANY_REGISTRY: CompanyProfile[] = [
   { id: "canoe-forest", clientNumbers: ["00166320"], displayName: "Canoe Forest Products", color: "#6366f1" },
 ];
 
-/**
- * Fast lookup: CLIENT_NUMBER -> company_id.
- * Returns "other" for unmapped companies (~180+ small operators).
- */
-export const CLIENT_LOOKUP: Record<string, string> = Object.fromEntries(
-  COMPANY_REGISTRY.flatMap((c) =>
-    c.clientNumbers.map((cn) => [cn, c.id])
-  )
-);
-
-/** Resolve a CLIENT_NUMBER to a company ID. Returns "other" if not mapped. */
-export function resolveCompany(clientNumber: string): string {
-  return CLIENT_LOOKUP[clientNumber] ?? "other";
-}
-
-/** Get a company profile by ID */
-export function getCompany(id: string): CompanyProfile | undefined {
-  return COMPANY_REGISTRY.find((c) => c.id === id);
-}
-
 /** Build a MapLibre match expression for fill-color by company_id */
 export function companyColorExpression(): unknown[] {
   const entries: unknown[] = [];

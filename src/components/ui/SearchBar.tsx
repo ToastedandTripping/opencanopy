@@ -118,31 +118,6 @@ function parseCoordinates(input: string): SearchResult[] {
   ];
 }
 
-/** Estimate a reasonable zoom level from a geocoding result */
-function estimateZoom(feature: GeocodingFeature): number {
-  const type = feature.place_type?.[0];
-  switch (type) {
-    case "address":
-      return 16;
-    case "poi":
-      return 15;
-    case "neighborhood":
-      return 14;
-    case "locality":
-    case "place":
-      return 12;
-    case "district":
-    case "municipality":
-      return 11;
-    case "region":
-      return 8;
-    case "country":
-      return 5;
-    default:
-      return 12;
-  }
-}
-
 // ── Component ───────────────────────────────────────────────
 
 export function SearchBar({ onLocationSelect }: SearchBarProps) {
@@ -223,7 +198,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
   );
 
   const handleSelect = useCallback(
-    (result: SearchResult, index: number) => {
+    (result: SearchResult) => {
       // Use the original geocoding feature's place_type for zoom estimation
       // Since we've already mapped it, use a default zoom of 12
       // unless the result is coordinate-based
@@ -235,10 +210,6 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
       } else if (result.region.startsWith("Place") || result.region.startsWith("Locality")) {
         zoom = 12;
       }
-
-      // For geocoded results, try to use the estimated zoom from the
-      // preserved full result data (we index into the same results array)
-      void index;
 
       onLocationSelect(result.center[0], result.center[1], zoom);
       setQuery(result.placeName);
@@ -275,7 +246,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
         case "Enter":
           e.preventDefault();
           if (focusedIndex >= 0 && focusedIndex < results.length) {
-            handleSelect(results[focusedIndex], focusedIndex);
+            handleSelect(results[focusedIndex]);
           } else {
             handleSearch(query);
           }
@@ -363,7 +334,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
                   key={result.id}
                   role="option"
                   aria-selected={focusedIndex === i}
-                  onClick={() => handleSelect(result, i)}
+                  onClick={() => handleSelect(result)}
                   onMouseEnter={() => setFocusedIndex(i)}
                   className={`
                     flex items-start gap-3 px-4 py-2.5 cursor-pointer

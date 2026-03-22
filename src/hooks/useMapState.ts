@@ -314,5 +314,5 @@ export function useMapState({
     return `${window.location.origin}${window.location.pathname}#${hash}`;
   }, [mapRef, enabledLayers, activePreset, style]);
 
-  return { getShareUrl, parseHash };
+  return { getShareUrl };
 }

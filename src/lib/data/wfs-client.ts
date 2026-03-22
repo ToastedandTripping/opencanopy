@@ -148,16 +148,3 @@ export function fetchLayerData(
   return promise;
 }
 
-/** Clear the entire cache (useful when switching areas dramatically) */
-export function clearCache(): void {
-  cache.clear();
-}
-
-/** Get cache stats for debugging */
-export function getCacheStats(): { entries: number; layers: Set<string> } {
-  const layers = new Set<string>();
-  for (const key of cache.keys()) {
-    layers.add(key.split(":")[0]);
-  }
-  return { entries: cache.size, layers };
-}

@@ -83,8 +83,3 @@ export const LAYER_PRESETS: LayerPreset[] = [
     layers: ["wildlife-habitat-areas", "ungulate-winter-range", "species-at-risk", "tap-deferrals"],
   },
 ];
-
-/** Look up a preset by ID */
-export function getPreset(id: string): LayerPreset | undefined {
-  return LAYER_PRESETS.find((p) => p.id === id);
-}
