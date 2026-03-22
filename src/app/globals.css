@@ -1,0 +1,278 @@
+@import "tailwindcss";
+
+:root {
+  /* Conservation palette */
+  --color-old-growth: #15803d;
+  --color-mature-forest: #4ade80;
+  --color-young-forest: #f97316;
+  --color-harvested: #ef4444;
+  --color-cutblocks: #dc2626;
+  --color-tap-deferrals: #fbbf24;
+  --color-fish-streams: #3b82f6;
+  --color-species-at-risk: #f59e0b;
+
+  /* Surface (dark mode always) */
+  --background: #0a0a0c;
+  --foreground: #ededed;
+  --color-surface-0: #0a0a0c;
+  --color-surface-1: #111114;
+  --color-surface-2: #1a1a1f;
+  --color-surface-overlay: rgba(10, 10, 12, 0.85);
+
+  /* Brand accent */
+  --color-accent: #2dd4bf;
+
+  /* Fonts */
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+/* Landing page scroll animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 700ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* MapLibre popup styling */
+.maplibregl-popup-content {
+  background: #111114 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+}
+
+.maplibregl-popup-close-button {
+  color: #999 !important;
+  font-size: 18px !important;
+  padding: 4px 8px !important;
+  z-index: 10;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #fff !important;
+  background: transparent !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #111114 !important;
+}
+
+/* Navigation controls */
+.maplibregl-ctrl-group {
+  background: rgba(17, 17, 20, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  backdrop-filter: blur(8px);
+}
+
+.maplibregl-ctrl-group button {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.maplibregl-ctrl-group button span {
+  filter: invert(1) !important;
+}
+
+/* Geolocate control */
+.maplibregl-ctrl-geolocate {
+  filter: invert(1) !important;
+}
+
+/* Scale control */
+.maplibregl-ctrl-scale {
+  background: rgba(17, 17, 20, 0.8) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  font-size: 10px !important;
+  border-radius: 4px !important;
+}
+
+/* Attribution -- compact, bottom-right, out of the way */
+.maplibregl-ctrl-attrib {
+  background: rgba(17, 17, 20, 0.6) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+  font-size: 9px !important;
+  max-width: 300px !important;
+  line-height: 1.2 !important;
+}
+
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  min-height: 20px !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Scale control -- keep small and unobtrusive */
+.maplibregl-ctrl-scale {
+  background: rgba(17, 17, 20, 0.5) !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  font-size: 9px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Hide scrollbar on horizontal chip bars */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Panel slide-in animation */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: slide-in-bottom 300ms ease-out;
+}
+
+.animate-in-right {
+  animation: slide-in-bottom 300ms ease-out;
+}
+
+@media (min-width: 768px) {
+  .animate-in {
+    animation: slide-in-left 300ms ease-out;
+  }
+
+  .animate-in-right {
+    animation: slide-in-right 300ms ease-out;
+  }
+}
+
+/* Timeline slider */
+.timeline-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.4);
+  transition: box-shadow 0.2s;
+}
+.timeline-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 16px rgba(45, 212, 191, 0.6);
+}
+.timeline-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.4);
+}
+.timeline-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--track-fill, 0%),
+    #27272a var(--track-fill, 0%)
+  );
+}
+.timeline-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--track-fill, 0%),
+    #27272a var(--track-fill, 0%)
+  );
+}
+
+@media (max-width: 640px) {
+  .timeline-slider::-webkit-slider-thumb { width: 20px; height: 20px; }
+  .timeline-slider::-moz-range-thumb { width: 20px; height: 20px; }
+}
+
+/* Scrollytelling */
+@media (prefers-reduced-motion: reduce) {
+  .story-step { min-height: auto !important; }
+  .narrative-panel { transition: none !important; }
+}
+
+.story-year-counter {
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+}
