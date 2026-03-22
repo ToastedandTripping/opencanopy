@@ -198,7 +198,9 @@ export function DataLayer({ layer, visible, yearFilter }: DataLayerProps) {
                   paint={{
                     ...(layer.style.paint as Record<string, unknown>),
                     "fill-antialias": false,
-                    "fill-opacity": tileTargetOpacity,
+                    "fill-opacity": (visible && !timelineHidesTiles
+                      ? (layer.style.paint["fill-opacity"] ?? layer.style.opacity ?? 0.7)
+                      : 0) as number,
                     "fill-opacity-transition": { duration: 300 },
                   }}
                 />

@@ -31,6 +31,7 @@ import {
   mkdirSync,
   statSync,
   appendFileSync,
+  unlinkSync,
 } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -758,6 +759,8 @@ function appendFeaturesNDJSON(
 
 function runTippecanoe(): boolean {
   const outputPath = resolve(TILES_DIR, "opencanopy.pmtiles");
+  const overviewPath = resolve(TILES_DIR, "overview.pmtiles");
+  const detailPath = resolve(TILES_DIR, "detail.pmtiles");
 
   // Build layer inputs from ALL available NDJSON files
   const layerFiles = [
@@ -780,6 +783,10 @@ function runTippecanoe(): boolean {
     const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
     if (existsSync(p) && statSync(p).size > 0) {
       inputs.push("-l", name, p);
+    } else if (existsSync(p) && statSync(p).size === 0) {
+      console.log(`  Skipping ${name}: NDJSON exists but is empty (0 bytes)`);
+    } else {
+      console.log(`  Skipping ${name}: NDJSON file missing`);
     }
   }
 
@@ -788,7 +795,7 @@ function runTippecanoe(): boolean {
     return false;
   }
 
-  // Check tippecanoe exists
+  // Check tippecanoe and tile-join exist
   try {
     execSync("which tippecanoe", { stdio: "pipe" });
   } catch {
@@ -802,33 +809,84 @@ function runTippecanoe(): boolean {
   }
 
   try {
-    // Single run with progressive drop rate for smooth disclosure:
-    //   -B 5          base zoom: features guaranteed present at z5+
-    //   -r 2          drop rate: halve features per zoom below base
-    //   -M 750000     750KB max tile size for fast loading
-    //   --drop-smallest-as-needed  drop sub-pixel features when tile overflows
-    //   --simplification=10        aggressive geometry simplification at low zoom
-    //   --extend-zooms-if-still-dropping  don't cap if tiles still too dense
+    execSync("which tile-join", { stdio: "pipe" });
+  } catch {
+    console.error(
+      "\ntile-join not found. It ships with tippecanoe -- ensure the full package is installed.\n"
+    );
+    return false;
+  }
+
+  try {
+    // Two-pass approach to preserve full coverage at low zoom:
     //
-    // Result: z0-4 very few features (largest only), z5-7 progressive fill,
-    // z8-10 most features, z11-12 full detail, z13+ WFS takes over.
-    console.log("\nRunning tippecanoe (progressive drop, zoom 0-12)...");
-    const cmd = [
+    // Pass 1 -- Overview (z4-z7): Keep all features, coalesce tiny polygons
+    //   --no-feature-limit     don't cap feature count per tile
+    //   -M 10000000            10MB max tile size (bounded, not unlimited)
+    //   --coalesce-smallest-as-needed  merge tiny adjacent polygons (preserves coverage)
+    //   --simplification=20    extreme vertex reduction (3-4 vertices per polygon at z5)
+    //
+    // Pass 2 -- Detail (z8-z12): Normal dropping with larger budget
+    //   --drop-smallest-as-needed  standard feature reduction
+    //   -M 2500000             2.5MB max tile size
+    //   --simplification=10    moderate vertex reduction
+    //   --extend-zooms-if-still-dropping  don't cap if tiles still too dense
+
+    // Pass 1: Overview tiles
+    console.log("\nPass 1: Building overview tiles (z4-z7, coalesce mode)...");
+    const overviewCmd = [
       "tippecanoe",
-      "-o", outputPath,
+      "-o", overviewPath,
       "-P",
-      "-Z", "0", "-z", "12",
+      "-Z", "4", "-z", "7",
+      "--no-feature-limit",
+      "-M", "10000000",
+      "--coalesce-smallest-as-needed",
+      "--simplification=20",
+      "--force",
+      ...inputs,
+    ].join(" ");
+    console.log(`  $ ${overviewCmd}\n`);
+    execSync(overviewCmd, { stdio: "inherit", timeout: 1_800_000 });
+
+    // Pass 2: Detail tiles
+    console.log("\nPass 2: Building detail tiles (z8-z12, drop mode)...");
+    const detailCmd = [
+      "tippecanoe",
+      "-o", detailPath,
+      "-P",
+      "-Z", "8", "-z", "12",
       "--drop-smallest-as-needed",
-      "-B", "5",
-      "-r", "2",
-      "-M", "750000",
+      "-M", "2500000",
       "--simplification=10",
       "--extend-zooms-if-still-dropping",
       "--force",
       ...inputs,
     ].join(" ");
-    console.log(`  $ ${cmd}\n`);
-    execSync(cmd, { stdio: "inherit", timeout: 1_200_000 });
+    console.log(`  $ ${detailCmd}\n`);
+    execSync(detailCmd, { stdio: "inherit", timeout: 1_800_000 });
+
+    // Merge: tile-join combines overview + detail into final output
+    console.log("\nMerging overview + detail tiles...");
+    const mergeCmd = [
+      "tile-join",
+      "-o", outputPath,
+      "-pk",
+      "-f",
+      overviewPath,
+      detailPath,
+    ].join(" ");
+    console.log(`  $ ${mergeCmd}\n`);
+    execSync(mergeCmd, { stdio: "inherit", timeout: 600_000 });
+
+    // Clean up intermediate files
+    try {
+      unlinkSync(overviewPath);
+      unlinkSync(detailPath);
+      console.log("  Cleaned up intermediate tile files.");
+    } catch {
+      console.log("  Warning: could not clean up intermediate tile files.");
+    }
 
     const stats = statSync(outputPath);
     console.log(
@@ -1079,7 +1137,13 @@ async function main() {
     const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
     if (existsSync(p)) {
       const stats = statSync(p);
-      console.log(`  ${name}: ${(stats.size / 1024 / 1024).toFixed(1)} MB`);
+      if (stats.size === 0) {
+        console.log(`  ${name}: EMPTY (0 bytes) -- WFS download returned no features`);
+      } else {
+        console.log(`  ${name}: ${(stats.size / 1024 / 1024).toFixed(1)} MB`);
+      }
+    } else {
+      console.log(`  ${name}: MISSING`);
     }
   }
 
