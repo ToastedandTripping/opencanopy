@@ -819,8 +819,10 @@ function runTippecanoe(): boolean {
 
   try {
     // ── Tier 1: Overview (z4-z7) ──
-    // Keep ALL features with aggressive simplification.
+    // Keep ALL features with moderate simplification.
     // Ensures full province coverage at low zoom (no feature dropping).
+    // simplification=8 preserves polygons down to ~200m at z7 (was 20 = ~700m,
+    // which collapsed 5-20 ha forest stands in the fragmented interior).
     console.log("\nTier 1: Overview tiles (z4-z7, no feature limit)...");
     const overviewCmd = [
       "tippecanoe",
@@ -828,7 +830,7 @@ function runTippecanoe(): boolean {
       "-P",
       "-Z", "4", "-z", "7",
       "--no-feature-limit", "--no-tile-size-limit",
-      "--simplification=20",
+      "--simplification=8",
       "--force",
       ...inputs,
     ].join(" ");
