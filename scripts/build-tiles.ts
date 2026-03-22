@@ -876,7 +876,7 @@ function runTippecanoe(): boolean {
     console.log("\nVerifying merged PMTiles metadata...");
     const inspectOutput = execSync(
       `tippecanoe-decode --stats ${outputPath} 2>&1 || echo "inspect-failed"`,
-      { encoding: "utf-8", timeout: 30_000 }
+      { encoding: "utf-8", timeout: 30_000, maxBuffer: 50 * 1024 * 1024 }
     );
     const expectedLayers = layerFiles.filter((name) => {
       const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
