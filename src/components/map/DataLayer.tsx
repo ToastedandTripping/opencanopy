@@ -117,8 +117,18 @@ function PmtilesLayers({
                   "line-color":
                     (layer.style.paint["fill-outline-color"] as string) ??
                     "rgba(255,255,255,0.2)",
-                  "line-width": 0.5,
-                  "line-opacity": 0.4,
+                  "line-width": [
+                    "interpolate", ["linear"], ["zoom"],
+                    5, 0,
+                    8, 0.3,
+                    10, 0.5,
+                  ],
+                  "line-opacity": [
+                    "interpolate", ["linear"], ["zoom"],
+                    5, 0,
+                    8, 0.2,
+                    10, 0.4,
+                  ],
                   "line-opacity-transition": { duration: 300 },
                 },
               },

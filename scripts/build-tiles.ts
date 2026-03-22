@@ -818,36 +818,58 @@ function runTippecanoe(): boolean {
   }
 
   try {
-    // Single-pass with coalesce: preserves full coverage at low zoom by
-    // merging tiny adjacent polygons instead of dropping them. The 10MB
-    // tile limit is generous enough for detail at high zoom while the
-    // coalescing keeps low-zoom tiles from being empty.
-    //
-    //   --no-feature-limit               don't cap feature count per tile
-    //   -M 10000000                      10MB max tile size (bounded)
-    //   --coalesce-smallest-as-needed    merge tiny polygons (preserves coverage)
-    //   --simplification=10              moderate vertex reduction
-    //   --extend-zooms-if-still-dropping  don't cap if tiles still too dense
-    //   -B 5                             base zoom: features guaranteed at z5+
-    //   -r 1                             minimal drop rate below base zoom
-    console.log("\nRunning tippecanoe (coalesce mode, zoom 4-12)...");
-    const cmd = [
+    // ── Tier 1: Overview (z4-z7) ──
+    // Keep ALL features with aggressive simplification.
+    // Ensures full province coverage at low zoom (no feature dropping).
+    console.log("\nTier 1: Overview tiles (z4-z7, no feature limit)...");
+    const overviewCmd = [
       "tippecanoe",
-      "-o", outputPath,
+      "-o", overviewPath,
       "-P",
-      "-Z", "4", "-z", "12",
-      "--no-feature-limit",
-      "-M", "10000000",
-      "--coalesce-smallest-as-needed",
-      "--simplification=10",
-      "--extend-zooms-if-still-dropping",
-      "-B", "5",
-      "-r", "1",
+      "-Z", "4", "-z", "7",
+      "--no-feature-limit", "--no-tile-size-limit",
+      "--simplification=20",
       "--force",
       ...inputs,
     ].join(" ");
-    console.log(`  $ ${cmd}\n`);
-    execSync(cmd, { stdio: "inherit", timeout: 3_600_000 });
+    console.log(`  $ ${overviewCmd}\n`);
+    execSync(overviewCmd, { stdio: "inherit", timeout: 3_600_000 });
+
+    // ── Tier 2: Detail (z8-z12) ──
+    // Normal coalescing for manageable tiles at high zoom.
+    console.log("\nTier 2: Detail tiles (z8-z12, coalesce mode)...");
+    const detailCmd = [
+      "tippecanoe",
+      "-o", detailPath,
+      "-P",
+      "-Z", "8", "-z", "12",
+      "--no-feature-limit",
+      "-M", "5000000",
+      "--coalesce-smallest-as-needed",
+      "--simplification=10",
+      "--extend-zooms-if-still-dropping",
+      "--force",
+      ...inputs,
+    ].join(" ");
+    console.log(`  $ ${detailCmd}\n`);
+    execSync(detailCmd, { stdio: "inherit", timeout: 3_600_000 });
+
+    // ── Merge ──
+    console.log("\nMerging overview + detail...");
+    const mergeCmd = [
+      "tile-join",
+      "-o", outputPath,
+      "-pk",
+      "--force",
+      overviewPath,
+      detailPath,
+    ].join(" ");
+    console.log(`  $ ${mergeCmd}\n`);
+    execSync(mergeCmd, { stdio: "inherit", timeout: 600_000 });
+
+    // Clean up intermediate files
+    unlinkSync(overviewPath);
+    unlinkSync(detailPath);
 
     const stats = statSync(outputPath);
     console.log(
