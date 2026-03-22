@@ -290,47 +290,37 @@ async function downloadLayerCells(
   for (let i = 0; i < grid.length; i++) {
     const cell = grid[i];
     const bbox = `${cell.west},${cell.south},${cell.east},${cell.north},EPSG:3005`;
-    let startIndex = 0;
-    let hasMore = true;
-
     console.log(
       `  [${i + 1}/${grid.length}] ${layerName} cell [${cell.col},${cell.row}]`
     );
 
-    while (hasMore) {
-      const data = await fetchLayerBatch(
-        endpoint,
-        typeName,
-        `${layerName} cell [${cell.col},${cell.row}] offset ${startIndex}`,
-        startIndex,
-        bbox,
-      );
+    // Single fetch per cell -- no pagination (BC WFS rejects startIndex on
+    // layers without a primary key). The bbox limits feature count per cell.
+    const data = await fetchLayerBatch(
+      endpoint,
+      typeName,
+      `${layerName} cell [${cell.col},${cell.row}]`,
+      bbox,
+    );
 
-      if (!data || !data.features) break;
+    if (!data || !data.features) continue;
 
-      const features: GeoJSON.Feature[] = [];
-      for (const f of data.features) {
-        if (!f.geometry) continue;
-        const extracted = extractProperties(f.properties);
-        if (!extracted) continue;
-        features.push({
-          type: "Feature",
-          geometry: f.geometry,
-          properties: extracted,
-        });
-      }
+    const features: GeoJSON.Feature[] = [];
+    for (const f of data.features) {
+      if (!f.geometry) continue;
+      const extracted = extractProperties(f.properties);
+      if (!extracted) continue;
+      features.push({
+        type: "Feature",
+        geometry: f.geometry,
+        properties: extracted,
+      });
+    }
 
-      if (features.length > 0) {
-        appendFeaturesNDJSON(outputPath, features);
-        total += features.length;
-      }
-
-      if (data.features.length < BATCH_SIZE) {
-        hasMore = false;
-      } else {
-        startIndex += BATCH_SIZE;
-        await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
-      }
+    if (features.length > 0) {
+      appendFeaturesNDJSON(outputPath, features);
+      total += features.length;
+      console.log(`    ${features.length} features`);
     }
 
     if (i < grid.length - 1) {
@@ -502,20 +492,20 @@ async function fetchLayerBatch(
   endpoint: string,
   typeName: string,
   label: string,
-  startIndex: number,
   bbox?: string
 ): Promise<WFSResponse | null> {
-  // WFS 1.1.0: BC's server rejects v2.0.0 + srsName=EPSG:4326 (HTTP 400).
-  // v1.1.0 works reliably. Uses maxFeatures instead of count.
+  // WFS 2.0.0 without startIndex/sortBy -- BC's WFS rejects pagination on layers
+  // without a primary key ("Cannot do natural order without a primary key").
+  // Instead, rely on bbox + count to limit results per request.
+  // For grid-based downloads, each cell's bbox naturally limits feature count.
   const params = new URLSearchParams({
     service: "WFS",
-    version: "1.1.0",
+    version: "2.0.0",
     request: "GetFeature",
     typeName,
     srsName: "EPSG:4326",
-    outputFormat: "json",
-    maxFeatures: String(BATCH_SIZE),
-    startIndex: String(startIndex),
+    outputFormat: "application/json",
+    count: String(BATCH_SIZE),
   });
   if (bbox) {
     params.set("bbox", bbox);
@@ -529,56 +519,41 @@ async function downloadParksProvinceWide(
   outputPath: string
 ): Promise<number> {
   console.log("\nDownloading parks (province-wide attempt)...");
-  let startIndex = 0;
-  let hasMore = true;
-  let total = 0;
 
-  while (hasMore) {
-    const data = await fetchLayerBatch(
-      WFS_ENDPOINTS.parks,
-      "pub:WHSE_TANTALIS.TA_PARK_ECORES_PA_SVW",
-      `Parks offset ${startIndex}`,
-      startIndex
-    );
+  const data = await fetchLayerBatch(
+    WFS_ENDPOINTS.parks,
+    "pub:WHSE_TANTALIS.TA_PARK_ECORES_PA_SVW",
+    "Parks province-wide"
+  );
 
-    if (!data || !data.features) {
-      // Any batch failure triggers gridded fallback
-      console.log(`  Parks batch ${startIndex} failed. Signaling fallback.`);
-      return -1;
-    }
-
-    const features: GeoJSON.Feature[] = [];
-    for (const f of data.features) {
-      if (!f.geometry) continue;
-      features.push({
-        type: "Feature",
-        geometry: f.geometry,
-        properties: {
-          name:
-            f.properties.PROTECTED_LANDS_NAME ??
-            f.properties.PARK_NAME ??
-            "",
-          designation: f.properties.PROTECTED_LANDS_DESIGNATION ?? "",
-        },
-      });
-    }
-
-    appendFeaturesNDJSON(outputPath, features);
-    total += features.length;
-
-    console.log(
-      `  Parks batch ${startIndex}: ${data.features.length} raw, ${total} total`
-    );
-
-    if (data.features.length < BATCH_SIZE) {
-      hasMore = false;
-    } else {
-      startIndex += BATCH_SIZE;
-      await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
-    }
+  if (!data || !data.features) {
+    console.log("  Parks province-wide fetch failed. Signaling fallback.");
+    return -1;
   }
 
-  return total;
+  const features: GeoJSON.Feature[] = [];
+  for (const f of data.features) {
+    if (!f.geometry) continue;
+    features.push({
+      type: "Feature",
+      geometry: f.geometry,
+      properties: {
+        name:
+          f.properties.PROTECTED_LANDS_NAME ??
+          f.properties.PARK_NAME ??
+          "",
+        designation: f.properties.PROTECTED_LANDS_DESIGNATION ?? "",
+      },
+    });
+  }
+
+  appendFeaturesNDJSON(outputPath, features);
+
+  console.log(
+    `  Parks: ${data.features.length} raw, ${features.length} kept`
+  );
+
+  return features.length;
 }
 
 async function downloadParksGridded(outputPath: string): Promise<number> {
@@ -592,55 +567,43 @@ async function downloadParksGridded(outputPath: string): Promise<number> {
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
     const bbox = `${cell.west},${cell.south},${cell.east},${cell.north},EPSG:3005`;
-    let startIndex = 0;
-    let hasMore = true;
 
     console.log(
       `  [${i + 1}/${cells.length}] Parks cell [${cell.col},${cell.row}]`
     );
 
-    while (hasMore) {
-      const data = await fetchLayerBatch(
-        WFS_ENDPOINTS.parks,
-        "pub:WHSE_TANTALIS.TA_PARK_ECORES_PA_SVW",
-        `Parks cell [${cell.col},${cell.row}] offset ${startIndex}`,
-        startIndex,
-        bbox
-      );
+    const data = await fetchLayerBatch(
+      WFS_ENDPOINTS.parks,
+      "pub:WHSE_TANTALIS.TA_PARK_ECORES_PA_SVW",
+      `Parks cell [${cell.col},${cell.row}]`,
+      bbox
+    );
 
-      if (!data || !data.features) break;
+    if (!data || !data.features) continue;
 
-      const features: GeoJSON.Feature[] = [];
-      for (const f of data.features) {
-        if (!f.geometry) continue;
-        // Dedup: parks spanning cell boundaries appear in multiple cells
-        const fid = String(f.properties.OBJECTID ?? (f as Record<string, unknown>).id ?? "");
-        if (fid && seenIds.has(fid)) continue;
-        if (fid) seenIds.add(fid);
-        features.push({
-          type: "Feature",
-          geometry: f.geometry,
-          properties: {
-            name:
-              f.properties.PROTECTED_LANDS_NAME ??
-              f.properties.PARK_NAME ??
-              "",
-            designation: f.properties.PROTECTED_LANDS_DESIGNATION ?? "",
-          },
-        });
-      }
+    const features: GeoJSON.Feature[] = [];
+    for (const f of data.features) {
+      if (!f.geometry) continue;
+      // Dedup: parks spanning cell boundaries appear in multiple cells
+      const fid = String(f.properties.OBJECTID ?? (f as Record<string, unknown>).id ?? "");
+      if (fid && seenIds.has(fid)) continue;
+      if (fid) seenIds.add(fid);
+      features.push({
+        type: "Feature",
+        geometry: f.geometry,
+        properties: {
+          name:
+            f.properties.PROTECTED_LANDS_NAME ??
+            f.properties.PARK_NAME ??
+            "",
+          designation: f.properties.PROTECTED_LANDS_DESIGNATION ?? "",
+        },
+      });
+    }
 
-      if (features.length > 0) {
-        appendFeaturesNDJSON(outputPath, features);
-        total += features.length;
-      }
-
-      if (data.features.length < BATCH_SIZE) {
-        hasMore = false;
-      } else {
-        startIndex += BATCH_SIZE;
-        await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
-      }
+    if (features.length > 0) {
+      appendFeaturesNDJSON(outputPath, features);
+      total += features.length;
     }
 
     if (i < cells.length - 1) {
@@ -671,52 +634,37 @@ async function downloadConservanciesProvinceWide(
   outputPath: string
 ): Promise<number> {
   console.log("\nDownloading conservancies (province-wide attempt)...");
-  let startIndex = 0;
-  let hasMore = true;
-  let total = 0;
 
-  while (hasMore) {
-    const data = await fetchLayerBatch(
-      WFS_ENDPOINTS.conservancies,
-      "pub:WHSE_TANTALIS.TA_CONSERVANCY_AREAS_SVW",
-      `Conservancies offset ${startIndex}`,
-      startIndex
-    );
+  const data = await fetchLayerBatch(
+    WFS_ENDPOINTS.conservancies,
+    "pub:WHSE_TANTALIS.TA_CONSERVANCY_AREAS_SVW",
+    "Conservancies province-wide"
+  );
 
-    if (!data || !data.features) {
-      // Any batch failure triggers gridded fallback
-      console.log(`  Conservancies batch ${startIndex} failed. Signaling fallback.`);
-      return -1;
-    }
-
-    const features: GeoJSON.Feature[] = [];
-    for (const f of data.features) {
-      if (!f.geometry) continue;
-      features.push({
-        type: "Feature",
-        geometry: f.geometry,
-        properties: {
-          name: f.properties.CONSERVANCY_AREA_NAME ?? "",
-        },
-      });
-    }
-
-    appendFeaturesNDJSON(outputPath, features);
-    total += features.length;
-
-    console.log(
-      `  Conservancies batch ${startIndex}: ${data.features.length} raw, ${total} total`
-    );
-
-    if (data.features.length < BATCH_SIZE) {
-      hasMore = false;
-    } else {
-      startIndex += BATCH_SIZE;
-      await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
-    }
+  if (!data || !data.features) {
+    console.log("  Conservancies province-wide fetch failed. Signaling fallback.");
+    return -1;
   }
 
-  return total;
+  const features: GeoJSON.Feature[] = [];
+  for (const f of data.features) {
+    if (!f.geometry) continue;
+    features.push({
+      type: "Feature",
+      geometry: f.geometry,
+      properties: {
+        name: f.properties.CONSERVANCY_AREA_NAME ?? "",
+      },
+    });
+  }
+
+  appendFeaturesNDJSON(outputPath, features);
+
+  console.log(
+    `  Conservancies: ${data.features.length} raw, ${features.length} kept`
+  );
+
+  return features.length;
 }
 
 async function downloadConservanciesGridded(
@@ -732,51 +680,39 @@ async function downloadConservanciesGridded(
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
     const bbox = `${cell.west},${cell.south},${cell.east},${cell.north},EPSG:3005`;
-    let startIndex = 0;
-    let hasMore = true;
 
     console.log(
       `  [${i + 1}/${cells.length}] Conservancies cell [${cell.col},${cell.row}]`
     );
 
-    while (hasMore) {
-      const data = await fetchLayerBatch(
-        WFS_ENDPOINTS.conservancies,
-        "pub:WHSE_TANTALIS.TA_CONSERVANCY_AREAS_SVW",
-        `Conservancies cell [${cell.col},${cell.row}] offset ${startIndex}`,
-        startIndex,
-        bbox
-      );
+    const data = await fetchLayerBatch(
+      WFS_ENDPOINTS.conservancies,
+      "pub:WHSE_TANTALIS.TA_CONSERVANCY_AREAS_SVW",
+      `Conservancies cell [${cell.col},${cell.row}]`,
+      bbox
+    );
 
-      if (!data || !data.features) break;
+    if (!data || !data.features) continue;
 
-      const features: GeoJSON.Feature[] = [];
-      for (const f of data.features) {
-        if (!f.geometry) continue;
-        // Dedup: conservancies spanning cell boundaries appear in multiple cells
-        const fid = String(f.properties.OBJECTID ?? (f as Record<string, unknown>).id ?? "");
-        if (fid && seenIds.has(fid)) continue;
-        if (fid) seenIds.add(fid);
-        features.push({
-          type: "Feature",
-          geometry: f.geometry,
-          properties: {
-            name: f.properties.CONSERVANCY_AREA_NAME ?? "",
-          },
-        });
-      }
+    const features: GeoJSON.Feature[] = [];
+    for (const f of data.features) {
+      if (!f.geometry) continue;
+      // Dedup: conservancies spanning cell boundaries appear in multiple cells
+      const fid = String(f.properties.OBJECTID ?? (f as Record<string, unknown>).id ?? "");
+      if (fid && seenIds.has(fid)) continue;
+      if (fid) seenIds.add(fid);
+      features.push({
+        type: "Feature",
+        geometry: f.geometry,
+        properties: {
+          name: f.properties.CONSERVANCY_AREA_NAME ?? "",
+        },
+      });
+    }
 
-      if (features.length > 0) {
-        appendFeaturesNDJSON(outputPath, features);
-        total += features.length;
-      }
-
-      if (data.features.length < BATCH_SIZE) {
-        hasMore = false;
-      } else {
-        startIndex += BATCH_SIZE;
-        await new Promise((r) => setTimeout(r, INTER_BATCH_DELAY_MS));
-      }
+    if (features.length > 0) {
+      appendFeaturesNDJSON(outputPath, features);
+      total += features.length;
     }
 
     if (i < cells.length - 1) {
