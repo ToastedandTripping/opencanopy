@@ -600,12 +600,12 @@ export function StoryMap({
       {/* Year counter overlay for timeline chapters -- bottom-right position */}
       {yearFilter != null && (
         <div
-          className="absolute bottom-8 right-8 pointer-events-none"
+          className="absolute bottom-6 right-4 md:bottom-8 md:right-8 pointer-events-none"
           role="status"
           aria-live="polite"
           aria-label={`Showing data through ${yearFilter}`}
         >
-          <span className="story-year-counter text-8xl font-light text-white/30 select-none" aria-hidden="true">
+          <span className="story-year-counter text-5xl md:text-8xl font-light text-white/30 select-none" aria-hidden="true">
             {yearFilter}
           </span>
         </div>

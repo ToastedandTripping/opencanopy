@@ -54,7 +54,7 @@ export function ScrollytellingContainer() {
           aria-label="OpenCanopy home"
         >
           <span
-            className="text-base font-semibold text-[#94a3b8]"
+            className="text-base font-semibold text-[var(--color-text-muted)]"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Open
@@ -68,7 +68,7 @@ export function ScrollytellingContainer() {
         </Link>
         <Link
           href="/map"
-          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded"
         >
           Skip to map
         </Link>
@@ -104,16 +104,7 @@ export function ScrollytellingContainer() {
               body={chapter.body}
               active={activeChapterIndex === i}
               position={chapter.id === "explore" ? "center" : "left"}
-            >
-              {chapter.id === "explore" && (
-                <a
-                  href="/map"
-                  className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-[#2dd4bf] text-black font-semibold text-sm hover:bg-[#5eead4] transition-colors"
-                >
-                  Explore the Map
-                </a>
-              )}
-            </NarrativePanel>
+            />
           </div>
         ))}
       </div>

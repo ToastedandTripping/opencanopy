@@ -19,8 +19,8 @@ export function NarrativePanel({
 }: NarrativePanelProps) {
   const positionClasses =
     position === "center"
-      ? "flex items-end md:items-center justify-center pb-8 md:pb-0"
-      : "flex items-end md:items-center justify-start pb-8 md:pb-0";
+      ? "flex items-end md:items-center justify-center pb-[max(2rem,env(safe-area-inset-bottom,2rem))] md:pb-0"
+      : "flex items-end md:items-center justify-start pb-[max(2rem,env(safe-area-inset-bottom,2rem))] md:pb-0";
 
   const cardPositionClasses =
     position === "center"
@@ -33,10 +33,11 @@ export function NarrativePanel({
       aria-hidden={!active}
     >
       <div
-        className={`pointer-events-auto bg-black/70 backdrop-blur-xl border border-white/10 rounded-2xl p-8 narrative-panel ${cardPositionClasses}`}
+        className={`pointer-events-auto bg-[var(--color-surface-overlay)] backdrop-blur-xl border border-white/10 rounded-2xl p-8 narrative-panel ${cardPositionClasses}`}
         style={{
           opacity: active ? 1 : 0,
-          transition: "opacity 500ms ease",
+          transform: active ? "none" : "translateY(12px)",
+          transition: "opacity 500ms ease, transform 500ms ease",
         }}
       >
         <h2

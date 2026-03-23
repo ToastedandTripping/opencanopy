@@ -5,7 +5,7 @@ import { Footer } from "@/components/landing/Footer";
 export function CtaSection() {
   return (
     <>
-      <section className="bg-[#0a0a0c] py-24 md:py-32">
+      <section className="bg-[var(--color-surface-0)] py-24 md:py-32">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2
             className="text-3xl md:text-4xl font-bold text-white tracking-tight"
@@ -20,7 +20,7 @@ export function CtaSection() {
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href="/map"
-              className="inline-flex items-center justify-center px-8 py-3 rounded-xl bg-[#2dd4bf] text-black font-semibold text-sm hover:bg-[#5eead4] transition-colors"
+              className="inline-flex items-center justify-center px-8 py-3 rounded-xl bg-[var(--color-accent)] text-black font-semibold text-sm hover:bg-[var(--color-accent-hover)] transition-colors"
             >
               Explore the Map
             </a>
