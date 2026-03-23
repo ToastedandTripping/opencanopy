@@ -25,7 +25,7 @@ export function NarrativePanel({
   const cardPositionClasses =
     position === "center"
       ? "max-w-lg mx-auto text-center"
-      : "max-w-md ml-6 md:ml-12";
+      : "max-w-md ml-6 mr-6 md:ml-12 md:mr-0";
 
   return (
     <div

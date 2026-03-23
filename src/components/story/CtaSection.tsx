@@ -5,7 +5,7 @@ import { Footer } from "@/components/landing/Footer";
 export function CtaSection() {
   return (
     <>
-      <section className="bg-[var(--color-surface-0)] py-24 md:py-32">
+      <section className="relative z-10 bg-[var(--color-surface-0)] py-24 md:py-32">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2
             className="text-3xl md:text-4xl font-bold text-white tracking-tight"

@@ -75,7 +75,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
             "match",
             ["get", "class"],
             "old-growth",
-            "#15803d",
+            "#0d5c2a",
             "mature",
             "#4ade80",
             "young",
@@ -104,7 +104,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     defaultEnabled: true,
     interactive: true,
     legendItems: [
-      { color: "#15803d", label: "Old Growth (250+ yr)" },
+      { color: "#0d5c2a", label: "Old Growth (250+ yr)" },
       { color: "#4ade80", label: "Mature (80-250 yr)" },
       { color: "#f97316", label: "Young (<80 yr)" },
       { color: "#ef4444", label: "Harvested" },

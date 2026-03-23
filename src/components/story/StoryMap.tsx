@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import Map, { type MapRef, AttributionControl } from "react-map-gl/maplibre";
 import type { FilterSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -11,12 +11,12 @@ import { createHatchPattern } from "./HatchPattern";
 
 initPMTiles();
 
-/** Raster overview tiles for forest-age at province zoom (z4-z10).
+/** Raster overview tiles for forest-age at province zoom (z4-z8).
  *  Using raster avoids 400K+ vector features per tile at z5 which crashes Chrome. */
 const RASTER_OVERVIEW_URL =
   "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png";
 
-/** PMTiles vector source for detail zoom (z11+). */
+/** PMTiles vector source for detail zoom (z9+). */
 const PMTILES_URL =
   "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v5.pmtiles";
 
@@ -58,6 +58,7 @@ export function StoryMap({
   const terrainExaggerationRef = useRef(0);
   const terrainAnimRef = useRef<number | null>(null);
   const mapReadyRef = useRef(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   // Apply camera on every update
   useEffect(() => {
@@ -231,7 +232,7 @@ export function StoryMap({
         hatchEnabled ? 0.6 : 0
       );
     }
-  }, [layers, hatchEnabled, yearFilter]);
+  }, [layers, hatchEnabled, yearFilter, mapLoaded]);
 
   // Apply timeline year filter + age-grading to cutblocks tiles.
   // The PMTiles tenure-cutblocks layer stores DISTURBANCE_START_DATE as a
@@ -298,7 +299,7 @@ export function StoryMap({
       const scalarOpacity = cutblocksLayer?.opacity ?? 0;
       map.setPaintProperty(fillId, "fill-opacity", scalarOpacity);
     }
-  }, [yearFilter, layers]);
+  }, [yearFilter, layers, mapLoaded]);
 
   // On map load: add sources, layers, terrain, hatch pattern
   const onLoad = useCallback(() => {
@@ -339,7 +340,7 @@ export function StoryMap({
       );
     }
 
-    // ── Raster overview source (forest-age, z4-z10) ─────────────────
+    // ── Raster overview source (forest-age, z4-z8) ──────────────────
     // Pre-rendered PNG tiles avoid 400K+ vector features per tile at z5.
     if (!map.getSource("story-forest-age-raster")) {
       map.addSource("story-forest-age-raster", {
@@ -347,7 +348,7 @@ export function StoryMap({
         tiles: [RASTER_OVERVIEW_URL],
         tileSize: 256,
         minzoom: 4,
-        maxzoom: 11,
+        maxzoom: 9,
       });
     }
 
@@ -357,7 +358,7 @@ export function StoryMap({
           id: "story-forest-age-raster",
           type: "raster",
           source: "story-forest-age-raster",
-          maxzoom: 11,
+          maxzoom: 9,
           paint: {
             "raster-opacity": 0,
             "raster-opacity-transition": { duration: 400 },
@@ -375,7 +376,7 @@ export function StoryMap({
       });
     }
 
-    // ── Forest-age vector fill layer (detail zoom z11+) ─────────────
+    // ── Forest-age vector fill layer (detail zoom z9+) ──────────────
     if (!map.getLayer("story-forest-age-fill")) {
       map.addLayer(
         {
@@ -383,13 +384,13 @@ export function StoryMap({
           type: "fill",
           source: "story-pmtiles",
           "source-layer": "forest-age",
-          minzoom: 11,
+          minzoom: 9,
           paint: {
             "fill-color": [
               "match",
               ["get", "class"],
               "old-growth",
-              "#15803d",
+              "#0d5c2a",
               "mature",
               "#4ade80",
               "young",
@@ -415,7 +416,7 @@ export function StoryMap({
           type: "line",
           source: "story-pmtiles",
           "source-layer": "forest-age",
-          minzoom: 11,
+          minzoom: 9,
           paint: {
             "line-color": "rgba(255,255,255,0.15)",
             "line-width": 0.5,
@@ -539,6 +540,7 @@ export function StoryMap({
           type: "fill",
           source: "story-pmtiles",
           "source-layer": "forest-age",
+          minzoom: 9,
           filter: ["==", ["get", "class"], "harvested"],
           paint: {
             "fill-pattern": "hatch-pattern",
@@ -573,8 +575,9 @@ export function StoryMap({
       }
     }
 
-    // Signal that map is loaded for the initial camera effect
+    // Signal that map is loaded -- triggers layer visibility + timeline effects
     mapReadyRef.current = true;
+    setMapLoaded(true);
   }, []);
 
   return (
