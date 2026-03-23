@@ -413,12 +413,12 @@ interface WFSResponse {
   }>;
 }
 
-async function downloadVRICell(cell: GridCell): Promise<ClassifiedFeature[]> {
+async function downloadVRICell(cell: GridCell, outputPath: string): Promise<number> {
   const bbox = `${cell.west},${cell.south},${cell.east},${cell.north},EPSG:3005`;
-  const features: ClassifiedFeature[] = [];
   let startIndex = 0;
   let hasMore = true;
   let totalRaw = 0;
+  let totalClassified = 0;
 
   while (hasMore) {
     const params = new URLSearchParams({
@@ -448,12 +448,16 @@ async function downloadVRICell(cell: GridCell): Promise<ClassifiedFeature[]> {
     const batchCount = data.features.length;
     totalRaw += batchCount;
 
+    // Stream each batch directly to NDJSON -- never accumulate in memory.
+    // Previous approach held all features in an array, crashing at ~300K
+    // with "Invalid string length" when V8 hit its string size limit.
+    const lines: string[] = [];
     for (const f of data.features) {
       if (!f.geometry) continue;
       const cls = classify(f.properties);
       if (!cls) continue;
 
-      features.push({
+      lines.push(JSON.stringify({
         type: "Feature",
         geometry: f.geometry,
         properties: {
@@ -467,11 +471,15 @@ async function downloadVRICell(cell: GridCell): Promise<ClassifiedFeature[]> {
               ? f.properties.SPECIES_CD_1
               : null,
         },
-      });
+      }));
+    }
+    if (lines.length > 0) {
+      appendFileSync(outputPath, lines.join("\n") + "\n");
+      totalClassified += lines.length;
     }
 
     console.log(
-      `    Batch ${startIndex}: ${batchCount} raw, ${features.length} classified so far`
+      `    Batch ${startIndex}: ${batchCount} raw, ${totalClassified} classified so far`
     );
 
     if (batchCount < BATCH_SIZE) {
@@ -483,9 +491,9 @@ async function downloadVRICell(cell: GridCell): Promise<ClassifiedFeature[]> {
   }
 
   console.log(
-    `  Cell [${cell.col},${cell.row}]: ${totalRaw} raw -> ${features.length} classified`
+    `  Cell [${cell.col},${cell.row}]: ${totalRaw} raw -> ${totalClassified} classified`
   );
-  return features;
+  return totalClassified;
 }
 
 // -- Parks & Conservancies download -------------------------------------------
@@ -935,11 +943,10 @@ async function main() {
     );
 
     try {
-      const features = await downloadVRICell(cell);
+      const cellCount = await downloadVRICell(cell, forestAgePath);
 
-      if (features.length > 0) {
-        appendFeaturesNDJSON(forestAgePath, features);
-        totalFeatures += features.length;
+      if (cellCount > 0) {
+        totalFeatures += cellCount;
         console.log(`  Running total: ${totalFeatures} classified features`);
       } else {
         console.log(
