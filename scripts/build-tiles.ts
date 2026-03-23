@@ -829,24 +829,62 @@ function runTippecanoe(): boolean {
   }
 
   try {
-    // Single-pass: no feature limits, no tile size limits, moderate simplification.
-    // Previous two-tier approach (overview + detail + tile-join) caused coverage
-    // gaps at z8+ because the detail tier's 5MB tile cap dropped features via
-    // coalescing. Single pass with no limits guarantees every tile at every zoom
-    // has complete data. Tiles will be large at low zoom but R2 handles it fine.
-    console.log("\nSingle-pass tile build (z4-z10, no limits)...");
-    const cmd = [
+    // Two-tier build: both tiers keep ALL features (no dropping, no coalescing).
+    // The split exists because the BROWSER has WebGL/protobuf parsing limits:
+    // z5 tiles with 400K features at simplification=8 produce ~3-4MB protobuf
+    // that MapLibre's Web Worker silently fails to parse. High simplification
+    // at z4-z7 reduces per-tile vertex count so the browser can render them.
+    // At z8-z10, tiles are smaller (more tiles, fewer features each) so
+    // moderate simplification works fine.
+
+    // ── Tier 1: Overview (z4-z7) ──
+    // All features, aggressive simplification for browser-parseable tile sizes.
+    console.log("\nTier 1: Overview tiles (z4-z7, high simplification)...");
+    const overviewCmd = [
       "tippecanoe",
-      "-o", outputPath,
+      "-o", overviewPath,
       "-P",
-      "-Z", "4", "-z", "10",
+      "-Z", "4", "-z", "7",
+      "--no-feature-limit", "--no-tile-size-limit",
+      "--simplification=20",
+      "--force",
+      ...inputs,
+    ].join(" ");
+    console.log(`  $ ${overviewCmd}\n`);
+    execSync(overviewCmd, { stdio: "inherit", timeout: 3_600_000 });
+
+    // ── Tier 2: Detail (z8-z10) ──
+    // All features, moderate simplification for accurate boundaries.
+    console.log("\nTier 2: Detail tiles (z8-z10, moderate simplification)...");
+    const detailCmd = [
+      "tippecanoe",
+      "-o", detailPath,
+      "-P",
+      "-Z", "8", "-z", "10",
       "--no-feature-limit", "--no-tile-size-limit",
       "--simplification=8",
       "--force",
       ...inputs,
     ].join(" ");
-    console.log(`  $ ${cmd}\n`);
-    execSync(cmd, { stdio: "inherit", timeout: 7_200_000 }); // 2 hour timeout
+    console.log(`  $ ${detailCmd}\n`);
+    execSync(detailCmd, { stdio: "inherit", timeout: 3_600_000 });
+
+    // ── Merge ──
+    console.log("\nMerging overview + detail...");
+    const mergeCmd = [
+      "tile-join",
+      "-o", outputPath,
+      "-pk",
+      "--force",
+      overviewPath,
+      detailPath,
+    ].join(" ");
+    console.log(`  $ ${mergeCmd}\n`);
+    execSync(mergeCmd, { stdio: "inherit", timeout: 600_000 });
+
+    // Clean up intermediate files
+    try { unlinkSync(overviewPath); } catch { /* may not exist on failure */ }
+    try { unlinkSync(detailPath); } catch { /* may not exist on failure */ }
 
     const stats = statSync(outputPath);
     console.log(
