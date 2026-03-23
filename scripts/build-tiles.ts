@@ -838,14 +838,20 @@ function runTippecanoe(): boolean {
     // moderate simplification works fine.
 
     // ── Tier 1: Overview (z4-z7) ──
-    // All features, aggressive simplification for browser-parseable tile sizes.
-    console.log("\nTier 1: Overview tiles (z4-z7, high simplification)...");
+    // Coalesce (merge) small polygons to keep tiles under 2MB for browser parsing.
+    // --coalesce-smallest-as-needed MERGES adjacent same-class polygons rather
+    // than dropping them, preserving visual coverage while reducing feature count.
+    // At z5, this turns 400K tiny polygons into ~50-100K merged blobs -- a density
+    // map that MapLibre can actually render.
+    console.log("\nTier 1: Overview tiles (z4-z7, coalesce + high simplification)...");
     const overviewCmd = [
       "tippecanoe",
       "-o", overviewPath,
       "-P",
       "-Z", "4", "-z", "7",
-      "--no-feature-limit", "--no-tile-size-limit",
+      "--no-feature-limit",
+      "-M", "2000000",
+      "--coalesce-smallest-as-needed",
       "--simplification=20",
       "--force",
       ...inputs,
