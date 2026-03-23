@@ -94,7 +94,10 @@ const PARKS_CELL_HEIGHT =
   (BC_EXTENT.north - BC_EXTENT.south) / PARKS_GRID_ROWS;
 
 // WFS fetch settings
-const BATCH_SIZE = 50000;
+// BC WFS server caps at 10,000 features per request regardless of maxFeatures.
+// Must match server limit so pagination detects "full batch = more data" correctly.
+// Previous BATCH_SIZE=50000 caused pagination to stop after 1st batch (10K < 50K).
+const BATCH_SIZE = 10000;
 const MAX_RETRIES = 4;
 const RETRY_DELAY_MS = 5000;
 const FETCH_TIMEOUT_MS = 300_000; // 5 minutes per request
