@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
-import maplibregl, { type FilterSpecification } from "maplibre-gl";
+import maplibregl, { GeoJSONSource, type FilterSpecification } from "maplibre-gl";
 import type { LayerDefinition, BBox } from "@/types/layers";
 import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
@@ -28,12 +28,6 @@ const CLASS_LABEL_MAP: Record<string, string> = {
   "Low (Young)": "young",
   "Logged": "harvested",
 };
-
-function buildClassFilter(enabledLabels: string[]): unknown[] | undefined {
-  const values = enabledLabels.map(l => CLASS_LABEL_MAP[l]).filter(Boolean);
-  if (values.length === 0) return undefined;
-  return ["in", ["get", "class"], ["literal", values]];
-}
 
 const EMPTY_FC: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
@@ -298,6 +292,384 @@ function PmtilesLayers({
   return null; // No DOM output -- layers managed imperatively
 }
 
+// ── WFS Imperative Layer Manager ────────────────────────────────────
+
+interface WfsLayersProps {
+  layer: LayerDefinition;
+  visible: boolean;
+  filteredData: GeoJSON.FeatureCollection;
+  loading: boolean;
+  classFilters?: Record<string, string[]>;
+  wfsMinZoom: number;
+}
+
+/**
+ * Returns all MapLibre layer IDs that WfsLayers creates for a given layer.
+ * Used for cleanup and visibility checks.
+ */
+function getWfsLayerIds(layer: LayerDefinition): string[] {
+  const ids: string[] = [];
+  switch (layer.style.type) {
+    case "fill":
+      ids.push(`layer-${layer.id}-fill`, `layer-${layer.id}-outline`);
+      break;
+    case "line":
+      ids.push(`layer-${layer.id}-line`);
+      break;
+    case "circle":
+      ids.push(`layer-${layer.id}-cluster`, `layer-${layer.id}-cluster-count`, `layer-${layer.id}-circle`);
+      break;
+  }
+  ids.push(`layer-${layer.id}-loading`);
+  return ids;
+}
+
+/**
+ * Imperative WFS GeoJSON layer manager.
+ * Adds a GeoJSON source and layers directly via the MapLibre API,
+ * bypassing react-map-gl's declarative <Source> + <Layer> which
+ * permanently fail to register WFS layers at z11+ ("missing required
+ * property source" errors on every render cycle).
+ *
+ * Follows the proven PmtilesLayers pattern: renderless component with
+ * useEffect hooks for initialization, data updates, visibility, and
+ * class filters.
+ *
+ * Key difference from PmtilesLayers: GeoJSON sources are synchronous
+ * (no sourcedata wait needed), but data updates via setData() on every
+ * viewport pan and timeline slider change.
+ */
+function WfsLayers({
+  layer,
+  visible,
+  filteredData,
+  loading,
+  classFilters,
+  wfsMinZoom,
+}: WfsLayersProps) {
+  const { current: map } = useMap();
+
+  // 1. Initialization: add source + layers
+  useEffect(() => {
+    if (!map) return;
+
+    const mapInstance = map.getMap();
+    const sourceId = `source-${layer.id}`;
+    let cancelled = false;
+
+    function addLayersToMap() {
+      if (cancelled) return;
+
+      try {
+        // Insert data layers below first basemap symbol
+        const firstSymbolId = mapInstance.getStyle().layers.find(
+          (l: maplibregl.LayerSpecification) => l.type === "symbol"
+        )?.id;
+
+        if (layer.style.type === "fill") {
+          if (!mapInstance.getLayer(`layer-${layer.id}-fill`)) {
+            // Pass through registry paint directly (including zoom-interpolation
+            // expressions for fill-opacity and fill-color match expressions).
+            // Do NOT override fill-opacity with a scalar -- preserves zoom-dependent opacity.
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-fill`,
+                type: "fill",
+                source: sourceId,
+                minzoom: wfsMinZoom,
+                layout: { visibility: visible ? "visible" : "none" },
+                paint: {
+                  ...(layer.style.paint as Record<string, unknown>),
+                  "fill-antialias": false,
+                  "fill-opacity-transition": { duration: 300 },
+                } as maplibregl.FillLayerSpecification["paint"],
+              },
+              firstSymbolId,
+            );
+          }
+          if (!mapInstance.getLayer(`layer-${layer.id}-outline`)) {
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-outline`,
+                type: "line",
+                source: sourceId,
+                minzoom: wfsMinZoom,
+                layout: { visibility: visible ? "visible" : "none" },
+                paint: {
+                  "line-color":
+                    (layer.style.paint["fill-outline-color"] as string) ??
+                    "rgba(255,255,255,0.2)",
+                  "line-width": 0.5,
+                  "line-opacity": 0.4,
+                  "line-opacity-transition": { duration: 300 },
+                },
+              },
+              firstSymbolId,
+            );
+          }
+        } else if (layer.style.type === "line") {
+          if (!mapInstance.getLayer(`layer-${layer.id}-line`)) {
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-line`,
+                type: "line",
+                source: sourceId,
+                minzoom: wfsMinZoom,
+                paint: {
+                  ...(layer.style.paint as Record<string, unknown>),
+                  "line-opacity": visible
+                    ? (layer.style.paint["line-opacity"] as number) ?? 0.8
+                    : 0,
+                  "line-opacity-transition": { duration: 300 },
+                } as maplibregl.LineLayerSpecification["paint"],
+              },
+              firstSymbolId,
+            );
+          }
+        } else if (layer.style.type === "circle") {
+          // Cluster circles
+          if (!mapInstance.getLayer(`layer-${layer.id}-cluster`)) {
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-cluster`,
+                type: "circle",
+                source: sourceId,
+                filter: ["has", "point_count"],
+                paint: {
+                  "circle-color": "#2dd4bf",
+                  "circle-radius": [
+                    "step",
+                    ["get", "point_count"],
+                    15,
+                    20, 20,
+                    50, 25,
+                    100, 35,
+                  ],
+                  "circle-opacity": visible
+                    ? (layer.style.opacity ?? 0.7)
+                    : 0,
+                  "circle-stroke-width": 1,
+                  "circle-stroke-color": "rgba(255,255,255,0.3)",
+                },
+              },
+              firstSymbolId,
+            );
+          }
+          // Cluster count labels
+          if (!mapInstance.getLayer(`layer-${layer.id}-cluster-count`)) {
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-cluster-count`,
+                type: "symbol",
+                source: sourceId,
+                filter: ["has", "point_count"],
+                layout: {
+                  "text-field": "{point_count_abbreviated}",
+                  "text-size": 11,
+                  "text-font": ["Open Sans Regular"],
+                },
+                paint: { "text-color": "#ffffff" },
+              },
+              firstSymbolId,
+            );
+          }
+          // Unclustered individual points
+          if (!mapInstance.getLayer(`layer-${layer.id}-circle`)) {
+            mapInstance.addLayer(
+              {
+                id: `layer-${layer.id}-circle`,
+                type: "circle",
+                source: sourceId,
+                minzoom: wfsMinZoom,
+                filter: ["!", ["has", "point_count"]],
+                paint: {
+                  ...(layer.style.paint as Record<string, unknown>),
+                  "circle-opacity": visible
+                    ? (layer.style.paint["circle-opacity"] as number) ?? 0.7
+                    : 0,
+                  "circle-stroke-opacity": visible ? 1 : 0,
+                  "circle-opacity-transition": { duration: 300 },
+                },
+              },
+              firstSymbolId,
+            );
+          }
+        }
+
+        // Loading indicator layer (invisible fill, used as a signal)
+        if (!mapInstance.getLayer(`layer-${layer.id}-loading`)) {
+          mapInstance.addLayer({
+            id: `layer-${layer.id}-loading`,
+            type: "fill",
+            source: sourceId,
+            layout: { visibility: "none" },
+            paint: {
+              "fill-color": "#ffffff",
+              "fill-opacity": 0,
+            },
+          });
+        }
+      } catch (err) {
+        console.error(`[OpenCanopy] Failed to add WFS layers for ${layer.id}:`, err);
+      }
+    }
+
+    function init() {
+      if (cancelled) return;
+
+      // Add GeoJSON source (synchronous -- no sourcedata wait needed)
+      if (!mapInstance.getSource(sourceId)) {
+        const sourceOpts: maplibregl.GeoJSONSourceSpecification = {
+          type: "geojson",
+          data: EMPTY_FC,
+          attribution: layer.source.attribution,
+        };
+        // Circle layers need clustering
+        if (layer.style.type === "circle") {
+          sourceOpts.cluster = true;
+          sourceOpts.clusterMaxZoom = 12;
+          sourceOpts.clusterRadius = 50;
+        }
+        mapInstance.addSource(sourceId, sourceOpts);
+      }
+
+      addLayersToMap();
+    }
+
+    // Wait for map style to load before registering the source
+    if (mapInstance.isStyleLoaded()) {
+      init();
+    } else {
+      const onLoad = () => init();
+      mapInstance.on("load", onLoad);
+      return () => {
+        cancelled = true;
+        mapInstance.off("load", onLoad);
+      };
+    }
+
+    // Cleanup: remove layers then source on unmount
+    return () => {
+      cancelled = true;
+      const layerIds = getWfsLayerIds(layer);
+      for (const id of layerIds) {
+        if (mapInstance.getLayer(id)) {
+          mapInstance.removeLayer(id);
+        }
+      }
+      if (mapInstance.getSource(sourceId)) {
+        mapInstance.removeSource(sourceId);
+      }
+    };
+  }, [map, layer.id, layer.style.type, layer.source.attribution, wfsMinZoom]);
+
+  // 2. Data update: push new GeoJSON data on viewport/timeline changes
+  useEffect(() => {
+    if (!map) return;
+
+    const mapInstance = map.getMap();
+    const sourceId = `source-${layer.id}`;
+    const source = mapInstance.getSource(sourceId) as GeoJSONSource | undefined;
+    if (source) {
+      source.setData(filteredData);
+    }
+  }, [map, layer.id, filteredData]);
+
+  // 3. Visibility toggle
+  useEffect(() => {
+    if (!map) return;
+
+    const mapInstance = map.getMap();
+
+    if (layer.style.type === "fill") {
+      const fillId = `layer-${layer.id}-fill`;
+      const outlineId = `layer-${layer.id}-outline`;
+      // Use layout visibility for fill layers -- preserves zoom-dependent
+      // opacity expressions (same approach as PmtilesLayers)
+      if (mapInstance.getLayer(fillId)) {
+        mapInstance.setLayoutProperty(fillId, "visibility", visible ? "visible" : "none");
+      }
+      if (mapInstance.getLayer(outlineId)) {
+        mapInstance.setLayoutProperty(outlineId, "visibility", visible ? "visible" : "none");
+      }
+    } else if (layer.style.type === "line") {
+      const lineId = `layer-${layer.id}-line`;
+      // Line layers use paint opacity for fade transitions
+      if (mapInstance.getLayer(lineId)) {
+        mapInstance.setPaintProperty(
+          lineId,
+          "line-opacity",
+          visible ? (layer.style.paint["line-opacity"] as number) ?? 0.8 : 0
+        );
+      }
+    } else if (layer.style.type === "circle") {
+      const clusterId = `layer-${layer.id}-cluster`;
+      const countId = `layer-${layer.id}-cluster-count`;
+      const circleId = `layer-${layer.id}-circle`;
+      // Circle layers use paint opacity for fade transitions
+      if (mapInstance.getLayer(clusterId)) {
+        mapInstance.setPaintProperty(
+          clusterId,
+          "circle-opacity",
+          visible ? (layer.style.opacity ?? 0.7) : 0
+        );
+      }
+      if (mapInstance.getLayer(countId)) {
+        mapInstance.setLayoutProperty(countId, "visibility", visible ? "visible" : "none");
+      }
+      if (mapInstance.getLayer(circleId)) {
+        mapInstance.setPaintProperty(
+          circleId,
+          "circle-opacity",
+          visible ? (layer.style.paint["circle-opacity"] as number) ?? 0.7 : 0
+        );
+        mapInstance.setPaintProperty(
+          circleId,
+          "circle-stroke-opacity",
+          visible ? 1 : 0
+        );
+      }
+    }
+  }, [map, layer.id, layer.style.type, layer.style.paint, layer.style.opacity, visible]);
+
+  // 4. Loading indicator visibility
+  useEffect(() => {
+    if (!map) return;
+
+    const mapInstance = map.getMap();
+    const loadingId = `layer-${layer.id}-loading`;
+    if (mapInstance.getLayer(loadingId)) {
+      mapInstance.setLayoutProperty(
+        loadingId,
+        "visibility",
+        loading && visible ? "visible" : "none"
+      );
+    }
+  }, [map, layer.id, loading, visible]);
+
+  // 5. Class filters
+  useEffect(() => {
+    if (!map) return;
+
+    const mapInstance = map.getMap();
+    const fillId = `layer-${layer.id}-fill`;
+    const outlineId = `layer-${layer.id}-outline`;
+
+    const activeFilter = classFilters?.[layer.id];
+    if (activeFilter) {
+      const values = activeFilter.map(label => CLASS_LABEL_MAP[label]).filter(Boolean);
+      const filter = ["in", ["get", "class"], ["literal", values]] as unknown as FilterSpecification;
+      if (mapInstance.getLayer(fillId)) mapInstance.setFilter(fillId, filter);
+      if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, filter);
+    } else {
+      if (mapInstance.getLayer(fillId)) mapInstance.setFilter(fillId, null);
+      if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, null);
+    }
+  }, [map, layer.id, classFilters]);
+
+  return null; // No DOM output -- layers managed imperatively
+}
+
 /**
  * Generic data layer component.
  * Renders any layer from the registry using the appropriate
@@ -458,10 +830,6 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
 
   // WFS GeoJSON layers (with optional PMTiles underlay + raster overview)
   if (layer.source.type === "wfs") {
-    const wfsClassFilter = classFilters?.[layer.id]
-      ? buildClassFilter(classFilters[layer.id])
-      : undefined;
-
     // Raster overview: pre-rendered PNG tiles at z4-z7 for layers too dense
     // for vector rendering at province scale (avoids Chrome crashes).
     const hasRasterOverview = !!layer.rasterOverview;
@@ -507,124 +875,17 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
         )}
 
         {/* WFS GeoJSON source (high zoom, or full range if no tile source).
-            Only mount when visible to avoid react-map-gl "missing source" errors
-            that spam the console for all 19 layers on page load. PMTiles and
-            raster sources above are always-mounted (they handle their own lifecycle). */}
-        {visible && <Source
-          id={`source-${layer.id}`}
-          type="geojson"
-          data={filteredData}
-          attribution={layer.source.attribution}
-          cluster={layer.style.type === "circle"}
-          clusterMaxZoom={12}
-          clusterRadius={50}
-        >
-          {layer.style.type === "fill" && (
-            <>
-              <Layer
-                id={`layer-${layer.id}-fill`}
-                type="fill"
-                minzoom={hasTileSource ? wfsMinZoom : undefined}
-                {...(wfsClassFilter ? { filter: wfsClassFilter as FilterSpecification } : {})}
-                paint={{
-                  ...(layer.style.paint as Record<string, unknown>),
-                  "fill-antialias": false,
-                  "fill-opacity": targetOpacity,
-                  "fill-opacity-transition": { duration: 300 },
-                }}
-              />
-              <Layer
-                id={`layer-${layer.id}-outline`}
-                type="line"
-                minzoom={hasTileSource ? wfsMinZoom : undefined}
-                {...(wfsClassFilter ? { filter: wfsClassFilter as FilterSpecification } : {})}
-                paint={{
-                  "line-color":
-                    (layer.style.paint["fill-outline-color"] as string) ??
-                    "rgba(255,255,255,0.2)",
-                  "line-width": 0.5,
-                  "line-opacity": visible ? 0.4 : 0,
-                  "line-opacity-transition": { duration: 300 },
-                }}
-              />
-            </>
-          )}
-          {layer.style.type === "line" && (
-            <Layer
-              id={`layer-${layer.id}-line`}
-              type="line"
-              minzoom={hasTileSource ? wfsMinZoom : undefined}
-              paint={{
-                ...(layer.style.paint as Record<string, unknown>),
-                "line-opacity": visible
-                  ? (layer.style.paint["line-opacity"] as number) ?? 0.8
-                  : 0,
-                "line-opacity-transition": { duration: 300 },
-              }}
-            />
-          )}
-          {layer.style.type === "circle" && (
-            <>
-              {/* Cluster circles */}
-              <Layer
-                id={`layer-${layer.id}-cluster`}
-                type="circle"
-                filter={["has", "point_count"]}
-                paint={{
-                  "circle-color": "#2dd4bf",
-                  "circle-radius": [
-                    "step",
-                    ["get", "point_count"],
-                    15,
-                    20, 20,
-                    50, 25,
-                    100, 35,
-                  ],
-                  "circle-opacity": targetOpacity,
-                  "circle-stroke-width": 1,
-                  "circle-stroke-color": "rgba(255,255,255,0.3)",
-                }}
-              />
-              {/* Cluster count labels */}
-              <Layer
-                id={`layer-${layer.id}-cluster-count`}
-                type="symbol"
-                filter={["has", "point_count"]}
-                layout={{
-                  "text-field": "{point_count_abbreviated}",
-                  "text-size": 11,
-                  "text-font": ["Open Sans Regular"],
-                }}
-                paint={{ "text-color": "#ffffff" }}
-              />
-              {/* Unclustered individual points */}
-              <Layer
-                id={`layer-${layer.id}-circle`}
-                type="circle"
-                filter={["!", ["has", "point_count"]]}
-                minzoom={hasTileSource ? wfsMinZoom : undefined}
-                paint={{
-                  ...(layer.style.paint as Record<string, unknown>),
-                  "circle-opacity": visible
-                    ? (layer.style.paint["circle-opacity"] as number) ?? 0.7
-                    : 0,
-                  "circle-stroke-opacity": visible ? 1 : 0,
-                  "circle-opacity-transition": { duration: 300 },
-                }}
-              />
-            </>
-          )}
-          {loading && visible && (
-            <Layer
-              id={`layer-${layer.id}-loading`}
-              type="fill"
-              paint={{
-                "fill-color": "#ffffff",
-                "fill-opacity": 0,
-              }}
-            />
-          )}
-        </Source>}
+            Managed imperatively via MapLibre API -- always mounted, handles
+            visibility internally. Eliminates react-map-gl "missing source"
+            errors that spam the console with declarative <Source> + <Layer>. */}
+        <WfsLayers
+          layer={layer}
+          visible={visible}
+          filteredData={filteredData}
+          loading={loading}
+          classFilters={classFilters}
+          wfsMinZoom={wfsMinZoom}
+        />
       </>
     );
   }
