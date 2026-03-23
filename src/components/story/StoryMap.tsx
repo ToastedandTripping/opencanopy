@@ -11,6 +11,15 @@ import { createHatchPattern } from "./HatchPattern";
 
 initPMTiles();
 
+/** Raster overview tiles for forest-age at province zoom (z4-z10).
+ *  Using raster avoids 400K+ vector features per tile at z5 which crashes Chrome. */
+const RASTER_OVERVIEW_URL =
+  "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png";
+
+/** PMTiles vector source for detail zoom (z11+). */
+const PMTILES_URL =
+  "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v5.pmtiles";
+
 interface StoryMapProps {
   camera: ChapterCamera;
   terrain: ChapterTerrain;
@@ -29,8 +38,11 @@ function prefersReducedMotion(): boolean {
 
 /**
  * Lightweight map component for the scrollytelling story.
- * Non-interactive (scroll-driven only). Renders PMTiles layers
- * for forest-age, cutblocks, fire-history, and parks.
+ * Non-interactive (scroll-driven only). Uses raster overview tiles
+ * for province-level views and vector PMTiles for valley-level detail.
+ *
+ * CRITICAL: All layers are added imperatively via map.addSource() /
+ * map.addLayer(). Never use react-map-gl declarative <Source>/<Layer>.
  */
 export function StoryMap({
   camera,
@@ -151,13 +163,24 @@ export function StoryMap({
     const map = mapRef.current?.getMap();
     if (!map || !map.isStyleLoaded()) return;
 
-    // Layer ID to tile source-layer mapping
+    // All story layers managed in this component
     const layerIds = ["forest-age", "cutblocks", "fire-history", "parks"];
 
     // Build a set of active layer IDs for quick lookup
     const activeLayers = Object.fromEntries(layers.map((l) => [l.id, l])) as Record<string, (typeof layers)[number]>;
 
-    // For each possible layer, set opacity
+    // Raster overview: visible when forest-age is active and zoom <= 10
+    const forestAgeActive = activeLayers["forest-age"];
+    const rasterLayerId = "story-forest-age-raster";
+    if (map.getLayer(rasterLayerId)) {
+      map.setPaintProperty(
+        rasterLayerId,
+        "raster-opacity",
+        forestAgeActive ? Math.min(forestAgeActive.opacity, 0.85) : 0
+      );
+    }
+
+    // For each possible layer, set opacity via imperative paint properties
     for (const layerId of layerIds) {
       const storyLayer = activeLayers[layerId];
       const opacity = storyLayer?.opacity ?? 0;
@@ -177,18 +200,17 @@ export function StoryMap({
       }
 
       if (map.getLayer(fillId)) {
-        map.setPaintProperty(fillId, "fill-opacity", opacity);
+        // Skip opacity override on cutblocks when timeline is active --
+        // the timeline effect manages age-graded fill-opacity per-feature.
+        const isTimelineControlled = layerId === "cutblocks" && yearFilter != null;
+        if (!isTimelineControlled) {
+          map.setPaintProperty(fillId, "fill-opacity", opacity);
+        }
         map.setFilter(fillId, classFilterExpr);
       }
       if (map.getLayer(outlineId)) {
         map.setPaintProperty(outlineId, "line-opacity", opacity > 0 ? 0.4 : 0);
         map.setFilter(outlineId, classFilterExpr);
-      }
-
-      // Handle cutblocks as line layer
-      const lineId = `story-${layerId}-line`;
-      if (map.getLayer(lineId)) {
-        map.setPaintProperty(lineId, "line-opacity", opacity);
       }
     }
 
@@ -201,33 +223,59 @@ export function StoryMap({
         hatchEnabled ? 0.6 : 0
       );
     }
-  }, [layers, hatchEnabled]);
+  }, [layers, hatchEnabled, yearFilter]);
 
-  // Apply timeline year filter to cutblocks tiles
+  // Apply timeline year filter + age-grading to cutblocks tiles.
+  // The PMTiles tenure-cutblocks layer stores DISTURBANCE_START_DATE as a
+  // date string (e.g. "2004-01-15"). We extract the first 4 chars as year
+  // using a MapLibre expression: ["to-number", ["slice", ["get", "DISTURBANCE_START_DATE"], 0, 4]]
+  //
+  // Age-grading: recent cuts bright (0.8), old cuts faint (0.15).
+  // Implemented as a data-driven fill-opacity expression.
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map || !map.isStyleLoaded()) return;
 
-    const lineId = "story-cutblocks-line";
-    if (!map.getLayer(lineId)) return;
+    const fillId = "story-cutblocks-fill";
+    const outlineId = "story-cutblocks-outline";
+    if (!map.getLayer(fillId)) return;
+
+    // Expression to extract year from DISTURBANCE_START_DATE string
+    const yearExpr = ["to-number", ["slice", ["get", "DISTURBANCE_START_DATE"], 0, 4]];
 
     if (yearFilter != null) {
-      map.setFilter(lineId, [
-        "<=",
-        ["get", "year"],
-        yearFilter,
+      // Filter: only show cutblocks logged on or before the current year
+      const filter = ["<=", yearExpr, yearFilter] as unknown as FilterSpecification;
+      map.setFilter(fillId, filter);
+      if (map.getLayer(outlineId)) map.setFilter(outlineId, filter);
+
+      // Age-graded opacity: newer cuts are brighter, older cuts fade
+      // Distance = yearFilter - feature year. Interpolate opacity.
+      map.setPaintProperty(fillId, "fill-opacity", [
+        "interpolate", ["linear"],
+        ["-", yearFilter, yearExpr],
+        0, 0.8,    // just logged: bright
+        20, 0.4,   // 20 years ago: medium
+        50, 0.15,  // 50+ years ago: faint
       ]);
     } else {
-      map.setFilter(lineId, null);
+      map.setFilter(fillId, null);
+      if (map.getLayer(outlineId)) map.setFilter(outlineId, null);
     }
   }, [yearFilter]);
 
-  // On map load: add sources, layers, terrain, hatch pattern (no camera dependency)
+  // On map load: add sources, layers, terrain, hatch pattern
   const onLoad = useCallback(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    // Terrain DEM source
+    // Find the first symbol layer in the basemap to insert data layers below it.
+    // This keeps basemap labels (roads, places) visible above our data fills.
+    const firstSymbolId = map.getStyle().layers.find(
+      (l) => l.type === "symbol"
+    )?.id;
+
+    // ── Terrain DEM source ──────────────────────────────────────────
     if (TERRAIN_SOURCE.enabled && !map.getSource("terrain-rgb")) {
       map.addSource("terrain-rgb", {
         type: "raster-dem",
@@ -238,156 +286,255 @@ export function StoryMap({
 
     // Hillshade layer from DEM
     if (TERRAIN_SOURCE.enabled && !map.getLayer("story-hillshade")) {
-      map.addLayer({
-        id: "story-hillshade",
-        type: "hillshade",
-        source: "terrain-rgb",
-        paint: {
-          "hillshade-illumination-direction": 315,
-          "hillshade-shadow-color": "#000000",
-          "hillshade-highlight-color": "#1a1a2e",
-          "hillshade-exaggeration": 0.3,
-          "hillshade-illumination-anchor": "viewport",
+      map.addLayer(
+        {
+          id: "story-hillshade",
+          type: "hillshade",
+          source: "terrain-rgb",
+          paint: {
+            "hillshade-illumination-direction": 315,
+            "hillshade-shadow-color": "#000000",
+            "hillshade-highlight-color": "#1a1a2e",
+            "hillshade-exaggeration": 0.3,
+            "hillshade-illumination-anchor": "viewport",
+          },
         },
+        firstSymbolId,
+      );
+    }
+
+    // ── Raster overview source (forest-age, z4-z10) ─────────────────
+    // Pre-rendered PNG tiles avoid 400K+ vector features per tile at z5.
+    if (!map.getSource("story-forest-age-raster")) {
+      map.addSource("story-forest-age-raster", {
+        type: "raster",
+        tiles: [RASTER_OVERVIEW_URL],
+        tileSize: 256,
+        minzoom: 4,
+        maxzoom: 11,
       });
     }
 
-    // PMTiles source for the opencanopy archive
+    if (!map.getLayer("story-forest-age-raster")) {
+      map.addLayer(
+        {
+          id: "story-forest-age-raster",
+          type: "raster",
+          source: "story-forest-age-raster",
+          maxzoom: 11,
+          paint: {
+            "raster-opacity": 0,
+            "raster-opacity-transition": { duration: 400 },
+          },
+        },
+        firstSymbolId,
+      );
+    }
+
+    // ── PMTiles vector source (detail layers) ───────────────────────
     if (!map.getSource("story-pmtiles")) {
       map.addSource("story-pmtiles", {
         type: "vector",
-        url: "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v5.pmtiles",
+        url: PMTILES_URL,
       });
     }
 
-    // Forest-age fill layer
+    // ── Forest-age vector fill layer (detail zoom z11+) ─────────────
     if (!map.getLayer("story-forest-age-fill")) {
-      map.addLayer({
-        id: "story-forest-age-fill",
-        type: "fill",
-        source: "story-pmtiles",
-        "source-layer": "forest-age",
-        paint: {
-          "fill-color": [
-            "match",
-            ["get", "class"],
-            "old-growth",
-            "#15803d",
-            "mature",
-            "#4ade80",
-            "young",
-            "#f97316",
-            "harvested",
-            "#ef4444",
-            "#6b7280",
-          ],
-          "fill-opacity": 0,
-          "fill-opacity-transition": { duration: 400 },
-          "fill-antialias": false,
+      map.addLayer(
+        {
+          id: "story-forest-age-fill",
+          type: "fill",
+          source: "story-pmtiles",
+          "source-layer": "forest-age",
+          minzoom: 11,
+          paint: {
+            "fill-color": [
+              "match",
+              ["get", "class"],
+              "old-growth",
+              "#15803d",
+              "mature",
+              "#4ade80",
+              "young",
+              "#f97316",
+              "harvested",
+              "#ef4444",
+              "#6b7280",
+            ],
+            "fill-opacity": 0,
+            "fill-opacity-transition": { duration: 400 },
+            "fill-antialias": false,
+          },
         },
-      });
+        firstSymbolId,
+      );
     }
 
     // Forest-age outline
     if (!map.getLayer("story-forest-age-outline")) {
-      map.addLayer({
-        id: "story-forest-age-outline",
-        type: "line",
-        source: "story-pmtiles",
-        "source-layer": "forest-age",
-        paint: {
-          "line-color": "rgba(255,255,255,0.15)",
-          "line-width": 0.5,
-          "line-opacity": 0,
-          "line-opacity-transition": { duration: 400 },
+      map.addLayer(
+        {
+          id: "story-forest-age-outline",
+          type: "line",
+          source: "story-pmtiles",
+          "source-layer": "forest-age",
+          minzoom: 11,
+          paint: {
+            "line-color": "rgba(255,255,255,0.15)",
+            "line-width": 0.5,
+            "line-opacity": 0,
+            "line-opacity-transition": { duration: 400 },
+          },
         },
-      });
+        firstSymbolId,
+      );
     }
 
-    // Cutblocks line layer (RESULTS layer uses lines in the registry)
-    if (!map.getLayer("story-cutblocks-line")) {
-      map.addLayer({
-        id: "story-cutblocks-line",
-        type: "line",
-        source: "story-pmtiles",
-        "source-layer": "cutblocks",
-        paint: {
-          "line-color": "#dc2626",
-          "line-width": 1.5,
-          "line-opacity": 0,
-          "line-opacity-transition": { duration: 400 },
+    // ── Cutblocks fill layer (tenure-cutblocks source-layer) ────────
+    // The PMTiles archive stores cutblock data in the "tenure-cutblocks"
+    // source-layer with DISTURBANCE_START_DATE for timeline filtering.
+    // Rendered as fill (not line) so age-grading opacity works per-feature.
+    if (!map.getLayer("story-cutblocks-fill")) {
+      map.addLayer(
+        {
+          id: "story-cutblocks-fill",
+          type: "fill",
+          source: "story-pmtiles",
+          "source-layer": "tenure-cutblocks",
+          paint: {
+            "fill-color": "#dc2626",
+            "fill-opacity": 0,
+            "fill-opacity-transition": { duration: 400 },
+            "fill-antialias": false,
+          },
         },
-      });
+        firstSymbolId,
+      );
     }
 
-    // Fire-history fill layer
+    // Cutblocks outline for definition at higher zoom
+    if (!map.getLayer("story-cutblocks-outline")) {
+      map.addLayer(
+        {
+          id: "story-cutblocks-outline",
+          type: "line",
+          source: "story-pmtiles",
+          "source-layer": "tenure-cutblocks",
+          paint: {
+            "line-color": "#dc2626",
+            "line-width": 0.5,
+            "line-opacity": 0,
+            "line-opacity-transition": { duration: 400 },
+          },
+        },
+        firstSymbolId,
+      );
+    }
+
+    // ── Fire-history fill layer ─────────────────────────────────────
     if (!map.getLayer("story-fire-history-fill")) {
-      map.addLayer({
-        id: "story-fire-history-fill",
-        type: "fill",
-        source: "story-pmtiles",
-        "source-layer": "fire-history",
-        paint: {
-          "fill-color": "#f59e0b",
-          "fill-opacity": 0,
-          "fill-opacity-transition": { duration: 400 },
-          "fill-antialias": false,
+      map.addLayer(
+        {
+          id: "story-fire-history-fill",
+          type: "fill",
+          source: "story-pmtiles",
+          "source-layer": "fire-history",
+          paint: {
+            "fill-color": "#f59e0b",
+            "fill-opacity": 0,
+            "fill-opacity-transition": { duration: 400 },
+            "fill-antialias": false,
+          },
         },
-      });
+        firstSymbolId,
+      );
     }
 
-    // Parks fill layer
+    // ── Parks fill layer ────────────────────────────────────────────
     if (!map.getLayer("story-parks-fill")) {
-      map.addLayer({
-        id: "story-parks-fill",
-        type: "fill",
-        source: "story-pmtiles",
-        "source-layer": "parks",
-        paint: {
-          "fill-color": "rgba(255,255,255,0.1)",
-          "fill-opacity": 0,
-          "fill-opacity-transition": { duration: 400 },
+      map.addLayer(
+        {
+          id: "story-parks-fill",
+          type: "fill",
+          source: "story-pmtiles",
+          "source-layer": "parks",
+          paint: {
+            "fill-color": "rgba(255,255,255,0.1)",
+            "fill-opacity": 0,
+            "fill-opacity-transition": { duration: 400 },
+          },
         },
-      });
+        firstSymbolId,
+      );
     }
 
     // Parks outline
     if (!map.getLayer("story-parks-outline")) {
-      map.addLayer({
-        id: "story-parks-outline",
-        type: "line",
-        source: "story-pmtiles",
-        "source-layer": "parks",
-        paint: {
-          "line-color": "#ffffff",
-          "line-width": 1,
-          "line-opacity": 0,
-          "line-opacity-transition": { duration: 400 },
+      map.addLayer(
+        {
+          id: "story-parks-outline",
+          type: "line",
+          source: "story-pmtiles",
+          "source-layer": "parks",
+          paint: {
+            "line-color": "#ffffff",
+            "line-width": 1,
+            "line-opacity": 0,
+            "line-opacity-transition": { duration: 400 },
+          },
         },
-      });
+        firstSymbolId,
+      );
     }
 
-    // Hatch pattern
+    // ── Hatch pattern ───────────────────────────────────────────────
     if (!hatchAddedRef.current) {
       const imageData = createHatchPattern();
       map.addImage("hatch-pattern", imageData, { sdf: false });
       hatchAddedRef.current = true;
     }
 
-    // Harvested-hatch fill pattern layer
+    // Harvested-hatch fill pattern layer (above fill, below outline)
     if (!map.getLayer("story-harvested-hatch")) {
-      map.addLayer({
-        id: "story-harvested-hatch",
-        type: "fill",
-        source: "story-pmtiles",
-        "source-layer": "forest-age",
-        filter: ["==", ["get", "class"], "harvested"],
-        paint: {
-          "fill-pattern": "hatch-pattern",
-          "fill-opacity": 0,
-          "fill-opacity-transition": { duration: 400 },
+      map.addLayer(
+        {
+          id: "story-harvested-hatch",
+          type: "fill",
+          source: "story-pmtiles",
+          "source-layer": "forest-age",
+          filter: ["==", ["get", "class"], "harvested"],
+          paint: {
+            "fill-pattern": "hatch-pattern",
+            "fill-opacity": 0,
+            "fill-opacity-transition": { duration: 400 },
+          },
         },
-      });
+        firstSymbolId,
+      );
+    }
+
+    // ── Terrain tile prefetch for Fairy Creek ───────────────────────
+    // Pre-request DEM tiles at Fairy Creek so the valley dive is smooth.
+    // We use a hidden <img> approach to warm the CDN/browser tile cache
+    // without moving the visible map camera.
+    if (TERRAIN_SOURCE.enabled && typeof Image !== "undefined") {
+      const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
+      if (MAPTILER_KEY) {
+        // Request z12 DEM tiles covering Fairy Creek area (-124.55, 48.64)
+        // Tile coordinates: z12/x649/y1448, z12/x650/y1448
+        const tilesToPrefetch = [
+          [12, 649, 1448],
+          [12, 650, 1448],
+          [12, 649, 1449],
+          [12, 650, 1449],
+        ];
+        for (const [z, x, y] of tilesToPrefetch) {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = `https://api.maptiler.com/tiles/terrain-rgb-v2/${z}/${x}/${y}.webp?key=${MAPTILER_KEY}`;
+        }
+      }
     }
 
     // Signal that map is loaded for the initial camera effect
@@ -414,15 +561,15 @@ export function StoryMap({
         <AttributionControl compact position="bottom-right" />
       </Map>
 
-      {/* Year counter overlay for timeline chapters */}
+      {/* Year counter overlay for timeline chapters -- bottom-right position */}
       {yearFilter != null && (
         <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          className="absolute bottom-8 right-8 pointer-events-none"
           role="status"
           aria-live="polite"
           aria-label={`Showing data through ${yearFilter}`}
         >
-          <span className="story-year-counter text-[8rem] md:text-[12rem] font-bold text-white/10 select-none" aria-hidden="true">
+          <span className="story-year-counter text-8xl font-light text-white/30 select-none" aria-hidden="true">
             {yearFilter}
           </span>
         </div>
