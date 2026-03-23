@@ -506,8 +506,11 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
           />
         )}
 
-        {/* WFS GeoJSON source (high zoom, or full range if no tile source) */}
-        <Source
+        {/* WFS GeoJSON source (high zoom, or full range if no tile source).
+            Only mount when visible to avoid react-map-gl "missing source" errors
+            that spam the console for all 19 layers on page load. PMTiles and
+            raster sources above are always-mounted (they handle their own lifecycle). */}
+        {visible && <Source
           id={`source-${layer.id}`}
           type="geojson"
           data={filteredData}
@@ -621,7 +624,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
               }}
             />
           )}
-        </Source>
+        </Source>}
       </>
     );
   }
