@@ -368,9 +368,26 @@ function WfsLayers({
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-fill`)) {
-            // Pass through registry paint directly (including zoom-interpolation
-            // expressions for fill-opacity and fill-color match expressions).
-            // Do NOT override fill-opacity with a scalar -- preserves zoom-dependent opacity.
+            // Cherry-pick valid fill paint properties (no undefined values).
+            // Matches PmtilesLayers guard pattern -- preserves zoom-dependent
+            // opacity expressions without passing through undefined keys.
+            const fillPaint: Record<string, unknown> = {
+              "fill-antialias": false,
+              "fill-opacity-transition": { duration: 300 },
+            };
+            if (layer.style.paint["fill-opacity"] != null) {
+              fillPaint["fill-opacity"] = layer.style.paint["fill-opacity"];
+            }
+            if (layer.style.paint["fill-color"] != null) {
+              fillPaint["fill-color"] = layer.style.paint["fill-color"];
+            }
+            if (layer.style.paint["fill-outline-color"] != null) {
+              fillPaint["fill-outline-color"] = layer.style.paint["fill-outline-color"];
+            }
+            if (layer.style.paint["fill-pattern"] != null) {
+              fillPaint["fill-pattern"] = layer.style.paint["fill-pattern"];
+            }
+
             mapInstance.addLayer(
               {
                 id: `layer-${layer.id}-fill`,
@@ -378,11 +395,7 @@ function WfsLayers({
                 source: sourceId,
                 minzoom: wfsMinZoom,
                 layout: { visibility: visible ? "visible" : "none" },
-                paint: {
-                  ...(layer.style.paint as Record<string, unknown>),
-                  "fill-antialias": false,
-                  "fill-opacity-transition": { duration: 300 },
-                } as maplibregl.FillLayerSpecification["paint"],
+                paint: fillPaint as maplibregl.FillLayerSpecification["paint"],
               },
               firstSymbolId,
             );
@@ -409,19 +422,36 @@ function WfsLayers({
           }
         } else if (layer.style.type === "line") {
           if (!mapInstance.getLayer(`layer-${layer.id}-line`)) {
+            // Cherry-pick valid line paint properties (no undefined values)
+            const linePaint: Record<string, unknown> = {
+              "line-opacity": visible
+                ? (layer.style.paint["line-opacity"] as number) ?? 0.8
+                : 0,
+              "line-opacity-transition": { duration: 300 },
+            };
+            if (layer.style.paint["line-color"] != null) {
+              linePaint["line-color"] = layer.style.paint["line-color"];
+            }
+            if (layer.style.paint["line-width"] != null) {
+              linePaint["line-width"] = layer.style.paint["line-width"];
+            }
+            if (layer.style.paint["line-dasharray"] != null) {
+              linePaint["line-dasharray"] = layer.style.paint["line-dasharray"];
+            }
+            if (layer.style.paint["line-blur"] != null) {
+              linePaint["line-blur"] = layer.style.paint["line-blur"];
+            }
+            if (layer.style.paint["line-gap-width"] != null) {
+              linePaint["line-gap-width"] = layer.style.paint["line-gap-width"];
+            }
+
             mapInstance.addLayer(
               {
                 id: `layer-${layer.id}-line`,
                 type: "line",
                 source: sourceId,
                 minzoom: wfsMinZoom,
-                paint: {
-                  ...(layer.style.paint as Record<string, unknown>),
-                  "line-opacity": visible
-                    ? (layer.style.paint["line-opacity"] as number) ?? 0.8
-                    : 0,
-                  "line-opacity-transition": { duration: 300 },
-                } as maplibregl.LineLayerSpecification["paint"],
+                paint: linePaint as maplibregl.LineLayerSpecification["paint"],
               },
               firstSymbolId,
             );
@@ -475,6 +505,30 @@ function WfsLayers({
           }
           // Unclustered individual points
           if (!mapInstance.getLayer(`layer-${layer.id}-circle`)) {
+            // Cherry-pick valid circle paint properties (no undefined values)
+            const circlePaint: Record<string, unknown> = {
+              "circle-opacity": visible
+                ? (layer.style.paint["circle-opacity"] as number) ?? 0.7
+                : 0,
+              "circle-stroke-opacity": visible ? 1 : 0,
+              "circle-opacity-transition": { duration: 300 },
+            };
+            if (layer.style.paint["circle-color"] != null) {
+              circlePaint["circle-color"] = layer.style.paint["circle-color"];
+            }
+            if (layer.style.paint["circle-radius"] != null) {
+              circlePaint["circle-radius"] = layer.style.paint["circle-radius"];
+            }
+            if (layer.style.paint["circle-stroke-color"] != null) {
+              circlePaint["circle-stroke-color"] = layer.style.paint["circle-stroke-color"];
+            }
+            if (layer.style.paint["circle-stroke-width"] != null) {
+              circlePaint["circle-stroke-width"] = layer.style.paint["circle-stroke-width"];
+            }
+            if (layer.style.paint["circle-blur"] != null) {
+              circlePaint["circle-blur"] = layer.style.paint["circle-blur"];
+            }
+
             mapInstance.addLayer(
               {
                 id: `layer-${layer.id}-circle`,
@@ -482,14 +536,7 @@ function WfsLayers({
                 source: sourceId,
                 minzoom: wfsMinZoom,
                 filter: ["!", ["has", "point_count"]],
-                paint: {
-                  ...(layer.style.paint as Record<string, unknown>),
-                  "circle-opacity": visible
-                    ? (layer.style.paint["circle-opacity"] as number) ?? 0.7
-                    : 0,
-                  "circle-stroke-opacity": visible ? 1 : 0,
-                  "circle-opacity-transition": { duration: 300 },
-                },
+                paint: circlePaint as maplibregl.CircleLayerSpecification["paint"],
               },
               firstSymbolId,
             );
@@ -537,20 +584,21 @@ function WfsLayers({
     }
 
     // Wait for map style to load before registering the source
+    let onLoad: (() => void) | null = null;
     if (mapInstance.isStyleLoaded()) {
       init();
     } else {
-      const onLoad = () => init();
+      onLoad = () => init();
       mapInstance.on("load", onLoad);
-      return () => {
-        cancelled = true;
-        mapInstance.off("load", onLoad);
-      };
     }
 
-    // Cleanup: remove layers then source on unmount
+    // Unified cleanup: handles both the "load" listener AND layer/source
+    // removal regardless of which code path was taken during setup.
     return () => {
       cancelled = true;
+      if (onLoad) {
+        mapInstance.off("load", onLoad);
+      }
       const layerIds = getWfsLayerIds(layer);
       for (const id of layerIds) {
         if (mapInstance.getLayer(id)) {
