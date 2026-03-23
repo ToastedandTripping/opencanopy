@@ -54,6 +54,9 @@ export default function Home() {
     null
   );
 
+  // Class filtering state (e.g. toggle individual forest age classes on/off)
+  const [classFilters, setClassFilters] = useState<Record<string, string[]>>({});
+
   // Watershed mode
   const watershedSelection = useWatershedSelection();
 
@@ -127,6 +130,29 @@ export default function Home() {
       setTimeout(() => setCopied(false), 2000);
     }
   }, [getShareUrl]);
+
+  // ── Class filter handler ───────────────────────────────────────────
+
+  const handleToggleClassFilter = useCallback((layerId: string, className: string) => {
+    setClassFilters(prev => {
+      const layer = getLayer(layerId);
+      if (!layer) return prev;
+      const allClasses = layer.legendItems.map(item => item.label);
+      const current = prev[layerId] ?? allClasses;
+      const isEnabled = current.includes(className);
+      let next: string[];
+      if (isEnabled && current.length === 1) {
+        // Last class toggled off -- reset to show all
+        const { [layerId]: _, ...rest } = prev;
+        return rest;
+      } else if (isEnabled) {
+        next = current.filter(c => c !== className);
+      } else {
+        next = [...current, className];
+      }
+      return { ...prev, [layerId]: next };
+    });
+  }, []);
 
   // ── Search handler ──────────────────────────────────────────────────
 
@@ -443,6 +469,7 @@ export default function Home() {
         ref={mapRef}
         enabledLayers={enabledLayers}
         yearFilter={timeline.yearFilter}
+        classFilters={classFilters}
         className="absolute inset-0"
         onMapClick={handleMapClick}
         cursor={watershedSelection.mode === "selecting" ? "crosshair" : undefined}
@@ -559,6 +586,8 @@ export default function Home() {
         enabledLayers={enabledLayers}
         onToggleLayer={toggleLayer}
         layerPanelOpen={layerPanelOpen}
+        classFilters={classFilters}
+        onToggleClassFilter={handleToggleClassFilter}
       />
 
       {/* Bottom bar cluster: timeline control + preset chips */}

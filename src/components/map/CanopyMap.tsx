@@ -31,6 +31,8 @@ interface CanopyMapProps {
   enabledLayers: string[];
   /** When set, filter timeline-enabled layers by year (client-side) */
   yearFilter?: number | null;
+  /** When set, filter individual classes within layers (e.g. forest age classes) */
+  classFilters?: Record<string, string[]>;
   children?: React.ReactNode;
   /** Optional click interceptor. Return true to suppress the default popup behavior. */
   onMapClick?: (lng: number, lat: number) => boolean;
@@ -50,7 +52,7 @@ interface PopupInfo {
  * and dynamic data layers driven by the registry.
  */
 const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
-  { className, enabledLayers, yearFilter, children, onMapClick, cursor },
+  { className, enabledLayers, yearFilter, classFilters, children, onMapClick, cursor },
   ref
 ) {
   const mapRef = useRef<MapRef>(null);
@@ -176,6 +178,7 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
             layer={layer}
             visible={enabledLayers.includes(layer.id)}
             yearFilter={yearFilter}
+            classFilters={classFilters}
           />
         ))}
 

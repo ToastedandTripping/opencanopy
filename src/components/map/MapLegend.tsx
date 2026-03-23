@@ -10,6 +10,8 @@ interface MapLegendProps {
   enabledLayers: string[];
   onToggleLayer: (id: string) => void;
   layerPanelOpen: boolean;
+  classFilters?: Record<string, string[]>;
+  onToggleClassFilter?: (layerId: string, className: string) => void;
 }
 
 // ── Color dot rendering ─────────────────────────────────────
@@ -73,17 +75,53 @@ function CompactDots({ layer }: { layer: LayerDefinition }) {
 
 // ── Expanded legend items list ──────────────────────────────
 
-function ExpandedItems({ layer }: { layer: LayerDefinition }) {
+function ExpandedItems({
+  layer,
+  classFilters,
+  onToggleClassFilter,
+}: {
+  layer: LayerDefinition;
+  classFilters?: Record<string, string[]>;
+  onToggleClassFilter?: (layerId: string, className: string) => void;
+}) {
+  // Check if the layer has a class-based fill-color expression
+  const isFilterable =
+    Array.isArray(layer.style.paint["fill-color"]) &&
+    JSON.stringify(layer.style.paint["fill-color"]).includes('"class"');
+
   return (
     <div className="mt-1.5 ml-0.5 space-y-1">
-      {layer.legendItems.map((item, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <ColorDot item={item} styleType={layer.style.type} />
-          <span className="text-[10px] text-zinc-400 leading-tight">
-            {item.label}
-          </span>
-        </div>
-      ))}
+      {layer.legendItems.map((item, i) => {
+        const isActive =
+          !classFilters?.[layer.id] ||
+          classFilters[layer.id].includes(item.label);
+
+        if (isFilterable && onToggleClassFilter) {
+          return (
+            <button
+              key={i}
+              onClick={() => onToggleClassFilter(layer.id, item.label)}
+              className={`flex items-center gap-2 w-full text-left transition-opacity duration-200 ${
+                isActive ? "" : "opacity-30"
+              }`}
+            >
+              <ColorDot item={item} styleType={layer.style.type} />
+              <span className="text-[10px] text-zinc-400 leading-tight">
+                {item.label}
+              </span>
+            </button>
+          );
+        }
+
+        return (
+          <div key={i} className="flex items-center gap-2">
+            <ColorDot item={item} styleType={layer.style.type} />
+            <span className="text-[10px] text-zinc-400 leading-tight">
+              {item.label}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -95,11 +133,15 @@ function LegendRow({
   expanded,
   onToggleExpand,
   onDismiss,
+  classFilters,
+  onToggleClassFilter,
 }: {
   layer: LayerDefinition;
   expanded: boolean;
   onToggleExpand: () => void;
   onDismiss: () => void;
+  classFilters?: Record<string, string[]>;
+  onToggleClassFilter?: (layerId: string, className: string) => void;
 }) {
   return (
     <div className="px-2 py-1.5">
@@ -158,7 +200,11 @@ function LegendRow({
         }}
       >
         <div className="overflow-hidden">
-          <ExpandedItems layer={layer} />
+          <ExpandedItems
+            layer={layer}
+            classFilters={classFilters}
+            onToggleClassFilter={onToggleClassFilter}
+          />
         </div>
       </div>
     </div>
@@ -176,6 +222,8 @@ export function MapLegend({
   enabledLayers,
   onToggleLayer,
   layerPanelOpen,
+  classFilters,
+  onToggleClassFilter,
 }: MapLegendProps) {
   const [expandedLayer, setExpandedLayer] = useState<string | null>(null);
 
@@ -224,6 +272,8 @@ export function MapLegend({
             expanded={expandedLayer === layer.id}
             onToggleExpand={() => handleToggleExpand(layer.id)}
             onDismiss={() => handleDismiss(layer.id)}
+            classFilters={classFilters}
+            onToggleClassFilter={onToggleClassFilter}
           />
         ))}
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
-import maplibregl from "maplibre-gl";
+import maplibregl, { type FilterSpecification } from "maplibre-gl";
 import type { LayerDefinition, BBox } from "@/types/layers";
 import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
@@ -12,6 +12,27 @@ interface DataLayerProps {
   visible: boolean;
   /** When set, filter features by year for timeline animation (client-side) */
   yearFilter?: number | null;
+  /** When set, filter individual classes within layers (e.g. forest age classes) */
+  classFilters?: Record<string, string[]>;
+}
+
+// ── Class filter helpers ────────────────────────────────────────────
+
+const CLASS_LABEL_MAP: Record<string, string> = {
+  "Old Growth (250+ yr)": "old-growth",
+  "Mature (80-250 yr)": "mature",
+  "Young (<80 yr)": "young",
+  "Harvested": "harvested",
+  "High (Old Growth)": "old-growth",
+  "Moderate (Mature)": "mature",
+  "Low (Young)": "young",
+  "Logged": "harvested",
+};
+
+function buildClassFilter(enabledLabels: string[]): unknown[] | undefined {
+  const values = enabledLabels.map(l => CLASS_LABEL_MAP[l]).filter(Boolean);
+  if (values.length === 0) return undefined;
+  return ["in", ["get", "class"], ["literal", values]];
 }
 
 const EMPTY_FC: GeoJSON.FeatureCollection = {
@@ -31,11 +52,13 @@ function PmtilesLayers({
   tileMaxZoom,
   visible,
   opacity,
+  classFilters,
 }: {
   layer: LayerDefinition;
   tileMaxZoom: number;
   visible: boolean;
   opacity: number;
+  classFilters?: Record<string, string[]>;
 }) {
   const { current: map } = useMap();
 
@@ -247,6 +270,25 @@ function PmtilesLayers({
     }
   }, [map, layer.id, layer.tileSource, layer.style.paint, visible]);
 
+  // Apply class filters to PMTiles layers
+  useEffect(() => {
+    if (!map || !layer.tileSource) return;
+    const mapInstance = map.getMap();
+    const fillId = `layer-${layer.id}-tiles-fill`;
+    const outlineId = `layer-${layer.id}-tiles-outline`;
+
+    const activeFilter = classFilters?.[layer.id];
+    if (activeFilter && mapInstance.getLayer(fillId)) {
+      const values = activeFilter.map(label => CLASS_LABEL_MAP[label]).filter(Boolean);
+      const filter = ["in", ["get", "class"], ["literal", values]] as unknown as FilterSpecification;
+      mapInstance.setFilter(fillId, filter);
+      if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, filter);
+    } else {
+      if (mapInstance.getLayer(fillId)) mapInstance.setFilter(fillId, null);
+      if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, null);
+    }
+  }, [map, layer.id, layer.tileSource, classFilters]);
+
   return null; // No DOM output -- layers managed imperatively
 }
 
@@ -264,7 +306,7 @@ function PmtilesLayers({
  * For raster sources: uses MapLibre raster source directly.
  * Includes opacity transitions and loading states.
  */
-export function DataLayer({ layer, visible, yearFilter }: DataLayerProps) {
+export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLayerProps) {
   const { current: map } = useMap();
   const [data, setData] = useState<GeoJSON.FeatureCollection>(EMPTY_FC);
   const [loading, setLoading] = useState(false);
@@ -410,6 +452,10 @@ export function DataLayer({ layer, visible, yearFilter }: DataLayerProps) {
 
   // WFS GeoJSON layers (with optional PMTiles underlay)
   if (layer.source.type === "wfs") {
+    const wfsClassFilter = classFilters?.[layer.id]
+      ? buildClassFilter(classFilters[layer.id])
+      : undefined;
+
     return (
       <>
         {/* PMTiles vector tile source (low zoom) -- added imperatively
@@ -421,6 +467,7 @@ export function DataLayer({ layer, visible, yearFilter }: DataLayerProps) {
             tileMaxZoom={tileMaxZoom}
             visible={visible && !timelineHidesTiles}
             opacity={tileTargetOpacity}
+            classFilters={classFilters}
           />
         )}
 
@@ -440,6 +487,7 @@ export function DataLayer({ layer, visible, yearFilter }: DataLayerProps) {
                 id={`layer-${layer.id}-fill`}
                 type="fill"
                 minzoom={hasTileSource ? wfsMinZoom : undefined}
+                filter={wfsClassFilter as FilterSpecification | undefined}
                 paint={{
                   ...(layer.style.paint as Record<string, unknown>),
                   "fill-antialias": false,
@@ -451,6 +499,7 @@ export function DataLayer({ layer, visible, yearFilter }: DataLayerProps) {
                 id={`layer-${layer.id}-outline`}
                 type="line"
                 minzoom={hasTileSource ? wfsMinZoom : undefined}
+                filter={wfsClassFilter as FilterSpecification | undefined}
                 paint={{
                   "line-color":
                     (layer.style.paint["fill-outline-color"] as string) ??
