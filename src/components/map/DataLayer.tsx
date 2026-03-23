@@ -522,7 +522,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
                 id={`layer-${layer.id}-fill`}
                 type="fill"
                 minzoom={hasTileSource ? wfsMinZoom : undefined}
-                filter={wfsClassFilter as FilterSpecification | undefined}
+                {...(wfsClassFilter ? { filter: wfsClassFilter as FilterSpecification } : {})}
                 paint={{
                   ...(layer.style.paint as Record<string, unknown>),
                   "fill-antialias": false,
@@ -534,7 +534,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
                 id={`layer-${layer.id}-outline`}
                 type="line"
                 minzoom={hasTileSource ? wfsMinZoom : undefined}
-                filter={wfsClassFilter as FilterSpecification | undefined}
+                {...(wfsClassFilter ? { filter: wfsClassFilter as FilterSpecification } : {})}
                 paint={{
                   "line-color":
                     (layer.style.paint["fill-outline-color"] as string) ??
