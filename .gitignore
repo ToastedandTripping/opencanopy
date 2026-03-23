@@ -51,3 +51,5 @@ next-env.d.ts
 /data/tiles/
 /data/progress/
 /public/data/tiles/
+data/raster/*.tif
+data/raster-tiles/

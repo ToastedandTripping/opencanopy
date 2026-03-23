@@ -50,12 +50,14 @@ const EMPTY_FC: GeoJSON.FeatureCollection = {
 function PmtilesLayers({
   layer,
   tileMaxZoom,
+  tileMinZoom,
   visible,
   opacity,
   classFilters,
 }: {
   layer: LayerDefinition;
   tileMaxZoom: number;
+  tileMinZoom?: number;
   visible: boolean;
   opacity: number;
   classFilters?: Record<string, string[]>;
@@ -89,6 +91,7 @@ function PmtilesLayers({
       try {
         const sourceLayer = layer.tileSource!.sourceLayer;
         const maxzoom = tileMaxZoom + 1;
+        const minzoom = tileMinZoom ?? 0;
 
         // Bug 4 fix: insert data layers below basemap labels
         const firstSymbolId = mapInstance.getStyle().layers.find(
@@ -120,6 +123,7 @@ function PmtilesLayers({
                 type: "fill",
                 source: sourceId,
                 "source-layer": sourceLayer,
+                minzoom,
                 maxzoom,
                 layout: { visibility: visible ? "visible" : "none" },
                 paint: fillPaint as maplibregl.FillLayerSpecification["paint"],
@@ -134,6 +138,7 @@ function PmtilesLayers({
                 type: "line",
                 source: sourceId,
                 "source-layer": sourceLayer,
+                minzoom,
                 maxzoom,
                 layout: { visibility: visible ? "visible" : "none" },
                 paint: {
@@ -166,6 +171,7 @@ function PmtilesLayers({
                 type: "line",
                 source: sourceId,
                 "source-layer": sourceLayer,
+                minzoom,
                 maxzoom,
                 paint: {
                   ...(layer.style.paint as Record<string, unknown>),
@@ -450,14 +456,42 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
     );
   }
 
-  // WFS GeoJSON layers (with optional PMTiles underlay)
+  // WFS GeoJSON layers (with optional PMTiles underlay + raster overview)
   if (layer.source.type === "wfs") {
     const wfsClassFilter = classFilters?.[layer.id]
       ? buildClassFilter(classFilters[layer.id])
       : undefined;
 
+    // Raster overview: pre-rendered PNG tiles at z4-z7 for layers too dense
+    // for vector rendering at province scale (avoids Chrome crashes).
+    const hasRasterOverview = !!layer.rasterOverview;
+    const rasterMaxZoom = layer.rasterOverview?.maxZoom ?? 0;
+
     return (
       <>
+        {/* Raster overview tiles (z4-z7) -- pre-rendered PNGs, zero geometry parsing */}
+        {hasRasterOverview && layer.rasterOverview && (
+          <Source
+            id={`source-${layer.id}-raster`}
+            type="raster"
+            tiles={[layer.rasterOverview.urlTemplate]}
+            tileSize={256}
+            minzoom={layer.rasterOverview.minZoom}
+            maxzoom={layer.rasterOverview.maxZoom + 1}
+            attribution={layer.source.attribution}
+          >
+            <Layer
+              id={`layer-${layer.id}-raster`}
+              type="raster"
+              maxzoom={layer.rasterOverview.maxZoom + 1}
+              paint={{
+                "raster-opacity": visible ? 0.85 : 0,
+                "raster-opacity-transition": { duration: 300 },
+              }}
+            />
+          </Source>
+        )}
+
         {/* PMTiles vector tile source (low zoom) -- added imperatively
             because react-map-gl's declarative <Layer> fails for fill types
             when the PMTiles source loads asynchronously from a remote URL */}
@@ -465,6 +499,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
           <PmtilesLayers
             layer={layer}
             tileMaxZoom={tileMaxZoom}
+            tileMinZoom={hasRasterOverview ? rasterMaxZoom + 1 : undefined}
             visible={visible && !timelineHidesTiles}
             opacity={tileTargetOpacity}
             classFilters={classFilters}

@@ -67,6 +67,14 @@ export interface LayerDefinition {
   source: LayerSource;
   /** Optional PMTiles source for low-zoom pre-built tiles */
   tileSource?: TileSource;
+  /** Optional pre-rendered raster tiles for overview zoom levels (z4-z7).
+   *  Used instead of vector tiles at low zoom to avoid browser crashes
+   *  with hundreds of thousands of features per tile. */
+  rasterOverview?: {
+    urlTemplate: string;
+    minZoom: number;
+    maxZoom: number;
+  };
   /** MapLibre paint/layout specs */
   style: LayerStyle;
   /** Min/max zoom where layer renders */
