@@ -66,7 +66,7 @@ const WFS_ENDPOINTS = {
   forestryRoads:
     "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FTEN_ROAD_SECTION_LINES_SVW/ows",
   conservationPriority:
-    "https://openmaps.gov.bc.ca/geo/pub/WHSE_LAND_USE_PLANNING.OGSR_TAP_PRIORITY_DEF_AREA_CUR_SP/ows",
+    "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.OGSR_PRIORITY_DEF_AREA_CUR_SP/ows",
 } as const;
 
 // BC extent in EPSG:3005 (BC Albers)
@@ -274,9 +274,13 @@ const extractForestryRoads: PropertyExtractor = (props) => ({
 });
 
 const extractConservationPriority: PropertyExtractor = (props) => ({
-  DEFERRAL_STATUS: props.DEFERRAL_STATUS ?? null,
+  TAP_CLASSIFICATION_LABEL: props.TAP_CLASSIFICATION_LABEL ?? null,
   LANDSCAPE_UNIT_NAME: props.LANDSCAPE_UNIT_NAME ?? null,
-  ANCIENT_FLAG: props.ANCIENT_FLAG ?? null,
+  ANCIENT_FOREST_IND: props.ANCIENT_FOREST_IND ?? null,
+  PRIORITY_BIG_TREED_OG_IND: props.PRIORITY_BIG_TREED_OG_IND ?? null,
+  BGC_LABEL: props.BGC_LABEL ?? null,
+  FIELD_VERIFIED_IND: props.FIELD_VERIFIED_IND ?? null,
+  FEATURE_AREA_SQM: props.FEATURE_AREA_SQM ?? null,
 });
 
 // -- Generic layer download ---------------------------------------------------
@@ -1103,7 +1107,7 @@ async function main() {
     },
     {
       endpoint: WFS_ENDPOINTS.conservationPriority,
-      typeName: "pub:WHSE_LAND_USE_PLANNING.OGSR_TAP_PRIORITY_DEF_AREA_CUR_SP",
+      typeName: "pub:WHSE_FOREST_VEGETATION.OGSR_PRIORITY_DEF_AREA_CUR_SP",
       name: "conservation-priority",
       grid: getAllParksGridCells(),
       extract: extractConservationPriority,
