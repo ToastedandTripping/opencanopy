@@ -49,12 +49,12 @@ function rejectPendingForLayer(layerId: string): void {
 
 /** Round bbox values to reduce cache misses on minor viewport changes.
  *  Precision adapts to zoom: coarser rounding at low zoom improves cache hits. */
-function roundBBox(bbox: BBox, precision: number): BBox {
+export function roundBBox(bbox: BBox, precision: number): BBox {
   return bbox.map((v) => Math.round(v * 10 ** precision) / 10 ** precision) as BBox;
 }
 
 /** Build cache key from request params */
-function cacheKey(layerId: string, bbox: BBox, zoom: number): string {
+export function cacheKey(layerId: string, bbox: BBox, zoom: number): string {
   const precision = zoom <= 8 ? 1 : zoom <= 12 ? 2 : 3;
   const rb = roundBBox(bbox, precision);
   return `${layerId}:${rb.join(",")}:${Math.floor(zoom)}`;
