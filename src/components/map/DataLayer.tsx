@@ -264,11 +264,11 @@ function PmtilesLayers({
     // instead of overriding the paint opacity expression with a scalar
     if (mapInstance.getLayer(fillId)) {
       mapInstance.setLayoutProperty(fillId, "visibility", visible ? "visible" : "none");
-      pipelineLog("setPaintProperty", fillId, { property: "visibility", value: visible });
+      pipelineLog("visibility-effect", fillId, { property: "visibility", value: visible });
     }
     if (mapInstance.getLayer(outlineId)) {
       mapInstance.setLayoutProperty(outlineId, "visibility", visible ? "visible" : "none");
-      pipelineLog("setPaintProperty", outlineId, { property: "visibility", value: visible });
+      pipelineLog("visibility-effect", outlineId, { property: "visibility", value: visible });
     }
     // Line layers still use paint opacity (no expression to preserve)
     if (mapInstance.getLayer(lineId)) {
@@ -656,11 +656,11 @@ function WfsLayers({
       // opacity expressions (same approach as PmtilesLayers)
       if (mapInstance.getLayer(fillId)) {
         mapInstance.setLayoutProperty(fillId, "visibility", visible ? "visible" : "none");
-        pipelineLog("setPaintProperty", fillId, { property: "visibility", value: visible });
+        pipelineLog("visibility-effect", fillId, { property: "visibility", value: visible });
       }
       if (mapInstance.getLayer(outlineId)) {
         mapInstance.setLayoutProperty(outlineId, "visibility", visible ? "visible" : "none");
-        pipelineLog("setPaintProperty", outlineId, { property: "visibility", value: visible });
+        pipelineLog("visibility-effect", outlineId, { property: "visibility", value: visible });
       }
     } else if (layer.style.type === "line") {
       const lineId = `layer-${layer.id}-line`;
@@ -688,7 +688,7 @@ function WfsLayers({
       }
       if (mapInstance.getLayer(countId)) {
         mapInstance.setLayoutProperty(countId, "visibility", visible ? "visible" : "none");
-        pipelineLog("setPaintProperty", countId, { property: "visibility", value: visible });
+        pipelineLog("visibility-effect", countId, { property: "visibility", value: visible });
       }
       if (mapInstance.getLayer(circleId)) {
         mapInstance.setPaintProperty(

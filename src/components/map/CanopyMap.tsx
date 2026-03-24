@@ -89,6 +89,10 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
         if (map) pipelineHealthReport(map, LAYER_REGISTRY, enabledLayers);
       };
     }
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (window as any).__OC_HEALTH_REPORT;
+    };
   }, [enabledLayers]);
 
   // Handle click on interactive layers (or delegate to parent interceptor)

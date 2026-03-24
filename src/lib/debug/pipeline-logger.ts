@@ -49,9 +49,8 @@ export function isEnabled(): boolean {
       return true;
     }
 
-    // Check URL query param
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("debug") === "pipeline") {
+    // Check URL query param (fast string pre-check avoids URLSearchParams allocation)
+    if (window.location.search.includes("debug=pipeline")) {
       return true;
     }
   } catch {
@@ -193,7 +192,8 @@ export function pipelineHealthReport(
         } else if (layer.style.type === "circle") {
           expectedLayers.push(
             `layer-${layer.id}-circle`,
-            `layer-${layer.id}-cluster`
+            `layer-${layer.id}-cluster`,
+            `layer-${layer.id}-cluster-count`
           );
         }
 
