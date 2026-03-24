@@ -32,7 +32,7 @@ const WFS_ENDPOINTS = {
   communityWatersheds: "https://openmaps.gov.bc.ca/geo/pub/WHSE_WATER_MANAGEMENT.WLS_COMMUNITY_WS_PUB_SVW/ows",
   miningClaims: "https://openmaps.gov.bc.ca/geo/pub/WHSE_MINERAL_TENURE.MTA_ACQUIRED_TENURE_SVW/ows",
   forestryRoads: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FTEN_ROAD_SECTION_LINES_SVW/ows",
-  conservationPriority: "https://openmaps.gov.bc.ca/geo/pub/WHSE_LAND_USE_PLANNING.OGSR_TAP_PRIORITY_DEF_AREA_CUR_SP/ows",
+  conservationPriority: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.OGSR_PRIORITY_DEF_AREA_CUR_SP/ows",
 } as const;
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
@@ -443,7 +443,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     source: {
       type: "wfs",
       url: WFS_ENDPOINTS.conservationPriority,
-      typeName: "pub:WHSE_LAND_USE_PLANNING.OGSR_TAP_PRIORITY_DEF_AREA_CUR_SP",
+      typeName: "pub:WHSE_FOREST_VEGETATION.OGSR_PRIORITY_DEF_AREA_CUR_SP",
       attribution: "BC OGSR (FLNRORD)",
     },
     tileSource: {
