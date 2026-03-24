@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -22,6 +23,7 @@ import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import { DataLayer } from "./DataLayer";
 import { MapPopup } from "./MapPopup";
 import { TileProgress } from "./TileProgress";
+import { pipelineLog, pipelineHealthReport, isEnabled } from "@/lib/debug/pipeline-logger";
 
 // Register PMTiles protocol globally (idempotent, runs once)
 initPMTiles();
@@ -74,7 +76,20 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
       });
       map.setTerrain({ source: "terrain-rgb", exaggeration: 1.2 });
     }
+
+    pipelineLog("map-load", "CanopyMap ready");
   }, []);
+
+  // Expose health report function on window when debug mode is active
+  useEffect(() => {
+    if (typeof window !== "undefined" && isEnabled()) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__OC_HEALTH_REPORT = () => {
+        const map = mapRef.current?.getMap();
+        if (map) pipelineHealthReport(map, LAYER_REGISTRY, enabledLayers);
+      };
+    }
+  }, [enabledLayers]);
 
   // Handle click on interactive layers (or delegate to parent interceptor)
   const onClick = useCallback(

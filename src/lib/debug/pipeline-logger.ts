@@ -13,6 +13,9 @@
  *   pipelineLog('setPaintProperty', 'story-forest-age-raster', { property: 'raster-opacity', value: 0.6 });
  */
 
+import type maplibregl from "maplibre-gl";
+import type { LayerDefinition } from "@/types/layers";
+
 type PipelineStage =
   | "onLoad"
   | "addSource"
@@ -25,9 +28,16 @@ type PipelineStage =
   | "onStepEnter"
   | "onStepProgress"
   | "updateCamera"
-  | "setYearFilter";
+  | "setYearFilter"
+  | "wfs-fetch"
+  | "wfs-data"
+  | "pmtiles-source"
+  | "pmtiles-layer"
+  | "raster-mount"
+  | "map-load"
+  | "layer-health";
 
-function isEnabled(): boolean {
+export function isEnabled(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
@@ -83,4 +93,183 @@ export function pipelineLog(
  */
 export function _resetPipelineLogger(): void {
   // nothing to reset -- isEnabled() checks live state on each call
+}
+
+// ── Health Report ───────────────────────────────────────────────────
+
+interface HealthRow {
+  Layer: string;
+  Enabled: string;
+  PMTiles: string;
+  WFS: string;
+  Raster: string;
+  Visible: string;
+  Errors: string;
+}
+
+/**
+ * Check whether a MapLibre layer exists and is visible.
+ * Returns "ok" if the layer exists and is visible,
+ * "hidden" if it exists but is not visible, or "" if absent.
+ */
+function checkLayerVisibility(
+  map: maplibregl.Map,
+  layerId: string
+): "ok" | "hidden" | "" {
+  if (!map.getLayer(layerId)) return "";
+  const vis = map.getLayoutProperty(layerId, "visibility");
+  // MapLibre defaults to "visible" if not explicitly set
+  return vis === "none" ? "hidden" : "ok";
+}
+
+/**
+ * Produce a console.table health report for all registered layers.
+ * Checks existence of expected MapLibre sources/layers using naming conventions.
+ *
+ * @param map - The MapLibre GL map instance
+ * @param registry - The full layer registry
+ * @param enabledLayers - Array of currently enabled layer IDs
+ */
+export function pipelineHealthReport(
+  map: maplibregl.Map,
+  registry: LayerDefinition[],
+  enabledLayers: string[]
+): void {
+  if (!isEnabled()) return;
+
+  const rows: HealthRow[] = [];
+
+  for (const layer of registry) {
+    const enabled = enabledLayers.includes(layer.id);
+    const errors: string[] = [];
+
+    // PMTiles check
+    let pmtilesStatus = "-";
+    if (layer.tileSource) {
+      const sourceId = `source-${layer.id}-tiles`;
+      const hasSource = !!map.getSource(sourceId);
+      if (!hasSource) {
+        pmtilesStatus = "no source";
+        if (enabled) errors.push("PMTiles source missing");
+      } else {
+        const expectedLayers: string[] = [];
+        if (layer.style.type === "fill") {
+          expectedLayers.push(
+            `layer-${layer.id}-tiles-fill`,
+            `layer-${layer.id}-tiles-outline`
+          );
+        } else if (layer.style.type === "line") {
+          expectedLayers.push(`layer-${layer.id}-tiles-line`);
+        }
+
+        const found = expectedLayers.filter((id) => !!map.getLayer(id));
+        if (found.length === expectedLayers.length) {
+          pmtilesStatus = "ok";
+        } else {
+          const missing = expectedLayers.filter((id) => !map.getLayer(id));
+          pmtilesStatus = `${found.length}/${expectedLayers.length}`;
+          if (enabled) errors.push(`Missing: ${missing.join(", ")}`);
+        }
+      }
+    }
+
+    // WFS check
+    let wfsStatus = "-";
+    if (layer.source.type === "wfs") {
+      const sourceId = `source-${layer.id}`;
+      const hasSource = !!map.getSource(sourceId);
+      if (!hasSource) {
+        wfsStatus = "no source";
+        if (enabled) errors.push("WFS source missing");
+      } else {
+        const expectedLayers: string[] = [];
+        if (layer.style.type === "fill") {
+          expectedLayers.push(
+            `layer-${layer.id}-fill`,
+            `layer-${layer.id}-outline`
+          );
+        } else if (layer.style.type === "line") {
+          expectedLayers.push(`layer-${layer.id}-line`);
+        } else if (layer.style.type === "circle") {
+          expectedLayers.push(
+            `layer-${layer.id}-circle`,
+            `layer-${layer.id}-cluster`
+          );
+        }
+
+        const found = expectedLayers.filter((id) => !!map.getLayer(id));
+        if (found.length === expectedLayers.length) {
+          wfsStatus = "ok";
+        } else {
+          const missing = expectedLayers.filter((id) => !map.getLayer(id));
+          wfsStatus = `${found.length}/${expectedLayers.length}`;
+          if (enabled) errors.push(`Missing: ${missing.join(", ")}`);
+        }
+      }
+    }
+
+    // Raster check
+    let rasterStatus = "-";
+    if (layer.rasterOverview) {
+      const sourceId = `source-${layer.id}-raster`;
+      const layerId = `layer-${layer.id}-raster`;
+      const hasSource = !!map.getSource(sourceId);
+      if (!hasSource) {
+        rasterStatus = "no source";
+        if (enabled) errors.push("Raster source missing");
+      } else if (!map.getLayer(layerId)) {
+        rasterStatus = "no layer";
+        if (enabled) errors.push("Raster layer missing");
+      } else {
+        rasterStatus = "ok";
+      }
+    } else if (layer.source.type === "raster") {
+      const sourceId = `source-${layer.id}`;
+      const layerId = `layer-${layer.id}`;
+      const hasSource = !!map.getSource(sourceId);
+      if (!hasSource) {
+        rasterStatus = "no source";
+        if (enabled) errors.push("Raster source missing");
+      } else if (!map.getLayer(layerId)) {
+        rasterStatus = "no layer";
+        if (enabled) errors.push("Raster layer missing");
+      } else {
+        rasterStatus = "ok";
+      }
+    }
+
+    // Visibility check -- look at the primary render layer
+    let visibleStatus = "-";
+    if (enabled) {
+      if (layer.style.type === "fill") {
+        const tileVis = checkLayerVisibility(map, `layer-${layer.id}-tiles-fill`);
+        const wfsVis = checkLayerVisibility(map, `layer-${layer.id}-fill`);
+        const rasterVis = checkLayerVisibility(map, `layer-${layer.id}-raster`);
+        const statuses = [tileVis, wfsVis, rasterVis].filter(Boolean);
+        visibleStatus = statuses.includes("ok") ? "ok" : statuses.includes("hidden") ? "hidden" : "none";
+      } else if (layer.style.type === "line") {
+        const tileVis = checkLayerVisibility(map, `layer-${layer.id}-tiles-line`);
+        const wfsVis = checkLayerVisibility(map, `layer-${layer.id}-line`);
+        const statuses = [tileVis, wfsVis].filter(Boolean);
+        visibleStatus = statuses.includes("ok") ? "ok" : statuses.includes("hidden") ? "hidden" : "none";
+      } else if (layer.style.type === "circle") {
+        visibleStatus = checkLayerVisibility(map, `layer-${layer.id}-circle`) || "none";
+      } else if (layer.source.type === "raster") {
+        visibleStatus = checkLayerVisibility(map, `layer-${layer.id}`) || "none";
+      }
+    }
+
+    rows.push({
+      Layer: layer.id,
+      Enabled: enabled ? "yes" : "",
+      PMTiles: pmtilesStatus,
+      WFS: wfsStatus,
+      Raster: rasterStatus,
+      Visible: visibleStatus,
+      Errors: errors.join("; "),
+    });
+  }
+
+  pipelineLog("layer-health", "Pipeline Health Report");
+  console.table(rows);
 }

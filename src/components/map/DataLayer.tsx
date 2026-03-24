@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
 import maplibregl, { GeoJSONSource, type FilterSpecification } from "maplibre-gl";
 import type { LayerDefinition, BBox } from "@/types/layers";
 import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
+import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
 interface DataLayerProps {
   layer: LayerDefinition;
@@ -74,6 +75,7 @@ function PmtilesLayers({
           url: layer.tileSource!.url,
           attribution: layer.source.attribution,
         });
+        pipelineLog("pmtiles-source", layer.id, { sourceId, action: "registered" });
       }
     }
 
@@ -124,6 +126,7 @@ function PmtilesLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("pmtiles-layer", `layer-${layer.id}-tiles-fill`, { type: "fill", minzoom, maxzoom });
           }
           if (!mapInstance.getLayer(`layer-${layer.id}-tiles-outline`)) {
             mapInstance.addLayer(
@@ -156,6 +159,7 @@ function PmtilesLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("pmtiles-layer", `layer-${layer.id}-tiles-outline`, { type: "line", minzoom, maxzoom });
           }
         } else if (layer.style.type === "line") {
           if (!mapInstance.getLayer(`layer-${layer.id}-tiles-line`)) {
@@ -177,6 +181,7 @@ function PmtilesLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("pmtiles-layer", `layer-${layer.id}-tiles-line`, { type: "line", minzoom, maxzoom });
           }
         }
       } catch (err) {
@@ -195,6 +200,7 @@ function PmtilesLayers({
 
       // If the source is already loaded (e.g. re-render), add layers immediately
       if (mapInstance.isSourceLoaded(sourceId)) {
+        pipelineLog("pmtiles-source", layer.id, { sourceId, action: "loaded" });
         addLayersToMap();
         return;
       }
@@ -205,6 +211,7 @@ function PmtilesLayers({
           mapInstance.off("sourcedata", sourcedataHandler!);
           sourcedataHandler = null;
           if (timeoutId) clearTimeout(timeoutId);
+          pipelineLog("pmtiles-source", layer.id, { sourceId, action: "loaded" });
           addLayersToMap();
         }
       };
@@ -215,6 +222,7 @@ function PmtilesLayers({
         if (sourcedataHandler) {
           mapInstance.off("sourcedata", sourcedataHandler);
           sourcedataHandler = null;
+          pipelineLog("pmtiles-source", layer.id + " TIMEOUT", { sourceId });
           console.warn(`[OpenCanopy] PMTiles source for ${layer.id} failed to load within 15s`);
         }
       }, 15_000);
@@ -256,9 +264,11 @@ function PmtilesLayers({
     // instead of overriding the paint opacity expression with a scalar
     if (mapInstance.getLayer(fillId)) {
       mapInstance.setLayoutProperty(fillId, "visibility", visible ? "visible" : "none");
+      pipelineLog("setPaintProperty", fillId, { property: "visibility", value: visible });
     }
     if (mapInstance.getLayer(outlineId)) {
       mapInstance.setLayoutProperty(outlineId, "visibility", visible ? "visible" : "none");
+      pipelineLog("setPaintProperty", outlineId, { property: "visibility", value: visible });
     }
     // Line layers still use paint opacity (no expression to preserve)
     if (mapInstance.getLayer(lineId)) {
@@ -267,6 +277,7 @@ function PmtilesLayers({
         "line-opacity",
         visible ? (layer.style.paint["line-opacity"] as number) ?? 0.8 : 0
       );
+      pipelineLog("setPaintProperty", lineId, { property: "line-opacity", value: visible });
     }
   }, [map, layer.id, layer.tileSource, layer.style.paint, visible]);
 
@@ -287,6 +298,7 @@ function PmtilesLayers({
       if (mapInstance.getLayer(fillId)) mapInstance.setFilter(fillId, null);
       if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, null);
     }
+    pipelineLog("setFilter", layer.id, { type: "pmtiles", filter: activeFilter ?? "none" });
   }, [map, layer.id, layer.tileSource, classFilters]);
 
   return null; // No DOM output -- layers managed imperatively
@@ -399,6 +411,7 @@ function WfsLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("addLayer", `layer-${layer.id}-fill`, { type: "fill", minzoom: wfsMinZoom });
           }
           if (!mapInstance.getLayer(`layer-${layer.id}-outline`)) {
             mapInstance.addLayer(
@@ -419,6 +432,7 @@ function WfsLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("addLayer", `layer-${layer.id}-outline`, { type: "line", minzoom: wfsMinZoom });
           }
         } else if (layer.style.type === "line") {
           if (!mapInstance.getLayer(`layer-${layer.id}-line`)) {
@@ -455,6 +469,7 @@ function WfsLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("addLayer", `layer-${layer.id}-line`, { type: "line", minzoom: wfsMinZoom });
           }
         } else if (layer.style.type === "circle") {
           // Cluster circles
@@ -484,6 +499,7 @@ function WfsLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("addLayer", `layer-${layer.id}-cluster`, { type: "circle", cluster: true });
           }
           // Cluster count labels
           if (!mapInstance.getLayer(`layer-${layer.id}-cluster-count`)) {
@@ -502,6 +518,7 @@ function WfsLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("addLayer", `layer-${layer.id}-cluster-count`, { type: "symbol" });
           }
           // Unclustered individual points
           if (!mapInstance.getLayer(`layer-${layer.id}-circle`)) {
@@ -540,6 +557,7 @@ function WfsLayers({
               },
               firstSymbolId,
             );
+            pipelineLog("addLayer", `layer-${layer.id}-circle`, { type: "circle", minzoom: wfsMinZoom });
           }
         }
 
@@ -578,6 +596,7 @@ function WfsLayers({
           sourceOpts.clusterRadius = 50;
         }
         mapInstance.addSource(sourceId, sourceOpts);
+        pipelineLog("addSource", layer.id, { type: "geojson", cluster: layer.style.type === "circle" });
       }
 
       addLayersToMap();
@@ -620,6 +639,7 @@ function WfsLayers({
     const source = mapInstance.getSource(sourceId) as GeoJSONSource | undefined;
     if (source) {
       source.setData(filteredData);
+      pipelineLog("wfs-data", layer.id, { features: filteredData.features.length });
     }
   }, [map, layer.id, filteredData]);
 
@@ -636,9 +656,11 @@ function WfsLayers({
       // opacity expressions (same approach as PmtilesLayers)
       if (mapInstance.getLayer(fillId)) {
         mapInstance.setLayoutProperty(fillId, "visibility", visible ? "visible" : "none");
+        pipelineLog("setPaintProperty", fillId, { property: "visibility", value: visible });
       }
       if (mapInstance.getLayer(outlineId)) {
         mapInstance.setLayoutProperty(outlineId, "visibility", visible ? "visible" : "none");
+        pipelineLog("setPaintProperty", outlineId, { property: "visibility", value: visible });
       }
     } else if (layer.style.type === "line") {
       const lineId = `layer-${layer.id}-line`;
@@ -649,6 +671,7 @@ function WfsLayers({
           "line-opacity",
           visible ? (layer.style.paint["line-opacity"] as number) ?? 0.8 : 0
         );
+        pipelineLog("setPaintProperty", lineId, { property: "line-opacity", value: visible });
       }
     } else if (layer.style.type === "circle") {
       const clusterId = `layer-${layer.id}-cluster`;
@@ -661,9 +684,11 @@ function WfsLayers({
           "circle-opacity",
           visible ? (layer.style.opacity ?? 0.7) : 0
         );
+        pipelineLog("setPaintProperty", clusterId, { property: "circle-opacity", value: visible });
       }
       if (mapInstance.getLayer(countId)) {
         mapInstance.setLayoutProperty(countId, "visibility", visible ? "visible" : "none");
+        pipelineLog("setPaintProperty", countId, { property: "visibility", value: visible });
       }
       if (mapInstance.getLayer(circleId)) {
         mapInstance.setPaintProperty(
@@ -676,6 +701,7 @@ function WfsLayers({
           "circle-stroke-opacity",
           visible ? 1 : 0
         );
+        pipelineLog("setPaintProperty", circleId, { property: "circle-opacity", value: visible });
       }
     }
   }, [map, layer.id, layer.style.type, layer.style.paint, layer.style.opacity, visible]);
@@ -713,9 +739,25 @@ function WfsLayers({
       if (mapInstance.getLayer(fillId)) mapInstance.setFilter(fillId, null);
       if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, null);
     }
+    pipelineLog("setFilter", layer.id, { type: "wfs", filter: activeFilter ?? "none" });
   }, [map, layer.id, classFilters]);
 
   return null; // No DOM output -- layers managed imperatively
+}
+
+/**
+ * Raster overview mount logger.
+ * Logs when a raster overview source is mounted in the DOM.
+ */
+function RasterMountLogger({ layerId }: { layerId: string }) {
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      pipelineLog("raster-mount", layerId);
+    }
+  }, [layerId]);
+  return null;
 }
 
 /**
@@ -813,11 +855,16 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
       bbox[3] + latSpan * 0.2,
     ];
 
+    pipelineLog("wfs-fetch", layer.id, { bbox: paddedBbox, zoom });
+
     setLoading(true);
     setLayerLoading(layer.id, true);
+    const fetchStart = performance.now();
     try {
       const fc = await fetchLayerData(layer.id, paddedBbox, zoom, layer.fetchPriority);
       setData(fc);
+      const elapsed = (performance.now() - fetchStart).toFixed(0);
+      pipelineLog("wfs-data", layer.id, { features: fc.features.length, elapsed: elapsed + "ms" });
     } catch (err) {
       console.error(`Failed to load layer ${layer.id}:`, err);
     } finally {
@@ -905,6 +952,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
                 "raster-opacity-transition": { duration: 300 },
               }}
             />
+            <RasterMountLogger layerId={layer.id} />
           </Source>
         )}
 
