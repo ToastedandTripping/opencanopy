@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "build-tiles": "npx tsx scripts/build-tiles.ts",
-    "build-tiles:test": "npx tsx scripts/build-tiles.ts --region 5,5"
+    "build-tiles:test": "npx tsx scripts/build-tiles.ts --region 5,5",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@turf/area": "^7.3.4",
@@ -26,13 +30,18 @@
     "scrollama": "^3.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
+    "happy-dom": "^20.8.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.1"
   }
 }
