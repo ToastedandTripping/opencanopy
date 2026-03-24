@@ -115,10 +115,10 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
 
   {
     id: "logging-risk",
-    label: "Logging Vulnerability",
+    label: "Forest Age (Risk View)",
     category: "forest",
     description:
-      "Unprotected forest by timber value. Higher value = higher logging pressure.",
+      "Forest age classes colored by logging pressure. Not a true vulnerability analysis -- shows age-based risk proxy only.",
     source: {
       type: "wfs",
       url: WFS_ENDPOINTS.vri,
