@@ -61,9 +61,16 @@ function formatPropertyName(key: string): string {
     ROAD_SECTION_NAME: "Road Name",
     ROAD_CLASS: "Road Class",
     // Conservation priority
-    PRIORITY_DEFERRAL_ID: "Deferral ID",
-    DEFERRAL_STATUS: "Status",
-    ANCIENT_FLAG: "Ancient Forest",
+    CURRENT_PRIORITY_DEFERRAL_ID: "Deferral ID",
+    TAP_CLASSIFICATION_LABEL: "Classification",
+    ANCIENT_FOREST_IND: "Ancient Forest",
+    PRIORITY_BIG_TREED_OG_IND: "Priority Big-Treed OG",
+    REMNANT_OLD_ECOSYS_IND: "Remnant Old Ecosystem",
+    BGC_LABEL: "BEC Zone",
+    FIELD_VERIFIED_IND: "Field Verified",
+    REGION_NAME: "Region",
+    DISTRICT_NAME: "District",
+    FEATURE_AREA_SQM: "Area",
   };
   return labels[key] || key.replace(/_/g, " ").toLowerCase();
 }
@@ -72,6 +79,9 @@ function formatPropertyName(key: string): string {
 function formatPropertyValue(key: string, value: unknown): string {
   if (value === null || value === undefined) return "--";
 
+  if (key === "FEATURE_AREA_SQM" && typeof value === "number") {
+    return `${(value / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 })} ha`;
+  }
   if (
     (key === "POLYGON_AREA" || key === "FIRE_SIZE_HECTARES" ||
      key === "AREA_HA" || key === "TENURE_AREA_IN_HECTARE") &&
@@ -139,14 +149,18 @@ const PRIORITY_KEYS = [
   "ROAD_SECTION_NAME",
   "ROAD_CLASS",
   // Conservation priority
-  "DEFERRAL_STATUS",
+  "TAP_CLASSIFICATION_LABEL",
+  "ANCIENT_FOREST_IND",
+  "BGC_LABEL",
+  "REGION_NAME",
+  "DISTRICT_NAME",
+  "FEATURE_AREA_SQM",
 ];
 
 /** Keys to exclude from display */
 const EXCLUDE_KEYS = new Set([
   "OBJECTID",
   "FEATURE_ID",
-  "FEATURE_AREA_SQM",
   "FEATURE_LENGTH_M",
   "SE_ANNO_CAD_DATA",
   "SHAPE",
