@@ -222,7 +222,7 @@ def write_tile_png(rgba: np.ndarray, path: Path):
 
 # ── Main pipeline ────────────────────────────────────────────────
 
-def build_theme(theme_name: str, features: list, zoom_range: range = range(4, 8)):
+def build_theme(theme_name: str, features: list, zoom_range: range = range(4, 11)):
     """Build all PNG tiles for a theme across zoom levels."""
     theme = THEMES[theme_name]
     theme_dir = OUTPUT_DIR / theme_name

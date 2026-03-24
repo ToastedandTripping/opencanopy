@@ -75,6 +75,11 @@ export interface LayerDefinition {
     minZoom: number;
     maxZoom: number;
   };
+  /** Optional URL template for per-class raster tiles (e.g. old-growth only).
+   *  Contains a `{class}` placeholder replaced at runtime with the class slug.
+   *  When a class filter selects a subset, these class-specific raster sources
+   *  are shown instead of the default all-class rasterOverview. */
+  rasterOverviewClassUrl?: string;
   /** MapLibre paint/layout specs */
   style: LayerStyle;
   /** Min/max zoom where layer renders */

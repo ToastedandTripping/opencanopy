@@ -30,6 +30,17 @@ const CLASS_LABEL_MAP: Record<string, string> = {
   "Logged": "harvested",
 };
 
+/** Canonical class slugs for per-class raster tile sources. */
+const CLASS_NAMES = ["old-growth", "mature", "harvested", "young"];
+
+/** Raster theme colors for vector fill-color overrides.
+ *  When a single class is filtered and its raster tiles use a distinctive color,
+ *  the vector PMTiles fill-color must match to avoid a jarring color jump at
+ *  the raster-to-vector zoom transition (e.g. gold old-growth raster -> green vector). */
+const RASTER_THEME_COLORS: Record<string, string> = {
+  "old-growth": "#eab308",  // gold (default vector color is #0d5c2a green)
+};
+
 const EMPTY_FC: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
   features: [],
@@ -300,6 +311,32 @@ function PmtilesLayers({
     }
     pipelineLog("setFilter", layer.id, { type: "pmtiles", filter: activeFilter ?? "none" });
   }, [map, layer.id, layer.tileSource, classFilters]);
+
+  // Override fill-color when a single class is filtered to match raster theme.
+  // Prevents jarring color jump at raster->vector zoom transition
+  // (e.g. gold old-growth raster at z10 -> green vector at z11).
+  useEffect(() => {
+    if (!map || !layer.tileSource || layer.style.type !== "fill") return;
+    const mapInstance = map.getMap();
+    const fillId = `layer-${layer.id}-tiles-fill`;
+    if (!mapInstance.getLayer(fillId)) return;
+
+    const activeFilter = classFilters?.[layer.id];
+    if (activeFilter && activeFilter.length === 1) {
+      const cls = CLASS_LABEL_MAP[activeFilter[0]];
+      const themeColor = RASTER_THEME_COLORS[cls];
+      if (themeColor) {
+        mapInstance.setPaintProperty(fillId, "fill-color", themeColor);
+        pipelineLog("setPaintProperty", fillId, { property: "fill-color", value: themeColor, reason: "class-theme-override" });
+        return;
+      }
+    }
+    // Reset to registry default when no single-class filter active
+    if (layer.style.paint["fill-color"] != null) {
+      mapInstance.setPaintProperty(fillId, "fill-color", layer.style.paint["fill-color"]);
+      pipelineLog("setPaintProperty", fillId, { property: "fill-color", value: "registry-default" });
+    }
+  }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.paint, classFilters]);
 
   return null; // No DOM output -- layers managed imperatively
 }
@@ -930,30 +967,67 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
     const hasRasterOverview = !!layer.rasterOverview;
     const rasterMaxZoom = layer.rasterOverview?.maxZoom ?? 0;
 
+    // Determine which per-class rasters to show based on class filter state
+    const activeClasses = classFilters?.[layer.id]
+      ? classFilters[layer.id].map(label => CLASS_LABEL_MAP[label]).filter(Boolean)
+      : null;
+    const allClassesSelected = !activeClasses || activeClasses.length === CLASS_NAMES.length || activeClasses.length === 0;
+    const showDefault = allClassesSelected;
+
     return (
       <>
-        {/* Raster overview tiles (z4-z7) -- pre-rendered PNGs, zero geometry parsing */}
+        {/* Raster overview tiles -- pre-rendered PNGs, zero geometry parsing.
+            5 sources for forest-age: 1 default (all-class) + 4 per-class.
+            Only one set has non-zero opacity at a time. Pre-mounted to avoid
+            unmount/remount flash -- MapLibre lazy-loads inactive raster tiles. */}
         {hasRasterOverview && layer.rasterOverview && (
-          <Source
-            id={`source-${layer.id}-raster`}
-            type="raster"
-            tiles={[layer.rasterOverview.urlTemplate]}
-            tileSize={256}
-            minzoom={layer.rasterOverview.minZoom}
-            maxzoom={layer.rasterOverview.maxZoom + 1}
-            attribution={layer.source.attribution}
-          >
-            <Layer
-              id={`layer-${layer.id}-raster`}
+          <>
+            {/* Default all-class raster (always mounted) */}
+            <Source
+              id={`source-${layer.id}-raster`}
               type="raster"
+              tiles={[layer.rasterOverview.urlTemplate]}
+              tileSize={256}
+              minzoom={layer.rasterOverview.minZoom}
               maxzoom={layer.rasterOverview.maxZoom + 1}
-              paint={{
-                "raster-opacity": visible ? 0.85 : 0,
-                "raster-opacity-transition": { duration: 300 },
-              }}
-            />
-            <RasterMountLogger layerId={layer.id} />
-          </Source>
+              attribution={layer.source.attribution}
+            >
+              <Layer
+                id={`layer-${layer.id}-raster`}
+                type="raster"
+                maxzoom={layer.rasterOverview.maxZoom + 1}
+                paint={{
+                  "raster-opacity": visible && showDefault ? 0.85 : 0,
+                  "raster-opacity-transition": { duration: 300 },
+                }}
+              />
+              <RasterMountLogger layerId={layer.id} />
+            </Source>
+
+            {/* Per-class raster sources (only when rasterOverviewClassUrl configured) */}
+            {layer.rasterOverviewClassUrl && CLASS_NAMES.map(cls => (
+              <Source
+                key={cls}
+                id={`source-${layer.id}-raster-${cls}`}
+                type="raster"
+                tiles={[layer.rasterOverviewClassUrl!.replace("{class}", cls)]}
+                tileSize={256}
+                minzoom={layer.rasterOverview!.minZoom}
+                maxzoom={layer.rasterOverview!.maxZoom + 1}
+                attribution={layer.source.attribution}
+              >
+                <Layer
+                  id={`layer-${layer.id}-raster-${cls}`}
+                  type="raster"
+                  maxzoom={layer.rasterOverview!.maxZoom + 1}
+                  paint={{
+                    "raster-opacity": visible && !showDefault && activeClasses?.includes(cls) ? 0.85 : 0,
+                    "raster-opacity-transition": { duration: 300 },
+                  }}
+                />
+              </Source>
+            ))}
+          </>
         )}
 
         {/* PMTiles vector tile source (low zoom) -- added imperatively

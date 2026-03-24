@@ -65,6 +65,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       minZoom: 4,
       maxZoom: 10,
     },
+    rasterOverviewClassUrl: "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/{class}/{z}/{x}/{y}.png",
     style: {
       type: "fill",
       paint: {
