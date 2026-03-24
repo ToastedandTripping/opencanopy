@@ -8,6 +8,8 @@
  * lifecycle effects in StoryMap.
  */
 
+import { pipelineLog } from "@/lib/debug/pipeline-logger";
+
 /** Raster overview tiles for forest-age at province zoom (z4-z8). */
 const RASTER_OVERVIEW_URL =
   "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png";
@@ -78,6 +80,8 @@ export function setupStoryLayers(
   const firstSymbolId = map.getStyle().layers.find(
     (l) => l.type === "symbol"
   )?.id;
+
+  pipelineLog("onLoad", "registering sources", { firstSymbolId, terrainEnabled: terrain.enabled });
 
   // ── Terrain DEM source ──────────────────────────────────────────
   if (terrain.enabled && !map.getSource("terrain-rgb")) {
@@ -308,4 +312,9 @@ export function setupStoryLayers(
       firstSymbolId,
     );
   }
+
+  pipelineLog("onLoad", "all sources and layers registered", {
+    layerIds: STORY_LAYER_IDS,
+    sourceIds: STORY_SOURCE_IDS,
+  });
 }

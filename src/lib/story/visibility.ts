@@ -7,6 +7,7 @@
  */
 
 import type { ChapterLayer } from "@/data/chapters";
+import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
 /**
  * Map interface sufficient for visibility operations.
@@ -34,7 +35,10 @@ export function applyLayerVisibility(
   hatchEnabled: boolean,
   yearFilter: number | null
 ): void {
-  if (!map.isStyleLoaded()) return;
+  if (!map.isStyleLoaded()) {
+    pipelineLog("visibility-effect", "skipped: style not loaded");
+    return;
+  }
 
   const layerIds = ["forest-age", "cutblocks", "fire-history", "parks"];
   const activeLayers = Object.fromEntries(
@@ -45,10 +49,12 @@ export function applyLayerVisibility(
   const forestAgeActive = activeLayers["forest-age"];
   const rasterLayerId = "story-forest-age-raster";
   if (map.getLayer(rasterLayerId)) {
+    const rasterOpacity = forestAgeActive ? Math.min(forestAgeActive.opacity, 0.85) : 0;
+    pipelineLog("setPaintProperty", rasterLayerId, { property: "raster-opacity", value: rasterOpacity });
     map.setPaintProperty(
       rasterLayerId,
       "raster-opacity",
-      forestAgeActive ? Math.min(forestAgeActive.opacity, 0.85) : 0
+      rasterOpacity
     );
   }
 

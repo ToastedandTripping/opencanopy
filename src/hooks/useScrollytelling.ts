@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CHAPTERS, type ChapterCamera } from "@/data/chapters";
 import { normalizeAngle, interpolateCamera } from "@/lib/math/interpolation";
+import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
 /** Check if user prefers reduced motion (cached per session). */
 function prefersReducedMotion(): boolean {
@@ -39,12 +40,19 @@ export function useScrollytelling() {
         camera = { ...chapter.camera, center: [...chapter.camera.center] };
       }
 
+      pipelineLog("updateCamera", `chapter=${chapterIdx}`, {
+        zoom: camera.zoom,
+        center: camera.center,
+        prog,
+      });
+
       // Timeline scrub: map progress to year
       if (chapter.timelineScrub) {
         const year = Math.round(
           chapter.timelineScrub.start +
             (chapter.timelineScrub.end - chapter.timelineScrub.start) * prog
         );
+        pipelineLog("setYearFilter", String(year));
         setYearFilter(year);
       } else {
         setYearFilter(null);
@@ -115,6 +123,7 @@ export function useScrollytelling() {
         })
         .onStepEnter((response) => {
           if (destroyed) return;
+          pipelineLog("onStepEnter", `index=${response.index}`);
           setActiveChapterIndex(response.index);
           updateCamera(response.index, progressRef.current);
         })

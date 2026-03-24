@@ -9,6 +9,7 @@ import type { ChapterCamera, ChapterTerrain, ChapterFog, ChapterLayer } from "@/
 import { createHatchPattern } from "./HatchPattern";
 import { setupStoryLayers } from "@/lib/story/setup-layers";
 import { applyLayerVisibility, applyTimelineFilter } from "@/lib/story/visibility";
+import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
 initPMTiles();
 
@@ -155,6 +156,14 @@ export function StoryMap({
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
+    pipelineLog("visibility-effect", "entry", {
+      isStyleLoaded: map.isStyleLoaded(),
+      layerCount: layers.length,
+      layerIds: layers.map((l) => l.id),
+      hatchEnabled,
+      yearFilter,
+      mapLoaded,
+    });
     applyLayerVisibility(map, layers, hatchEnabled, yearFilter);
   }, [layers, hatchEnabled, yearFilter, mapLoaded]);
 
@@ -162,6 +171,7 @@ export function StoryMap({
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
+    pipelineLog("timeline-effect", "entry", { yearFilter, layerCount: layers.length });
     applyTimelineFilter(map, layers, yearFilter);
   }, [yearFilter, layers, mapLoaded]);
 
@@ -170,6 +180,8 @@ export function StoryMap({
     const map = mapRef.current?.getMap();
     if (!map) return;
 
+    pipelineLog("onLoad", "start");
+
     // Register all story sources and layers via extracted setup function
     const hatchPattern = !hatchAddedRef.current ? createHatchPattern() : null;
     setupStoryLayers(map, {
@@ -177,6 +189,8 @@ export function StoryMap({
       hatchPattern,
     });
     if (hatchPattern) hatchAddedRef.current = true;
+
+    pipelineLog("onLoad", "layers registered");
 
     // ── Terrain tile prefetch for Fairy Creek ───────────────────────
     // Pre-request DEM tiles at Fairy Creek so the valley dive is smooth.
@@ -204,6 +218,8 @@ export function StoryMap({
     // Signal that map is loaded -- triggers layer visibility + timeline effects
     mapReadyRef.current = true;
     setMapLoaded(true);
+    pipelineLog("setMapLoaded", "true");
+    pipelineLog("onLoad", "end");
   }, []);
 
   return (
