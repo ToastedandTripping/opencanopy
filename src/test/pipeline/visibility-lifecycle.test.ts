@@ -518,16 +518,7 @@ describe("visibility lifecycle", () => {
       ).toBe(0.6);
     });
 
-    it("HYPOTHESIS C: mapRef.current null check", () => {
-      // In the real component, if mapRef.current is null, the effect
-      // returns early. This test confirms the extracted function
-      // handles it correctly by virtue of never being called
-      // (the null check is in the useEffect wrapper, not in the function).
-      //
-      // The extracted function always receives a valid map object,
-      // so this hypothesis is not testable at this level -- it's
-      // handled by the React component's null guard.
-    });
+    it.todo("HYPOTHESIS C: mapRef.current null check -- guarded by useEffect wrapper, not testable at this level");
 
     it("HYPOTHESIS D: isStyleLoaded gate prevents paint when style not ready", () => {
       simulateOnLoad();

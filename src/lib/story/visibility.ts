@@ -16,7 +16,7 @@ import { pipelineLog } from "@/lib/debug/pipeline-logger";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface VisibilityMap {
   getLayer(id: string): unknown;
-  isStyleLoaded(): boolean | void;
+  isStyleLoaded(): boolean;
   setPaintProperty(layerId: string, prop: string, value: any): void;  // eslint-disable-line @typescript-eslint/no-explicit-any
   setFilter(layerId: string, filter: any): void;                      // eslint-disable-line @typescript-eslint/no-explicit-any
 }

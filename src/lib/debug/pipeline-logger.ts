@@ -27,34 +27,27 @@ type PipelineStage =
   | "updateCamera"
   | "setYearFilter";
 
-let _enabled: boolean | null = null;
-
 function isEnabled(): boolean {
-  if (_enabled !== null) return _enabled;
-
   if (typeof window === "undefined") {
-    _enabled = false;
     return false;
   }
 
   try {
-    // Check localStorage
+    // Check on every call -- localStorage.getItem is fast (~0.01ms)
+    // and this avoids stale cache if OC_DEBUG is toggled at runtime.
     if (localStorage.getItem("OC_DEBUG") === "true") {
-      _enabled = true;
       return true;
     }
 
     // Check URL query param
     const params = new URLSearchParams(window.location.search);
     if (params.get("debug") === "pipeline") {
-      _enabled = true;
       return true;
     }
   } catch {
     // localStorage access can throw in some contexts (e.g. sandboxed iframes)
   }
 
-  _enabled = false;
   return false;
 }
 
@@ -76,15 +69,18 @@ export function pipelineLog(
   const prefix = `[OC:${stage}]`;
 
   if (data) {
-    console.log(`%c${prefix} %c${detail}`, "color: #4ade80; font-weight: bold", "color: #a1a1aa", data);
+    console.log(`%c${prefix} %c${detail} %c+${timestamp}ms`, "color: #4ade80; font-weight: bold", "color: #a1a1aa", "color: #6b7280", data);
   } else {
-    console.log(`%c${prefix} %c${detail}`, "color: #4ade80; font-weight: bold", "color: #a1a1aa");
+    console.log(`%c${prefix} %c${detail} %c+${timestamp}ms`, "color: #4ade80; font-weight: bold", "color: #a1a1aa", "color: #6b7280");
   }
 }
 
 /**
- * Reset the enabled cache. Useful for testing.
+ * No-op -- retained for API compatibility.
+ * Previously reset a cached `_enabled` flag. The cache was removed
+ * so isEnabled() checks localStorage on every call (fast, ~0.01ms)
+ * and responds to runtime OC_DEBUG changes without requiring a reset.
  */
 export function _resetPipelineLogger(): void {
-  _enabled = null;
+  // nothing to reset -- isEnabled() checks live state on each call
 }
