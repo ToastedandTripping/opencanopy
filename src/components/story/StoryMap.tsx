@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import Map, { type MapRef, AttributionControl } from "react-map-gl/maplibre";
-import type { FilterSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLES, TERRAIN_SOURCE } from "@/lib/mapConfig";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import type { ChapterCamera, ChapterTerrain, ChapterFog, ChapterLayer } from "@/data/chapters";
 import { createHatchPattern } from "./HatchPattern";
 import { setupStoryLayers } from "@/lib/story/setup-layers";
+import { applyLayerVisibility, applyTimelineFilter } from "@/lib/story/visibility";
 
 initPMTiles();
 
@@ -154,143 +154,15 @@ export function StoryMap({
   // Apply layer visibility and opacity
   useEffect(() => {
     const map = mapRef.current?.getMap();
-    if (!map || !map.isStyleLoaded()) return;
-
-    // All story layers managed in this component
-    const layerIds = ["forest-age", "cutblocks", "fire-history", "parks"];
-
-    // Build a set of active layer IDs for quick lookup
-    const activeLayers = Object.fromEntries(layers.map((l) => [l.id, l])) as Record<string, (typeof layers)[number]>;
-
-    // Raster overview: visible when forest-age is active and zoom <= 10
-    const forestAgeActive = activeLayers["forest-age"];
-    const rasterLayerId = "story-forest-age-raster";
-    if (map.getLayer(rasterLayerId)) {
-      map.setPaintProperty(
-        rasterLayerId,
-        "raster-opacity",
-        forestAgeActive ? Math.min(forestAgeActive.opacity, 0.85) : 0
-      );
-    }
-
-    // For each possible layer, set opacity via imperative paint properties
-    for (const layerId of layerIds) {
-      const storyLayer = activeLayers[layerId];
-      const opacity = storyLayer?.opacity ?? 0;
-
-      const fillId = `story-${layerId}-fill`;
-      const outlineId = `story-${layerId}-outline`;
-
-      // Build class filter expression if specified (e.g. show only old-growth + mature)
-      let classFilterExpr: FilterSpecification | null = null;
-      if (storyLayer?.classFilter && storyLayer.classFilter.length > 0) {
-        classFilterExpr = [
-          "any",
-          ...storyLayer.classFilter.map(
-            (cls) => ["==", ["get", "class"], cls] as FilterSpecification
-          ),
-        ] as FilterSpecification;
-      }
-
-      // Cutblocks filters are managed exclusively by the yearFilter effect
-      // to avoid two useEffects competing over setFilter on the same layer.
-      const isCutblocks = layerId === "cutblocks";
-
-      if (map.getLayer(fillId)) {
-        // Skip opacity override on cutblocks when timeline is active --
-        // the timeline effect manages age-graded fill-opacity per-feature.
-        const isTimelineControlled = isCutblocks && yearFilter != null;
-        if (!isTimelineControlled) {
-          map.setPaintProperty(fillId, "fill-opacity", opacity);
-        }
-        if (!isCutblocks) {
-          map.setFilter(fillId, classFilterExpr);
-        }
-      }
-      if (map.getLayer(outlineId)) {
-        map.setPaintProperty(outlineId, "line-opacity", opacity > 0 ? 0.4 : 0);
-        if (!isCutblocks) {
-          map.setFilter(outlineId, classFilterExpr);
-        }
-      }
-    }
-
-    // Hatch layer
-    const hatchFillId = "story-harvested-hatch";
-    if (map.getLayer(hatchFillId)) {
-      map.setPaintProperty(
-        hatchFillId,
-        "fill-opacity",
-        hatchEnabled ? 0.6 : 0
-      );
-    }
+    if (!map) return;
+    applyLayerVisibility(map, layers, hatchEnabled, yearFilter);
   }, [layers, hatchEnabled, yearFilter, mapLoaded]);
 
   // Apply timeline year filter + age-grading to cutblocks tiles.
-  // The PMTiles tenure-cutblocks layer stores DISTURBANCE_START_DATE as a
-  // date string (e.g. "2004-01-15"). We extract the first 4 chars as year
-  // using a MapLibre expression: ["to-number", ["slice", ["get", "DISTURBANCE_START_DATE"], 0, 4]]
-  //
-  // Age-grading: recent cuts bright (0.8), old cuts faint (0.15).
-  // Implemented as a data-driven fill-opacity expression.
-  //
-  // This effect is the SINGLE AUTHORITY for cutblock filters. It composes
-  // classFilter (from chapter layers) + yearFilter into one expression to
-  // avoid two useEffects racing on map.setFilter for the same layer.
   useEffect(() => {
     const map = mapRef.current?.getMap();
-    if (!map || !map.isStyleLoaded()) return;
-
-    const fillId = "story-cutblocks-fill";
-    const outlineId = "story-cutblocks-outline";
-    if (!map.getLayer(fillId)) return;
-
-    // Build class filter from current chapter config (if any)
-    const cutblocksLayer = layers.find((l) => l.id === "cutblocks");
-    let classFilterExpr: FilterSpecification | null = null;
-    if (cutblocksLayer?.classFilter && cutblocksLayer.classFilter.length > 0) {
-      classFilterExpr = [
-        "any",
-        ...cutblocksLayer.classFilter.map(
-          (cls) => ["==", ["get", "class"], cls] as FilterSpecification
-        ),
-      ] as FilterSpecification;
-    }
-
-    // Expression to extract year from DISTURBANCE_START_DATE string
-    const yearExpr = ["to-number", ["slice", ["get", "DISTURBANCE_START_DATE"], 0, 4]];
-
-    if (yearFilter != null) {
-      // Year filter: only show cutblocks logged on or before the current year
-      const yearFilterExpr = ["<=", yearExpr, yearFilter] as unknown as FilterSpecification;
-
-      // Compose class + year filters into a single expression
-      const composedFilter = classFilterExpr
-        ? (["all", classFilterExpr, yearFilterExpr] as unknown as FilterSpecification)
-        : yearFilterExpr;
-
-      map.setFilter(fillId, composedFilter);
-      if (map.getLayer(outlineId)) map.setFilter(outlineId, composedFilter);
-
-      // Age-graded opacity: newer cuts are brighter, older cuts fade
-      // Distance = yearFilter - feature year. Interpolate opacity.
-      map.setPaintProperty(fillId, "fill-opacity", [
-        "interpolate", ["linear"],
-        ["-", yearFilter, yearExpr],
-        0, 0.8,    // just logged: bright
-        20, 0.4,   // 20 years ago: medium
-        50, 0.15,  // 50+ years ago: faint
-      ]);
-    } else {
-      // Timeline inactive: apply only the class filter (or clear entirely)
-      map.setFilter(fillId, classFilterExpr);
-      if (map.getLayer(outlineId)) map.setFilter(outlineId, classFilterExpr);
-
-      // Reset fill-opacity back to the chapter's scalar value so the stale
-      // data-driven expression from the timeline doesn't linger.
-      const scalarOpacity = cutblocksLayer?.opacity ?? 0;
-      map.setPaintProperty(fillId, "fill-opacity", scalarOpacity);
-    }
+    if (!map) return;
+    applyTimelineFilter(map, layers, yearFilter);
   }, [yearFilter, layers, mapLoaded]);
 
   // On map load: add sources, layers, terrain, hatch pattern
