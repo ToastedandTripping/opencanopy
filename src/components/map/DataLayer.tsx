@@ -316,7 +316,7 @@ function PmtilesLayers({
   // Prevents jarring color jump at raster->vector zoom transition
   // (e.g. gold old-growth raster at z10 -> green vector at z11).
   useEffect(() => {
-    if (!map || !layer.tileSource || layer.style.type !== "fill") return;
+    if (!map || !layer.tileSource || layer.style.type !== "fill" || !layer.rasterOverviewClassUrl) return;
     const mapInstance = map.getMap();
     const fillId = `layer-${layer.id}-tiles-fill`;
     if (!mapInstance.getLayer(fillId)) return;
