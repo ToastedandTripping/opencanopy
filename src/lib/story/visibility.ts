@@ -16,7 +16,7 @@ import { pipelineLog } from "@/lib/debug/pipeline-logger";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface VisibilityMap {
   getLayer(id: string): unknown;
-  isStyleLoaded(): boolean;
+  isStyleLoaded(): boolean | void;
   setPaintProperty(layerId: string, prop: string, value: any): void;  // eslint-disable-line @typescript-eslint/no-explicit-any
   setFilter(layerId: string, filter: any): void;                      // eslint-disable-line @typescript-eslint/no-explicit-any
 }
@@ -33,10 +33,14 @@ export function applyLayerVisibility(
   map: VisibilityMap,
   layers: ChapterLayer[],
   hatchEnabled: boolean,
-  yearFilter: number | null
+  yearFilter: number | null,
+  retryCount = 0
 ): void {
   if (!map.isStyleLoaded()) {
-    pipelineLog("visibility-effect", "skipped: style not loaded");
+    pipelineLog("visibility-effect", "style not loaded, scheduling retry");
+    if (retryCount < 3) {
+      requestAnimationFrame(() => applyLayerVisibility(map, layers, hatchEnabled, yearFilter, retryCount + 1));
+    }
     return;
   }
 
@@ -121,9 +125,16 @@ export function applyLayerVisibility(
 export function applyTimelineFilter(
   map: VisibilityMap,
   layers: ChapterLayer[],
-  yearFilter: number | null
+  yearFilter: number | null,
+  retryCount = 0
 ): void {
-  if (!map.isStyleLoaded()) return;
+  if (!map.isStyleLoaded()) {
+    pipelineLog("timeline-effect", "style not loaded, scheduling retry");
+    if (retryCount < 3) {
+      requestAnimationFrame(() => applyTimelineFilter(map, layers, yearFilter, retryCount + 1));
+    }
+    return;
+  }
 
   const fillId = "story-cutblocks-fill";
   const outlineId = "story-cutblocks-outline";

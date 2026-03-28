@@ -184,10 +184,11 @@ export function StoryMap({
 
     // Register all story sources and layers via extracted setup function
     const hatchPattern = !hatchAddedRef.current ? createHatchPattern() : null;
-    setupStoryLayers(map, {
-      terrain: TERRAIN_SOURCE,
-      hatchPattern,
-    });
+    try {
+      setupStoryLayers(map, { terrain: TERRAIN_SOURCE, hatchPattern });
+    } catch (err) {
+      console.error("[OpenCanopy] setupStoryLayers failed:", err);
+    }
     if (hatchPattern) hatchAddedRef.current = true;
 
     pipelineLog("onLoad", "layers registered");

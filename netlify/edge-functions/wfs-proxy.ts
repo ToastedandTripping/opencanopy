@@ -92,8 +92,8 @@ const LAYER_CONFIG: Record<string, WFSLayerConfig> = {
     // + geometry. The simplification step reduces payload size.
   },
   cutblocks: {
-    url: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.RSLT_FOREST_COVER_INV_SVW/ows",
-    typeName: "pub:WHSE_FOREST_VEGETATION.RSLT_FOREST_COVER_INV_SVW",
+    url: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW/ows",
+    typeName: "pub:WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW",
   },
   "tap-deferrals": {
     url: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.VEG_COMP_LYR_R1_POLY/ows",
@@ -360,9 +360,7 @@ const PROPERTY_WHITELIST: Record<string, string[]> = {
     "class", "PROJ_AGE_1", "SPECIES_CD_1", "PROJ_HEIGHT_1",
     "POLYGON_AREA", "BEC_ZONE_CODE", "HARVEST_DATE", "OBJECTID", "FEATURE_ID",
   ],
-  cutblocks: [
-    "OPENING_ID", "DISTURBANCE_START_DATE", "DISTURBANCE_END_DATE", "FEATURE_AREA_SQM",
-  ],
+  cutblocks: ["company_id", "DISTURBANCE_START_DATE", "PLANNED_GROSS_BLOCK_AREA"],
   "species-at-risk": [
     "SCIENTIFIC_NAME", "ENGLISH_NAME", "BC_LIST", "COSEWIC_STATUS", "ELEMENT_OCCURRENCE_ID",
   ],
@@ -610,7 +608,7 @@ export default async function handler(
   const [albersEast, albersNorth] = wgs84ToBcAlbers(east, north);
 
   // Scale feature count by zoom -- fewer features at wide views
-  const maxFeatures = zoom <= 6 ? 800 : zoom <= 8 ? 1500 : zoom <= 10 ? 2000 : 3000;
+  const maxFeatures = zoom <= 6 ? 2000 : zoom <= 8 ? 3000 : zoom <= 10 ? 5000 : 8000;
 
   const wfsParams = new URLSearchParams({
     service: "WFS",
@@ -665,7 +663,7 @@ export default async function handler(
       }
 
       // Tenure-cutblocks: resolve company from CLIENT_NUMBER
-      if (layerId === "tenure-cutblocks") {
+      if (layerId === "tenure-cutblocks" || layerId === "cutblocks" || layerId === "operating-territories") {
         const props = feature.properties as Record<string, unknown>;
         const cn = String(props.CLIENT_NUMBER ?? "");
         props.company_id = COMPANY_MAP[cn] ?? "other";
