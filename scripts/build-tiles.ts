@@ -32,6 +32,8 @@ import {
   statSync,
   appendFileSync,
   unlinkSync,
+  copyFileSync,
+  readdirSync,
 } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -770,6 +772,49 @@ function appendFeaturesNDJSON(
   }
 }
 
+// -- archive step -------------------------------------------------------------
+
+/**
+ * Archive the current PMTiles before a new build overwrites it.
+ *
+ * - Copies data/tiles/opencanopy.pmtiles to data/tiles/archive/opencanopy-YYYYMMDD.pmtiles
+ * - Creates the archive directory if it doesn't exist
+ * - Retains only the 3 most recent archives (deletes older ones)
+ *
+ * Called BEFORE runTippecanoe so the previous build is preserved even if
+ * the new build fails.
+ */
+function archiveCurrentTiles(): void {
+  const archiveDir = resolve(TILES_DIR, "archive");
+  const outputPath = resolve(TILES_DIR, "opencanopy.pmtiles");
+
+  if (!existsSync(outputPath)) {
+    console.log("  No existing PMTiles to archive — skipping.");
+    return;
+  }
+
+  mkdirSync(archiveDir, { recursive: true });
+
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const archivePath = resolve(archiveDir, `opencanopy-${today}.pmtiles`);
+
+  console.log(`  Archiving current PMTiles → ${archivePath}`);
+  copyFileSync(outputPath, archivePath);
+
+  // Retain only 3 most recent archives
+  const archives = readdirSync(archiveDir)
+    .filter((f) => f.startsWith("opencanopy-") && f.endsWith(".pmtiles"))
+    .sort() // YYYYMMDD is lexicographically sortable
+    .reverse();
+
+  const toDelete = archives.slice(3);
+  for (const name of toDelete) {
+    const p = resolve(archiveDir, name);
+    console.log(`  Removing old archive: ${name}`);
+    try { unlinkSync(p); } catch { /* ignore */ }
+  }
+}
+
 // -- tippecanoe runner --------------------------------------------------------
 
 function runTippecanoe(): boolean {
@@ -923,6 +968,8 @@ async function main() {
 
   if (tilesOnly) {
     console.log("Mode: tiles-only (skipping download, running tippecanoe)\n");
+    console.log("Archiving current PMTiles before rebuild...");
+    archiveCurrentTiles();
     const ok = runTippecanoe();
     process.exit(ok ? 0 : 1);
   }
@@ -1157,8 +1204,10 @@ async function main() {
   if (!skipTiles) {
     const totalElapsed = ((Date.now() - startTime) / 1000 / 60).toFixed(1);
     console.log(
-      `\nDownload phase complete (${totalElapsed} min). Starting tile generation...`
+      `\nDownload phase complete (${totalElapsed} min). Archiving current tiles before rebuild...`
     );
+    archiveCurrentTiles();
+    console.log("Starting tile generation...");
     const ok = runTippecanoe();
     if (!ok) {
       console.log(

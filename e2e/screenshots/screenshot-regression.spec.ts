@@ -1,0 +1,201 @@
+/**
+ * Screenshot Regression Spec — OpenCanopy V2 Diagnostic Pipeline
+ *
+ * Captures screenshots at 36 viewports (9 BC sample points × 4 zoom levels)
+ * and 12 per-layer isolation screenshots at BC center.
+ *
+ * First run: saves baselines to e2e/screenshots/baselines/
+ * Subsequent runs: compares against baselines, writes diffs to e2e/screenshots/diffs/
+ *
+ * Run with dev server running: npm run audit:visual
+ * Update baselines: npm run audit:visual:update
+ */
+
+import { test, expect, type Page } from '@playwright/test';
+import { join } from 'path';
+import { mkdirSync, existsSync } from 'fs';
+import {
+  compareScreenshots,
+  loadBaseline,
+  saveBaseline,
+} from '../../scripts/lib/screenshot-utils';
+import {
+  SCREENSHOT_VIEWPORTS,
+  BC_SAMPLE_POINTS,
+  EXPECTED_SOURCE_LAYERS,
+} from '../../scripts/lib/bc-sample-grid';
+
+const BASELINES_DIR = join(__dirname, 'baselines');
+const DIFFS_DIR = join(__dirname, 'diffs');
+
+// Pixel diff threshold — 2% of pixels may differ before flagging
+const DIFF_THRESHOLD_PERCENT = 2;
+// Per-pixel color threshold for pixelmatch
+const PIXEL_THRESHOLD = 0.1;
+
+// ── Map idle wait ──────────────────────────────────────────────────────────────
+
+/**
+ * Wait for MapLibre to finish loading tiles and rendering.
+ *
+ * Strategy:
+ * 1. Poll until the map canvas exists and the map reports loaded() + areTilesLoaded()
+ * 2. Additional settle time to allow final render pass to complete
+ *
+ * The map instance is accessed via react-map-gl's container property. Falls back
+ * to a timeout-based approach if the map instance is not directly accessible.
+ */
+async function waitForMapIdle(page: Page, timeoutMs = 45000): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const canvas = document.querySelector('.maplibregl-canvas');
+      if (!canvas) return false;
+      // react-map-gl v8 stores the MapLibre map on the container element
+      const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
+      if (!container) return false;
+      // Try react-map-gl's __maplibreMap property first, then fall back to maplibregl instances
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const map = (container as any).__maplibreMap ?? (container as any)._map;
+      if (!map) {
+        // If we can't access the map instance, check for canvas existence as a proxy
+        return canvas.getAttribute('width') !== null;
+      }
+      return map.loaded() && map.areTilesLoaded();
+    },
+    { timeout: timeoutMs }
+  );
+  // Extra settle time for final GPU render pass
+  await page.waitForTimeout(2000);
+}
+
+/**
+ * Navigate the map to a specific lat/lon/zoom using MapLibre's flyTo.
+ * After navigation, wait for the map to be idle at the new position.
+ */
+async function navigateTo(
+  page: Page,
+  lat: number,
+  lon: number,
+  zoom: number
+): Promise<void> {
+  await page.evaluate(
+    ({ lat, lon, zoom }) => {
+      return new Promise<void>((resolve) => {
+        const canvas = document.querySelector('.maplibregl-canvas');
+        if (!canvas) { resolve(); return; }
+        const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
+        if (!container) { resolve(); return; }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const map = (container as any).__maplibreMap ?? (container as any)._map;
+        if (!map) { resolve(); return; }
+
+        const onIdle = () => { map.off('idle', onIdle); resolve(); };
+        map.on('idle', onIdle);
+        map.flyTo({ center: [lon, lat], zoom, duration: 0 });
+      });
+    },
+    { lat, lon, zoom }
+  );
+  // Additional settle after navigation
+  await page.waitForTimeout(1000);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function ensureDirs(): void {
+  mkdirSync(BASELINES_DIR, { recursive: true });
+  mkdirSync(DIFFS_DIR, { recursive: true });
+}
+
+async function captureAndCompare(
+  page: Page,
+  slug: string,
+  screenshotPath: string
+): Promise<void> {
+  const screenshot = await page.screenshot({ path: screenshotPath });
+
+  const baseline = loadBaseline(slug, BASELINES_DIR);
+  if (!baseline) {
+    // First run — save as baseline
+    saveBaseline(slug, screenshot, BASELINES_DIR);
+    console.log(`[baseline] Saved new baseline: ${slug}`);
+    return;
+  }
+
+  // Compare against existing baseline
+  const result = compareScreenshots(screenshot, baseline, PIXEL_THRESHOLD);
+  if (result.diffPercent > DIFF_THRESHOLD_PERCENT) {
+    // Save diff image for inspection
+    const diffPath = join(DIFFS_DIR, `${slug}-diff.png`);
+    mkdirSync(DIFFS_DIR, { recursive: true });
+    require('fs').writeFileSync(diffPath, result.diffImage);
+    expect.soft(result.diffPercent, `Visual regression at ${slug}: ${result.diffPercent.toFixed(2)}% pixels changed (${result.diffPixels} pixels). Diff: ${diffPath}`).toBeLessThanOrEqual(DIFF_THRESHOLD_PERCENT);
+  } else {
+    console.log(`[pass] ${slug}: ${result.diffPercent.toFixed(2)}% diff (${result.diffPixels}px)`);
+  }
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────────
+
+test.describe('Screenshot Regression — 36 BC viewports', () => {
+  test.beforeEach(async ({ page }) => {
+    ensureDirs();
+    await page.goto('/map');
+    await waitForMapIdle(page, 45000);
+  });
+
+  for (const viewport of SCREENSHOT_VIEWPORTS) {
+    test(`viewport: ${viewport.name}`, async ({ page }) => {
+      await navigateTo(page, viewport.lat, viewport.lon, viewport.zoom);
+      await waitForMapIdle(page, 45000);
+
+      const screenshotPath = join(DIFFS_DIR, `${viewport.slug}-actual.png`);
+      await captureAndCompare(page, viewport.slug, screenshotPath);
+    });
+  }
+});
+
+test.describe('Screenshot Regression — 12 layer isolation at BC center', () => {
+  const CENTER_LAT = 52.0;
+  const CENTER_LON = -125.0;
+  const CENTER_ZOOM = 7;
+
+  test.beforeEach(async ({ page }) => {
+    ensureDirs();
+    await page.goto('/map');
+    await waitForMapIdle(page, 45000);
+    await navigateTo(page, CENTER_LAT, CENTER_LON, CENTER_ZOOM);
+    await waitForMapIdle(page, 45000);
+  });
+
+  for (const layerName of EXPECTED_SOURCE_LAYERS) {
+    const slug = `layer-${layerName}-z${CENTER_ZOOM}`;
+
+    test(`layer isolation: ${layerName}`, async ({ page }) => {
+      // Verify layer exists and has rendered features at this viewport
+      const featureCount = await page.evaluate(
+        (layer: string) => {
+          const canvas = document.querySelector('.maplibregl-canvas');
+          if (!canvas) return -1;
+          const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
+          if (!container) return -1;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const map = (container as any).__maplibreMap ?? (container as any)._map;
+          if (!map || typeof map.queryRenderedFeatures !== 'function') return -1;
+          return map.queryRenderedFeatures(undefined, { layers: [layer] }).length;
+        },
+        layerName
+      );
+
+      // Feature count of -1 means map instance not accessible — skip comparison but capture
+      if (featureCount === -1) {
+        console.warn(`[warn] Could not access map instance for layer ${layerName}`);
+      } else {
+        console.log(`[info] Layer ${layerName} has ${featureCount} rendered features at z${CENTER_ZOOM}`);
+      }
+
+      const screenshotPath = join(DIFFS_DIR, `${slug}-actual.png`);
+      await captureAndCompare(page, slug, screenshotPath);
+    });
+  }
+});

@@ -53,3 +53,10 @@ next-env.d.ts
 /public/data/tiles/
 data/raster/*.tif
 data/raster-tiles/
+
+# V2 Diagnostic Pipeline — generated artifacts
+e2e/screenshots/baselines/
+e2e/screenshots/diffs/
+data/geojson/reference/
+data/tiles/archive/
+data/reports/

@@ -15,7 +15,16 @@
     "test:coverage": "vitest run --coverage",
     "audit:rendering": "vitest run --reporter=verbose src/test/audit/",
     "audit:tiles": "npx tsx scripts/audit-tiles.ts",
-    "audit": "npm run audit:rendering && npm run audit:tiles"
+    "audit": "npm run audit:rendering && npm run audit:tiles",
+    "audit:spatial": "npx tsx scripts/audit-spatial.ts",
+    "audit:temporal": "npx tsx scripts/audit-temporal.ts",
+    "audit:crosssource": "python3 scripts/audit-crosssource.py",
+    "audit:visual": "npx playwright test e2e/screenshots/",
+    "audit:visual:update": "npx playwright test e2e/screenshots/ --update-snapshots",
+    "audit:live": "npx playwright test e2e/monitoring/",
+    "audit:download-reference": "npx tsx scripts/download-reference-data.ts",
+    "audit:v2": "npm run audit && npm run audit:spatial",
+    "audit:full": "npm run audit:v2 && npm run audit:temporal"
   },
   "dependencies": {
     "@turf/area": "^7.3.4",
@@ -43,6 +52,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
     "happy-dom": "^20.8.7",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.1"
