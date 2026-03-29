@@ -171,10 +171,11 @@ async function loadLakes(lakesPath: string): Promise<GeoJSONPolygon[]> {
         continue;
       }
 
-      // Filter out tiny lakes to reduce memory and processing time
+      // Filter out tiny lakes to reduce memory and processing time.
+      // Default missing area to 0 so lakes without AREA_HA are always skipped.
       const props = feature.properties ?? {};
-      const areaHa = Number(props["AREA_HA"] ?? props["area_ha"] ?? NaN);
-      if (!isNaN(areaHa) && areaHa < MIN_LAKE_AREA_HA) {
+      const areaHa = Number(props["AREA_HA"] ?? props["area_ha"] ?? 0);
+      if (areaHa < MIN_LAKE_AREA_HA) {
         continue;
       }
 
@@ -207,16 +208,28 @@ export async function createWaterSubtractor(lakesPath: string): Promise<{
   const lakes = await loadLakes(lakesPath);
   console.log(`  Loaded ${lakes.length} lake polygons (>= ${MIN_LAKE_AREA_HA} ha)`);
 
-  // Pre-compute bboxes
-  const lakeBboxes: Bbox4[] = lakes.map((l) => {
+  // Pre-compute bboxes, skipping any lake whose bbox() throws to avoid
+  // a global [-180,-90,180,90] fallback that would make it a candidate for
+  // every feature.
+  const validLakes: GeoJSONPolygon[] = [];
+  const lakeBboxes: Bbox4[] = [];
+  let skipped = 0;
+  for (const l of lakes) {
     try {
-      return bbox(l) as Bbox4;
+      lakeBboxes.push(bbox(l) as Bbox4);
+      validLakes.push(l);
     } catch {
-      return [-180, -90, 180, 90];
+      // Skip corrupt lake geometry
+      skipped++;
     }
-  });
+  }
+  if (skipped > 0) {
+    console.log(`  Skipped ${skipped} lake(s) with corrupt geometry`);
+  }
 
-  const index = buildGridIndex(lakes, lakeBboxes);
+  // Rebind to validLakes so the index and subtract closure use the same array
+  const indexedLakes = validLakes;
+  const index = buildGridIndex(indexedLakes, lakeBboxes);
 
   const result: WaterSubtractResult = {
     total: 0,
@@ -252,9 +265,10 @@ export async function createWaterSubtractor(lakesPath: string): Promise<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let current: any = feature;
     let modified = false;
+    let failedForThisFeature = false;
 
     for (const idx of candidates) {
-      const lake = lakes[idx];
+      const lake = indexedLakes[idx];
       try {
         // Turf v7: difference(featureCollection([subject, clip]))
         const diff = difference(featureCollection([current, lake]));
@@ -276,8 +290,12 @@ export async function createWaterSubtractor(lakesPath: string): Promise<{
         modified = true;
       } catch {
         // Degenerate geometry pair -- skip this lake
-        result.failed++;
+        failedForThisFeature = true;
       }
+    }
+
+    if (failedForThisFeature) {
+      result.failed++;
     }
 
     if (modified) {

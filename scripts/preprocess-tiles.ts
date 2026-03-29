@@ -186,7 +186,15 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
   const layerArg = args.indexOf("--layer");
-  const targetLayer = layerArg >= 0 ? args[layerArg + 1] : null;
+  let targetLayer: string | null = null;
+  if (layerArg >= 0) {
+    const val = args[layerArg + 1];
+    if (!val || val.startsWith("--")) {
+      console.error("Error: --layer requires a layer name argument");
+      process.exit(1);
+    }
+    targetLayer = val;
+  }
   const validateOnly = args.includes("--validate-only");
   const skipDedup = args.includes("--skip-dedup");
 

@@ -4,7 +4,8 @@
  * Streams through an NDJSON file and discards features whose geometry
  * has already been seen (identical rounded coordinates + properties).
  * Suitable for province-scale datasets; a Set<string> of SHA-256 hashes
- * at 6.2M entries uses ~310MB RAM, well within Node's default heap.
+ * at 6.2M entries uses ~930MB RAM. Combined with lake loading, total peak
+ * RSS may reach 2-3GB -- run with NODE_OPTIONS='--max-old-space-size=8192'.
  */
 
 import { createReadStream, createWriteStream } from "fs";
@@ -43,9 +44,10 @@ function roundCoordinates(coords: unknown): unknown {
  *
  * Strategy:
  * 1. Round all geometry coordinates to 6 decimal places
- * 2. Sort coordinate pairs so that rings with different winding produce the
- *    same hash (degenerate case -- rings with genuinely different vertex order
- *    won't collide because the full coordinate array is included)
+ * 2. Preserve original ring order -- identical features from overlapping grid
+ *    cells will have identical source geometry and therefore identical hashes.
+ *    Sorting by string coercion does not normalize winding order and creates
+ *    false-positive collision risk for genuinely different features.
  * 3. Concatenate with JSON.stringify of properties
  */
 function hashFeature(feature: {
@@ -58,10 +60,7 @@ function hashFeature(feature: {
   let coordStr = "";
   if (geometry && geometry.coordinates !== undefined) {
     const rounded = roundCoordinates(geometry.coordinates);
-    // Sort the top-level coordinate array to make ring winding order irrelevant
-    // for simple polygons. For multi-geometries the sub-arrays stay ordered.
-    const sortable = Array.isArray(rounded) ? [...(rounded as unknown[])].sort() : rounded;
-    coordStr = JSON.stringify(sortable);
+    coordStr = JSON.stringify(rounded);
   }
 
   const propStr = JSON.stringify(props ?? null);
