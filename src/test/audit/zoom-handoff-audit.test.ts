@@ -147,12 +147,20 @@ describe("Check 6: Zoom handoff continuity", () => {
   });
 
   describe("per-layer zoom continuity", () => {
-    // satellite is a raster layer -- not subject to tier logic
+    // satellite is a raster-only layer -- it has no WFS or PMTiles tiers,
+    // so computeZoomTiers returns [] for it. Skip it to avoid trivial pass.
     const auditLayers = LAYER_REGISTRY.filter((l) => l.id !== "satellite");
 
     for (const layer of auditLayers) {
       it(`${layer.id}: no zoom gaps between tiers`, () => {
         const tiers = computeZoomTiers(layer);
+
+        expect(
+          tiers.length,
+          `Layer "${layer.id}" returned no zoom tiers from computeZoomTiers(). ` +
+          "Either the layer has no source type, or it should be excluded from this audit (like satellite)."
+        ).toBeGreaterThan(0);
+
         const gaps = findGaps(tiers);
 
         expect(

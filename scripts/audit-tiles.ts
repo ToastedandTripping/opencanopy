@@ -21,8 +21,8 @@ import path from "path";
 import { PMTiles } from "pmtiles";
 import { NodeFileSource } from "./lib/node-file-source";
 import { parseTile, getLayerFeatures, getLayerPropertyKeys } from "./lib/mvt-reader";
-import { countLines, sampleFeatures } from "./lib/ndjson-sampler";
-import { latLonToTile, tileCenter, parentTile } from "./lib/tile-math";
+import { countLines } from "./lib/ndjson-sampler";
+import { latLonToTile, parentTile } from "./lib/tile-math";
 import {
   AuditResult,
   printResults,
@@ -176,14 +176,24 @@ class TileAudit {
     }
 
     // Check each expected layer
-    const missing: string[] = [];
-    for (const expected of EXPECTED_SOURCE_LAYERS) {
-      if (foundLayers.size > 0 && !foundLayers.has(expected)) {
-        missing.push(expected);
+    if (foundLayers.size === 0) {
+      // Empty/corrupt PMTiles -- all expected layers are missing
+      for (const expected of EXPECTED_SOURCE_LAYERS) {
+        results.push({
+          check: `A1: All 12 expected source layers present`,
+          status: "FAIL",
+          message: `Layer "${expected}" missing: PMTiles metadata returned no vector_layers (empty or corrupt file).`,
+          details: { missing: expected },
+        });
       }
-    }
+    } else {
+      const missing: string[] = [];
+      for (const expected of EXPECTED_SOURCE_LAYERS) {
+        if (!foundLayers.has(expected)) {
+          missing.push(expected);
+        }
+      }
 
-    if (foundLayers.size > 0) {
       if (missing.length > 0) {
         results.push({
           check: "A1: All 12 expected source layers present",
@@ -292,6 +302,24 @@ class TileAudit {
           z10TileFeatures: z10Count >= 0 ? z10Count : "no tile",
         },
       });
+
+      // Sanity check: large NDJSON but near-zero tile features suggests massive data loss
+      const tileTotal = Math.max(0, z7Count) + Math.max(0, z10Count);
+      if (ndjsonCount > 1000 && tileTotal < 10) {
+        results.push({
+          check: `A2: Data loss sanity check [${layerName}]`,
+          status: "WARN",
+          message:
+            `NDJSON has ${ndjsonCount.toLocaleString()} features but combined center tile count is only ${tileTotal}. ` +
+            "This may indicate massive data loss during tiling (tippecanoe filtering, wrong layer name, or mismatched center point).",
+          details: {
+            ndjsonFeatures: ndjsonCount,
+            combinedTileFeatures: tileTotal,
+            z7TileFeatures: z7Count >= 0 ? z7Count : "no tile",
+            z10TileFeatures: z10Count >= 0 ? z10Count : "no tile",
+          },
+        });
+      }
     }
 
     return results;
@@ -446,20 +474,42 @@ class TileAudit {
       },
     });
 
-    // Large features (>2000 ha) should exist in the data (not filtered from tiles)
-    // but the registry filter at the rendering layer should catch them
+    // Large features (>2000 ha) should exist in the tile data (not stripped by tippecanoe).
+    // The rendering filter in the registry excludes them from display -- they must survive tiling.
+    //
+    // PASS: large features found (PLANNED_GROSS_BLOCK_AREA present and >2000 ha)
+    // WARN: no large features found but we did read some features (all cutblocks genuinely small,
+    //       or the property was stripped -- ambiguous, warrants review)
+    // FAIL: totalFeaturesChecked === 0 (couldn't read any tenure-cutblocks features at all)
+    let largeFeatureStatus: AuditResult["status"];
+    let largeFeatureMessage: string;
+
+    if (totalCutblockFeatures === 0) {
+      largeFeatureStatus = "FAIL";
+      largeFeatureMessage =
+        "Could not read any tenure-cutblocks features from BC sample tiles at z8. " +
+        "Cannot verify PLANNED_GROSS_BLOCK_AREA preservation. " +
+        "The layer may be absent or all sampled tiles may be empty.";
+    } else if (largeFeatureCount > 0) {
+      largeFeatureStatus = "PASS";
+      largeFeatureMessage =
+        `Found ${largeFeatureCount} feature(s) with PLANNED_GROSS_BLOCK_AREA > 2000 ha in BC tiles at z8. ` +
+        "Property preserved in tiles (as expected). Registry filter excludes them from rendering.";
+    } else {
+      largeFeatureStatus = "WARN";
+      largeFeatureMessage =
+        `Read ${totalCutblockFeatures} tenure-cutblocks features but none have PLANNED_GROSS_BLOCK_AREA > 2000 ha. ` +
+        "Either all sampled cutblocks are genuinely small, or the property was stripped by tippecanoe. " +
+        "Check that --include-all-properties or explicit -y flags were used during tile build.";
+    }
+
     results.push({
       check: "A4: Large features (>2000 ha) exist in tile data",
-      status: largeFeatureCount >= 0 ? "PASS" : "FAIL", // always pass -- informational
-      message:
-        largeFeatureCount > 0
-          ? `Found ${largeFeatureCount} feature(s) with PLANNED_GROSS_BLOCK_AREA > 2000 ha in BC tiles at z8. ` +
-            "Data preserved in tiles (as expected). Registry filter excludes them from rendering."
-          : "No features with PLANNED_GROSS_BLOCK_AREA > 2000 ha found in BC sample tiles at z8. " +
-            "Either no large features exist in sampled tiles, or the property was not preserved. " +
-            "(WARN: expected some large tenure boundaries in BC data)",
+      status: largeFeatureStatus,
+      message: largeFeatureMessage,
       details: {
         largeFeatureCount,
+        totalFeaturesChecked: totalCutblockFeatures,
         threshold: 2000,
         tilesWithLargeArea,
       },

@@ -93,6 +93,13 @@ export function saveResults(results: AuditResult[], path: string): void {
     },
     results,
   };
-  writeFileSync(path, JSON.stringify(payload, null, 2));
-  console.log(`Results saved to ${path}`);
+  try {
+    writeFileSync(path, JSON.stringify(payload, null, 2));
+    console.log(`Results saved to ${path}`);
+  } catch (err) {
+    console.error(
+      `Warning: could not write audit results to "${path}": ${(err as Error).message}. ` +
+      "Results were printed to stdout above."
+    );
+  }
 }
