@@ -23,7 +23,7 @@ import {
   readdirSync,
   unlinkSync,
 } from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { PMTiles } from "pmtiles";
 import { NodeFileSource } from "./lib/node-file-source";
 import { parseTile, getLayerFeatures } from "./lib/mvt-reader";
@@ -148,9 +148,9 @@ export async function extractTestRegion(
 // ── Step 2: Build tippecanoe commands ──────────────────────────────────────────
 
 export function buildTippecanoeCommands(cfg: TileConfig, outputName: string): {
-  overviewCmd: string;
-  detailCmd: string;
-  mergeCmd: string;
+  overviewArgs: string[];
+  detailArgs: string[];
+  mergeArgs: string[];
   overviewPath: string;
   detailPath: string;
   outputPath: string;
@@ -165,6 +165,8 @@ export function buildTippecanoeCommands(cfg: TileConfig, outputName: string): {
     ? readdirSync(TEST_GEOJSON_DIR).filter((f) => f.endsWith(".ndjson"))
     : [];
 
+  // Build -L layerName:path args. Paths come from disk — use execFileSync (no shell)
+  // so no quoting/escaping is needed; each element is passed directly to the process.
   const inputs: string[] = [];
   for (const file of ndjsonFiles) {
     const fullPath = path.join(TEST_GEOJSON_DIR, file);
@@ -175,13 +177,13 @@ export function buildTippecanoeCommands(cfg: TileConfig, outputName: string): {
   }
 
   // Shared border / buffer flags
-  const sharedBorderFlag = cfg.detectSharedBorders ? "--detect-shared-borders" : "";
-  const bufferFlag = cfg.buffer !== null ? `--buffer=${cfg.buffer}` : "";
-  const extraFlags = [sharedBorderFlag, bufferFlag].filter(Boolean);
+  const extraFlags: string[] = [];
+  if (cfg.detectSharedBorders) extraFlags.push("--detect-shared-borders");
+  if (cfg.buffer !== null) extraFlags.push(`--buffer=${cfg.buffer}`);
 
   // Overview: z4-z7 with tile cap + coalescing
-  const overviewParts = [
-    "tippecanoe",
+  // Each element is a distinct argv token — no shell interpolation.
+  const overviewArgs = [
     "-o", overviewPath,
     "-Z", "4", "-z", "7",
     "--no-feature-limit",
@@ -193,11 +195,9 @@ export function buildTippecanoeCommands(cfg: TileConfig, outputName: string): {
     "-P",
     ...inputs,
   ];
-  const overviewCmd = overviewParts.join(" ");
 
   // Detail: z8-z10 with no tile size limit
-  const detailParts = [
-    "tippecanoe",
+  const detailArgs = [
     "-o", detailPath,
     "-Z", "8", "-z", "10",
     "--no-feature-limit", "--no-tile-size-limit",
@@ -207,39 +207,39 @@ export function buildTippecanoeCommands(cfg: TileConfig, outputName: string): {
     "-P",
     ...inputs,
   ];
-  const detailCmd = detailParts.join(" ");
 
   // Merge
-  const mergeCmd = [
-    "tile-join",
+  const mergeArgs = [
     "-o", outputPath,
     "-pk",
     "--force",
     overviewPath,
     detailPath,
-  ].join(" ");
+  ];
 
-  return { overviewCmd, detailCmd, mergeCmd, overviewPath, detailPath, outputPath, inputs };
+  return { overviewArgs, detailArgs, mergeArgs, overviewPath, detailPath, outputPath, inputs };
 }
 
 // ── Step 3: Run tippecanoe ─────────────────────────────────────────────────────
 
 export function runTippecanoeCommands(
-  overviewCmd: string,
-  detailCmd: string,
-  mergeCmd: string,
+  overviewArgs: string[],
+  detailArgs: string[],
+  mergeArgs: string[],
   overviewPath: string,
   detailPath: string
 ): boolean {
   try {
-    console.log(`  $ ${overviewCmd}`);
-    execSync(overviewCmd, { stdio: "inherit", timeout: 3_600_000 });
+    // Use execFileSync with explicit argv arrays — bypasses the shell entirely,
+    // so file paths from disk require no quoting or escaping.
+    console.log(`  $ tippecanoe ${overviewArgs.join(" ")}`);
+    execFileSync("tippecanoe", overviewArgs, { stdio: "inherit", timeout: 3_600_000 });
 
-    console.log(`  $ ${detailCmd}`);
-    execSync(detailCmd, { stdio: "inherit", timeout: 3_600_000 });
+    console.log(`  $ tippecanoe ${detailArgs.join(" ")}`);
+    execFileSync("tippecanoe", detailArgs, { stdio: "inherit", timeout: 3_600_000 });
 
-    console.log(`  $ ${mergeCmd}`);
-    execSync(mergeCmd, { stdio: "inherit", timeout: 600_000 });
+    console.log(`  $ tile-join ${mergeArgs.join(" ")}`);
+    execFileSync("tile-join", mergeArgs, { stdio: "inherit", timeout: 600_000 });
 
     // Clean up intermediates
     try { unlinkSync(overviewPath); } catch { /* ignore */ }
@@ -342,23 +342,42 @@ async function measureArtifactPercent(
 }
 
 /**
- * Count features across all layers in the tile at the given coordinate.
+ * Count features across all source layers in every tile covering the bbox at the given zoom.
+ *
+ * The single-tile approach (countFeaturesAtTile) severely underestimates preservation because
+ * the test bbox spans ~64 tiles at z10. This function iterates all tiles in the bbox and
+ * sums features across all layers, giving a meaningful preservation ratio.
  */
-async function countFeaturesAtTile(
+async function countFeaturesInBbox(
   pmtiles: PMTiles,
-  lat: number,
-  lon: number,
+  bbox: [west: number, south: number, east: number, north: number],
   zoom: number
 ): Promise<number> {
-  const tile = latLonToTile(lat, lon, zoom);
-  const tileData = await readTileSafe(pmtiles, tile.z, tile.x, tile.y);
-  if (!tileData) return 0;
+  const [west, south, east, north] = bbox;
 
-  const parsed = parseTile(tileData);
-  return Object.keys(parsed.layers).reduce(
-    (sum, layer) => sum + getLayerFeatures(parsed, layer).length,
-    0
-  );
+  const swTile = latLonToTile(south, west, zoom);
+  const neTile = latLonToTile(north, east, zoom);
+
+  const xMin = Math.min(swTile.x, neTile.x);
+  const xMax = Math.max(swTile.x, neTile.x);
+  const yMin = Math.min(swTile.y, neTile.y);
+  const yMax = Math.max(swTile.y, neTile.y);
+
+  let total = 0;
+
+  for (let x = xMin; x <= xMax; x++) {
+    for (let y = yMin; y <= yMax; y++) {
+      const tileData = await readTileSafe(pmtiles, zoom, x, y);
+      if (!tileData) continue;
+
+      const parsed = parseTile(tileData);
+      for (const layer of Object.keys(parsed.layers)) {
+        total += getLayerFeatures(parsed, layer).length;
+      }
+    }
+  }
+
+  return total;
 }
 
 /**
@@ -408,10 +427,14 @@ export async function measureMetrics(
   const source = new NodeFileSource(pmtilesPath);
   const pmtiles = new PMTiles(source);
 
-  const [z7, z9, z10] = await Promise.all([
+  const bbox: [number, number, number, number] = [
+    lon - radius, lat - radius, lon + radius, lat + radius,
+  ];
+
+  const [z7, z9, tileFeatureCount] = await Promise.all([
     measureArtifactPercent(pmtiles, lat, lon, 7),
     measureArtifactPercent(pmtiles, lat, lon, 9),
-    countFeaturesAtTile(pmtiles, lat, lon, 10),
+    countFeaturesInBbox(pmtiles, bbox, 10),
   ]);
 
   const maxTileSizeMB = await findMaxTileSize(pmtiles, lat, lon, radius, [7, 9]);
@@ -420,10 +443,12 @@ export async function measureMetrics(
 
   const totalSizeMB = statSync(pmtilesPath).size / (1024 * 1024);
 
-  // Feature preservation: ratio of tile features at z10 to NDJSON features in bbox
+  // Feature preservation: ratio of features in all z10 tiles covering bbox
+  // to NDJSON source features in the same bbox. Summing across the full bbox
+  // avoids the severe undercount of reading a single tile.
   const featurePreservationPercent =
     ndjsonFeatureCount > 0
-      ? Math.min(100, (z10 / ndjsonFeatureCount) * 100)
+      ? Math.min(100, (tileFeatureCount / ndjsonFeatureCount) * 100)
       : 0;
 
   return {
@@ -478,7 +503,7 @@ async function main() {
 
   // ── Step 2: Build ──
   console.log("Step 2: Building test tiles...");
-  const { overviewCmd, detailCmd, mergeCmd, overviewPath, detailPath, outputPath, inputs } =
+  const { overviewArgs, detailArgs, mergeArgs, overviewPath, detailPath, outputPath, inputs } =
     buildTippecanoeCommands(args, "test-config");
 
   if (inputs.length === 0) {
@@ -487,9 +512,9 @@ async function main() {
   }
 
   const built = runTippecanoeCommands(
-    overviewCmd,
-    detailCmd,
-    mergeCmd,
+    overviewArgs,
+    detailArgs,
+    mergeArgs,
     overviewPath,
     detailPath
   );

@@ -31,6 +31,7 @@ import {
 } from "./test-tile-config";
 import {
   computeQualityScore,
+  buildSizeRange,
   findParetoOptimal,
   formatSweepTable,
   type ConfigMetrics,
@@ -264,7 +265,9 @@ async function main() {
   console.log(`\nStep 3: Testing ${uniqueConfigs.length} configurations...`);
   console.log("─".repeat(60));
 
-  const results: ScoredConfig[] = [];
+  // Collect raw metrics first; scores are computed after all configs are measured
+  // so we can normalize size scores relative to the sweep set (not absolute thresholds).
+  const rawResults: Array<{ name: string; metrics: ConfigMetrics }> = [];
 
   for (let i = 0; i < uniqueConfigs.length; i++) {
     const { name, config } = uniqueConfigs[i];
@@ -272,7 +275,7 @@ async function main() {
 
     console.log(`\n[${i + 1}/${uniqueConfigs.length}] ${name}  (${paramStr})`);
 
-    const { overviewCmd, detailCmd, mergeCmd, overviewPath, detailPath, outputPath, inputs } =
+    const { overviewArgs, detailArgs, mergeArgs, overviewPath, detailPath, outputPath, inputs } =
       buildTippecanoeCommands(config, `sweep-${name}`);
 
     if (inputs.length === 0) {
@@ -281,9 +284,9 @@ async function main() {
     }
 
     const built = runTippecanoeCommands(
-      overviewCmd,
-      detailCmd,
-      mergeCmd,
+      overviewArgs,
+      detailArgs,
+      mergeArgs,
       overviewPath,
       detailPath
     );
@@ -294,27 +297,39 @@ async function main() {
     }
 
     const metrics = await measureMetrics(outputPath, lat, lon, radius, ndjsonCount);
-    const score = computeQualityScore(metrics);
 
     console.log(
-      `  Score: ${score}  artifact z7: ${metrics.artifactPercentZ7.toFixed(1)}%  ` +
+      `  artifact z7: ${metrics.artifactPercentZ7.toFixed(1)}%  ` +
       `z9: ${metrics.artifactPercentZ9.toFixed(1)}%  ` +
       `preserve: ${metrics.featurePreservationPercent.toFixed(1)}%  ` +
-      `maxTile: ${metrics.maxTileSizeMB.toFixed(2)} MB`
+      `maxTile: ${metrics.maxTileSizeMB.toFixed(2)} MB  ` +
+      `total: ${metrics.totalSizeMB.toFixed(1)} MB`
     );
 
-    results.push({ name, metrics, score, pareto: false });
+    rawResults.push({ name, metrics });
 
     // Clean up test PMTiles to save disk space
     try { unlinkSync(outputPath); } catch { /* ignore */ }
   }
 
-  if (results.length === 0) {
+  if (rawResults.length === 0) {
     console.error("No results collected. Sweep failed.");
     process.exit(1);
   }
 
-  // ── Step 4: Find Pareto-optimal configs ──
+  // ── Step 4: Compute relative-normalized scores ──
+  // Size thresholds are too large for test-region files (5-50 MB vs 500 MB ceiling).
+  // Normalize size components within the sweep set so differentiation is meaningful.
+  const sizeRange = buildSizeRange(rawResults.map((r) => r.metrics));
+
+  const results: ScoredConfig[] = rawResults.map(({ name, metrics }) => ({
+    name,
+    metrics,
+    score: computeQualityScore(metrics, sizeRange),
+    pareto: false,
+  }));
+
+  // ── Step 5: Find Pareto-optimal configs ──
   const paretoNames = new Set(
     findParetoOptimal(results.map((r) => ({ name: r.name, metrics: r.metrics })))
   );
@@ -323,26 +338,27 @@ async function main() {
     r.pareto = paretoNames.has(r.name);
   }
 
-  // ── Step 5: Sort by score descending ──
+  // ── Step 6: Sort by score descending ──
   results.sort((a, b) => b.score - a.score);
 
-  // ── Step 6: Output results table ──
+  // ── Step 7: Output results table ──
   const table = formatSweepTable(results);
   console.log(table);
 
   // Print production comparison if we have it
   if (productionMetrics !== null) {
-    console.log(`  Production (baseline) score: ${computeQualityScore(productionMetrics)}`);
+    const productionScore = computeQualityScore(productionMetrics, sizeRange);
+    console.log(`  Production (baseline) score: ${productionScore}`);
     const bestResult = results[0];
-    if (bestResult && bestResult.score > computeQualityScore(productionMetrics)) {
+    if (bestResult && bestResult.score > productionScore) {
       console.log(
-        `  Best config "${bestResult.name}" scores ${bestResult.score - computeQualityScore(productionMetrics)} points higher than production.`
+        `  Best config "${bestResult.name}" scores ${bestResult.score - productionScore} points higher than production.`
       );
     }
     console.log();
   }
 
-  // ── Step 7: Save results ──
+  // ── Step 8: Save results ──
   const reportPath = path.join(REPORTS_DIR, "sweep-results.json");
   const report = {
     timestamp: new Date().toISOString(),
@@ -351,7 +367,7 @@ async function main() {
     production: productionMetrics
       ? {
           metrics: productionMetrics,
-          score: computeQualityScore(productionMetrics),
+          score: computeQualityScore(productionMetrics, sizeRange),
         }
       : null,
     configs: results.map((r) => ({

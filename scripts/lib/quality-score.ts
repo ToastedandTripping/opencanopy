@@ -37,6 +37,18 @@ export interface ScoredConfig {
 // ── Scoring ────────────────────────────────────────────────────────────────────
 
 /**
+ * Size normalization context for relative scoring.
+ * When provided, size scores are computed relative to the sweep set rather
+ * than against fixed absolute thresholds (which are too large for test-region files).
+ */
+export interface SizeRange {
+  minTotalSizeMB: number;
+  maxTotalSizeMB: number;
+  minMaxTileSizeMB: number;
+  maxMaxTileSizeMB: number;
+}
+
+/**
  * Compute a weighted quality score (0-100) from ConfigMetrics.
  *
  * Higher is better. Weights:
@@ -45,12 +57,14 @@ export interface ScoredConfig {
  *   - Inverse max tile size:              0.20 (smaller tile = better)
  *   - Inverse total archive size:         0.20 (smaller archive = better)
  *
- * Artifact score: clamp artifact% to [0, 20], invert → score in [0, 1]
- * Preservation score: clamp to [0, 100] → score in [0, 1]
- * Tile size score: clamp maxTileSizeMB to [0, 50] → invert to [0, 1]
- * Total size score: clamp totalSizeMB to [0, 500] → invert to [0, 1]
+ * Without sizeRange: absolute thresholds (50 MB tile / 500 MB total).
+ * With sizeRange: relative scoring across the sweep set — avoids all configs
+ * scoring ~1.0 on size when test-region files are 5-50 MB (far below 500 MB ceiling).
+ *
+ * sizeScore = 1 - (thisSize - minSize) / (maxSize - minSize)
+ * When all configs are the same size, scores 0.5 for all (neutral).
  */
-export function computeQualityScore(metrics: ConfigMetrics): number {
+export function computeQualityScore(metrics: ConfigMetrics, sizeRange?: SizeRange): number {
   const avgArtifact = (metrics.artifactPercentZ7 + metrics.artifactPercentZ9) / 2;
 
   // Artifact: 0% artifact → score 1.0, 20% artifact → score 0.0
@@ -59,11 +73,27 @@ export function computeQualityScore(metrics: ConfigMetrics): number {
   // Feature preservation: 100% → score 1.0, 0% → score 0.0
   const preservationScore = Math.min(100, Math.max(0, metrics.featurePreservationPercent)) / 100;
 
-  // Max tile size: 0 MB → score 1.0, 50 MB → score 0.0
-  const tileScore = Math.max(0, 1 - metrics.maxTileSizeMB / 50);
+  let tileScore: number;
+  let totalScore: number;
 
-  // Total archive size: 0 MB → score 1.0, 500 MB → score 0.0
-  const totalScore = Math.max(0, 1 - metrics.totalSizeMB / 500);
+  if (sizeRange) {
+    // Relative scoring: normalize within the sweep set
+    const tileRange = sizeRange.maxMaxTileSizeMB - sizeRange.minMaxTileSizeMB;
+    tileScore = tileRange > 0
+      ? 1 - (metrics.maxTileSizeMB - sizeRange.minMaxTileSizeMB) / tileRange
+      : 0.5;
+
+    const totalRange = sizeRange.maxTotalSizeMB - sizeRange.minTotalSizeMB;
+    totalScore = totalRange > 0
+      ? 1 - (metrics.totalSizeMB - sizeRange.minTotalSizeMB) / totalRange
+      : 0.5;
+  } else {
+    // Absolute fallback thresholds (suitable for full-dataset production builds)
+    // Max tile size: 0 MB → score 1.0, 50 MB → score 0.0
+    tileScore = Math.max(0, 1 - metrics.maxTileSizeMB / 50);
+    // Total archive size: 0 MB → score 1.0, 500 MB → score 0.0
+    totalScore = Math.max(0, 1 - metrics.totalSizeMB / 500);
+  }
 
   const raw =
     artifactScore * 0.35 +
@@ -72,6 +102,21 @@ export function computeQualityScore(metrics: ConfigMetrics): number {
     totalScore * 0.20;
 
   return Math.round(raw * 100);
+}
+
+/**
+ * Build a SizeRange from an array of ConfigMetrics for use in relative scoring.
+ */
+export function buildSizeRange(metrics: ConfigMetrics[]): SizeRange {
+  if (metrics.length === 0) {
+    return { minTotalSizeMB: 0, maxTotalSizeMB: 0, minMaxTileSizeMB: 0, maxMaxTileSizeMB: 0 };
+  }
+  return {
+    minTotalSizeMB: Math.min(...metrics.map((m) => m.totalSizeMB)),
+    maxTotalSizeMB: Math.max(...metrics.map((m) => m.totalSizeMB)),
+    minMaxTileSizeMB: Math.min(...metrics.map((m) => m.maxTileSizeMB)),
+    maxMaxTileSizeMB: Math.max(...metrics.map((m) => m.maxTileSizeMB)),
+  };
 }
 
 // ── Pareto ─────────────────────────────────────────────────────────────────────

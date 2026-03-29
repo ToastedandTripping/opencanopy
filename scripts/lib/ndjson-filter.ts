@@ -7,7 +7,6 @@
 
 import { createReadStream, createWriteStream, existsSync, statSync } from "fs";
 import { createInterface } from "readline";
-import { writeFile } from "fs/promises";
 
 export type Bbox = [west: number, south: number, east: number, north: number];
 
@@ -115,14 +114,23 @@ export async function extractToBbox(
     }
   }
 
+  // Stream directly to the output file rather than accumulating in memory.
+  // createWriteStream was already imported but unused in the original implementation.
+  const writeStream = createWriteStream(outputPath, { encoding: "utf-8" });
+
   let count = 0;
-  const lines: string[] = [];
 
   for await (const line of filterByBbox(inputPath, bbox)) {
-    lines.push(line);
+    writeStream.write(line + "\n");
     count++;
   }
 
-  await writeFile(outputPath, lines.join("\n") + (lines.length > 0 ? "\n" : ""), "utf-8");
+  await new Promise<void>((resolve, reject) => {
+    writeStream.end((err?: Error | null) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+
   return count;
 }
