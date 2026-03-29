@@ -67,6 +67,11 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
     const map = mapRef.current?.getMap();
     if (!map) return;
 
+    // Expose map instance for e2e testing (Playwright screenshot regression)
+    if (typeof window !== "undefined") {
+      (window as unknown as Record<string, unknown>).__opencanopy_map = map;
+    }
+
     // Add terrain source for 3D hillshade
     if (TERRAIN_SOURCE.enabled && !map.getSource("terrain-rgb")) {
       map.addSource("terrain-rgb", {
@@ -79,6 +84,19 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
 
     pipelineLog("map-load", "CanopyMap ready");
   }, []);
+
+  // Expose map instance on window for e2e testing (Playwright screenshot regression)
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (typeof window !== "undefined" && map) {
+      (window as unknown as Record<string, unknown>).__opencanopy_map = map;
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        delete (window as unknown as Record<string, unknown>).__opencanopy_map;
+      }
+    };
+  });
 
   // Expose health report function on window when debug mode is active
   useEffect(() => {

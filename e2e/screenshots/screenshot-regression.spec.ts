@@ -33,62 +33,71 @@ const DIFF_THRESHOLD_PERCENT = 2;
 // Per-pixel color threshold for pixelmatch
 const PIXEL_THRESHOLD = 0.1;
 
-// ── Map idle wait ──────────────────────────────────────────────────────────────
+// ── Map instance discovery ────────────────────────────────────────────────────
 
 /**
- * Wait for MapLibre to finish loading tiles and rendering.
- *
- * Strategy:
- * 1. Poll until the map canvas exists and the map reports loaded() + areTilesLoaded()
- * 2. Additional settle time to allow final render pass to complete
- *
- * The map instance is accessed via react-map-gl's container property. Falls back
- * to a timeout-based approach if the map instance is not directly accessible.
+ * Find the MapLibre map instance by walking the React fiber tree.
+ * react-map-gl stores a ref with getMap() on a component a few levels up
+ * from the .maplibregl-map container. This is more reliable than looking
+ * for undocumented properties on DOM elements.
  */
-async function waitForMapIdle(page: Page, timeoutMs = 45000): Promise<void> {
+async function ensureMapInstance(page: Page, timeoutMs = 30000): Promise<void> {
   await page.waitForFunction(
     () => {
-      const canvas = document.querySelector('.maplibregl-canvas');
-      if (!canvas) return false;
-      // react-map-gl v8 stores the MapLibre map on the container element
-      const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
+      // Already found?
+      if ((window as any).__opencanopy_map?.flyTo) return true;
+
+      const container = document.querySelector('.maplibregl-map');
       if (!container) return false;
-      // Try react-map-gl's __maplibreMap property first, then fall back to maplibregl instances
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const map = (container as any).__maplibreMap ?? (container as any)._map;
-      if (!map) {
-        // If we can't access the map instance, check for canvas existence as a proxy
-        return canvas.getAttribute('width') !== null;
+
+      const fiberKey = Object.keys(container).find(k => k.startsWith('__reactFiber'));
+      if (!fiberKey) return false;
+
+      let fiber = (container as any)[fiberKey];
+      for (let depth = 0; fiber && depth < 40; depth++) {
+        let state = fiber.memoizedState;
+        for (let si = 0; state && si < 15; si++) {
+          const m = state.memoizedState;
+          if (m?.current?.getMap) {
+            try {
+              const map = m.current.getMap();
+              if (map?.flyTo) { (window as any).__opencanopy_map = map; return true; }
+            } catch { /* skip */ }
+          }
+          state = state.next;
+        }
+        fiber = fiber.return;
       }
-      return map.loaded() && map.areTilesLoaded();
+      return false;
     },
     { timeout: timeoutMs }
   );
-  // Extra settle time for final GPU render pass
+}
+
+/**
+ * Wait for MapLibre to finish loading tiles and rendering.
+ */
+async function waitForMapIdle(page: Page, timeoutMs = 45000): Promise<void> {
+  await ensureMapInstance(page, timeoutMs);
+  await page.waitForFunction(
+    () => {
+      const map = (window as any).__opencanopy_map;
+      return map?.loaded() && map?.areTilesLoaded();
+    },
+    { timeout: timeoutMs }
+  );
   await page.waitForTimeout(2000);
 }
 
 /**
  * Navigate the map to a specific lat/lon/zoom using MapLibre's flyTo.
- * After navigation, wait for the map to be idle at the new position.
  */
-async function navigateTo(
-  page: Page,
-  lat: number,
-  lon: number,
-  zoom: number
-): Promise<void> {
+async function navigateTo(page: Page, lat: number, lon: number, zoom: number): Promise<void> {
   await page.evaluate(
     ({ lat, lon, zoom }) => {
       return new Promise<void>((resolve, reject) => {
-        const canvas = document.querySelector('.maplibregl-canvas');
-        if (!canvas) { reject(new Error('navigateTo: map canvas not found')); return; }
-        const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
-        if (!container) { reject(new Error('navigateTo: .maplibregl-map container not found')); return; }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const map = (container as any).__maplibreMap ?? (container as any)._map;
-        if (!map) { reject(new Error('navigateTo: map instance not accessible — cannot navigate')); return; }
-
+        const map = (window as any).__opencanopy_map;
+        if (!map) { reject(new Error('navigateTo: map not found')); return; }
         const onIdle = () => { map.off('idle', onIdle); resolve(); };
         map.on('idle', onIdle);
         map.flyTo({ center: [lon, lat], zoom, duration: 0 });
@@ -96,7 +105,6 @@ async function navigateTo(
     },
     { lat, lon, zoom }
   );
-  // Additional settle after navigation
   await page.waitForTimeout(1000);
 }
 
@@ -175,12 +183,8 @@ test.describe('Screenshot Regression — 12 layer isolation at BC center', () =>
       // Verify layer exists and has rendered features at this viewport
       const featureCount = await page.evaluate(
         (layer: string) => {
-          const canvas = document.querySelector('.maplibregl-canvas');
-          if (!canvas) return -1;
-          const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
-          if (!container) return -1;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const map = (container as any).__maplibreMap ?? (container as any)._map;
+          const map = (window as any).__opencanopy_map;
           if (!map || typeof map.queryRenderedFeatures !== 'function') return -1;
           return map.queryRenderedFeatures(undefined, { layers: [layer] }).length;
         },

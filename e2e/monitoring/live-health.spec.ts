@@ -23,24 +23,45 @@ test.use({ baseURL: PRODUCTION_URL });
 
 test.describe.configure({ retries: 3 });
 
-// ── Map idle wait ──────────────────────────────────────────────────────────────
+// ── Map instance discovery ────────────────────────────────────────────────────
+
+/** Find MapLibre map instance via React fiber tree */
+async function ensureMapInstance(page: Page, timeoutMs = 30000): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      if ((window as any).__opencanopy_map?.flyTo) return true;
+      const container = document.querySelector('.maplibregl-map');
+      if (!container) return false;
+      const fiberKey = Object.keys(container).find(k => k.startsWith('__reactFiber'));
+      if (!fiberKey) return false;
+      let fiber = (container as any)[fiberKey];
+      for (let depth = 0; fiber && depth < 40; depth++) {
+        let state = fiber.memoizedState;
+        for (let si = 0; state && si < 15; si++) {
+          const m = state.memoizedState;
+          if (m?.current?.getMap) {
+            try {
+              const map = m.current.getMap();
+              if (map?.flyTo) { (window as any).__opencanopy_map = map; return true; }
+            } catch { /* skip */ }
+          }
+          state = state.next;
+        }
+        fiber = fiber.return;
+      }
+      return false;
+    },
+    { timeout: timeoutMs }
+  );
+}
 
 async function waitForMapIdle(page: Page, timeoutMs = 60000): Promise<boolean> {
   try {
+    await ensureMapInstance(page, timeoutMs);
     await page.waitForFunction(
       () => {
-        const canvas = document.querySelector('.maplibregl-canvas');
-        if (!canvas) return false;
-        const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
-        if (!container) return false;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const map = (container as any).__maplibreMap ?? (container as any)._map;
-        if (!map) {
-          // Map instance not accessible — return false so the caller handles the failure explicitly.
-          // Do NOT treat canvas existence alone as a proxy for "loaded"; it allows silent pass on broken state.
-          return false;
-        }
-        return map.loaded() && map.areTilesLoaded();
+        const map = (window as any).__opencanopy_map;
+        return map?.loaded() && map?.areTilesLoaded();
       },
       { timeout: timeoutMs }
     );
@@ -50,18 +71,9 @@ async function waitForMapIdle(page: Page, timeoutMs = 60000): Promise<boolean> {
   }
 }
 
-/**
- * Query rendered features for a layer.
- * Returns -1 if the map instance is not accessible.
- */
 async function queryFeatureCount(page: Page, layerName: string): Promise<number> {
   return page.evaluate((layer: string) => {
-    const canvas = document.querySelector('.maplibregl-canvas');
-    if (!canvas) return -1;
-    const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
-    if (!container) return -1;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const map = (container as any).__maplibreMap ?? (container as any)._map;
+    const map = (window as any).__opencanopy_map;
     if (!map || typeof map.queryRenderedFeatures !== 'function') return -1;
     return map.queryRenderedFeatures(undefined, { layers: [layer] }).length;
   }, layerName);
@@ -119,12 +131,8 @@ test('tenure-cutblocks layer renders features at z7 on production', async ({ pag
 
   // Navigate to z7 (BC center) — map starts at DEFAULT_ZOOM=5
   await page.evaluate(() => {
-    const canvas = document.querySelector('.maplibregl-canvas');
-    if (!canvas) return;
-    const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
-    if (!container) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const map = (container as any).__maplibreMap ?? (container as any)._map;
+    const map = (window as any).__opencanopy_map;
     if (!map) return;
     map.flyTo({ center: [-125.0, 52.0], zoom: 7, duration: 0 });
   });
