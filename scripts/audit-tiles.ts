@@ -15,9 +15,12 @@
  *   A4: Large feature detection (tenure-cutblocks >2000ha should exist but be filtered)
  *   A5: Tile boundary artifacts (near Revelstoke at z7 and z9)
  *   A6: Zoom consistency (z10 features have coverage in z6 parent tiles)
+ *   A7: Timeline property format (DISTURBANCE_START_DATE, FIRE_YEAR)
+ *   A8: Preprocessing comparison (dedup rate, reject rate, water subtraction stats)
  */
 
 import path from "path";
+import { existsSync, readFileSync } from "fs";
 import { PMTiles } from "pmtiles";
 import { NodeFileSource } from "./lib/node-file-source";
 import { parseTile, getLayerFeatures, getLayerPropertyKeys } from "./lib/mvt-reader";
@@ -138,6 +141,9 @@ class TileAudit {
 
     console.log("A7: Checking timeline property format...");
     results.push(...(await this.checkTimelinePropertyFormat()));
+
+    console.log("A8: Checking preprocessing comparison...");
+    results.push(...(await this.checkPreprocessingComparison()));
 
     await this.source.close();
     return results;
@@ -920,6 +926,148 @@ class TileAudit {
             stringWithYearCount,
             nullCount,
           },
+        });
+      }
+    }
+
+    return results;
+  }
+
+  // ── A8: Preprocessing comparison ───────────────────────────────────────────
+
+  async checkPreprocessingComparison(): Promise<AuditResult[]> {
+    const results: AuditResult[] = [];
+    const reportPath = path.resolve(
+      __dirname,
+      "../data/geojson/preprocessed/_report.json"
+    );
+
+    if (!existsSync(reportPath)) {
+      results.push({
+        check: "A8: Preprocessing report",
+        status: "PASS",
+        message: "No preprocessing report found — raw data used (run `npm run preprocess` to generate)",
+      });
+      return results;
+    }
+
+    let report: {
+      timestamp?: string;
+      layers?: Array<{
+        layer: string;
+        rawFeatures?: number;
+        finalFeatures?: number;
+        dedup?: { duplicateRate?: number };
+        validation?: { total?: number; rejected?: number };
+        waterSubtract?: { intersected?: number; dropped?: number };
+        error?: string;
+      }>;
+    };
+
+    try {
+      report = JSON.parse(readFileSync(reportPath, "utf-8"));
+    } catch (err) {
+      results.push({
+        check: "A8: Preprocessing report",
+        status: "WARN",
+        message: `Could not read preprocessing report: ${(err as Error).message}`,
+      });
+      return results;
+    }
+
+    results.push({
+      check: "A8: Preprocessing report",
+      status: "PASS",
+      message: `Preprocessing report found (timestamp: ${report.timestamp ?? "unknown"})`,
+    });
+
+    for (const layerReport of report.layers ?? []) {
+      const layer = layerReport.layer;
+
+      if (layerReport.error) {
+        results.push({
+          check: `A8: Preprocessing [${layer}]`,
+          status: "WARN",
+          message: `Layer preprocessing failed: ${layerReport.error}`,
+        });
+        continue;
+      }
+
+      // Dedup rate check
+      const dedupRate = layerReport.dedup?.duplicateRate ?? 0;
+      if (dedupRate > 0.2) {
+        results.push({
+          check: `A8: Dedup rate [${layer}]`,
+          status: "WARN",
+          message:
+            `Dedup rate ${(dedupRate * 100).toFixed(1)}% exceeds 20% threshold. ` +
+            `Source data may have significant duplication.`,
+          details: { layer, dedupRate },
+        });
+      } else {
+        results.push({
+          check: `A8: Dedup rate [${layer}]`,
+          status: "PASS",
+          message: `Dedup rate ${(dedupRate * 100).toFixed(1)}% is within acceptable range (<= 20%)`,
+          details: { layer, dedupRate },
+        });
+      }
+
+      // Validation reject rate check
+      const validTotal = layerReport.validation?.total ?? 0;
+      const validRejected = layerReport.validation?.rejected ?? 0;
+      const rejectRate = validTotal > 0 ? validRejected / validTotal : 0;
+      if (rejectRate > 0.05) {
+        results.push({
+          check: `A8: Validation reject rate [${layer}]`,
+          status: "WARN",
+          message:
+            `Validation reject rate ${(rejectRate * 100).toFixed(1)}% exceeds 5% threshold. ` +
+            `Check source data quality for ${layer}.`,
+          details: { layer, rejectRate, rejected: validRejected, total: validTotal },
+        });
+      } else {
+        results.push({
+          check: `A8: Validation reject rate [${layer}]`,
+          status: "PASS",
+          message: `Validation reject rate ${(rejectRate * 100).toFixed(1)}% within range (<= 5%). ${validRejected} of ${validTotal} features rejected.`,
+          details: { layer, rejectRate },
+        });
+      }
+
+      // Water subtraction informational
+      if (layerReport.waterSubtract) {
+        const { intersected, dropped } = layerReport.waterSubtract;
+        results.push({
+          check: `A8: Water subtraction [${layer}]`,
+          status: "PASS",
+          message: `Water subtraction: ${intersected ?? 0} features intersected lakes, ${dropped ?? 0} features dropped`,
+          details: { layer, intersected, dropped },
+        });
+      }
+
+      // Total feature removal check
+      const rawFeatures = layerReport.rawFeatures ?? 0;
+      const finalFeatures = layerReport.finalFeatures ?? rawFeatures;
+      const removalRate = rawFeatures > 0 ? (rawFeatures - finalFeatures) / rawFeatures : 0;
+      if (removalRate > 0.25) {
+        results.push({
+          check: `A8: Total feature removal [${layer}]`,
+          status: "FAIL",
+          message:
+            `${(removalRate * 100).toFixed(1)}% of features removed during preprocessing (threshold: 25%). ` +
+            `Raw: ${rawFeatures.toLocaleString()}, Final: ${finalFeatures.toLocaleString()}. ` +
+            `Investigate dedup/validation rules or source data quality.`,
+          details: { layer, rawFeatures, finalFeatures, removalRate },
+        });
+      } else {
+        results.push({
+          check: `A8: Total feature removal [${layer}]`,
+          status: "PASS",
+          message:
+            `${(removalRate * 100).toFixed(1)}% of features removed during preprocessing (threshold: 25%). ` +
+            `Raw: ${rawFeatures.toLocaleString()}, Final: ${finalFeatures.toLocaleString()}`,
+          details: { layer, rawFeatures, finalFeatures, removalRate },
         });
       }
     }

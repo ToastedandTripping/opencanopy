@@ -826,6 +826,8 @@ function archiveCurrentTiles(): void {
 
 // -- tippecanoe runner --------------------------------------------------------
 
+const PREPROCESSED_DIR = resolve(GEOJSON_DIR, "preprocessed");
+
 function runTippecanoe(): boolean {
   const outputPath = resolve(TILES_DIR, "opencanopy.pmtiles");
   const overviewPath = resolve(TILES_DIR, "overview.pmtiles");
@@ -847,9 +849,49 @@ function runTippecanoe(): boolean {
     "conservation-priority",
   ];
 
+  // --preprocessed flag: read manifest and use preprocessed NDJSON where available
+  const usePreprocessed = process.argv.includes("--preprocessed");
+  let preprocessedLayers = new Set<string>();
+
+  if (usePreprocessed) {
+    const manifestPath = resolve(PREPROCESSED_DIR, "_manifest.json");
+    if (existsSync(manifestPath)) {
+      try {
+        const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+          layers: string[];
+          timestamp: string;
+        };
+        preprocessedLayers = new Set(manifest.layers);
+        console.log(
+          `  Using preprocessed data for ${preprocessedLayers.size} layer(s) ` +
+          `(manifest timestamp: ${manifest.timestamp})`
+        );
+      } catch (err) {
+        console.warn(`  Warning: could not read preprocessed manifest: ${(err as Error).message}`);
+        console.warn(`  Falling back to raw NDJSON for all layers`);
+      }
+    } else {
+      console.warn(
+        `  Warning: --preprocessed specified but no manifest found at ${manifestPath}`
+      );
+      console.warn(`  Run: npm run preprocess`);
+    }
+  }
+
   const inputs: string[] = [];
   for (const name of layerFiles) {
-    const p = resolve(GEOJSON_DIR, `${name}.ndjson`);
+    // Prefer preprocessed version if available and --preprocessed flag is set
+    let p: string;
+    if (usePreprocessed && preprocessedLayers.has(name)) {
+      p = resolve(PREPROCESSED_DIR, `${name}.ndjson`);
+      console.log(`  ${name}: using preprocessed data`);
+    } else {
+      p = resolve(GEOJSON_DIR, `${name}.ndjson`);
+      if (usePreprocessed) {
+        console.log(`  ${name}: using raw data (not in preprocessed manifest)`);
+      }
+    }
+
     if (existsSync(p) && statSync(p).size > 0) {
       inputs.push("-L", `${name}:${p}`);
     } else if (existsSync(p) && statSync(p).size === 0) {
@@ -911,6 +953,8 @@ function runTippecanoe(): boolean {
       "-M", "10000000",
       "--coalesce-smallest-as-needed",
       "--simplification=10",
+      "--detect-shared-borders",
+      "--buffer=16",
       "--force",
       ...inputs,
     ].join(" ");
@@ -927,6 +971,8 @@ function runTippecanoe(): boolean {
       "-Z", "8", "-z", "10",
       "--no-feature-limit", "--no-tile-size-limit",
       "--simplification=8",
+      "--detect-shared-borders",
+      "--buffer=16",
       "--force",
       ...inputs,
     ].join(" ");
@@ -954,6 +1000,18 @@ function runTippecanoe(): boolean {
     console.log(
       `\nPMTiles output: ${outputPath} (${(stats.size / 1024 / 1024).toFixed(1)} MB)`
     );
+
+    // --audit flag: run full audit suite after successful tile generation
+    if (process.argv.includes("--audit")) {
+      console.log("\nRunning post-build audit (--audit)...");
+      try {
+        execSync("npm run audit", { stdio: "inherit" });
+      } catch {
+        console.error("Post-build audit FAILED. Tile file was generated but audit checks did not pass.");
+        return false;
+      }
+    }
+
     return true;
   } catch (err) {
     console.error("tippecanoe failed:", (err as Error).message);

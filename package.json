@@ -27,13 +27,17 @@
     "//audit:v2-note": "audit:visual is intentionally excluded from audit:v2 — it requires a running dev server. Run audit:visual separately.",
     "audit:full": "npm run audit:v2 && npm run audit:temporal",
     "test:tile-config": "npx tsx scripts/test-tile-config.ts",
-    "sweep:tile-configs": "npx tsx scripts/sweep-tile-configs.ts"
+    "sweep:tile-configs": "npx tsx scripts/sweep-tile-configs.ts",
+    "preprocess": "NODE_OPTIONS='--max-old-space-size=8192' npx tsx scripts/preprocess-tiles.ts",
+    "preprocess:validate-only": "npx tsx scripts/preprocess-tiles.ts --validate-only",
+    "build-tiles:full": "npm run preprocess && npm run build-tiles -- --tiles-only --preprocessed --audit"
   },
   "dependencies": {
     "@turf/area": "^7.3.4",
     "@turf/bbox": "^7.3.4",
     "@turf/bbox-polygon": "^7.3.4",
     "@turf/boolean-within": "^7.3.4",
+    "@turf/difference": "^7.3.4",
     "@turf/helpers": "^7.3.4",
     "@turf/intersect": "^7.3.4",
     "maplibre-gl": "^5.21.0",
