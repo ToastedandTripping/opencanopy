@@ -207,6 +207,12 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
         "fill-opacity-transition": { duration: 300 },
       },
       opacity: 0.7,
+      // Exclude TFL/community forest tenure boundaries (>5000 ha) — real cutblocks are <500 ha
+      filter: [
+        "any",
+        ["!", ["has", "PLANNED_GROSS_BLOCK_AREA"]],
+        ["<", ["to-number", ["get", "PLANNED_GROSS_BLOCK_AREA"]], 5000],
+      ],
     },
     zoomRange: [5, 18],
     defaultEnabled: false,

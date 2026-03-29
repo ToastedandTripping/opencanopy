@@ -42,6 +42,8 @@ export interface LayerStyle {
   layout?: Record<string, unknown>;
   /** Default opacity (0-1) */
   opacity?: number;
+  /** Default MapLibre filter expression applied to both PMTiles and WFS layers */
+  filter?: unknown[];
 }
 
 /** Legend color swatch entry */

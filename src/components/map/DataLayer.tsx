@@ -134,6 +134,7 @@ function PmtilesLayers({
                 maxzoom,
                 layout: { visibility: visible ? "visible" : "none" },
                 paint: fillPaint as maplibregl.FillLayerSpecification["paint"],
+                ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
               },
               firstSymbolId,
             );
@@ -167,6 +168,7 @@ function PmtilesLayers({
                   ],
                   "line-opacity-transition": { duration: 300 },
                 },
+                ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
               },
               firstSymbolId,
             );
@@ -189,6 +191,7 @@ function PmtilesLayers({
                     : 0,
                   "line-opacity-transition": { duration: 300 },
                 } as maplibregl.LineLayerSpecification["paint"],
+                ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
               },
               firstSymbolId,
             );
@@ -445,6 +448,7 @@ function WfsLayers({
                 minzoom: wfsMinZoom,
                 layout: { visibility: visible ? "visible" : "none" },
                 paint: fillPaint as maplibregl.FillLayerSpecification["paint"],
+                ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
               },
               firstSymbolId,
             );
@@ -466,6 +470,7 @@ function WfsLayers({
                   "line-opacity": 0.4,
                   "line-opacity-transition": { duration: 300 },
                 },
+                ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
               },
               firstSymbolId,
             );

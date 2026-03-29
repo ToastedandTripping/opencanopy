@@ -94,6 +94,7 @@ const LAYER_CONFIG: Record<string, WFSLayerConfig> = {
   cutblocks: {
     url: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW/ows",
     typeName: "pub:WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW",
+    cqlFilter: "PLANNED_GROSS_BLOCK_AREA < 5000",
   },
   "tap-deferrals": {
     url: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.VEG_COMP_LYR_R1_POLY/ows",
