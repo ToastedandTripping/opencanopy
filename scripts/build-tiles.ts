@@ -796,7 +796,16 @@ function archiveCurrentTiles(): void {
   mkdirSync(archiveDir, { recursive: true });
 
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const archivePath = resolve(archiveDir, `opencanopy-${today}.pmtiles`);
+
+  // Avoid silently overwriting a same-day archive: append -1, -2, ... as needed.
+  let archiveName = `opencanopy-${today}.pmtiles`;
+  let archivePath = resolve(archiveDir, archiveName);
+  let suffix = 1;
+  while (existsSync(archivePath)) {
+    archiveName = `opencanopy-${today}-${suffix}.pmtiles`;
+    archivePath = resolve(archiveDir, archiveName);
+    suffix++;
+  }
 
   console.log(`  Archiving current PMTiles → ${archivePath}`);
   copyFileSync(outputPath, archivePath);

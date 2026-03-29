@@ -80,14 +80,14 @@ async function navigateTo(
 ): Promise<void> {
   await page.evaluate(
     ({ lat, lon, zoom }) => {
-      return new Promise<void>((resolve) => {
+      return new Promise<void>((resolve, reject) => {
         const canvas = document.querySelector('.maplibregl-canvas');
-        if (!canvas) { resolve(); return; }
+        if (!canvas) { reject(new Error('navigateTo: map canvas not found')); return; }
         const container = canvas.closest('.maplibregl-map') as HTMLElement | null;
-        if (!container) { resolve(); return; }
+        if (!container) { reject(new Error('navigateTo: .maplibregl-map container not found')); return; }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const map = (container as any).__maplibreMap ?? (container as any)._map;
-        if (!map) { resolve(); return; }
+        if (!map) { reject(new Error('navigateTo: map instance not accessible — cannot navigate')); return; }
 
         const onIdle = () => { map.off('idle', onIdle); resolve(); };
         map.on('idle', onIdle);
@@ -187,12 +187,15 @@ test.describe('Screenshot Regression — 12 layer isolation at BC center', () =>
         layerName
       );
 
-      // Feature count of -1 means map instance not accessible — skip comparison but capture
+      // Feature count of -1 means map instance not accessible.
+      // Skip rather than risk saving a blank/wrong screenshot as a golden baseline.
       if (featureCount === -1) {
-        console.warn(`[warn] Could not access map instance for layer ${layerName}`);
-      } else {
-        console.log(`[info] Layer ${layerName} has ${featureCount} rendered features at z${CENTER_ZOOM}`);
+        console.warn(`[warn] Could not access map instance for layer ${layerName} — skipping`);
+        test.skip();
+        return;
       }
+
+      console.log(`[info] Layer ${layerName} has ${featureCount} rendered features at z${CENTER_ZOOM}`);
 
       const screenshotPath = join(DIFFS_DIR, `${slug}-actual.png`);
       await captureAndCompare(page, slug, screenshotPath);

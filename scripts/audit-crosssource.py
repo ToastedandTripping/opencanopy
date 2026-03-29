@@ -60,8 +60,7 @@ DEFAULT_SAMPLES = 500
 GFW_API_BASE = "https://data-api.globalforestwatch.org"
 GFW_DATASET = "umd_tree_cover_loss"
 
-# PMTiles reader helper script path
-PMT_READER_SCRIPT = PROJECT_ROOT / "scripts" / "lib" / "pmtiles-point-reader.mjs"
+# PMTiles reader — embedded as an inline ESM script, never written to disk
 
 # Zoom level for PMTiles point sampling (z10 = most detailed tier)
 SAMPLE_ZOOM = 10
@@ -94,73 +93,58 @@ def random_bc_point() -> tuple[float, float]:
 
 # ── PMTiles reader ─────────────────────────────────────────────────────────────
 
-def ensure_pmtiles_reader() -> bool:
-    """
-    Write the Node.js PMTiles point reader helper if it doesn't exist.
-    This script reads a single tile from PMTiles and returns feature data for a point.
-    """
-    if PMT_READER_SCRIPT.exists():
-        return True
+# Inline ESM source for the Node.js PMTiles point reader.
+# Passed to Node via stdin with --input-type=module — never written to disk.
+_PMTILES_READER_ESM = """
+import {{ PMTiles }} from "pmtiles";
+import {{ gunzipSync }} from "zlib";
 
-    script = """#!/usr/bin/env node
-/**
- * PMTiles point reader helper — called by audit-crosssource.py
- *
- * Usage: node pmtiles-point-reader.mjs <pmtiles-path> <lat> <lon> <zoom>
- * Output: JSON { layer: "forest-age", class: "old-growth"|"mature"|"young"|"harvested"|null }
- */
-import { PMTiles } from "pmtiles";
-import { readFileSync } from "fs";
-import { gunzipSync } from "zlib";
-
-// Inline NodeFileSource to avoid import issues
-class NodeFileSource {
-  constructor(path) { this.path = path; this.fh = null; }
-  async getBytes(offset, length) {
-    if (!this.fh) {
-      const { open } = await import("fs/promises");
+class NodeFileSource {{
+  constructor(path) {{ this.path = path; this.fh = null; }}
+  async getBytes(offset, length) {{
+    if (!this.fh) {{
+      const {{ open }} = await import("fs/promises");
       this.fh = await open(this.path, "r");
-    }
+    }}
     const buffer = Buffer.alloc(length);
     await this.fh.read(buffer, 0, length, offset);
-    return { data: buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) };
-  }
-  getKey() { return this.path; }
-}
+    return {{ data: buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) }};
+  }}
+  getKey() {{ return this.path; }}
+}}
 
-function latLonToTile(lat, lon, zoom) {
+function latLonToTile(lat, lon, zoom) {{
   const z = Math.floor(zoom);
   const n = Math.pow(2, z);
   const x = Math.floor(((lon + 180) / 360) * n);
   const latRad = (lat * Math.PI) / 180;
   const y = Math.floor(((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n);
-  return { x: Math.max(0, Math.min(n - 1, x)), y: Math.max(0, Math.min(n - 1, y)), z };
-}
+  return {{ x: Math.max(0, Math.min(n - 1, x)), y: Math.max(0, Math.min(n - 1, y)), z }};
+}}
 
-const [,, pmtilesPath, latStr, lonStr, zoomStr] = process.argv;
-if (!pmtilesPath || !latStr || !lonStr || !zoomStr) {
-  console.log(JSON.stringify({ error: "Usage: pmtiles-point-reader.mjs <path> <lat> <lon> <zoom>" }));
+const [pmtilesPath, latStr, lonStr, zoomStr] = process.argv.slice(2);
+if (!pmtilesPath || !latStr || !lonStr || !zoomStr) {{
+  console.log(JSON.stringify({{ error: "Missing arguments: <path> <lat> <lon> <zoom>" }}));
   process.exit(1);
-}
+}}
 
 const lat = parseFloat(latStr);
 const lon = parseFloat(lonStr);
 const zoom = parseInt(zoomStr, 10);
 
-try {
+try {{
   const source = new NodeFileSource(pmtilesPath);
   const pmtiles = new PMTiles(source);
-  const { x, y, z } = latLonToTile(lat, lon, zoom);
+  const {{ x, y, z }} = latLonToTile(lat, lon, zoom);
   const result = await pmtiles.getZxy(z, x, y);
-  if (!result || !result.data) {
-    console.log(JSON.stringify({ class: null, reason: "no tile" }));
+  if (!result || !result.data) {{
+    console.log(JSON.stringify({{ class: null, reason: "no tile" }}));
     process.exit(0);
-  }
+  }}
 
-  // Minimal MVT parse — just pull forest-age class from first matching feature
   const VectorTileLib = await import("@mapbox/vector-tile");
   const PbfLib = await import("pbf");
-  const { VectorTile } = VectorTileLib;
+  const {{ VectorTile }} = VectorTileLib;
   const Pbf = PbfLib.default ?? PbfLib;
 
   const bytes = Buffer.from(result.data);
@@ -171,31 +155,35 @@ try {
   const tile = new VectorTile(pbf);
 
   const layer = tile.layers["forest-age"];
-  if (!layer || layer.length === 0) {
-    console.log(JSON.stringify({ class: null, reason: "no forest-age features" }));
+  if (!layer || layer.length === 0) {{
+    console.log(JSON.stringify({{ class: null, reason: "no forest-age features" }}));
     process.exit(0);
-  }
+  }}
 
   const feature = layer.feature(0);
-  const props = feature.properties ?? {};
-  console.log(JSON.stringify({ class: props.class ?? null, age: props.age ?? null }));
-} catch (err) {
-  console.log(JSON.stringify({ error: err.message }));
+  const props = feature.properties ?? {{}};
+  console.log(JSON.stringify({{ class: props.class ?? null, age: props.age ?? null }}));
+}} catch (err) {{
+  console.log(JSON.stringify({{ error: err.message }}));
   process.exit(0);
-}
+}}
 """
-    PMT_READER_SCRIPT.write_text(script)
-    return True
 
 def read_forest_age_at_point(lat: float, lon: float, zoom: int) -> dict:
     """
     Read forest-age class from PMTiles for a given point.
-    Shells out to the Node.js helper script.
-    Returns { class: str|None, error: str|None }
+    Pipes the ESM reader inline to Node via --input-type=module with args appended as argv.
+    No file is written to disk. Returns { class: str|None, error: str|None }
     """
+    # Embed the lat/lon/zoom into the script as argv via process.argv shim.
+    # Node's --input-type=module does not support passing positional args directly,
+    # so we prepend a shim that sets process.argv before the main body reads it.
+    argv_shim = f'process.argv = ["node", "stdin", {json.dumps(str(PMTILES_PATH))}, {json.dumps(str(lat))}, {json.dumps(str(lon))}, {json.dumps(str(zoom))}];\n'
+    inline_script = argv_shim + _PMTILES_READER_ESM
     try:
         result = subprocess.run(
-            ["node", str(PMT_READER_SCRIPT), str(PMTILES_PATH), str(lat), str(lon), str(zoom)],
+            ["node", "--input-type=module"],
+            input=inline_script,
             capture_output=True,
             text=True,
             timeout=30,
@@ -333,9 +321,6 @@ def main():
         output_path.write_text(json.dumps(results, indent=2))
         print(f"[FAIL] PMTiles not found: {PMTILES_PATH}")
         return
-
-    # Ensure Node helper
-    ensure_pmtiles_reader()
 
     # Check Node.js is available
     try:

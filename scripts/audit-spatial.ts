@@ -15,6 +15,7 @@
  */
 
 import path from "path";
+import { fileURLToPath } from "url";
 import { existsSync, mkdirSync } from "fs";
 import { execSync } from "child_process";
 import { AuditResult, printResults, saveResults } from "./lib/audit-types";
@@ -22,6 +23,9 @@ import { checkWaterBodyOverlap } from "./lib/spatial-checks";
 import { BC_SAMPLE_POINTS } from "./lib/bc-sample-grid";
 
 // -- Configuration -------------------------------------------------------------
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const PMTILES_PATH = path.resolve(PROJECT_ROOT, "data", "tiles", "opencanopy.pmtiles");

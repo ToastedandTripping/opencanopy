@@ -60,3 +60,5 @@ e2e/screenshots/diffs/
 data/geojson/reference/
 data/tiles/archive/
 data/reports/
+# audit-crosssource.py no longer writes this file (C2 fix), but ignore any existing copy
+scripts/lib/pmtiles-point-reader.mjs

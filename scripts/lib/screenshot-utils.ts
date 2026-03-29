@@ -36,6 +36,12 @@ export function compareScreenshots(
   const actualPng = PNG.sync.read(actual);
   const baselinePng = PNG.sync.read(baseline);
 
+  if (actualPng.width !== baselinePng.width || actualPng.height !== baselinePng.height) {
+    throw new Error(
+      `Dimension mismatch: actual ${actualPng.width}x${actualPng.height} vs baseline ${baselinePng.width}x${baselinePng.height}`
+    );
+  }
+
   const { width, height } = actualPng;
   const diffPng = new PNG({ width, height });
 

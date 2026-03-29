@@ -24,6 +24,7 @@
     "audit:live": "npx playwright test e2e/monitoring/",
     "audit:download-reference": "npx tsx scripts/download-reference-data.ts",
     "audit:v2": "npm run audit && npm run audit:spatial",
+    "//audit:v2-note": "audit:visual is intentionally excluded from audit:v2 — it requires a running dev server. Run audit:visual separately.",
     "audit:full": "npm run audit:v2 && npm run audit:temporal"
   },
   "dependencies": {

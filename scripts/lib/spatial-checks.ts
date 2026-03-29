@@ -18,6 +18,7 @@ import type { SamplePoint } from "./bc-sample-grid";
 const turf = {
   bbox: require("@turf/bbox").default ?? require("@turf/bbox"),
   intersect: require("@turf/intersect").default ?? require("@turf/intersect"),
+  area: require("@turf/area").default ?? require("@turf/area"),
   helpers: require("@turf/helpers"),
 };
 
@@ -248,15 +249,12 @@ export async function checkWaterBodyOverlap(
           );
           if (!intersection) continue;
 
-          // Estimate overlap fraction: intersection bbox area vs feature bbox area
-          // (approximate — avoids @turf/area for performance)
-          const intBbox = (turf.bbox.default ?? turf.bbox)(intersection) as [number, number, number, number];
-          const featureArea =
-            (featureBbox[2] - featureBbox[0]) * (featureBbox[3] - featureBbox[1]);
-          const intArea =
-            (intBbox[2] - intBbox[0]) * (intBbox[3] - intBbox[1]);
+          // Compute precise overlap fraction using @turf/area (geodesic m²)
+          const featureArea = (turf.area.default ?? turf.area)(geoFeature);
+          const overlapArea = (turf.area.default ?? turf.area)(intersection);
+          const overlapRatio = featureArea > 0 ? overlapArea / featureArea : 0;
 
-          if (featureArea > 0 && intArea / featureArea > OVERLAP_THRESHOLD) {
+          if (overlapRatio > OVERLAP_THRESHOLD) {
             pointWaterOverlaps++;
             totalWaterOverlaps++;
             break; // No need to check other lakes for this feature

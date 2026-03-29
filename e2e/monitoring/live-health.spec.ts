@@ -36,8 +36,9 @@ async function waitForMapIdle(page: Page, timeoutMs = 60000): Promise<boolean> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const map = (container as any).__maplibreMap ?? (container as any)._map;
         if (!map) {
-          // Canvas exists but map instance not directly accessible — treat as loaded
-          return true;
+          // Map instance not accessible — return false so the caller handles the failure explicitly.
+          // Do NOT treat canvas existence alone as a proxy for "loaded"; it allows silent pass on broken state.
+          return false;
         }
         return map.loaded() && map.areTilesLoaded();
       },

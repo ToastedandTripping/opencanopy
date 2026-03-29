@@ -17,6 +17,7 @@
  */
 
 import path from "path";
+import { fileURLToPath } from "url";
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { PMTiles } from "pmtiles";
 import { NodeFileSource } from "./lib/node-file-source";
@@ -26,6 +27,9 @@ import { AuditResult, printResults, saveResults } from "./lib/audit-types";
 import { BC_SAMPLE_POINTS, EXPECTED_SOURCE_LAYERS } from "./lib/bc-sample-grid";
 
 // -- Configuration -------------------------------------------------------------
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const TILES_DIR = path.resolve(PROJECT_ROOT, "data", "tiles");
