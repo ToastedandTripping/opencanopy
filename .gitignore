@@ -49,6 +49,7 @@ next-env.d.ts
 # Generated tile data (large files, built by scripts/build-tiles.ts)
 /data/geojson/
 /data/tiles/
+data/tiles/test/
 /data/progress/
 /public/data/tiles/
 data/raster/*.tif

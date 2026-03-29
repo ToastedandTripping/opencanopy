@@ -25,7 +25,9 @@
     "audit:download-reference": "npx tsx scripts/download-reference-data.ts",
     "audit:v2": "npm run audit && npm run audit:spatial",
     "//audit:v2-note": "audit:visual is intentionally excluded from audit:v2 — it requires a running dev server. Run audit:visual separately.",
-    "audit:full": "npm run audit:v2 && npm run audit:temporal"
+    "audit:full": "npm run audit:v2 && npm run audit:temporal",
+    "test:tile-config": "npx tsx scripts/test-tile-config.ts",
+    "sweep:tile-configs": "npx tsx scripts/sweep-tile-configs.ts"
   },
   "dependencies": {
     "@turf/area": "^7.3.4",
