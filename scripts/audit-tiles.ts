@@ -28,6 +28,7 @@ import {
   printResults,
   saveResults,
 } from "./lib/audit-types";
+import { LAYER_REGISTRY } from "../src/lib/layers/registry";
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -134,6 +135,9 @@ class TileAudit {
 
     console.log("A6: Checking zoom consistency...");
     results.push(...(await this.checkZoomConsistency()));
+
+    console.log("A7: Checking timeline property format...");
+    results.push(...(await this.checkTimelinePropertyFormat()));
 
     await this.source.close();
     return results;
@@ -725,6 +729,200 @@ class TileAudit {
         coveragePercent: parseFloat(coveragePercent),
       },
     });
+
+    return results;
+  }
+
+  // ── A7: Timeline property format ───────────────────────────────────────────
+  //
+  // For each layer with timelineField, sample features from a tile and verify
+  // the field value is a string starting with a 4-digit year (regex: /^\d{4}/).
+  //
+  // Background: tippecanoe can coerce numeric-looking strings to numbers.
+  // FIRE_YEAR values like "2015" might become the integer 2015.
+  // The story timeline filter uses ["slice", ["get", "FIRE_YEAR"], 0, 4] which
+  // fails silently on numbers -- the expression returns null instead of "2015".
+  //
+  // DISTURBANCE_START_DATE is a full ISO date string ("2015-06-01") so it
+  // should survive as a string. FIRE_YEAR is the higher-risk field.
+
+  async checkTimelinePropertyFormat(): Promise<AuditResult[]> {
+    const results: AuditResult[] = [];
+
+    // Collect layers with timelineField that also have a tileSource
+    const timelineLayers = LAYER_REGISTRY.filter(
+      (l) => l.timelineField && l.tileSource
+    );
+
+    if (timelineLayers.length === 0) {
+      results.push({
+        check: "A7: Timeline property format",
+        status: "WARN",
+        message:
+          "No registry layers have both timelineField and tileSource. " +
+          "Nothing to check. This may indicate the registry has changed.",
+      });
+      return results;
+    }
+
+    for (const layer of timelineLayers) {
+      const fieldName = layer.timelineField!;
+      const sourceLayer = layer.tileSource!.sourceLayer;
+      const center = LAYER_CENTER_POINTS[sourceLayer];
+
+      if (!center) {
+        results.push({
+          check: `A7: Timeline property format [${layer.id}] field: ${fieldName}`,
+          status: "WARN",
+          message:
+            `No center point defined for source layer "${sourceLayer}". ` +
+            "Cannot sample tile for timeline format check.",
+        });
+        continue;
+      }
+
+      // Try z10, fall back to z8
+      let tileData: ArrayBuffer | null = null;
+      let usedZoom = 10;
+      for (const zoom of [10, 8]) {
+        const tile = latLonToTile(center.lat, center.lon, zoom);
+        tileData = await readTile(this.pmtiles, tile.z, tile.x, tile.y);
+        if (tileData) {
+          usedZoom = zoom;
+          break;
+        }
+      }
+
+      if (!tileData) {
+        results.push({
+          check: `A7: Timeline property format [${layer.id}] field: ${fieldName}`,
+          status: "WARN",
+          message:
+            `No tile data found at z10 or z8 near center point for "${sourceLayer}". ` +
+            "Cannot verify timeline property format.",
+        });
+        continue;
+      }
+
+      const parsed = parseTile(tileData);
+      const features = getLayerFeatures(parsed, sourceLayer);
+
+      if (features.length === 0) {
+        results.push({
+          check: `A7: Timeline property format [${layer.id}] field: ${fieldName}`,
+          status: "WARN",
+          message:
+            `No features found in z${usedZoom} tile for source layer "${sourceLayer}". ` +
+            "Cannot verify timeline property format at this location.",
+        });
+        continue;
+      }
+
+      // Sample up to 20 features that have the timelineField set
+      const YEAR_STRING_RE = /^\d{4}/;
+      let sampled = 0;
+      let numberCount = 0;
+      let stringWithYearCount = 0;
+      let nullCount = 0;
+      let malformedCount = 0;
+      const malformedExamples: unknown[] = [];
+
+      for (const feature of features) {
+        const props = (feature as { properties?: Record<string, unknown> })
+          .properties;
+        if (!props || !(fieldName in props)) continue;
+
+        const val = props[fieldName];
+        sampled++;
+
+        if (val === null || val === undefined) {
+          nullCount++;
+        } else if (typeof val === "number") {
+          numberCount++;
+          if (malformedExamples.length < 3) malformedExamples.push(val);
+        } else if (typeof val === "string" && YEAR_STRING_RE.test(val)) {
+          stringWithYearCount++;
+        } else {
+          malformedCount++;
+          if (malformedExamples.length < 3) malformedExamples.push(val);
+        }
+
+        if (sampled >= 20) break;
+      }
+
+      if (sampled === 0) {
+        results.push({
+          check: `A7: Timeline property format [${layer.id}] field: ${fieldName}`,
+          status: "WARN",
+          message:
+            `Found ${features.length} features but none have the "${fieldName}" property. ` +
+            "Property may have been dropped by tippecanoe or misnamed.",
+          details: { sourceLayer, zoom: usedZoom, featureCount: features.length },
+        });
+        continue;
+      }
+
+      if (numberCount > 0) {
+        results.push({
+          check: `A7: Timeline property format [${layer.id}] field: ${fieldName}`,
+          status: "FAIL",
+          message:
+            `FAIL: "${fieldName}" has been coerced to a number in ${numberCount}/${sampled} ` +
+            `sampled features (z${usedZoom}, source: "${sourceLayer}"). ` +
+            `The timeline ["slice", ["get", "${fieldName}"], 0, 4] expression will fail silently on numbers. ` +
+            `Rebuild tiles with --include-all-properties or add -y ${fieldName}:string to tippecanoe flags. ` +
+            `Example values found: ${JSON.stringify(malformedExamples)}`,
+          details: {
+            field: fieldName,
+            sourceLayer,
+            zoom: usedZoom,
+            sampled,
+            numberCount,
+            stringWithYearCount,
+            nullCount,
+            malformedCount,
+            malformedExamples,
+          },
+        });
+      } else if (malformedCount > 0) {
+        results.push({
+          check: `A7: Timeline property format [${layer.id}] field: ${fieldName}`,
+          status: "WARN",
+          message:
+            `"${fieldName}" has ${malformedCount}/${sampled} values that don't match /^\\d{4}/. ` +
+            `These features won't match timeline year filters. ` +
+            `Example malformed values: ${JSON.stringify(malformedExamples)}`,
+          details: {
+            field: fieldName,
+            sourceLayer,
+            zoom: usedZoom,
+            sampled,
+            numberCount,
+            stringWithYearCount,
+            nullCount,
+            malformedCount,
+            malformedExamples,
+          },
+        });
+      } else {
+        results.push({
+          check: `A7: Timeline property format [${layer.id}] field: ${fieldName}`,
+          status: "PASS",
+          message:
+            `"${fieldName}" format looks correct: ${stringWithYearCount}/${sampled} sampled ` +
+            `features have string values starting with a 4-digit year (z${usedZoom}, source: "${sourceLayer}"). ` +
+            `${nullCount > 0 ? `${nullCount} features have null values (expected for some records).` : ""}`,
+          details: {
+            field: fieldName,
+            sourceLayer,
+            zoom: usedZoom,
+            sampled,
+            stringWithYearCount,
+            nullCount,
+          },
+        });
+      }
+    }
 
     return results;
   }
