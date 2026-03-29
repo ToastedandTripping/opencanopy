@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "audit:rendering": "vitest run --reporter=verbose src/test/audit/",
+    "audit:tiles": "npx tsx scripts/audit-tiles.ts",
+    "audit": "npm run audit:rendering && npm run audit:tiles"
   },
   "dependencies": {
     "@turf/area": "^7.3.4",
