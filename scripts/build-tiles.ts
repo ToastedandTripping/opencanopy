@@ -249,10 +249,17 @@ const extractOgma: PropertyExtractor = (props) => ({
   LANDSCAPE_UNIT_NAME: props.LANDSCAPE_UNIT_NAME ?? null,
 });
 
-const extractWildlifeHabitatAreas: PropertyExtractor = (props) => ({
-  COMMON_SPECIES_NAME: props.COMMON_SPECIES_NAME ?? null,
-  HABITAT_AREA_ID: props.HABITAT_AREA_ID ?? null,
-});
+const extractWildlifeHabitatAreas: PropertyExtractor = (props) => {
+  let habitatAreaId: number | null = null;
+  if (props.HABITAT_AREA_ID != null) {
+    const coerced = Number(props.HABITAT_AREA_ID);
+    habitatAreaId = isNaN(coerced) ? null : coerced;
+  }
+  return {
+    COMMON_SPECIES_NAME: props.COMMON_SPECIES_NAME ?? null,
+    HABITAT_AREA_ID: habitatAreaId,
+  };
+};
 
 const extractUngulateWinterRange: PropertyExtractor = (props) => ({
   SPECIES_1: props.SPECIES_1 ?? null,
