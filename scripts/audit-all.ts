@@ -190,8 +190,16 @@ function printSummary(runResults: RunResult[]): void {
     const exitDisplay = r.exitCode === 0 ? C.green + "0" + C.reset : C.red + String(r.exitCode) + C.reset;
     const statusDisplay = `${statusColor}${r.worstStatus}${C.reset}`;
 
+    // Strip ANSI codes before measuring, then pad with spaces to preserve column alignment.
+    const stripAnsi = (s: string): string => s.replace(/\x1b\[[0-9;]*m/g, "");
+    const padStart = (s: string, w: number): string => {
+      const plain = stripAnsi(s);
+      const spaces = Math.max(0, w - plain.length);
+      return " ".repeat(spaces) + s;
+    };
+
     console.log(
-      `${r.label.padEnd(colWidth)}${exitDisplay.padStart(6 + C.green.length + C.reset.length)}${statusDisplay.padStart(10 + statusColor.length + C.reset.length)}`
+      `${r.label.padEnd(colWidth)}${padStart(exitDisplay, 6)}${padStart(statusDisplay, 10)}`
     );
   }
 

@@ -4,6 +4,7 @@
 
 import { existsSync, writeFileSync, readFileSync } from "fs";
 import path from "path";
+import { archiveResults } from "./audit-archive";
 
 export interface AuditResult {
   check: string;
@@ -383,7 +384,6 @@ export function saveResults(results: AuditResult[], outputPath: string): void {
   const archiveDir = path.join(reportsDir, "archive");
   try {
     if (existsSync(archiveDir)) {
-      const { archiveResults } = require("./audit-archive");
       archiveResults(reportsDir, archiveDir);
     }
   } catch (err) {
