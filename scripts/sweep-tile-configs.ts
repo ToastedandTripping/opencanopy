@@ -8,6 +8,7 @@
  *   npx tsx scripts/sweep-tile-configs.ts
  *   npx tsx scripts/sweep-tile-configs.ts --lat=51.0 --lon=-118.2
  *   npx tsx scripts/sweep-tile-configs.ts --lat=49.4 --lon=-118.8 --radius=0.5
+ *   npx tsx scripts/sweep-tile-configs.ts --multi-region
  */
 
 import path from "path";
@@ -48,7 +49,27 @@ const REPORTS_DIR = path.resolve(PROJECT_ROOT, "data/reports");
 
 // ── CLI Argument Parsing ───────────────────────────────────────────────────────
 
-function parseArgs(argv: string[]): { lat: number; lon: number; radius: number } {
+/**
+ * The four regions used by --multi-region mode.
+ * Selected to cover the southern interior, mountain, north-central, and
+ * west coast zones of BC -- each with distinct forest characteristics.
+ */
+const MULTI_REGIONS: Array<{ name: string; lat: number; lon: number }> = [
+  { name: "Kelowna",        lat: 49.4, lon: -118.8 },
+  { name: "Revelstoke",     lat: 51.0, lon: -118.2 },
+  { name: "Prince George",  lat: 53.9, lon: -122.8 },
+  { name: "Campbell River", lat: 50.0, lon: -125.3 },
+];
+
+/** Score deviation (points) above which a config is flagged as "unstable" */
+const INSTABILITY_THRESHOLD = 15;
+
+function parseArgs(argv: string[]): {
+  lat: number;
+  lon: number;
+  radius: number;
+  multiRegion: boolean;
+} {
   const args = argv.slice(2);
 
   function getFlag(name: string): string | null {
@@ -59,10 +80,13 @@ function parseArgs(argv: string[]): { lat: number; lon: number; radius: number }
     return null;
   }
 
+  const multiRegion = args.includes("--multi-region");
+
   return {
     lat: parseFloat(getFlag("lat") ?? "49.4"),
     lon: parseFloat(getFlag("lon") ?? "-118.8"),
     radius: parseFloat(getFlag("radius") ?? "0.5"),
+    multiRegion,
   };
 }
 
@@ -212,10 +236,314 @@ async function countTestRegionFeatures(): Promise<number> {
   return total;
 }
 
+// ── Single-region sweep ────────────────────────────────────────────────────────
+
+/**
+ * Run the full sweep for a single region.
+ * Extracted so it can be called per-region in multi-region mode.
+ * Returns the scored results array (sorted by score descending).
+ */
+async function runSingleRegionSweep(
+  lat: number,
+  lon: number,
+  radius: number,
+  regionLabel: string
+): Promise<ScoredConfig[]> {
+  console.log(`\n${"─".repeat(60)}`);
+  console.log(`Region: ${regionLabel}  (${lat}, ${lon}  radius: ±${radius}°)`);
+  console.log("─".repeat(60));
+
+  mkdirSync(TEST_DIR, { recursive: true });
+  mkdirSync(REPORTS_DIR, { recursive: true });
+
+  // Step 1: Extract test region
+  console.log("\nStep 1: Extracting test region...");
+  await extractTestRegion(lat, lon, radius);
+
+  const ndjsonCount = await countTestRegionFeatures();
+  console.log(`  Total source features in region: ${ndjsonCount.toLocaleString()}`);
+
+  if (ndjsonCount === 0) {
+    console.error(`No NDJSON data found in test region for ${regionLabel}. Skipping.`);
+    return [];
+  }
+
+  // Step 2: Measure production baseline (optional)
+  let productionMetrics: ConfigMetrics | null = null;
+  if (existsSync(PRODUCTION_PMTILES)) {
+    productionMetrics = await measureMetrics(
+      PRODUCTION_PMTILES,
+      lat, lon, radius,
+      ndjsonCount
+    );
+    console.log(`  Production score: ${computeQualityScore(productionMetrics)}`);
+  }
+
+  // Step 3: Run all configs
+  const configs = buildConfigSet();
+  const seen = new Set<string>();
+  const uniqueConfigs = configs.filter((c) => {
+    const key = JSON.stringify(c.config);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  console.log(`\nTesting ${uniqueConfigs.length} configurations...`);
+
+  const rawResults: Array<{ name: string; metrics: ConfigMetrics }> = [];
+
+  for (let i = 0; i < uniqueConfigs.length; i++) {
+    const { name, config } = uniqueConfigs[i];
+    const paramStr = configToParamString(config);
+    console.log(`\n[${i + 1}/${uniqueConfigs.length}] ${name}  (${paramStr})`);
+
+    const { overviewArgs, detailArgs, mergeArgs, overviewPath, detailPath, outputPath, inputs } =
+      buildTippecanoeCommands(config, `sweep-${name}`);
+
+    if (inputs.length === 0) {
+      console.warn("  No NDJSON inputs — skipping.");
+      continue;
+    }
+
+    const built = runTippecanoeCommands(
+      overviewArgs,
+      detailArgs,
+      mergeArgs,
+      overviewPath,
+      detailPath
+    );
+
+    if (!built || !existsSync(outputPath)) {
+      console.error(`  Build failed — skipping ${name}.`);
+      continue;
+    }
+
+    const metrics = await measureMetrics(outputPath, lat, lon, radius, ndjsonCount);
+
+    console.log(
+      `  artifact z7: ${metrics.artifactPercentZ7.toFixed(1)}%  ` +
+      `z9: ${metrics.artifactPercentZ9.toFixed(1)}%  ` +
+      `preserve: ${metrics.featurePreservationPercent.toFixed(1)}%  ` +
+      `maxTile: ${metrics.maxTileSizeMB.toFixed(2)} MB  ` +
+      `total: ${metrics.totalSizeMB.toFixed(1)} MB`
+    );
+
+    rawResults.push({ name, metrics });
+
+    try { unlinkSync(outputPath); } catch { /* ignore */ }
+  }
+
+  if (rawResults.length === 0) {
+    console.error(`No results collected for ${regionLabel}.`);
+    return [];
+  }
+
+  // Step 4: Compute relative-normalized scores
+  const sizeRange = buildSizeRange(rawResults.map((r) => r.metrics));
+
+  const results: ScoredConfig[] = rawResults.map(({ name, metrics }) => ({
+    name,
+    metrics,
+    score: computeQualityScore(metrics, sizeRange),
+    pareto: false,
+  }));
+
+  // Step 5: Pareto-optimal
+  const paretoNames = new Set(
+    findParetoOptimal(results.map((r) => ({ name: r.name, metrics: r.metrics })))
+  );
+  for (const r of results) {
+    r.pareto = paretoNames.has(r.name);
+  }
+
+  // Step 6: Sort by score descending
+  results.sort((a, b) => b.score - a.score);
+
+  // Step 7: Output table
+  const table = formatSweepTable(results);
+  console.log(table);
+
+  if (productionMetrics !== null) {
+    const productionScore = computeQualityScore(productionMetrics);
+    console.log(`  Production (baseline) score: ${productionScore}`);
+    const bestResult = results[0];
+    if (bestResult && bestResult.score > productionScore) {
+      console.log(
+        `  Best config "${bestResult.name}" scores ${bestResult.score - productionScore} points higher than production.`
+      );
+    }
+    console.log();
+  }
+
+  return results;
+}
+
+// ── Multi-region sweep ─────────────────────────────────────────────────────────
+
+/**
+ * Run the sweep across all 4 BC regions, then cross-compare scores.
+ * Configs with a max-min spread > INSTABILITY_THRESHOLD are flagged as "unstable".
+ */
+async function runMultiRegionSweep(radius: number): Promise<void> {
+  console.log("\nTippecanoe Parameter Sweep — Multi-Region Mode");
+  console.log("─".repeat(60));
+  console.log(`  Regions: ${MULTI_REGIONS.map((r) => r.name).join(", ")}`);
+  console.log(`  Instability threshold: >${INSTABILITY_THRESHOLD} point cross-region deviation`);
+
+  mkdirSync(REPORTS_DIR, { recursive: true });
+
+  // Run each region
+  const regionResults: Array<{
+    region: string;
+    lat: number;
+    lon: number;
+    configs: ScoredConfig[];
+  }> = [];
+
+  for (const region of MULTI_REGIONS) {
+    const results = await runSingleRegionSweep(region.lat, region.lon, radius, region.name);
+    regionResults.push({
+      region: region.name,
+      lat: region.lat,
+      lon: region.lon,
+      configs: results,
+    });
+  }
+
+  // Cross-compare scores: for each config name, collect scores across regions
+  // and flag those with > INSTABILITY_THRESHOLD point spread
+  const configNames = new Set<string>();
+  for (const rr of regionResults) {
+    for (const c of rr.configs) configNames.add(c.name);
+  }
+
+  interface RegionScore {
+    region: string;
+    score: number;
+  }
+
+  interface ConfigCrossRegion {
+    configName: string;
+    scores: RegionScore[];
+    minScore: number;
+    maxScore: number;
+    deviation: number;
+    unstable: boolean;
+  }
+
+  const crossRegionAnalysis: ConfigCrossRegion[] = [];
+
+  for (const configName of configNames) {
+    const scores: RegionScore[] = [];
+    for (const rr of regionResults) {
+      const match = rr.configs.find((c) => c.name === configName);
+      if (match) {
+        scores.push({ region: rr.region, score: match.score });
+      }
+    }
+
+    if (scores.length === 0) continue;
+
+    const scoreValues = scores.map((s) => s.score);
+    const minScore = Math.min(...scoreValues);
+    const maxScore = Math.max(...scoreValues);
+    const deviation = maxScore - minScore;
+    const unstable = deviation > INSTABILITY_THRESHOLD;
+
+    crossRegionAnalysis.push({
+      configName,
+      scores,
+      minScore,
+      maxScore,
+      deviation,
+      unstable,
+    });
+  }
+
+  // Sort by deviation descending
+  crossRegionAnalysis.sort((a, b) => b.deviation - a.deviation);
+
+  const unstableConfigs = crossRegionAnalysis.filter((c) => c.unstable);
+
+  // Print cross-region summary
+  console.log("\n" + "═".repeat(60));
+  console.log("Cross-Region Analysis");
+  console.log("═".repeat(60));
+  console.log(`\n  Configs tested: ${crossRegionAnalysis.length}`);
+  console.log(`  Unstable configs (>${INSTABILITY_THRESHOLD}pt deviation): ${unstableConfigs.length}`);
+
+  if (unstableConfigs.length > 0) {
+    console.log("\n  Unstable configurations:");
+    for (const u of unstableConfigs) {
+      const scoreStr = u.scores.map((s) => `${s.region}: ${s.score}`).join(", ");
+      console.log(`    ${u.configName}  deviation=${u.deviation}  [${scoreStr}]`);
+    }
+  }
+
+  // Find configs that score well across ALL regions (stable + high performing)
+  const stableConfigs = crossRegionAnalysis.filter((c) => !c.unstable);
+  stableConfigs.sort((a, b) => b.minScore - a.minScore); // rank by worst-case score
+
+  if (stableConfigs.length > 0) {
+    const topStable = stableConfigs.slice(0, 3);
+    console.log("\n  Top stable configs (by worst-case regional score):");
+    for (const s of topStable) {
+      const scoreStr = s.scores.map((sc) => `${sc.region}: ${sc.score}`).join(", ");
+      console.log(`    ${s.configName}  min=${s.minScore}  [${scoreStr}]`);
+    }
+  }
+
+  // Save multi-region report
+  const reportPath = path.join(REPORTS_DIR, "sweep-results.json");
+  const report = {
+    timestamp: new Date().toISOString(),
+    mode: "multi-region",
+    radius,
+    instabilityThreshold: INSTABILITY_THRESHOLD,
+    regions: regionResults.map((rr) => ({
+      region: rr.region,
+      lat: rr.lat,
+      lon: rr.lon,
+      configs: rr.configs.map((c) => ({
+        name: c.name,
+        score: c.score,
+        pareto: c.pareto,
+        metrics: c.metrics,
+      })),
+      winner: rr.configs[0]?.name ?? null,
+    })),
+    crossRegionAnalysis,
+    unstableConfigs: unstableConfigs.map((u) => ({
+      configName: u.configName,
+      deviation: u.deviation,
+      scores: u.scores,
+    })),
+    topStableConfigs: stableConfigs.slice(0, 5).map((s) => ({
+      configName: s.configName,
+      minScore: s.minScore,
+      deviation: s.deviation,
+      scores: s.scores,
+    })),
+  };
+
+  try {
+    writeFileSync(reportPath, JSON.stringify(report, null, 2));
+    console.log(`\nMulti-region sweep results saved: ${reportPath}`);
+  } catch (err) {
+    console.warn(`Could not save report: ${(err as Error).message}`);
+  }
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const { lat, lon, radius } = parseArgs(process.argv);
+  const { lat, lon, radius, multiRegion } = parseArgs(process.argv);
+
+  if (multiRegion) {
+    await runMultiRegionSweep(radius);
+    return;
+  }
 
   console.log("\nTippecanoe Parameter Sweep");
   console.log("─".repeat(60));
