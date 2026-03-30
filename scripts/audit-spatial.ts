@@ -13,7 +13,7 @@
  *         "old-growth" → age ≥ 250
  *         "mature"     → 80 ≤ age < 250
  *         "young"      → 0 < age < 80
- *         "harvested"  → age is null (harvest indicator)
+ *         "harvested"  → any age (harvest set by HARVEST_DATE, not age)
  *
  * Prerequisites:
  *   - PMTiles archive: data/tiles/opencanopy.pmtiles
@@ -110,7 +110,7 @@ function parseArgs(): { outputPath: string; filterLayer: string | null } {
  *   "old-growth" → age ≥ 250
  *   "mature"     → 80 ≤ age < 250
  *   "young"      → 0 < age < 80
- *   "harvested"  → age is null (null is the harvest indicator)
+ *   "harvested"  → any age is acceptable (harvest is set by HARVEST_DATE, not age)
  */
 function isClassConsistent(
   cls: unknown,
@@ -152,10 +152,9 @@ function isClassConsistent(
       return { consistent: true };
 
     case "harvested":
-      // Harvest indicator: age must be null
-      if (ageNum !== null) {
-        return { consistent: false, reason: `class="harvested" but age=${ageNum} (expected null)` };
-      }
+      // Harvest classification is determined by the presence of HARVEST_DATE,
+      // not by age. Stand age is the projected age before harvest and is valid
+      // data — null or non-null age is both acceptable here.
       return { consistent: true };
 
     default:

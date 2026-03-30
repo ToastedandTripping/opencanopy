@@ -885,7 +885,12 @@ function runTippecanoe(): boolean {
     }
   }
 
-  const inputs: string[] = [];
+  // Build two input lists: overview excludes conservation-priority (it would be
+  // coalesced away at z4-z7 anyway and its absence from tier 1 caused tile-join
+  // to drop it from the merged output). Detail includes all layers.
+  const overviewInputs: string[] = [];
+  const detailInputs: string[] = [];
+
   for (const name of layerFiles) {
     // Prefer preprocessed version if available and --preprocessed flag is set
     let p: string;
@@ -900,7 +905,11 @@ function runTippecanoe(): boolean {
     }
 
     if (existsSync(p) && statSync(p).size > 0) {
-      inputs.push("-L", `${name}:${p}`);
+      // conservation-priority: detail tier only (see comment above)
+      if (name !== "conservation-priority") {
+        overviewInputs.push("-L", `${name}:${p}`);
+      }
+      detailInputs.push("-L", `${name}:${p}`);
     } else if (existsSync(p) && statSync(p).size === 0) {
       console.log(`  Skipping ${name}: NDJSON exists but is empty (0 bytes)`);
     } else {
@@ -908,7 +917,7 @@ function runTippecanoe(): boolean {
     }
   }
 
-  if (inputs.length === 0) {
+  if (detailInputs.length === 0) {
     console.error("No NDJSON files found to tile.");
     return false;
   }
@@ -961,14 +970,18 @@ function runTippecanoe(): boolean {
       "--coalesce-smallest-as-needed",
       "--simplification=10",
       "--buffer=16",
+      // Force timeline properties to string so MapLibre filter expressions work
+      "--attribute-type=FIRE_YEAR:string",
+      "--attribute-type=DISTURBANCE_START_DATE:string",
       "--force",
-      ...inputs,
+      ...overviewInputs,
     ].join(" ");
     console.log(`  $ ${overviewCmd}\n`);
     execSync(overviewCmd, { stdio: "inherit", timeout: 3_600_000 });
 
     // ── Tier 2: Detail (z8-z10) ──
     // All features, moderate simplification for accurate boundaries.
+    // conservation-priority is included here (excluded from overview tier).
     console.log("\nTier 2: Detail tiles (z8-z10, moderate simplification)...");
     const detailCmd = [
       "tippecanoe",
@@ -978,8 +991,11 @@ function runTippecanoe(): boolean {
       "--no-feature-limit", "--no-tile-size-limit",
       "--simplification=8",
       "--buffer=16",
+      // Force timeline properties to string so MapLibre filter expressions work
+      "--attribute-type=FIRE_YEAR:string",
+      "--attribute-type=DISTURBANCE_START_DATE:string",
       "--force",
-      ...inputs,
+      ...detailInputs,
     ].join(" ");
     console.log(`  $ ${detailCmd}\n`);
     execSync(detailCmd, { stdio: "inherit", timeout: 3_600_000 });
