@@ -334,16 +334,9 @@ async function checkV4OldGrowthPostFire(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const matureOrOldGrowth = forestResult.features.filter((f: any) => {
-    const ageClass = String(f.properties?.PROJ_AGE_CLASS_CD ?? "").toLowerCase();
-    // BC forest age class codes: old-growth = 9, mature = 7-8
-    // Layer may use age class codes or descriptive strings
-    return (
-      ageClass === "old-growth" ||
-      ageClass === "mature" ||
-      ageClass === "9" ||
-      ageClass === "8" ||
-      ageClass === "7"
-    );
+    // Tile stores `class` as a descriptive string emitted by the VRI extractor
+    const ageClass = String(f.properties?.class ?? "").toLowerCase();
+    return ageClass === "old-growth" || ageClass === "mature";
   });
 
   if (matureOrOldGrowth.length === 0) return null;

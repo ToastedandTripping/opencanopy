@@ -53,7 +53,7 @@ export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
     lon: -125.7,
     layer: "parks",
     expectedValue: /Pacific Rim/i,
-    propertyKey: "PROTECTED_LANDS_NAME",
+    propertyKey: "name",
     description: "Park boundary must be present at Pacific Rim NP",
   },
   {
@@ -62,7 +62,7 @@ export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
     lon: -124.52,
     layer: "tenure-cutblocks",
     expectedValue: /./,   // any non-empty value -- active cutblocks exist here
-    propertyKey: "OPENING_STATUS_CODE",
+    propertyKey: "company_id",
     description: "Active cutblocks must be present in Fairy Creek watershed",
   },
   {
@@ -71,7 +71,7 @@ export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
     lon: -128.2,
     layer: "conservancies",
     expectedValue: /./,   // any value -- conservancy boundary must exist
-    propertyKey: "CONSERVANCY_AREA_NAME",
+    propertyKey: "name",
     description: "Conservancy boundary must be present in Great Bear Rainforest",
   },
   {
@@ -80,7 +80,7 @@ export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
     lon: -118.2,
     layer: "tenure-cutblocks",
     expectedValue: /./,   // company_id present (any non-empty value)
-    propertyKey: "CLIENT_NAME",
+    propertyKey: "company_id",
     description: "Cutblocks with company identifier must be present near Revelstoke",
   },
   {
@@ -107,7 +107,7 @@ export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
     lon: -121.05,
     layer: "mining-claims",
     expectedValue: /./,   // any value -- mining tenure exists here
-    propertyKey: "TENURE_TYPE",
+    propertyKey: "TENURE_TYPE_DESCRIPTION",
     description: "Mining tenure must be present at Highland Valley copper mine",
   },
   {
@@ -116,7 +116,7 @@ export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
     lon: -122.9,
     layer: "community-watersheds",
     expectedValue: /./,   // watershed name present
-    propertyKey: "COMMUNITY_WATERSHED_NAME",
+    propertyKey: "CW_NAME",
     description: "Watershed name must be present in Greater Vancouver watershed",
   },
   {
@@ -125,7 +125,7 @@ export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
     lon: -125.75,
     layer: "parks",
     expectedValue: /Strathcona/i,
-    propertyKey: "PROTECTED_LANDS_NAME",
+    propertyKey: "name",
     description: "Park boundary must be present at Strathcona Provincial Park",
   },
 ];

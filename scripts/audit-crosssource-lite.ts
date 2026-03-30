@@ -100,34 +100,20 @@ async function getFeaturesAtPoint(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isMatureOrOldGrowth(feature: any): boolean {
-  const raw = String(feature.properties?.PROJ_AGE_CLASS_CD ?? "").toLowerCase().trim();
-  // BC VRI age class codes: 7 = mature (121-250 yrs), 8 = mature (251+), 9 = old (>250)
-  // Some datasets use descriptive strings
-  return (
-    raw === "old-growth" ||
-    raw === "old growth" ||
-    raw === "mature" ||
-    raw === "9" ||
-    raw === "8" ||
-    raw === "7"
-  );
+  // Tile stores `class` as a descriptive string emitted by the VRI extractor:
+  // "old-growth" | "mature" | "young" | "harvested"
+  const raw = String(feature.properties?.class ?? "").toLowerCase().trim();
+  return raw === "old-growth" || raw === "mature";
 }
 
 // ── Helper: is this a "harvested/young" age class? ───────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isHarvestedOrYoung(feature: any): boolean {
-  const raw = String(feature.properties?.PROJ_AGE_CLASS_CD ?? "").toLowerCase().trim();
-  // Age class 1 = 1-20 yrs, 2 = 21-40, 3 = 41-60; or descriptive strings
-  return (
-    raw === "harvested" ||
-    raw === "young" ||
-    raw === "1" ||
-    raw === "2" ||
-    raw === "3" ||
-    raw === "clearcut" ||
-    raw === "recently harvested"
-  );
+  // Tile stores `class` as a descriptive string emitted by the VRI extractor:
+  // "old-growth" | "mature" | "young" | "harvested"
+  const raw = String(feature.properties?.class ?? "").toLowerCase().trim();
+  return raw === "harvested" || raw === "young";
 }
 
 // ── Check one grid point ──────────────────────────────────────────────────────
@@ -173,7 +159,7 @@ async function checkPoint(
     ...new Set(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       forestAgeFeatures.map((f: any) =>
-        String(f.properties?.PROJ_AGE_CLASS_CD ?? "unknown")
+        String(f.properties?.class ?? "unknown")
       )
     ),
   ] as string[];
@@ -200,7 +186,7 @@ async function checkPoint(
         details: {
           recentFireYears,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          matureAgeClasses: matureFeatures.map((f: any) => f.properties?.PROJ_AGE_CLASS_CD),
+          matureAgeClasses: matureFeatures.map((f: any) => f.properties?.class),
           matureFeatureCount: matureFeatures.length,
         },
       });
