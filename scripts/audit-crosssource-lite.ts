@@ -170,24 +170,30 @@ async function checkPoint(
     .map((f: any) => Number(f.properties?.FIRE_YEAR))
     .filter((y: number) => !isNaN(y) && y >= 2000);
 
-  // ── R1: Recent fire + mature/old-growth ──
+  // ── R1: Recent fire + mature/old-growth (proportional) ──
+  // Only conflict if more than half of forest-age features at this tile are
+  // mature/old-growth. A minority of mature features is plausible at tile
+  // boundaries where a fire only clipped the edge of a mature stand.
   let r1Conflict = false;
   if (recentFireYears.length > 0 && forestAgeFeatures.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const matureFeatures = forestAgeFeatures.filter(isMatureOrOldGrowth);
-    if (matureFeatures.length > 0) {
+    const matureRatio = matureFeatures.length / forestAgeFeatures.length;
+    if (matureRatio > 0.5) {
       r1Conflict = true;
       conflicts.push({
         point: point.name,
         lat: point.lat,
         lon: point.lon,
         rule: "R1",
-        description: `Fire history FIRE_YEAR >= 2000 (${recentFireYears.join(", ")}) but forest-age shows mature/old-growth`,
+        description: `Fire history FIRE_YEAR >= 2000 (${recentFireYears.join(", ")}) but ${(matureRatio * 100).toFixed(1)}% of forest-age features show mature/old-growth`,
         details: {
           recentFireYears,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           matureAgeClasses: matureFeatures.map((f: any) => f.properties?.class),
           matureFeatureCount: matureFeatures.length,
+          totalForestAgeFeatures: forestAgeFeatures.length,
+          matureRatio,
         },
       });
     }

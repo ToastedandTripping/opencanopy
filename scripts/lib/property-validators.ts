@@ -138,9 +138,8 @@ export const TILE_PROPERTY_RULES: PropertyValidationRule[] = [
     properties: {
       FIRE_YEAR: {
         required: true,
-        type: "number",
-        min: 1900,
-        max: 2030,
+        type: "string",
+        pattern: /^\d{4}/,
       },
       FIRE_SIZE_HECTARES: {
         required: false,
@@ -198,7 +197,9 @@ export const TILE_PROPERTY_RULES: PropertyValidationRule[] = [
       },
       HABITAT_AREA_ID: {
         required: false,
-        type: "string",
+        type: "number",
+        min: 0,
+        max: 99999999,
       },
     },
   },

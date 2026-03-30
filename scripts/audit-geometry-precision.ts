@@ -104,6 +104,10 @@ function computeStats(values: number[]): {
 /**
  * Compute a property fingerprint match score in [0, 1] between source
  * properties and a candidate tile feature.
+ *
+ * Null/undefined parity: if both sides are null or undefined (any combination),
+ * the pair is treated as a match. MVT encoding drops null values, so a source
+ * null and a missing tile key are semantically equivalent.
  */
 function fingerprintScore(
   sourceProps: Record<string, unknown>,
@@ -115,7 +119,10 @@ function fingerprintScore(
   if (keys.length === 0) return 0;
   let matches = 0;
   for (const key of keys) {
-    if (sourceProps[key] === tileProps[key]) matches++;
+    const sv = sourceProps[key];
+    const tv = tileProps[key];
+    const match = (sv == null && tv == null) ? true : sv === tv;
+    if (match) matches++;
   }
   return matches / keys.length;
 }
@@ -168,6 +175,9 @@ interface LayerZoomMeasurement {
   skipped: number;
   neighborRematches: number;
   toGeoJsonFailures: number;
+  /** True when the sample had <50% unique property combos — Hausdorff stats
+   *  are unreliable because the fingerprint matcher cannot distinguish features. */
+  lowCardinality: boolean;
 }
 
 /**
@@ -205,6 +215,31 @@ async function measureLayer(
   const measurements: PrecisionResult[] = [];
   let skipped = 0;
   let neighborRematches = 0;
+
+  // ── Property cardinality guard ────────────────────────────────────────────
+  // If fewer than 50% of the sample features have unique property fingerprints,
+  // the fingerprint matcher cannot reliably identify individual features in the
+  // tile. Hausdorff measurements in that case reflect whichever feature happens
+  // to score highest, not the intended source feature. Skip the layer and record
+  // lowCardinality so callers can emit a NOTE instead of misleading stats.
+  const propFingerprints = features.map((f) =>
+    JSON.stringify(f.properties ?? {})
+  );
+  const uniqueCount = new Set(propFingerprints).size;
+  const lowCardinality =
+    features.length > 0 && uniqueCount / features.length < 0.5;
+
+  if (lowCardinality) {
+    return {
+      layer,
+      zoom,
+      measurements: [],
+      skipped: features.length,
+      neighborRematches: 0,
+      toGeoJsonFailures: 0,
+      lowCardinality: true,
+    };
+  }
 
   for (const feature of features) {
     const sourceProps = (feature.properties ?? {}) as Record<string, unknown>;
@@ -276,7 +311,7 @@ async function measureLayer(
   const toGeoJsonFailures = measurements.filter(isZeroResult).length;
   const validMeasurements = measurements.filter((r) => !isZeroResult(r));
 
-  return { layer, zoom, measurements: validMeasurements, skipped, neighborRematches, toGeoJsonFailures };
+  return { layer, zoom, measurements: validMeasurements, skipped, neighborRematches, toGeoJsonFailures, lowCardinality: false };
 }
 
 // ── G1/G2: Hausdorff stats per layer per zoom ─────────────────────────────────
@@ -433,12 +468,20 @@ async function main(): Promise<void> {
           skipped: 0,
           neighborRematches: 0,
           toGeoJsonFailures: 0,
+          lowCardinality: false,
         });
         continue;
       }
 
       const result = await measureLayer(pmtiles, features, layer, zoom);
       allMeasurements.get(layer)!.set(zoom, result);
+
+      if (result.lowCardinality) {
+        console.log(
+          `NOTE low-cardinality — Hausdorff skipped (unique props < 50% of sample)`
+        );
+        continue;
+      }
 
       const hausdorffs = result.measurements.map((m) => m.hausdorffDistanceMeters);
       const stats = computeStats(hausdorffs);
@@ -551,6 +594,18 @@ async function main(): Promise<void> {
         (sum, byZoom) => sum + [...byZoom.values()].reduce((s, m) => s + m.toGeoJsonFailures, 0),
         0
       ),
+      lowCardinalitySkips: [...allMeasurements.values()].reduce(
+        (sum, byZoom) =>
+          sum +
+          [...byZoom.values()].reduce((s, m) => s + (m.lowCardinality ? 1 : 0), 0),
+        0
+      ),
+      lowCardinalityLayers: [...allMeasurements.entries()]
+        .flatMap(([layer, byZoom]) =>
+          [...byZoom.entries()]
+            .filter(([, m]) => m.lowCardinality)
+            .map(([zoom]) => `z${zoom}/${layer}`)
+        ),
     },
   };
 

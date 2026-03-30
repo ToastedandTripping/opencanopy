@@ -233,13 +233,13 @@ const extractTenureCutblocks: PropertyExtractor = (props) => {
   const clientNum = String(props.CLIENT_NUMBER ?? "").padStart(8, "0");
   return {
     company_id: COMPANY_MAP[clientNum] ?? "other",
-    DISTURBANCE_START_DATE: props.DISTURBANCE_START_DATE ?? null,
+    DISTURBANCE_START_DATE: props.DISTURBANCE_START_DATE != null ? String(props.DISTURBANCE_START_DATE) : null,
     PLANNED_GROSS_BLOCK_AREA: props.PLANNED_GROSS_BLOCK_AREA ?? null,
   };
 };
 
 const extractFireHistory: PropertyExtractor = (props) => ({
-  FIRE_YEAR: props.FIRE_YEAR ?? null,
+  FIRE_YEAR: props.FIRE_YEAR != null ? String(props.FIRE_YEAR) : null,
   FIRE_SIZE_HECTARES: props.FIRE_SIZE_HECTARES ?? null,
   FIRE_CAUSE: props.FIRE_CAUSE ?? null,
 });

@@ -48,13 +48,13 @@ export interface AdversarialPoint {
  */
 export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
   {
-    name: "Pacific Rim National Park",
-    lat: 49.0,
-    lon: -125.7,
+    name: "Garibaldi Provincial Park",
+    lat: 49.92,
+    lon: -122.73,
     layer: "parks",
-    expectedValue: /Pacific Rim/i,
+    expectedValue: /Garibaldi/i,
     propertyKey: "name",
-    description: "Park boundary must be present at Pacific Rim NP",
+    description: "Park boundary must be present at Garibaldi Provincial Park",
   },
   {
     name: "Fairy Creek Watershed",

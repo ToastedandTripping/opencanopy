@@ -100,6 +100,10 @@ async function fetchTile(
  *
  * Returns a score in [0, 1]: fraction of source property keys whose values
  * match the candidate. Only keys present in the source are scored.
+ *
+ * Null/undefined parity: if both sides are null or undefined (any combination),
+ * the pair is treated as a match. MVT encoding drops null values, so a source
+ * null and a missing tile key are semantically equivalent.
  */
 function fingerprintScore(
   sourceProps: Record<string, unknown>,
@@ -114,14 +118,19 @@ function fingerprintScore(
   for (const key of sourceKeys) {
     const sv = sourceProps[key];
     const tv = tileProps[key];
-    if (sv === tv) matches++;
+    const match = (sv == null && tv == null) ? true : sv === tv;
+    if (match) matches++;
   }
   return matches / sourceKeys.length;
 }
 
 /**
  * Build a propertyComparison record: one entry per source property key,
- * each with { source, tile, match: strict equality }.
+ * each with { source, tile, match }.
+ *
+ * Null/undefined parity: if both sides are null or undefined (any combination),
+ * the pair is considered a match. MVT encoding drops null values, so a source
+ * null and a missing tile key are semantically equivalent.
  */
 function buildPropertyComparison(
   sourceProps: Record<string, unknown>,
@@ -134,7 +143,8 @@ function buildPropertyComparison(
   for (const key of Object.keys(sourceProps)) {
     const source = sourceProps[key];
     const tile = tileProps[key];
-    comparison[key] = { source, tile, match: source === tile };
+    const match = (source == null && tile == null) ? true : source === tile;
+    comparison[key] = { source, tile, match };
   }
   return comparison;
 }
