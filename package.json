@@ -34,7 +34,8 @@
     "audit:fidelity": "npx tsx scripts/audit-source-fidelity.ts",
     "audit:precision": "npx tsx scripts/audit-geometry-precision.ts",
     "audit:adversarial": "npx tsx scripts/audit-adversarial.ts",
-    "audit:crosssource-lite": "npx tsx scripts/audit-crosssource-lite.ts"
+    "audit:crosssource-lite": "npx tsx scripts/audit-crosssource-lite.ts",
+    "audit:trend": "npx tsx scripts/audit-trend.ts"
   },
   "dependencies": {
     "@turf/area": "^7.3.4",

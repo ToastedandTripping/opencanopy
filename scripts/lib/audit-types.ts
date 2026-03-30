@@ -2,13 +2,39 @@
  * Shared types and output utilities for the OpenCanopy tile audit pipeline.
  */
 
-import { writeFileSync } from "fs";
+import { existsSync, writeFileSync } from "fs";
+import path from "path";
 
 export interface AuditResult {
   check: string;
   status: "PASS" | "WARN" | "FAIL";
   message: string;
   details?: unknown;
+  layerName?: string;
+}
+
+/**
+ * Groups results by layerName and returns a pass-rate score (0–1) per layer.
+ * Results without a layerName are grouped under the key "__unassigned__".
+ */
+export function computePerLayerScore(
+  results: AuditResult[]
+): Record<string, number> {
+  const grouped: Record<string, AuditResult[]> = {};
+
+  for (const result of results) {
+    const key = result.layerName ?? "__unassigned__";
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(result);
+  }
+
+  const scores: Record<string, number> = {};
+  for (const [layer, layerResults] of Object.entries(grouped)) {
+    const passed = layerResults.filter((r) => r.status === "PASS").length;
+    scores[layer] = layerResults.length > 0 ? passed / layerResults.length : 0;
+  }
+
+  return scores;
 }
 
 const COLORS = {
@@ -82,7 +108,7 @@ export function printResults(results: AuditResult[]): void {
   }
 }
 
-export function saveResults(results: AuditResult[], path: string): void {
+export function saveResults(results: AuditResult[], outputPath: string): void {
   const payload = {
     timestamp: new Date().toISOString(),
     summary: {
@@ -94,12 +120,31 @@ export function saveResults(results: AuditResult[], path: string): void {
     results,
   };
   try {
-    writeFileSync(path, JSON.stringify(payload, null, 2));
-    console.log(`Results saved to ${path}`);
+    writeFileSync(outputPath, JSON.stringify(payload, null, 2));
+    console.log(`Results saved to ${outputPath}`);
   } catch (err) {
     console.error(
-      `Warning: could not write audit results to "${path}": ${(err as Error).message}. ` +
+      `Warning: could not write audit results to "${outputPath}": ${(err as Error).message}. ` +
       "Results were printed to stdout above."
     );
+  }
+
+  // Fire-and-forget: archive results when archive directory exists.
+  // Non-fatal — errors are logged but do not throw.
+  const reportsDir = path.dirname(outputPath);
+  const archiveDir = path.join(reportsDir, "archive");
+  if (existsSync(archiveDir)) {
+    // Dynamic import keeps this synchronous for callers while deferring
+    // the heavier archiving work to the next event loop tick.
+    Promise.resolve().then(async () => {
+      try {
+        const { archiveResults } = await import("./audit-archive");
+        archiveResults(reportsDir, archiveDir);
+      } catch (err) {
+        console.error(
+          `Warning: archive step failed: ${(err as Error).message}`
+        );
+      }
+    });
   }
 }
