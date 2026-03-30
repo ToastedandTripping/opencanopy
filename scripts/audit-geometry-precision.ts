@@ -423,6 +423,21 @@ async function main(): Promise<void> {
   console.log(`Layers: ${POLYGON_LAYERS.length}  Samples/layer: ${SAMPLES_PER_LAYER}  Zooms: ${MEASURE_ZOOMS.join(", ")}`);
   console.log(`Expected measurements: ${POLYGON_LAYERS.length * SAMPLES_PER_LAYER * MEASURE_ZOOMS.length}\n`);
 
+  // Emit NOTE for any layers excluded from measurement
+  const EXCLUDED_LAYERS = EXPECTED_SOURCE_LAYERS.filter(
+    (l) => !POLYGON_LAYERS.includes(l as string)
+  );
+  for (const excluded of EXCLUDED_LAYERS) {
+    if (excluded === "conservation-priority") {
+      console.log("  NOTE: conservation-priority excluded — not present in current PMTiles build");
+    } else if (excluded === "forestry-roads") {
+      console.log("  NOTE: forestry-roads excluded — line layer, not polygon; Hausdorff polygon audit does not apply");
+    } else {
+      console.log(`  NOTE: ${excluded} excluded from geometry precision audit`);
+    }
+  }
+  if (EXCLUDED_LAYERS.length > 0) console.log();
+
   // Open a single PMTiles source for the entire run
   const source = new NodeFileSource(PMTILES_PATH);
   const pmtiles = new PMTiles(source);
