@@ -79,14 +79,14 @@ export function computeQualityScore(metrics: ConfigMetrics, sizeRange?: SizeRang
   if (sizeRange) {
     // Relative scoring: normalize within the sweep set
     const tileRange = sizeRange.maxMaxTileSizeMB - sizeRange.minMaxTileSizeMB;
-    tileScore = tileRange > 0
+    tileScore = Math.max(0, Math.min(1, tileRange > 0
       ? 1 - (metrics.maxTileSizeMB - sizeRange.minMaxTileSizeMB) / tileRange
-      : 0.5;
+      : 0.5));
 
     const totalRange = sizeRange.maxTotalSizeMB - sizeRange.minTotalSizeMB;
-    totalScore = totalRange > 0
+    totalScore = Math.max(0, Math.min(1, totalRange > 0
       ? 1 - (metrics.totalSizeMB - sizeRange.minTotalSizeMB) / totalRange
-      : 0.5;
+      : 0.5));
   } else {
     // Absolute fallback thresholds (suitable for full-dataset production builds)
     // Max tile size: 0 MB → score 1.0, 50 MB → score 0.0

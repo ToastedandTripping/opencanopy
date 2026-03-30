@@ -347,7 +347,7 @@ async function main() {
 
   // Print production comparison if we have it
   if (productionMetrics !== null) {
-    const productionScore = computeQualityScore(productionMetrics, sizeRange);
+    const productionScore = computeQualityScore(productionMetrics);
     console.log(`  Production (baseline) score: ${productionScore}`);
     const bestResult = results[0];
     if (bestResult && bestResult.score > productionScore) {
@@ -367,7 +367,7 @@ async function main() {
     production: productionMetrics
       ? {
           metrics: productionMetrics,
-          score: computeQualityScore(productionMetrics, sizeRange),
+          score: computeQualityScore(productionMetrics),
         }
       : null,
     configs: results.map((r) => ({

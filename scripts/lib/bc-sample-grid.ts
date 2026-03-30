@@ -34,7 +34,7 @@ export const BC_SAMPLE_POINTS: SamplePoint[] = [
 ];
 
 /** Zoom levels used across the audit pipeline */
-export const AUDIT_ZOOM_LEVELS: number[] = [5, 7, 9, 12];
+export const AUDIT_ZOOM_LEVELS: number[] = [5, 7, 9, 10];
 
 /**
  * The 12 PMTiles source layer names expected in the OpenCanopy archive.
