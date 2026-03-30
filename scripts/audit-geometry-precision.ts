@@ -9,7 +9,7 @@
  *   G3: Area preservation — WARN if tile area differs >10% from source
  *   G4: Vertex reduction ratio per layer
  *
- * Coverage: 20 features × 12 layers × 2 zooms = 480 measurements
+ * Coverage: 20 features × 10 polygon layers × 2 zooms = 400 measurements
  *
  * Usage:
  *   npx tsx scripts/audit-geometry-precision.ts
@@ -19,6 +19,7 @@
  */
 
 import path from "path";
+import { fileURLToPath } from "url";
 import { mkdirSync, writeFileSync } from "fs";
 import { PMTiles } from "pmtiles";
 import { NodeFileSource } from "./lib/node-file-source";
@@ -31,7 +32,7 @@ import type { GeoJSON } from "geojson";
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const PROJECT_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PMTILES_PATH = path.join(PROJECT_ROOT, "data", "tiles", "opencanopy.pmtiles");
 const NDJSON_DIR = path.join(PROJECT_ROOT, "data", "geojson");
 const OUTPUT_PATH = path.join(PROJECT_ROOT, "data", "reports", "geometry-precision-results.json");
@@ -44,10 +45,11 @@ const MEASURE_ZOOMS = [7, 10] as const;
 
 /**
  * Polygon layers to measure.
- * Excludes forestry-roads (line layer, not polygon).
+ * Excludes forestry-roads (line layer, not polygon) and conservation-priority.
+ * Matches the 10-layer set used in audit-spatial.ts.
  */
 const POLYGON_LAYERS = EXPECTED_SOURCE_LAYERS.filter(
-  (l) => l !== "forestry-roads"
+  (l) => l !== "forestry-roads" && l !== "conservation-priority"
 ) as string[];
 
 /** Area divergence threshold for G3 WARN (10%) */
@@ -164,12 +166,35 @@ interface LayerZoomMeasurement {
   zoom: number;
   measurements: PrecisionResult[];
   skipped: number;
+  neighborRematches: number;
+  toGeoJsonFailures: number;
+}
+
+/**
+ * Return true if a PrecisionResult is a zero-filled sentinel produced by a
+ * failed toGeoJSON() call inside measurePrecision(). These entries must be
+ * excluded from statistics — they pull every metric toward zero and are not
+ * valid measurements.
+ */
+function isZeroResult(r: PrecisionResult): boolean {
+  return (
+    r.hausdorffDistanceMeters === 0 &&
+    r.avgVertexDisplacementMeters === 0 &&
+    r.sourceVertexCount === 0 &&
+    r.tileVertexCount === 0 &&
+    r.areaRatioPercent === 0
+  );
 }
 
 /**
  * Measure precision for a single layer at a single zoom level.
  * Returns all PrecisionResult objects collected (may be fewer than SAMPLES_PER_LAYER
  * if some features cannot be traced or matched).
+ *
+ * When traceFeature() locates the feature in a neighbor tile, the re-match
+ * after the trace re-fetches the centroid tile and may fail to find it there.
+ * This function replicates the neighbor-search from feature-tracer.ts so that
+ * features found in neighbor tiles are not silently skipped.
  */
 async function measureLayer(
   pmtiles: PMTiles,
@@ -179,6 +204,7 @@ async function measureLayer(
 ): Promise<LayerZoomMeasurement> {
   const measurements: PrecisionResult[] = [];
   let skipped = 0;
+  let neighborRematches = 0;
 
   for (const feature of features) {
     const sourceProps = (feature.properties ?? {}) as Record<string, unknown>;
@@ -192,30 +218,65 @@ async function measureLayer(
 
     const { z, x, y } = trace.tileCoord;
 
-    // Re-fetch tile to get raw MVT features with full geometry
+    // Re-fetch the centroid tile to get raw MVT features with full geometry
     const tileData = await fetchTile(pmtiles, z, x, y);
-    if (!tileData) {
-      skipped++;
-      continue;
+    let matchedRaw: unknown = null;
+    let matchTileX = x;
+    let matchTileY = y;
+
+    if (tileData) {
+      const tile = parseTile(tileData);
+      const tileFeatures = getLayerFeatures(tile, layer);
+      matchedRaw = findMatch(tileFeatures, sourceProps);
     }
 
-    const tile = parseTile(tileData);
-    const tileFeatures = getLayerFeatures(tile, layer);
+    // If the centroid tile didn't yield a match (feature may be in a neighbor
+    // tile — traceFeature checks neighbors but returns the centroid tileCoord),
+    // replicate the neighbor search from feature-tracer.ts.
+    if (!matchedRaw) {
+      const maxTile = Math.pow(2, z) - 1;
+      outer: for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue; // already tried the centroid tile
 
-    // Re-match by property fingerprint to get the raw MVT feature object
-    // (traceFeature only returns comparison data, not the raw feature)
-    const matchedRaw = findMatch(tileFeatures, sourceProps);
+          const nx = Math.max(0, Math.min(maxTile, x + dx));
+          const ny = Math.max(0, Math.min(maxTile, y + dy));
+          // Skip if edge clamping resolves this back to the primary tile
+          if (nx === x && ny === y) continue;
+
+          const neighborData = await fetchTile(pmtiles, z, nx, ny);
+          if (!neighborData) continue;
+
+          const neighborTile = parseTile(neighborData);
+          const neighborFeatures = getLayerFeatures(neighborTile, layer);
+          const candidate = findMatch(neighborFeatures, sourceProps);
+          if (candidate) {
+            matchedRaw = candidate;
+            matchTileX = nx;
+            matchTileY = ny;
+            neighborRematches++;
+            break outer;
+          }
+        }
+      }
+    }
+
     if (!matchedRaw) {
       skipped++;
       continue;
     }
 
-    // Measure precision
-    const result = measurePrecision(feature, matchedRaw, layer, zoom, x, y);
+    // Measure precision using the tile coordinates where the match was found
+    const result = measurePrecision(feature, matchedRaw, layer, zoom, matchTileX, matchTileY);
     measurements.push(result);
   }
 
-  return { layer, zoom, measurements, skipped };
+  // Filter out zero-filled sentinel results from failed toGeoJSON() calls
+  // so they do not corrupt G1-G4 statistics.
+  const toGeoJsonFailures = measurements.filter(isZeroResult).length;
+  const validMeasurements = measurements.filter((r) => !isZeroResult(r));
+
+  return { layer, zoom, measurements: validMeasurements, skipped, neighborRematches, toGeoJsonFailures };
 }
 
 // ── G1/G2: Hausdorff stats per layer per zoom ─────────────────────────────────
@@ -370,6 +431,8 @@ async function main(): Promise<void> {
           zoom,
           measurements: [],
           skipped: 0,
+          neighborRematches: 0,
+          toGeoJsonFailures: 0,
         });
         continue;
       }
@@ -381,6 +444,8 @@ async function main(): Promise<void> {
       const stats = computeStats(hausdorffs);
       console.log(
         `${result.measurements.length} measured, ${result.skipped} skipped` +
+          (result.neighborRematches > 0 ? ` (${result.neighborRematches} neighbor-rematch)` : "") +
+          (result.toGeoJsonFailures > 0 ? ` (${result.toGeoJsonFailures} toGeoJSON fail)` : "") +
           (stats.count > 0
             ? ` | H mean=${stats.mean.toFixed(1)}m max=${stats.max.toFixed(1)}m`
             : "")
@@ -482,6 +547,10 @@ async function main(): Promise<void> {
     summary: {
       g3_warns: g3Warns.length,
       g3_warn_layers: g3Warns.map((w) => `z${w.zoom}/${w.layer}`),
+      toGeoJsonFailures: [...allMeasurements.values()].reduce(
+        (sum, byZoom) => sum + [...byZoom.values()].reduce((s, m) => s + m.toGeoJsonFailures, 0),
+        0
+      ),
     },
   };
 

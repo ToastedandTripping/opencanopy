@@ -384,14 +384,15 @@ async function main(): Promise<void> {
       );
       results.push(...overlapResults);
 
-      // Aggregate overlap rate for this layer
+      // Aggregate overlap rate for this layer.
+      // Denominator counts ALL per-point results (PASS, WARN, FAIL) so that
+      // missing-tile WARNs are included and the rate reflects the full sample.
+      // Only FAIL contributes to the numerator.
       const pointResults = overlapResults.filter((r) =>
         r.check.includes(`@ R`) || r.check.includes(`@ `)
       );
       const failCount = pointResults.filter((r) => r.status === "FAIL").length;
-      const pointCount = pointResults.filter(
-        (r) => r.status === "FAIL" || r.status === "PASS"
-      ).length;
+      const pointCount = pointResults.length;
       layerOverlapRates[layer] = { overlaps: failCount, total: pointCount };
     }
 
