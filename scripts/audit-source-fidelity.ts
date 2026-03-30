@@ -262,7 +262,7 @@ async function runFidelityAudit(): Promise<void> {
 
   const layerData: LayerTraceData[] = [];
 
-  console.log("Collecting F1/F2/F3 traces (50 features × 12 layers)...");
+  console.log(`Collecting F1/F2/F3 traces (50 features × ${EXPECTED_SOURCE_LAYERS.length} layers)...`);
   for (const layer of EXPECTED_SOURCE_LAYERS) {
     const ndjsonPath = path.join(NDJSON_DIR, `${layer}.ndjson`);
     process.stdout.write(`  ${layer}... `);
@@ -308,7 +308,7 @@ async function runFidelityAudit(): Promise<void> {
   }
 
   const f1Message =
-    `${totalFound}/${totalSampled} features found across 12 layers ` +
+    `${totalFound}/${totalSampled} features found across ${EXPECTED_SOURCE_LAYERS.length} layers ` +
     `(${(f1FoundRate * 100).toFixed(1)}%). ` +
     (f1Status === "PASS"
       ? "Meets >98% threshold."
@@ -374,7 +374,7 @@ async function runFidelityAudit(): Promise<void> {
 
   // ── F4: Grid boundary stress test ─────────────────────────────────────────
 
-  console.log("\nF4: Grid boundary stress test (20 features × 12 layers near seams)...");
+  console.log(`\nF4: Grid boundary stress test (20 features × ${EXPECTED_SOURCE_LAYERS.length} layers near seams)...`);
   const f4Layers: F4LayerResult[] = [];
 
   for (const d of layerData) {

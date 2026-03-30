@@ -62,7 +62,7 @@ export type SourceLayerName = typeof EXPECTED_SOURCE_LAYERS[number];
  *
  * Latitude range:  48.5 → 59.5 in 6 steps (~2.2° spacing)
  * Longitude range: -136 → -115 in 6 steps (~4.2° spacing)
- * Named R0C0 (northwest corner) through R5C5 (southeast corner).
+ * Named R0C0 (southwest corner) through R5C5 (northeast corner).
  */
 export const BC_EXTENDED_GRID: SamplePoint[] = (() => {
   const LAT_START = 48.5;

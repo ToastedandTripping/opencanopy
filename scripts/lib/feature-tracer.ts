@@ -108,15 +108,13 @@ function fingerprintScore(
 ): number {
   const tileProps: Record<string, unknown> = tileFeature.properties ?? {};
   const sourceKeys = Object.keys(sourceProps);
-  if (sourceKeys.length === 0) return 1; // no properties to compare — vacuous match
+  if (sourceKeys.length === 0) return 0; // no properties to compare — unverifiable, treat as unfound
 
   let matches = 0;
   for (const key of sourceKeys) {
     const sv = sourceProps[key];
     const tv = tileProps[key];
-    // Loose equality: tile may stringify numbers or truncate floats
-    // eslint-disable-next-line eqeqeq
-    if (sv == tv) matches++;
+    if (sv === tv) matches++;
   }
   return matches / sourceKeys.length;
 }
@@ -245,6 +243,8 @@ export async function traceFeature(
 
         const nx = Math.max(0, Math.min(maxTile, x + dx));
         const ny = Math.max(0, Math.min(maxTile, y + dy));
+        // Skip if clamping resolved this neighbor back to the primary tile
+        if (nx === x && ny === y) continue;
         const neighborData = await fetchTile(pmtiles, z, nx, ny);
         if (!neighborData) continue;
 
