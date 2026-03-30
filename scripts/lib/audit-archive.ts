@@ -13,6 +13,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  statSync,
   writeFileSync,
 } from "fs";
 import path from "path";
@@ -53,7 +54,6 @@ function getPmtilesSize(reportsDir: string): number | null {
   const pmtilesPath = path.join(projectRoot, "data", "tiles", "opencanopy.pmtiles");
   if (!existsSync(pmtilesPath)) return null;
   try {
-    const { statSync } = require("fs");
     return statSync(pmtilesPath).size;
   } catch {
     return null;
@@ -132,7 +132,7 @@ function extractAdversarialPassRate(reportsDir: string): number | null {
  */
 export function archiveResults(reportsDir: string, archiveDir: string): void {
   const timestamp = new Date().toISOString();
-  const slug = timestamp.replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
+  const slug = timestamp.replace(/:/g, "-").replace(".", "-");
   const destDir = path.join(archiveDir, slug);
 
   mkdirSync(destDir, { recursive: true });

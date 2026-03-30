@@ -129,22 +129,16 @@ export function saveResults(results: AuditResult[], outputPath: string): void {
     );
   }
 
-  // Fire-and-forget: archive results when archive directory exists.
+  // Archive results synchronously when archive directory exists.
   // Non-fatal — errors are logged but do not throw.
   const reportsDir = path.dirname(outputPath);
   const archiveDir = path.join(reportsDir, "archive");
-  if (existsSync(archiveDir)) {
-    // Dynamic import keeps this synchronous for callers while deferring
-    // the heavier archiving work to the next event loop tick.
-    Promise.resolve().then(async () => {
-      try {
-        const { archiveResults } = await import("./audit-archive");
-        archiveResults(reportsDir, archiveDir);
-      } catch (err) {
-        console.error(
-          `Warning: archive step failed: ${(err as Error).message}`
-        );
-      }
-    });
+  try {
+    if (existsSync(archiveDir)) {
+      const { archiveResults } = require("./audit-archive");
+      archiveResults(reportsDir, archiveDir);
+    }
+  } catch (err) {
+    console.error("Archive failed (non-fatal):", err);
   }
 }
