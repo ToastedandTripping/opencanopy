@@ -40,7 +40,7 @@ const PROJECT_ROOT = resolve(__dirname, "..");
 
 const GEOJSON_DIR = resolve(PROJECT_ROOT, "data", "geojson");
 const PREPROCESSED_DIR = resolve(PROJECT_ROOT, "data", "geojson", "preprocessed");
-const LAKES_PATH = resolve(PROJECT_ROOT, "data", "reference", "fwa-lakes.ndjson");
+const LAKES_PATH = resolve(PROJECT_ROOT, "data", "geojson", "reference", "fwa-lakes.ndjson");
 
 // ── Layer discovery ───────────────────────────────────────────────────────────
 
