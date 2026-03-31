@@ -27,6 +27,8 @@ const turfArea = require("@turf/area");
 const turfBbox = require("@turf/bbox");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const turfHelpers = require("@turf/helpers");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const turfIntersect = require("@turf/intersect");
 
 // Resolve compat shims for default vs named exports (turf v7 pattern)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,6 +46,9 @@ const featureCollection: (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) => any =
   turfHelpers.featureCollection ?? turfHelpers.default?.featureCollection;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const intersect: (fc: any) => any =
+  turfIntersect.intersect ?? turfIntersect.default ?? turfIntersect;
 
 // 1 hectare in square metres
 const ONE_HECTARE_M2 = 10_000;
@@ -270,6 +275,12 @@ export async function createWaterSubtractor(lakesPath: string): Promise<{
     for (const idx of candidates) {
       const lake = indexedLakes[idx];
       try {
+        // Pre-filter: skip expensive difference() if geometries don't actually intersect.
+        // intersect() returns null when polygons don't overlap — much cheaper than
+        // computing the full boolean difference on non-overlapping geometry.
+        const overlap = intersect(featureCollection([current, lake]));
+        if (overlap === null) continue;
+
         // Turf v7: difference(featureCollection([subject, clip]))
         const diff = difference(featureCollection([current, lake]));
 
@@ -333,9 +344,23 @@ export async function subtractWaterFromNdjson(
     crlfDelay: Infinity,
   });
 
+  let lineCount = 0;
+  const startTime = Date.now();
+
   for await (const line of rl) {
     const trimmed = line.trim();
     if (!trimmed) continue;
+
+    lineCount++;
+    if (lineCount % 100_000 === 0) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+      const s = stats();
+      process.stdout.write(
+        `\r  [water-subtract] ${lineCount.toLocaleString()} features processed ` +
+        `(${s.intersected} intersected, ${s.subtracted} modified, ${s.dropped} dropped) ` +
+        `${elapsed}s`
+      );
+    }
 
     let feature: unknown;
     try {
@@ -352,6 +377,15 @@ export async function subtractWaterFromNdjson(
       writeStream.write(JSON.stringify(result) + "\n");
     }
   }
+
+  // Final progress line
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+  const finalStats = stats();
+  console.log(
+    `\r  [water-subtract] ${lineCount.toLocaleString()} features complete ` +
+    `(${finalStats.intersected} intersected, ${finalStats.subtracted} modified, ${finalStats.dropped} dropped) ` +
+    `${elapsed}s`
+  );
 
   await new Promise<void>((resolve, reject) => {
     writeStream.end((err?: Error | null) => {
