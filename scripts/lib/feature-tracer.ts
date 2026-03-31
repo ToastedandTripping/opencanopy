@@ -77,7 +77,23 @@ function extractFirstCoord(
 }
 
 /**
- * Fetch a tile from PMTiles. Returns null if the tile doesn't exist or errors.
+ * Tile cache — avoids redundant PMTiles reads when multiple features
+ * fall in the same tile (common for geographically clustered samples).
+ * Cache is per-session (module scope), cleared between audit runs.
+ */
+const tileCache = new Map<string, ArrayBuffer | null>();
+
+function tileCacheKey(z: number, x: number, y: number): string {
+  return `${z}/${x}/${y}`;
+}
+
+/** Clear the tile cache (call between independent audit runs if needed). */
+export function clearTileCache(): void {
+  tileCache.clear();
+}
+
+/**
+ * Fetch a tile from PMTiles with caching. Returns null if the tile doesn't exist or errors.
  */
 async function fetchTile(
   pmtiles: PMTiles,
@@ -85,11 +101,16 @@ async function fetchTile(
   x: number,
   y: number
 ): Promise<ArrayBuffer | null> {
+  const key = tileCacheKey(z, x, y);
+  if (tileCache.has(key)) return tileCache.get(key)!;
+
   try {
     const result = await pmtiles.getZxy(z, x, y);
-    if (!result || !result.data) return null;
-    return result.data;
+    const data = result?.data ?? null;
+    tileCache.set(key, data);
+    return data;
   } catch {
+    tileCache.set(key, null);
     return null;
   }
 }

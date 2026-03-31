@@ -43,7 +43,7 @@ const OVERLAP_THRESHOLD = 0.5;
  * Load all lake polygon features from an NDJSON file into memory.
  * BC FWA lakes at ~25K features fit comfortably in RAM.
  */
-async function loadLakes(lakesPath: string): Promise<GeoJSONPolygon[]> {
+export async function loadLakes(lakesPath: string): Promise<GeoJSONPolygon[]> {
   const lakes: GeoJSONPolygon[] = [];
   const stream = createReadStream(lakesPath, { encoding: "utf8" });
   const rl = createInterface({ input: stream, crlfDelay: Infinity });
@@ -152,7 +152,8 @@ export async function checkWaterBodyOverlap(
   lakesPath: string,
   samplePoints: SamplePoint[],
   sourceLayer: string,
-  zoom: number
+  zoom: number,
+  preloadedLakes?: { lakes: GeoJSONPolygon[]; lakeBboxes: Array<[number, number, number, number]> }
 ): Promise<AuditResult[]> {
   const results: AuditResult[] = [];
 
@@ -174,21 +175,30 @@ export async function checkWaterBodyOverlap(
     return results;
   }
 
-  console.log(`  Loading lake reference data from ${lakesPath}...`);
-  const lakes = await loadLakes(lakesPath);
-  console.log(`  Loaded ${lakes.length} lake polygons`);
+  let lakes: GeoJSONPolygon[];
+  let lakeBboxes: Array<[number, number, number, number]>;
 
-  // Pre-compute bboxes for lakes to speed up pre-filtering
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const lakeBboxes: Array<[number, number, number, number]> = lakes.map((l) => {
-    try {
-      return turf.bbox.default
-        ? turf.bbox.default(l)
-        : (turf.bbox as (f: unknown) => [number, number, number, number])(l);
-    } catch {
-      return [-180, -90, 180, 90];
-    }
-  });
+  if (preloadedLakes) {
+    lakes = preloadedLakes.lakes;
+    lakeBboxes = preloadedLakes.lakeBboxes;
+    console.log(`  Using preloaded ${lakes.length} lake polygons`);
+  } else {
+    console.log(`  Loading lake reference data from ${lakesPath}...`);
+    lakes = await loadLakes(lakesPath);
+    console.log(`  Loaded ${lakes.length} lake polygons`);
+
+    // Pre-compute bboxes for lakes to speed up pre-filtering
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    lakeBboxes = lakes.map((l) => {
+      try {
+        return turf.bbox.default
+          ? turf.bbox.default(l)
+          : (turf.bbox as (f: unknown) => [number, number, number, number])(l);
+      } catch {
+        return [-180, -90, 180, 90] as [number, number, number, number];
+      }
+    });
+  }
 
   const source = new NodeFileSource(pmtilesPath);
   const pmtiles = new PMTiles(source);

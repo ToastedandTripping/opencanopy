@@ -36,7 +36,7 @@ import { NodeFileSource } from "./lib/node-file-source";
 import { parseTile, getLayerFeatures } from "./lib/mvt-reader";
 import { latLonToTile } from "./lib/tile-math";
 import { AuditResult, printResults, saveResults } from "./lib/audit-types";
-import { checkWaterBodyOverlap } from "./lib/spatial-checks";
+import { checkWaterBodyOverlap, loadLakes } from "./lib/spatial-checks";
 import { BC_EXTENDED_GRID } from "./lib/bc-sample-grid";
 import type { SamplePoint } from "./lib/bc-sample-grid";
 
@@ -369,6 +369,23 @@ async function main(): Promise<void> {
       `\nS1: Checking water body overlap at z${CHECK_ZOOM} for ${layersToCheck.length} layer(s)...`
     );
 
+    // Load lakes ONCE for all layers (was previously reloaded per layer — 10x redundant I/O)
+    console.log(`  Loading lake reference data...`);
+    const lakes = await loadLakes(LAKES_PATH);
+    console.log(`  Loaded ${lakes.length} lake polygons`);
+
+    // Pre-compute bboxes once
+    const turfBbox = require("@turf/bbox");
+    const bboxFn = turfBbox.bbox ?? turfBbox.default ?? turfBbox;
+    const lakeBboxes: Array<[number, number, number, number]> = lakes.map((l: unknown) => {
+      try {
+        return bboxFn(l);
+      } catch {
+        return [-180, -90, 180, 90] as [number, number, number, number];
+      }
+    });
+    const preloadedLakes = { lakes, lakeBboxes };
+
     // Per-layer overlap rates tracking
     const layerOverlapRates: Record<string, { overlaps: number; total: number }> = {};
 
@@ -379,7 +396,8 @@ async function main(): Promise<void> {
         LAKES_PATH,
         BC_EXTENDED_GRID,
         layer,
-        CHECK_ZOOM
+        CHECK_ZOOM,
+        preloadedLakes
       );
       results.push(...overlapResults);
 
