@@ -40,7 +40,9 @@ const PROJECT_ROOT = resolve(__dirname, "..");
 
 const GEOJSON_DIR = resolve(PROJECT_ROOT, "data", "geojson");
 const PREPROCESSED_DIR = resolve(PROJECT_ROOT, "data", "geojson", "preprocessed");
-const LAKES_PATH = resolve(PROJECT_ROOT, "data", "geojson", "reference", "fwa-lakes.ndjson");
+const LAKES_NDJSON = resolve(PROJECT_ROOT, "data", "geojson", "reference", "fwa-lakes.ndjson");
+const LAKES_GPKG = resolve(PROJECT_ROOT, "data", "geojson", "reference", "fwa-lakes.gpkg");
+const WATER_SUBTRACT_SCRIPT = resolve(PROJECT_ROOT, "scripts", "water-subtract-gdal.py");
 
 // ── Layer discovery ───────────────────────────────────────────────────────────
 
@@ -136,15 +138,16 @@ async function processLayer(
     // ── Step 3: Water subtraction ──
     if (opts.validateOnly) {
       console.log(`  [${layerName}] Water subtract: skipped (--validate-only)`);
-      // Copy validated output to final location
       const { copyFileSync } = await import("fs");
       copyFileSync(tempValidate, outputPath);
       report.skippedWater = true;
       report.finalFeatures = validateResult.passed;
     } else {
-      if (!existsSync(LAKES_PATH)) {
+      // Water subtraction uses GDAL/GEOS (compiled C++) via Python script.
+      // Requires lakes GPKG with spatial index — auto-built from NDJSON if missing.
+      if (!existsSync(LAKES_NDJSON) && !existsSync(LAKES_GPKG)) {
         console.log(
-          `  [${layerName}] Water subtract: SKIPPED (lakes file not found at ${LAKES_PATH})`
+          `  [${layerName}] Water subtract: SKIPPED (no lakes data found)`
         );
         console.log(`    Run: npm run audit:download-reference`);
         const { copyFileSync } = await import("fs");
@@ -152,16 +155,39 @@ async function processLayer(
         report.skippedWater = true;
         report.finalFeatures = validateResult.passed;
       } else {
-        process.stdout.write(`  [${layerName}] Water subtract: processing...\n`);
-        const waterResult = await subtractWaterFromNdjson(tempValidate, outputPath, LAKES_PATH, validateResult.passed);
-        report.waterSubtract = waterResult;
-        const finalCount = waterResult.total - waterResult.dropped;
-        report.finalFeatures = finalCount;
-        console.log(
-          ` ${waterResult.total.toLocaleString()} → ${finalCount.toLocaleString()} features ` +
-          `(${waterResult.intersected.toLocaleString()} intersected, ${waterResult.dropped.toLocaleString()} dropped, ` +
-          `${waterResult.failed.toLocaleString()} errors)`
+        // Build lakes GPKG if it doesn't exist (one-time, ~30s)
+        if (!existsSync(LAKES_GPKG) && existsSync(LAKES_NDJSON)) {
+          console.log(`  [${layerName}] Building lakes GPKG (one-time)...`);
+          const { execSync } = await import("child_process");
+          execSync(
+            `ogr2ogr -f GPKG "${LAKES_GPKG}" "${LAKES_NDJSON}" -where "AREA_HA >= 5" -nln lakes -lco SPATIAL_INDEX=YES`,
+            { stdio: "inherit", timeout: 300_000 }
+          );
+          console.log(`  [${layerName}] Lakes GPKG built.`);
+        }
+
+        console.log(`  [${layerName}] Water subtract (GDAL/GEOS)...`);
+        const { execSync } = await import("child_process");
+        execSync(
+          `python3 "${WATER_SUBTRACT_SCRIPT}" "${tempValidate}" "${outputPath}" --lakes "${LAKES_GPKG}"`,
+          { stdio: "inherit", timeout: 86_400_000 } // 24h timeout for large files
         );
+
+        // Read stats from the GDAL script output
+        const statsPath = outputPath + ".stats.json";
+        if (existsSync(statsPath)) {
+          const { readFileSync, unlinkSync } = await import("fs");
+          const stats = JSON.parse(readFileSync(statsPath, "utf-8"));
+          report.waterSubtract = {
+            total: stats.total,
+            intersected: stats.intersected,
+            subtracted: stats.modified,
+            dropped: stats.dropped,
+            failed: stats.failed,
+          };
+          report.finalFeatures = stats.total - stats.dropped;
+          unlinkSync(statsPath); // clean up stats file
+        }
       }
     }
 
