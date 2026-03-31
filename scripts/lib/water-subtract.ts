@@ -84,7 +84,7 @@ function bboxesOverlap(a: Bbox4, b: Bbox4): boolean {
 //
 // Grid memory: ~50K cells (vs ~500 at 1°) — trivial overhead.
 
-const GRID_SCALE = 10; // 1/GRID_SCALE degree cells (10 = 0.1°)
+const GRID_SCALE = 2; // 1/GRID_SCALE degree cells (2 = 0.5°, ~40km × 55km)
 
 interface GridIndex {
   cells: Map<string, number[]>; // "lon_lat" → lake indices
