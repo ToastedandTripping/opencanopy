@@ -152,8 +152,8 @@ async function processLayer(
         report.skippedWater = true;
         report.finalFeatures = validateResult.passed;
       } else {
-        process.stdout.write(`  [${layerName}] Water subtract: processing...`);
-        const waterResult = await subtractWaterFromNdjson(tempValidate, outputPath, LAKES_PATH);
+        process.stdout.write(`  [${layerName}] Water subtract: processing...\n`);
+        const waterResult = await subtractWaterFromNdjson(tempValidate, outputPath, LAKES_PATH, validateResult.passed);
         report.waterSubtract = waterResult;
         const finalCount = waterResult.total - waterResult.dropped;
         report.finalFeatures = finalCount;

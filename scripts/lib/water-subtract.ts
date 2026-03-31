@@ -53,8 +53,10 @@ const intersect: (fc: any) => any =
 // 1 hectare in square metres
 const ONE_HECTARE_M2 = 10_000;
 
-// Minimum lake size to index (filters noise, reduces memory)
-const MIN_LAKE_AREA_HA = 1;
+// Minimum lake size to index. 5 ha filters tiny ponds invisible at tile
+// resolution (5 ha ≈ 225m × 225m ≈ 2 pixels at z10). Reduces lake count
+// by ~30-50% with zero visual impact on rendered tiles.
+const MIN_LAKE_AREA_HA = 5;
 
 export interface WaterSubtractResult {
   total: number;
@@ -74,9 +76,15 @@ function bboxesOverlap(a: Bbox4, b: Bbox4): boolean {
 
 // ── Grid-based spatial index ──────────────────────────────────────────────────
 //
-// Divides BC into 1° cells and maps each cell to the lake features that
-// overlap it. O(1) lookup per grid cell; sufficiently fast for ~386K features.
-// Falls back gracefully when @turf/geojson-rbush is unavailable.
+// Divides BC into 0.1° cells (~8km × 11km) and maps each cell to the lake
+// features that overlap it. At 1° cells, dense lake regions (Interior Plateau)
+// had 50-100 candidates per query, causing intersect() to run 50-100 times per
+// feature. At 0.1°, most cells contain 0-3 lakes — a 10-50x reduction in
+// candidates for lake-dense regions.
+//
+// Grid memory: ~50K cells (vs ~500 at 1°) — trivial overhead.
+
+const GRID_SCALE = 10; // 1/GRID_SCALE degree cells (10 = 0.1°)
 
 interface GridIndex {
   cells: Map<string, number[]>; // "lon_lat" → lake indices
@@ -85,7 +93,7 @@ interface GridIndex {
 }
 
 function cellKey(lon: number, lat: number): string {
-  return `${Math.floor(lon)}_${Math.floor(lat)}`;
+  return `${Math.floor(lon * GRID_SCALE)}_${Math.floor(lat * GRID_SCALE)}`;
 }
 
 function buildGridIndex(lakes: GeoJSONPolygon[], lakeBboxes: Bbox4[]): GridIndex {
@@ -93,14 +101,14 @@ function buildGridIndex(lakes: GeoJSONPolygon[], lakeBboxes: Bbox4[]): GridIndex
 
   for (let i = 0; i < lakes.length; i++) {
     const [west, south, east, north] = lakeBboxes[i];
-    const lonMin = Math.floor(west);
-    const lonMax = Math.floor(east);
-    const latMin = Math.floor(south);
-    const latMax = Math.floor(north);
+    const lonMin = Math.floor(west * GRID_SCALE);
+    const lonMax = Math.floor(east * GRID_SCALE);
+    const latMin = Math.floor(south * GRID_SCALE);
+    const latMax = Math.floor(north * GRID_SCALE);
 
     for (let lon = lonMin; lon <= lonMax; lon++) {
       for (let lat = latMin; lat <= latMax; lat++) {
-        const key = cellKey(lon, lat);
+        const key = `${lon}_${lat}`;
         const list = cells.get(key);
         if (list) {
           list.push(i);
@@ -116,17 +124,17 @@ function buildGridIndex(lakes: GeoJSONPolygon[], lakeBboxes: Bbox4[]): GridIndex
 
 function queryCandidates(index: GridIndex, featureBbox: Bbox4): number[] {
   const [west, south, east, north] = featureBbox;
-  const lonMin = Math.floor(west);
-  const lonMax = Math.floor(east);
-  const latMin = Math.floor(south);
-  const latMax = Math.floor(north);
+  const lonMin = Math.floor(west * GRID_SCALE);
+  const lonMax = Math.floor(east * GRID_SCALE);
+  const latMin = Math.floor(south * GRID_SCALE);
+  const latMax = Math.floor(north * GRID_SCALE);
 
   const seen = new Set<number>();
   const candidates: number[] = [];
 
   for (let lon = lonMin; lon <= lonMax; lon++) {
     for (let lat = latMin; lat <= latMax; lat++) {
-      const list = index.cells.get(cellKey(lon, lat));
+      const list = index.cells.get(`${lon}_${lat}`);
       if (!list) continue;
       for (const idx of list) {
         if (!seen.has(idx) && bboxesOverlap(featureBbox, index.lakeBboxes[idx])) {
@@ -333,7 +341,8 @@ export async function createWaterSubtractor(lakesPath: string): Promise<{
 export async function subtractWaterFromNdjson(
   inputPath: string,
   outputPath: string,
-  lakesPath: string
+  lakesPath: string,
+  totalFeatures?: number
 ): Promise<WaterSubtractResult> {
   const { subtract, stats } = await createWaterSubtractor(lakesPath);
 
@@ -346,6 +355,8 @@ export async function subtractWaterFromNdjson(
 
   let lineCount = 0;
   const startTime = Date.now();
+  const WRITE_BATCH = 1000;
+  const writeBuf: string[] = [];
 
   for await (const line of rl) {
     const trimmed = line.trim();
@@ -353,12 +364,21 @@ export async function subtractWaterFromNdjson(
 
     lineCount++;
     if (lineCount % 100_000 === 0) {
-      const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+      const elapsedS = (Date.now() - startTime) / 1000;
+      const rate = Math.round(lineCount / elapsedS);
       const s = stats();
+      const pct = totalFeatures ? ` (${((lineCount / totalFeatures) * 100).toFixed(1)}%)` : "";
+      const eta = totalFeatures && rate > 0
+        ? ` | ETA ${Math.round((totalFeatures - lineCount) / rate / 60)}m`
+        : "";
+      const avgCandidates = s.intersected > 0
+        ? (s.intersected / lineCount).toFixed(2)
+        : "0";
       process.stdout.write(
-        `\r  [water-subtract] ${lineCount.toLocaleString()} features processed ` +
-        `(${s.intersected} intersected, ${s.subtracted} modified, ${s.dropped} dropped) ` +
-        `${elapsed}s`
+        `\r  [water-subtract] ${lineCount.toLocaleString()}${pct} | ` +
+        `${rate} f/s${eta} | ` +
+        `${s.subtracted} modified, ${s.dropped} dropped | ` +
+        `${avgCandidates} candidates/feat     `
       );
     }
 
@@ -366,25 +386,37 @@ export async function subtractWaterFromNdjson(
     try {
       feature = JSON.parse(trimmed);
     } catch {
-      // Pass through malformed lines (validator already flagged these)
-      writeStream.write(trimmed + "\n");
+      writeBuf.push(trimmed);
+      if (writeBuf.length >= WRITE_BATCH) {
+        writeStream.write(writeBuf.join("\n") + "\n");
+        writeBuf.length = 0;
+      }
       continue;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = subtract(feature as any);
     if (result !== null) {
-      writeStream.write(JSON.stringify(result) + "\n");
+      writeBuf.push(JSON.stringify(result));
+      if (writeBuf.length >= WRITE_BATCH) {
+        writeStream.write(writeBuf.join("\n") + "\n");
+        writeBuf.length = 0;
+      }
     }
   }
 
+  // Flush remaining buffer
+  if (writeBuf.length > 0) {
+    writeStream.write(writeBuf.join("\n") + "\n");
+  }
+
   // Final progress line
-  const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+  const elapsedS = (Date.now() - startTime) / 1000;
+  const rate = Math.round(lineCount / elapsedS);
   const finalStats = stats();
   console.log(
-    `\r  [water-subtract] ${lineCount.toLocaleString()} features complete ` +
-    `(${finalStats.intersected} intersected, ${finalStats.subtracted} modified, ${finalStats.dropped} dropped) ` +
-    `${elapsed}s`
+    `\n  [water-subtract] ${lineCount.toLocaleString()} features complete in ${Math.round(elapsedS)}s ` +
+    `(${rate} f/s) | ${finalStats.intersected} intersected, ${finalStats.subtracted} modified, ${finalStats.dropped} dropped`
   );
 
   await new Promise<void>((resolve, reject) => {
