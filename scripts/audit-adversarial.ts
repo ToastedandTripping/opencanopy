@@ -24,63 +24,22 @@
  *   npx tsx scripts/audit-adversarial.ts
  */
 
-import path from "path";
 import { mkdirSync } from "fs";
-import { PMTiles } from "pmtiles";
-import { NodeFileSource } from "./lib/node-file-source";
-import { latLonToTile } from "./lib/tile-math";
-import { parseTile, getLayerFeatures } from "./lib/mvt-reader";
+import path from "path";
 import { AuditResult, printResults, saveResults } from "./lib/audit-types";
 import {
+  PATHS,
+  ZOOMS,
   ADVERSARIAL_POINTS,
   type AdversarialPoint,
   type ExpectedValue,
-} from "./lib/adversarial-points";
+} from "./lib/audit-config";
+import { TileReader } from "./lib/tile-reader";
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
-const PROJECT_ROOT = path.resolve(__dirname, "..");
-const PRODUCTION_PMTILES = path.resolve(PROJECT_ROOT, "data/tiles/opencanopy.pmtiles");
-const REPORTS_DIR = path.resolve(PROJECT_ROOT, "data/reports");
-const OUTPUT_PATH = path.resolve(REPORTS_DIR, "adversarial-results.json");
+const OUTPUT_PATH = path.resolve(PATHS.reports, "adversarial-results.json");
 
-const AUDIT_ZOOM = 10;
+const AUDIT_ZOOM = ZOOMS.feature;
 
-// ── Helper: fetch a tile ───────────────────────────────────────────────────────
-
-async function fetchTile(
-  pmtiles: PMTiles,
-  z: number,
-  x: number,
-  y: number
-): Promise<ArrayBuffer | null> {
-  try {
-    const result = await pmtiles.getZxy(z, x, y);
-    if (!result || !result.data) return null;
-    return result.data;
-  } catch {
-    return null;
-  }
-}
-
-// ── Helper: get all features from a layer at a lat/lon ────────────────────────
-
-async function getFeaturesAtPoint(
-  pmtiles: PMTiles,
-  lat: number,
-  lon: number,
-  layerName: string,
-  zoom = AUDIT_ZOOM
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<{ features: any[]; tileExists: boolean }> {
-  const { x, y, z } = latLonToTile(lat, lon, zoom);
-  const data = await fetchTile(pmtiles, z, x, y);
-
-  if (!data) return { features: [], tileExists: false };
-
-  const tile = parseTile(data);
-  const features = getLayerFeatures(tile, layerName);
-  return { features, tileExists: true };
-}
 
 // ── Helper: test a single property value against an ExpectedValue ─────────────
 
@@ -112,11 +71,11 @@ function matchesExpected(
 // ── V1: Feature presence ──────────────────────────────────────────────────────
 
 async function checkV1Presence(
-  pmtiles: PMTiles,
+  reader: TileReader,
   point: AdversarialPoint
 ): Promise<AuditResult> {
-  const { features, tileExists } = await getFeaturesAtPoint(
-    pmtiles, point.lat, point.lon, point.layer
+  const { features, tileExists } = await reader.featuresAt(
+    point.lat, point.lon, point.layer
   );
 
   const check = `V1:Presence | ${point.name} | ${point.layer}`;
@@ -150,14 +109,14 @@ async function checkV1Presence(
 // ── V2: Property value matching ───────────────────────────────────────────────
 
 async function checkV2PropertyValue(
-  pmtiles: PMTiles,
+  reader: TileReader,
   point: AdversarialPoint
 ): Promise<AuditResult | null> {
   // V2 only applies to points with a non-null expectedValue and a propertyKey
   if (point.expectedValue === null || !point.propertyKey) return null;
 
-  const { features, tileExists } = await getFeaturesAtPoint(
-    pmtiles, point.lat, point.lon, point.layer
+  const { features, tileExists } = await reader.featuresAt(
+    point.lat, point.lon, point.layer
   );
 
   const check = `V2:Property | ${point.name} | ${point.layer}.${point.propertyKey}`;
@@ -224,14 +183,14 @@ async function checkV2PropertyValue(
 // ── V3: Feature absence ───────────────────────────────────────────────────────
 
 async function checkV3Absence(
-  pmtiles: PMTiles,
+  reader: TileReader,
   point: AdversarialPoint
 ): Promise<AuditResult | null> {
   // V3 only applies to absence checks
   if (point.expectedValue !== null) return null;
 
-  const { features, tileExists } = await getFeaturesAtPoint(
-    pmtiles, point.lat, point.lon, point.layer
+  const { features, tileExists } = await reader.featuresAt(
+    point.lat, point.lon, point.layer
   );
 
   const check = `V3:Absence | ${point.name} | ${point.layer}`;
@@ -272,88 +231,112 @@ async function checkV3Absence(
 // ── V4: Layer contradictions ───────────────────────────────────────────────────
 
 /**
- * V4a: Cutblocks inside parks.
- * Checks each adversarial point -- if there are tenure-cutblocks AND parks features
- * at the same location, that's a contradiction worth flagging.
+ * V4a: Cutblocks near parks.
+ *
+ * At z10 a single tile covers ~10km. Parks and cutblocks routinely coexist in
+ * the same tile because BC has logging adjacent to parks throughout the province.
+ * Feature count ratios are misleading: parks are single large polygons while
+ * cutblocks are many small ones. True spatial overlap requires geometry
+ * intersection which is beyond this audit's scope.
+ *
+ * This check is informational only (always PASS with a note). The crosssource-
+ * lite R2 rule handles the actually problematic case: cutblocks exist but
+ * forest-age shows no harvested/young classification.
  */
 async function checkV4CutblocksInParks(
-  pmtiles: PMTiles,
+  reader: TileReader,
   lat: number,
   lon: number,
   label: string
 ): Promise<AuditResult | null> {
   const [parksResult, cutblocksResult] = await Promise.all([
-    getFeaturesAtPoint(pmtiles, lat, lon, "parks"),
-    getFeaturesAtPoint(pmtiles, lat, lon, "tenure-cutblocks"),
+    reader.featuresAt(lat, lon, "parks"),
+    reader.featuresAt(lat, lon, "tenure-cutblocks"),
   ]);
 
   if (!parksResult.tileExists) return null;
 
-  const hasPark = parksResult.features.length > 0;
-  const hasCutblock = cutblocksResult.features.length > 0;
+  const parkCount = parksResult.features.length;
+  const cutblockCount = cutblocksResult.features.length;
 
-  if (!hasPark || !hasCutblock) return null;
+  if (parkCount === 0 || cutblockCount === 0) return null;
 
   return {
     check: `V4:Contradiction | CutblocksInPark | ${label}`,
-    status: "WARN",
-    message: `Cutblocks detected inside a park boundary at ${label} -- verify this is intentional`,
+    status: "PASS",
+    message: `Parks (${parkCount}) and cutblocks (${cutblockCount}) coexist in z10 tile at ${label} (expected at this resolution)`,
     details: {
       lat,
       lon,
-      parkFeatureCount: parksResult.features.length,
-      cutblockFeatureCount: cutblocksResult.features.length,
+      parkFeatureCount: parkCount,
+      cutblockFeatureCount: cutblockCount,
     },
   };
 }
 
 /**
  * V4b: Old-growth/mature forest where FIRE_YEAR >= 2000.
- * Post-fire areas should not be classified as old-growth or mature.
+ *
+ * Post-fire areas should not be classified as old-growth or mature. But at z10
+ * tile scale (~10km), a tile commonly contains both a fire scar and surrounding
+ * unburned mature forest. This is normal BC landscape, not a data contradiction.
+ *
+ * Only WARN when mature/old-growth features are a majority (>50%) of all
+ * forest-age features AND recent fire covers a significant portion of the tile.
+ * This catches genuine VRI classification lag while ignoring incidental
+ * tile-level coexistence.
  */
 async function checkV4OldGrowthPostFire(
-  pmtiles: PMTiles,
+  reader: TileReader,
   lat: number,
   lon: number,
   label: string
 ): Promise<AuditResult | null> {
   const [forestResult, fireResult] = await Promise.all([
-    getFeaturesAtPoint(pmtiles, lat, lon, "forest-age"),
-    getFeaturesAtPoint(pmtiles, lat, lon, "fire-history"),
+    reader.featuresAt(lat, lon, "forest-age"),
+    reader.featuresAt(lat, lon, "fire-history"),
   ]);
 
   if (!forestResult.tileExists || !fireResult.tileExists) return null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const hasRecentFire = fireResult.features.some((f: any) => {
+  const recentFires = fireResult.features.filter((f: any) => {
     const year = Number(f.properties?.FIRE_YEAR);
     return !isNaN(year) && year >= 2000;
   });
 
-  if (!hasRecentFire) return null;
+  if (recentFires.length === 0) return null;
+
+  const totalForest = forestResult.features.length;
+  if (totalForest === 0) return null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const matureOrOldGrowth = forestResult.features.filter((f: any) => {
-    // Tile stores `class` as a descriptive string emitted by the VRI extractor
     const ageClass = String(f.properties?.class ?? "").toLowerCase();
     return ageClass === "old-growth" || ageClass === "mature";
   });
 
   if (matureOrOldGrowth.length === 0) return null;
 
+  const matureRatio = matureOrOldGrowth.length / totalForest;
+  const fireRatio = recentFires.length / (recentFires.length + totalForest);
+  // Significant = majority of forest is mature AND fire is a substantial presence
+  const isSignificant = matureRatio > 0.5 && fireRatio > 0.1;
+
   return {
     check: `V4:Contradiction | OldGrowthPostFire | ${label}`,
-    status: "WARN",
-    message: `Old-growth/mature forest classification found where FIRE_YEAR >= 2000 at ${label}`,
+    status: isSignificant ? "WARN" : "PASS",
+    message: isSignificant
+      ? `Significant old-growth/fire conflict at ${label} (${matureOrOldGrowth.length}/${totalForest} mature, ${recentFires.length} fires)`
+      : `Old-growth and recent fire coexist in tile at ${label} (${(matureRatio * 100).toFixed(0)}% mature -- below conflict threshold)`,
     details: {
       lat,
       lon,
+      totalForestFeatures: totalForest,
       matureOrOldGrowthCount: matureOrOldGrowth.length,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      recentFireYears: fireResult.features
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((f: any) => f.properties?.FIRE_YEAR)
-        .filter((y: unknown) => Number(y) >= 2000),
+      matureRatio: Math.round(matureRatio * 100),
+      recentFireCount: recentFires.length,
+      significant: isSignificant,
     },
   };
 }
@@ -363,12 +346,11 @@ async function checkV4OldGrowthPostFire(
 async function main() {
   console.log("\nOpenCanopy Adversarial Audit");
   console.log("─".repeat(60));
-  console.log(`  Archive: ${PRODUCTION_PMTILES}`);
+  console.log(`  Archive: ${PATHS.pmtiles}`);
   console.log(`  Points:  ${ADVERSARIAL_POINTS.length}`);
   console.log(`  Zoom:    z${AUDIT_ZOOM}`);
 
-  const source = new NodeFileSource(PRODUCTION_PMTILES);
-  const pmtiles = new PMTiles(source);
+  const reader = new TileReader(PATHS.pmtiles);
 
   const results: AuditResult[] = [];
 
@@ -378,16 +360,16 @@ async function main() {
 
     if (point.expectedValue === null) {
       // V3: absence check
-      const v3 = await checkV3Absence(pmtiles, point);
+      const v3 = await checkV3Absence(reader, point);
       if (v3) results.push(v3);
     } else {
       // V1: presence check
-      const v1 = await checkV1Presence(pmtiles, point);
+      const v1 = await checkV1Presence(reader, point);
       results.push(v1);
 
       // V2: property value check (only if V1 passed)
       if (v1.status === "PASS") {
-        const v2 = await checkV2PropertyValue(pmtiles, point);
+        const v2 = await checkV2PropertyValue(reader, point);
         if (v2) results.push(v2);
       }
     }
@@ -398,23 +380,23 @@ async function main() {
 
   for (const point of ADVERSARIAL_POINTS) {
     const cutblockConflict = await checkV4CutblocksInParks(
-      pmtiles, point.lat, point.lon, point.name
+      reader, point.lat, point.lon, point.name
     );
     if (cutblockConflict) results.push(cutblockConflict);
 
     const fireConflict = await checkV4OldGrowthPostFire(
-      pmtiles, point.lat, point.lon, point.name
+      reader, point.lat, point.lon, point.name
     );
     if (fireConflict) results.push(fireConflict);
   }
 
   // ── Close file handle ──
-  await source.close();
+  await reader.close();
 
   // ── Print and save ──
   printResults(results);
 
-  mkdirSync(REPORTS_DIR, { recursive: true });
+  mkdirSync(PATHS.reports, { recursive: true });
 
   // Extend the saveResults payload with adversarial-specific metadata
   const adversarialPayload = {
