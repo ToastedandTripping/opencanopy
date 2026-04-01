@@ -16,7 +16,7 @@ const RASTER_OVERVIEW_URL =
 
 /** PMTiles vector source for detail zoom (z9+). */
 const PMTILES_URL =
-  "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v5.pmtiles";
+  "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v6.pmtiles";
 
 /** All story layer IDs created by setupStoryLayers. */
 export const STORY_LAYER_IDS = [
