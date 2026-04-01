@@ -23,23 +23,30 @@ import { NodeFileSource } from "./lib/node-file-source";
 import { sampleFeatures } from "./lib/ndjson-sampler";
 import { filterByBbox, type Bbox } from "./lib/ndjson-filter";
 import { traceFeature } from "./lib/feature-tracer";
-import { EXPECTED_SOURCE_LAYERS } from "./lib/bc-sample-grid";
+import {
+  PATHS,
+  ZOOMS,
+  SAMPLING,
+  THRESHOLDS,
+  C,
+  EXPECTED_SOURCE_LAYERS,
+} from "./lib/audit-config";
 import type { GeoJSON } from "geojson";
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const PMTILES_PATH = path.resolve(__dirname, "../data/tiles/opencanopy.pmtiles");
-const NDJSON_DIR = path.resolve(__dirname, "../data/geojson");
-const OUTPUT_PATH = path.resolve(__dirname, "../data/reports/source-fidelity-results.json");
+const PMTILES_PATH = PATHS.pmtiles;
+const NDJSON_DIR = PATHS.geojson;
+const OUTPUT_PATH = path.join(PATHS.reports, "source-fidelity-results.json");
 
 /** Zoom level used for all trace operations */
-const TRACE_ZOOM = 10;
+const TRACE_ZOOM = ZOOMS.feature;
 
 /** Samples per layer for F1/F2/F3 */
-const F1_SAMPLES_PER_LAYER = 50;
+const F1_SAMPLES_PER_LAYER = SAMPLING.fidelityPerLayer;
 
 /** Samples per layer for F4 boundary stress */
-const F4_SAMPLES_PER_LAYER = 20;
+const F4_SAMPLES_PER_LAYER = SAMPLING.boundaryPerLayer;
 
 /**
  * F1 thresholds:
@@ -47,14 +54,14 @@ const F4_SAMPLES_PER_LAYER = 20;
  *   95–98% → WARN
  *   <95% → FAIL
  */
-const F1_PASS_THRESHOLD = 0.98;
-const F1_WARN_THRESHOLD = 0.95;
+const F1_PASS_THRESHOLD = THRESHOLDS.fidelity.pass;
+const F1_WARN_THRESHOLD = THRESHOLDS.fidelity.warn;
 
 /**
  * WFS grid seam strip width in degrees.
  * Features within 0.05° of a grid seam boundary are "boundary-adjacent".
  */
-const BOUNDARY_STRIP = 0.05;
+const BOUNDARY_STRIP = THRESHOLDS.boundaryStrip;
 
 /**
  * WFS grid cell size for BC: 8×8 grid.
@@ -68,17 +75,6 @@ const WFS_GRID_LAT_ORIGIN = 48.0;
 const WFS_GRID_LON_ORIGIN = -140.0;
 const WFS_GRID_ROWS = 8;
 const WFS_GRID_COLS = 8;
-
-// ── ANSI colours for console output ─────────────────────────────────────────
-
-const C = {
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  red: "\x1b[31m",
-};
 
 function statusTag(status: "PASS" | "WARN" | "FAIL"): string {
   const col = status === "PASS" ? C.green : status === "WARN" ? C.yellow : C.red;
