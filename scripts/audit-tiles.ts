@@ -21,9 +21,7 @@
 
 import path from "path";
 import { existsSync, readFileSync } from "fs";
-import { PMTiles } from "pmtiles";
-import { NodeFileSource } from "./lib/node-file-source";
-import { parseTile, getLayerFeatures, getLayerPropertyKeys } from "./lib/mvt-reader";
+import { TileReader, getLayerFeatures, getLayerPropertyKeys } from "./lib/tile-reader";
 import { countLines } from "./lib/ndjson-sampler";
 import { latLonToTile, parentTile } from "./lib/tile-math";
 import {
@@ -31,27 +29,17 @@ import {
   printResults,
   saveResults,
 } from "./lib/audit-types";
+import {
+  PATHS,
+  EXPECTED_SOURCE_LAYERS,
+  BC_SAMPLE_POINTS,
+} from "./lib/audit-config";
+import { getSignatureProperties } from "./lib/property-schema";
 import { LAYER_REGISTRY } from "../src/lib/layers/registry";
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const PMTILES_PATH = path.resolve(__dirname, "../data/tiles/opencanopy.pmtiles");
-const NDJSON_DIR = path.resolve(__dirname, "../data/geojson");
-
-const EXPECTED_SOURCE_LAYERS = [
-  "forest-age",
-  "tenure-cutblocks",
-  "fire-history",
-  "parks",
-  "conservancies",
-  "ogma",
-  "wildlife-habitat-areas",
-  "ungulate-winter-range",
-  "community-watersheds",
-  "mining-claims",
-  "forestry-roads",
-  "conservation-priority",
-] as const;
+const NDJSON_DIR = PATHS.geojson;
 
 // Representative center points for each layer's NDJSON file
 // (lat/lon near the middle of BC for layers that cover the province)
@@ -70,50 +58,18 @@ const LAYER_CENTER_POINTS: Record<string, { lat: number; lon: number }> = {
   "conservation-priority": { lat: 52.0, lon: -124.0 },
 };
 
-// BC sample points for A4 (large feature detection)
-const BC_SAMPLE_POINTS = [
-  { name: "NW", lat: 57.0, lon: -130.0 },
-  { name: "N",  lat: 57.0, lon: -125.0 },
-  { name: "NE", lat: 57.0, lon: -120.0 },
-  { name: "W",  lat: 52.0, lon: -128.0 },
-  { name: "C",  lat: 52.0, lon: -125.0 },
-  { name: "E",  lat: 52.0, lon: -118.0 },
-  { name: "SW", lat: 49.0, lon: -126.0 },
-  { name: "S",  lat: 49.0, lon: -122.0 },
-  { name: "SE", lat: 49.0, lon: -117.0 },
-];
-
-// ── PMTiles helper ────────────────────────────────────────────────────────────
-
-async function readTile(
-  pmtiles: PMTiles,
-  z: number,
-  x: number,
-  y: number
-): Promise<ArrayBuffer | null> {
-  try {
-    const result = await pmtiles.getZxy(z, x, y);
-    if (!result || !result.data) return null;
-    return result.data;
-  } catch {
-    return null;
-  }
-}
-
 // ── TileAudit class ───────────────────────────────────────────────────────────
 
 class TileAudit {
-  private pmtiles: PMTiles;
-  private source: NodeFileSource;
+  private reader: TileReader;
 
-  constructor() {
-    this.source = new NodeFileSource(PMTILES_PATH);
-    this.pmtiles = new PMTiles(this.source);
+  constructor(reader: TileReader) {
+    this.reader = reader;
   }
 
   async runAll(): Promise<AuditResult[]> {
     console.log("Opening PMTiles archive...");
-    const header = await this.pmtiles.getHeader();
+    const header = await this.reader.raw.getHeader();
     console.log(
       `  PMTiles version: ${header.specVersion}, ` +
         `zoom range: z${header.minZoom}-z${header.maxZoom}\n`
@@ -145,7 +101,6 @@ class TileAudit {
     console.log("A8: Checking preprocessing comparison...");
     results.push(...(await this.checkPreprocessingComparison()));
 
-    await this.source.close();
     return results;
   }
 
@@ -155,7 +110,7 @@ class TileAudit {
     const results: AuditResult[] = [];
 
     // Read PMTiles metadata -- tippecanoe writes layer names in the metadata JSON
-    const metadata = await this.pmtiles.getMetadata();
+    const metadata = await this.reader.raw.getMetadata();
     let vectorLayers: Array<{ id: string }> = [];
 
     if (metadata && typeof metadata === "object") {
@@ -223,11 +178,10 @@ class TileAudit {
     // Also verify by actually reading tiles -- tiles at z8 center of BC should
     // contain most layers
     const bcCenter = latLonToTile(53.7, -127.6, 8);
-    const tileData = await readTile(this.pmtiles, bcCenter.z, bcCenter.x, bcCenter.y);
+    const bcTile = await this.reader.getTile(bcCenter.z, bcCenter.x, bcCenter.y);
 
-    if (tileData) {
-      const tile = parseTile(tileData);
-      const tiledLayers = Object.keys(tile.layers);
+    if (bcTile) {
+      const tiledLayers = Object.keys(bcTile.layers);
       results.push({
         check: "A1: Source layers present in BC center tile (z8)",
         status: tiledLayers.length > 0 ? "PASS" : "WARN",
@@ -275,10 +229,9 @@ class TileAudit {
       // Read center tiles at z7 and z10
       const tileCountsByZoom: Record<number, number> = {};
       for (const zoom of [7, 10]) {
-        const tile = latLonToTile(center.lat, center.lon, zoom);
-        const tileData = await readTile(this.pmtiles, tile.z, tile.x, tile.y);
-        if (tileData) {
-          const parsed = parseTile(tileData);
+        const tileCoord = latLonToTile(center.lat, center.lon, zoom);
+        const parsed = await this.reader.getTile(tileCoord.z, tileCoord.x, tileCoord.y);
+        if (parsed) {
           const features = getLayerFeatures(parsed, layerName);
           tileCountsByZoom[zoom] = features.length;
         } else {
@@ -340,36 +293,24 @@ class TileAudit {
   async checkPropertyPreservation(): Promise<AuditResult[]> {
     const results: AuditResult[] = [];
 
-    // Key properties we expect tippecanoe to preserve per layer
-    const EXPECTED_PROPERTIES: Record<string, string[]> = {
-      "forest-age": ["class"],
-      "tenure-cutblocks": ["PLANNED_GROSS_BLOCK_AREA", "company_id"],
-      "fire-history": ["FIRE_YEAR"],
-      parks: ["PROTECTED_LANDS_NAME"],
-      conservancies: ["CONSERVANCY_AREA_NAME"],
-      ogma: ["OGMA_TYPE"],
-      "wildlife-habitat-areas": ["COMMON_SPECIES_NAME"],
-      "ungulate-winter-range": ["SPECIES_1"],
-      "community-watersheds": ["CW_NAME"],
-      "mining-claims": ["TENURE_TYPE_DESCRIPTION"],
-      "forestry-roads": ["ROAD_SECTION_NAME"],
-      "conservation-priority": ["TAP_CLASSIFICATION_LABEL"],
-    };
-
     for (const layerName of EXPECTED_SOURCE_LAYERS) {
-      const expectedProps = EXPECTED_PROPERTIES[layerName] ?? [];
+      // Signature properties from unified schema (replaces local EXPECTED_PROPERTIES).
+      // Note: parks now uses "name" (tile property) not "PROTECTED_LANDS_NAME" (source field).
+      // Conservancies now uses "name" (tile property) not "CONSERVANCY_AREA_NAME" (source field).
+      // The extractor renames these fields; property-schema reflects the tile reality.
+      const expectedProps = getSignatureProperties(layerName);
       if (expectedProps.length === 0) continue;
 
       const center = LAYER_CENTER_POINTS[layerName];
-      const tile = latLonToTile(center.lat, center.lon, 10);
-      const tileData = await readTile(this.pmtiles, tile.z, tile.x, tile.y);
+      const tileCoord10 = latLonToTile(center.lat, center.lon, 10);
+      const parsed10 = await this.reader.getTile(tileCoord10.z, tileCoord10.x, tileCoord10.y);
 
-      if (!tileData) {
+      if (!parsed10) {
         // Try z8 as fallback (some layers have sparse coverage at z10 center points)
-        const tile8 = latLonToTile(center.lat, center.lon, 8);
-        const tileData8 = await readTile(this.pmtiles, tile8.z, tile8.x, tile8.y);
+        const tileCoord8 = latLonToTile(center.lat, center.lon, 8);
+        const parsed8 = await this.reader.getTile(tileCoord8.z, tileCoord8.x, tileCoord8.y);
 
-        if (!tileData8) {
+        if (!parsed8) {
           results.push({
             check: `A3: Property preservation [${layerName}]`,
             status: "WARN",
@@ -379,15 +320,13 @@ class TileAudit {
           continue;
         }
 
-        const parsed = parseTile(tileData8);
-        const tileProps = getLayerPropertyKeys(parsed, layerName, 20);
-        this._checkPropsResult(results, layerName, tileProps, expectedProps, 8);
+        const tileProps8 = getLayerPropertyKeys(parsed8, layerName, 20);
+        this._checkPropsResult(results, layerName, tileProps8, expectedProps, 8);
         continue;
       }
 
-      const parsed = parseTile(tileData);
-      const tileProps = getLayerPropertyKeys(parsed, layerName, 20);
-      this._checkPropsResult(results, layerName, tileProps, expectedProps, 10);
+      const tileProps10 = getLayerPropertyKeys(parsed10, layerName, 20);
+      this._checkPropsResult(results, layerName, tileProps10, expectedProps, 10);
     }
 
     return results;
@@ -441,12 +380,11 @@ class TileAudit {
     let largeFeatureCount = 0;
 
     for (const point of BC_SAMPLE_POINTS) {
-      const tile = latLonToTile(point.lat, point.lon, 8);
-      const tileData = await readTile(this.pmtiles, tile.z, tile.x, tile.y);
+      const tileCoord = latLonToTile(point.lat, point.lon, 8);
+      const parsed = await this.reader.getTile(tileCoord.z, tileCoord.x, tileCoord.y);
 
-      if (!tileData) continue;
+      if (!parsed) continue;
 
-      const parsed = parseTile(tileData);
       const features = getLayerFeatures(parsed, "tenure-cutblocks");
 
       if (features.length > 0) {
@@ -537,20 +475,18 @@ class TileAudit {
     const REVELSTOKE = { lat: 51.0, lon: -118.2 };
 
     for (const zoom of [7, 9]) {
-      const tile = latLonToTile(REVELSTOKE.lat, REVELSTOKE.lon, zoom);
-      const tileData = await readTile(this.pmtiles, tile.z, tile.x, tile.y);
+      const tileCoord = latLonToTile(REVELSTOKE.lat, REVELSTOKE.lon, zoom);
+      const parsed = await this.reader.getTile(tileCoord.z, tileCoord.x, tileCoord.y);
 
-      if (!tileData) {
+      if (!parsed) {
         results.push({
           check: `A5: Tile boundary artifacts (z${zoom}, Revelstoke)`,
           status: "WARN",
           message: `No tile data at z${zoom} near Revelstoke. Cannot check for boundary artifacts.`,
-          details: { tile: `${tile.z}/${tile.x}/${tile.y}` },
+          details: { tile: `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}` },
         });
         continue;
       }
-
-      const parsed = parseTile(tileData);
 
       // Check forest-age (most likely to show boundary artifacts due to polygon clipping)
       const features = getLayerFeatures(parsed, "forest-age");
@@ -560,7 +496,7 @@ class TileAudit {
           check: `A5: Tile boundary artifacts (z${zoom}, Revelstoke)`,
           status: "WARN",
           message: `No forest-age features in z${zoom} tile near Revelstoke. Cannot assess boundary artifacts.`,
-          details: { tile: `${tile.z}/${tile.x}/${tile.y}` },
+          details: { tile: `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}` },
         });
         continue;
       }
@@ -632,7 +568,7 @@ class TileAudit {
             ? "Above 5% threshold -- potential clipping artifacts."
             : "Below 5% threshold -- tile clipping looks normal."),
         details: {
-          tile: `${tile.z}/${tile.x}/${tile.y}`,
+          tile: `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`,
           features: features.length,
           boundaryEdges: boundaryEdgeCount,
           totalEdges: totalEdgeCount,
@@ -673,14 +609,13 @@ class TileAudit {
     let parentTilesWithFeatures = 0;
 
     for (const point of samplePoints) {
-      const z10Tile = latLonToTile(point.lat, point.lon, 10);
-      const z10Data = await readTile(this.pmtiles, z10Tile.z, z10Tile.x, z10Tile.y);
+      const z10Coord = latLonToTile(point.lat, point.lon, 10);
+      const z10Parsed = await this.reader.getTile(z10Coord.z, z10Coord.x, z10Coord.y);
 
       tilesChecked++;
 
-      if (!z10Data) continue;
+      if (!z10Parsed) continue;
 
-      const z10Parsed = parseTile(z10Data);
       // Count features across all layers
       const z10FeatureCount = Object.keys(z10Parsed.layers).reduce(
         (sum, layer) => sum + getLayerFeatures(z10Parsed, layer).length,
@@ -692,12 +627,11 @@ class TileAudit {
       tilesWithFeatures++;
 
       // Check parent at z6 (4 zoom levels up)
-      const z6Tile = parentTile(z10Tile.x, z10Tile.y, z10Tile.z, 4);
-      const z6Data = await readTile(this.pmtiles, z6Tile.z, z6Tile.x, z6Tile.y);
+      const z6Coord = parentTile(z10Coord.x, z10Coord.y, z10Coord.z, 4);
+      const z6Parsed = await this.reader.getTile(z6Coord.z, z6Coord.x, z6Coord.y);
 
-      if (!z6Data) continue;
+      if (!z6Parsed) continue;
 
-      const z6Parsed = parseTile(z6Data);
       const z6FeatureCount = Object.keys(z6Parsed.layers).reduce(
         (sum, layer) => sum + getLayerFeatures(z6Parsed, layer).length,
         0
@@ -788,18 +722,18 @@ class TileAudit {
       }
 
       // Try z10, fall back to z8
-      let tileData: ArrayBuffer | null = null;
+      let parsed = null;
       let usedZoom = 10;
       for (const zoom of [10, 8]) {
-        const tile = latLonToTile(center.lat, center.lon, zoom);
-        tileData = await readTile(this.pmtiles, tile.z, tile.x, tile.y);
-        if (tileData) {
+        const tileCoord = latLonToTile(center.lat, center.lon, zoom);
+        parsed = await this.reader.getTile(tileCoord.z, tileCoord.x, tileCoord.y);
+        if (parsed) {
           usedZoom = zoom;
           break;
         }
       }
 
-      if (!tileData) {
+      if (!parsed) {
         results.push({
           check: `A7: Timeline property format [${layer.id}] field: ${fieldName}`,
           status: "WARN",
@@ -810,7 +744,6 @@ class TileAudit {
         continue;
       }
 
-      const parsed = parseTile(tileData);
       const features = getLayerFeatures(parsed, sourceLayer);
 
       if (features.length === 0) {
@@ -937,10 +870,7 @@ class TileAudit {
 
   async checkPreprocessingComparison(): Promise<AuditResult[]> {
     const results: AuditResult[] = [];
-    const reportPath = path.resolve(
-      __dirname,
-      "../data/geojson/preprocessed/_report.json"
-    );
+    const reportPath = path.join(PATHS.preprocessed, "_report.json");
 
     if (!existsSync(reportPath)) {
       results.push({
@@ -1083,7 +1013,8 @@ async function main() {
   const outputIdx = args.indexOf("--output");
   const outputPath = outputIdx >= 0 ? args[outputIdx + 1] : null;
 
-  const audit = new TileAudit();
+  const reader = new TileReader(PATHS.pmtiles);
+  const audit = new TileAudit(reader);
 
   try {
     const results = await audit.runAll();
@@ -1095,6 +1026,8 @@ async function main() {
   } catch (err) {
     console.error("Audit failed with error:", err);
     process.exit(1);
+  } finally {
+    await reader.close();
   }
 }
 
