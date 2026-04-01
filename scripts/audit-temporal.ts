@@ -17,37 +17,22 @@
  */
 
 import path from "path";
-import { fileURLToPath } from "url";
 import { existsSync, mkdirSync, readdirSync } from "fs";
-import { PMTiles } from "pmtiles";
-import { NodeFileSource } from "./lib/node-file-source";
-import { parseTile, getLayerFeatures } from "./lib/mvt-reader";
-import { latLonToTile } from "./lib/tile-math";
 import { AuditResult, printResults, saveResults } from "./lib/audit-types";
-import { BC_SAMPLE_POINTS, EXPECTED_SOURCE_LAYERS } from "./lib/bc-sample-grid";
+import {
+  PATHS,
+  ZOOMS,
+  SAMPLING,
+  THRESHOLDS,
+  BC_SAMPLE_POINTS,
+  EXPECTED_SOURCE_LAYERS,
+} from "./lib/audit-config";
+import { TileReader, getLayerFeatures } from "./lib/tile-reader";
+import { latLonToTile } from "./lib/tile-math";
 
 // -- Configuration -------------------------------------------------------------
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const PROJECT_ROOT = path.resolve(__dirname, "..");
-const TILES_DIR = path.resolve(PROJECT_ROOT, "data", "tiles");
-const ARCHIVE_DIR = path.resolve(TILES_DIR, "archive");
-const PMTILES_PATH = path.resolve(TILES_DIR, "opencanopy.pmtiles");
-const REPORTS_DIR = path.resolve(PROJECT_ROOT, "data", "reports");
-const DEFAULT_OUTPUT = path.resolve(REPORTS_DIR, "temporal-results.json");
-
-// Zoom level for temporal comparison
-const COMPARE_ZOOM = 10;
-
-// Sample 50 features from previous archive to check for disappearance
-const PERSISTENCE_SAMPLE_SIZE = 50;
-
-// Thresholds
-const WARN_DELTA_PCT = 10;
-const FAIL_DELTA_PCT = 25;
-const WARN_DISAPPEARANCE_PCT = 5;
+const DEFAULT_OUTPUT = path.resolve(PATHS.reports, "temporal-results.json");
 
 // -- Archive helpers -----------------------------------------------------------
 
@@ -56,32 +41,15 @@ const WARN_DISAPPEARANCE_PCT = 5;
  * Archives are named opencanopy-YYYYMMDD.pmtiles.
  */
 function findMostRecentArchive(): string | null {
-  if (!existsSync(ARCHIVE_DIR)) return null;
+  if (!existsSync(PATHS.tilesArchive)) return null;
 
-  const archives = readdirSync(ARCHIVE_DIR)
+  const archives = readdirSync(PATHS.tilesArchive)
     .filter((f) => f.startsWith("opencanopy-") && f.endsWith(".pmtiles"))
     .sort() // lexicographic sort works because YYYYMMDD is sortable
     .reverse();
 
   if (archives.length === 0) return null;
-  return path.resolve(ARCHIVE_DIR, archives[0]);
-}
-
-// -- PMTiles helper ------------------------------------------------------------
-
-async function readTile(
-  pmtiles: PMTiles,
-  z: number,
-  x: number,
-  y: number
-): Promise<ArrayBuffer | null> {
-  try {
-    const result = await pmtiles.getZxy(z, x, y);
-    if (!result || !result.data) return null;
-    return result.data;
-  } catch {
-    return null;
-  }
+  return path.resolve(PATHS.tilesArchive, archives[0]);
 }
 
 // -- Feature count comparison --------------------------------------------------
@@ -95,7 +63,7 @@ interface LayerCounts {
  * Returns total feature count per layer across all sample tiles.
  */
 async function countFeaturesPerLayer(
-  pmtiles: PMTiles,
+  reader: TileReader,
   zoom: number
 ): Promise<LayerCounts> {
   const counts: LayerCounts = {};
@@ -105,13 +73,12 @@ async function countFeaturesPerLayer(
   }
 
   for (const point of BC_SAMPLE_POINTS) {
-    const tile = latLonToTile(point.lat, point.lon, zoom);
-    const tileData = await readTile(pmtiles, tile.z, tile.x, tile.y);
-    if (!tileData) continue;
+    const { x, y, z } = latLonToTile(point.lat, point.lon, zoom);
+    const tile = await reader.getTile(z, x, y);
+    if (!tile) continue;
 
-    const vectorTile = parseTile(tileData);
     for (const layerName of EXPECTED_SOURCE_LAYERS) {
-      const features = getLayerFeatures(vectorTile, layerName);
+      const features = getLayerFeatures(tile, layerName);
       counts[layerName] += features.length;
     }
   }
@@ -141,8 +108,8 @@ function featureFingerprint(
 }
 
 async function checkFeaturePersistence(
-  previousPmtiles: PMTiles,
-  currentPmtiles: PMTiles,
+  previousReader: TileReader,
+  currentReader: TileReader,
   sourceLayer: string,
   zoom: number,
   sampleSize: number
@@ -153,12 +120,11 @@ async function checkFeaturePersistence(
   const previousFingerprints = new Set<string>();
 
   for (const point of BC_SAMPLE_POINTS) {
-    const tile = latLonToTile(point.lat, point.lon, zoom);
-    const tileData = await readTile(previousPmtiles, tile.z, tile.x, tile.y);
-    if (!tileData) continue;
+    const { x, y, z } = latLonToTile(point.lat, point.lon, zoom);
+    const tile = await previousReader.getTile(z, x, y);
+    if (!tile) continue;
 
-    const vectorTile = parseTile(tileData);
-    const features = getLayerFeatures(vectorTile, sourceLayer);
+    const features = getLayerFeatures(tile, sourceLayer);
 
     for (const f of features) {
       if (previousFingerprints.size >= sampleSize) break;
@@ -181,12 +147,11 @@ async function checkFeaturePersistence(
   const currentFingerprints = new Set<string>();
 
   for (const point of BC_SAMPLE_POINTS) {
-    const tile = latLonToTile(point.lat, point.lon, zoom);
-    const tileData = await readTile(currentPmtiles, tile.z, tile.x, tile.y);
-    if (!tileData) continue;
+    const { x, y, z } = latLonToTile(point.lat, point.lon, zoom);
+    const tile = await currentReader.getTile(z, x, y);
+    if (!tile) continue;
 
-    const vectorTile = parseTile(tileData);
-    const features = getLayerFeatures(vectorTile, sourceLayer);
+    const features = getLayerFeatures(tile, sourceLayer);
     for (const f of features) {
       currentFingerprints.add(featureFingerprint(f));
     }
@@ -200,7 +165,7 @@ async function checkFeaturePersistence(
 
   const disappearancePct = (disappeared / previousFingerprints.size) * 100;
 
-  if (disappearancePct > WARN_DISAPPEARANCE_PCT) {
+  if (disappearancePct > THRESHOLDS.temporal.warnDisappearancePct) {
     results.push({
       check: `Temporal — ${sourceLayer} feature persistence`,
       status: "WARN",
@@ -229,16 +194,16 @@ async function main(): Promise<void> {
 
   console.log("=== OpenCanopy Temporal Consistency Audit ===\n");
 
-  mkdirSync(REPORTS_DIR, { recursive: true });
+  mkdirSync(PATHS.reports, { recursive: true });
 
   const results: AuditResult[] = [];
 
   // Check current PMTiles exists
-  if (!existsSync(PMTILES_PATH)) {
+  if (!existsSync(PATHS.pmtiles)) {
     results.push({
       check: "Temporal audit — current PMTiles",
       status: "FAIL",
-      message: `Current PMTiles not found: ${PMTILES_PATH}. Run build-tiles first.`,
+      message: `Current PMTiles not found: ${PATHS.pmtiles}. Run build-tiles first.`,
     });
     printResults(results);
     saveResults(results, outputPath);
@@ -252,25 +217,23 @@ async function main(): Promise<void> {
     results.push({
       check: "Temporal audit — archive availability",
       status: "WARN",
-      message: `No archives found in ${ARCHIVE_DIR}. Temporal comparison requires at least one previous build. Skipping temporal checks.`,
+      message: `No archives found in ${PATHS.tilesArchive}. Temporal comparison requires at least one previous build. Skipping temporal checks.`,
     });
     printResults(results);
     saveResults(results, outputPath);
     return;
   }
 
-  console.log(`Current: ${PMTILES_PATH}`);
+  console.log(`Current: ${PATHS.pmtiles}`);
   console.log(`Archive: ${archivePath}\n`);
 
-  const currentSource = new NodeFileSource(PMTILES_PATH);
-  const archiveSource = new NodeFileSource(archivePath);
-  const currentPmtiles = new PMTiles(currentSource);
-  const archivePmtiles = new PMTiles(archiveSource);
+  const currentReader = new TileReader(PATHS.pmtiles);
+  const archiveReader = new TileReader(archivePath);
 
   // C1: Feature count delta per layer
-  console.log(`Counting features per layer at z${COMPARE_ZOOM}...`);
-  const currentCounts = await countFeaturesPerLayer(currentPmtiles, COMPARE_ZOOM);
-  const previousCounts = await countFeaturesPerLayer(archivePmtiles, COMPARE_ZOOM);
+  console.log(`Counting features per layer at z${ZOOMS.feature}...`);
+  const currentCounts = await countFeaturesPerLayer(currentReader, ZOOMS.feature);
+  const previousCounts = await countFeaturesPerLayer(archiveReader, ZOOMS.feature);
 
   for (const layerName of EXPECTED_SOURCE_LAYERS) {
     const current = currentCounts[layerName] ?? 0;
@@ -280,7 +243,7 @@ async function main(): Promise<void> {
       results.push({
         check: `Temporal — ${layerName} feature count`,
         status: "WARN",
-        message: `No features in either current or previous archive at z${COMPARE_ZOOM}`,
+        message: `No features in either current or previous archive at z${ZOOMS.feature}`,
       });
       continue;
     }
@@ -298,14 +261,14 @@ async function main(): Promise<void> {
     const deltaPct = Math.abs(((current - previous) / previous) * 100);
     const deltaSign = current >= previous ? "+" : "-";
 
-    if (deltaPct > FAIL_DELTA_PCT) {
+    if (deltaPct > THRESHOLDS.temporal.failDeltaPct) {
       results.push({
         check: `Temporal — ${layerName} feature count`,
         status: "FAIL",
         message: `Feature count changed by ${deltaSign}${deltaPct.toFixed(1)}% (${previous} → ${current})`,
         details: { previous, current, deltaPct: `${deltaSign}${deltaPct.toFixed(1)}%` },
       });
-    } else if (deltaPct > WARN_DELTA_PCT) {
+    } else if (deltaPct > THRESHOLDS.temporal.warnDeltaPct) {
       results.push({
         check: `Temporal — ${layerName} feature count`,
         status: "WARN",
@@ -324,16 +287,16 @@ async function main(): Promise<void> {
   // C2: Feature persistence for tenure-cutblocks
   console.log("\nChecking tenure-cutblocks feature persistence...");
   const persistenceResults = await checkFeaturePersistence(
-    archivePmtiles,
-    currentPmtiles,
+    archiveReader,
+    currentReader,
     "tenure-cutblocks",
-    COMPARE_ZOOM,
-    PERSISTENCE_SAMPLE_SIZE
+    ZOOMS.feature,
+    SAMPLING.persistenceSample
   );
   results.push(...persistenceResults);
 
-  await currentSource.close();
-  await archiveSource.close();
+  await currentReader.close();
+  await archiveReader.close();
 
   printResults(results);
   saveResults(results, outputPath);
