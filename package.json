@@ -30,7 +30,7 @@
     "sweep:tile-configs": "npx tsx scripts/sweep-tile-configs.ts",
     "preprocess": "NODE_OPTIONS='--max-old-space-size=8192' npx tsx scripts/preprocess-tiles.ts",
     "preprocess:validate-only": "npx tsx scripts/preprocess-tiles.ts --validate-only",
-    "build-tiles:full": "npm run preprocess && npm run build-tiles -- --tiles-only --preprocessed --audit",
+    "build-tiles:full": "npm run preprocess && npm run build-tiles -- --tiles-only --audit",
     "audit:fidelity": "npx tsx scripts/audit-source-fidelity.ts",
     "audit:precision": "npx tsx scripts/audit-geometry-precision.ts",
     "audit:adversarial": "npx tsx scripts/audit-adversarial.ts",

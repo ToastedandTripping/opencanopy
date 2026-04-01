@@ -233,7 +233,9 @@ const extractTenureCutblocks: PropertyExtractor = (props) => {
   const clientNum = String(props.CLIENT_NUMBER ?? "").padStart(8, "0");
   return {
     company_id: COMPANY_MAP[clientNum] ?? "other",
-    DISTURBANCE_START_DATE: props.DISTURBANCE_START_DATE != null ? String(props.DISTURBANCE_START_DATE) : null,
+    DISTURBANCE_START_DATE: props.DISTURBANCE_START_DATE != null && String(props.DISTURBANCE_START_DATE) !== "null"
+      ? String(props.DISTURBANCE_START_DATE)
+      : null,
     PLANNED_GROSS_BLOCK_AREA: props.PLANNED_GROSS_BLOCK_AREA ?? null,
   };
 };
@@ -856,11 +858,14 @@ function runTippecanoe(): boolean {
     "conservation-priority",
   ];
 
-  // --preprocessed flag: read manifest and use preprocessed NDJSON where available
-  const usePreprocessed = process.argv.includes("--preprocessed");
+  // Auto-detect preprocessed data: if a preprocessed NDJSON exists for a layer,
+  // use it. Use --raw to explicitly skip preprocessed data (debugging only).
+  // This replaces the old --preprocessed opt-in flag — the safe path is now the
+  // default path. Forgetting a flag should never silently discard water subtraction.
+  const forceRaw = process.argv.includes("--raw");
   let preprocessedLayers = new Set<string>();
 
-  if (usePreprocessed) {
+  if (!forceRaw) {
     const manifestPath = resolve(PREPROCESSED_DIR, "_manifest.json");
     if (existsSync(manifestPath)) {
       try {
@@ -870,45 +875,46 @@ function runTippecanoe(): boolean {
         };
         preprocessedLayers = new Set(manifest.layers);
         console.log(
-          `  Using preprocessed data for ${preprocessedLayers.size} layer(s) ` +
+          `  Auto-detected preprocessed data for ${preprocessedLayers.size} layer(s) ` +
           `(manifest timestamp: ${manifest.timestamp})`
         );
       } catch (err) {
         console.warn(`  Warning: could not read preprocessed manifest: ${(err as Error).message}`);
         console.warn(`  Falling back to raw NDJSON for all layers`);
       }
-    } else {
-      console.warn(
-        `  Warning: --preprocessed specified but no manifest found at ${manifestPath}`
-      );
-      console.warn(`  Run: npm run preprocess`);
     }
+    // Also check for preprocessed files not in manifest (e.g. from earlier runs)
+    for (const name of layerFiles) {
+      if (!preprocessedLayers.has(name)) {
+        const ppPath = resolve(PREPROCESSED_DIR, `${name}.ndjson`);
+        if (existsSync(ppPath) && statSync(ppPath).size > 0) {
+          preprocessedLayers.add(name);
+          console.log(`  Auto-detected preprocessed ${name} (not in manifest)`);
+        }
+      }
+    }
+  } else {
+    console.log("  --raw flag: skipping all preprocessed data");
   }
 
-  // Build two input lists: overview excludes conservation-priority (it would be
-  // coalesced away at z4-z7 anyway and its absence from tier 1 caused tile-join
-  // to drop it from the merged output). Detail includes all layers.
+  // Build two input lists: both tiers include ALL layers. Every layer should be
+  // visible at province level (z4-z7) for the full picture. The overview tier's
+  // coalescing handles dense tiles automatically.
   const overviewInputs: string[] = [];
   const detailInputs: string[] = [];
 
   for (const name of layerFiles) {
-    // Prefer preprocessed version if available and --preprocessed flag is set
+    // Prefer preprocessed version if available (auto-detected or in manifest)
     let p: string;
-    if (usePreprocessed && preprocessedLayers.has(name)) {
+    if (preprocessedLayers.has(name)) {
       p = resolve(PREPROCESSED_DIR, `${name}.ndjson`);
       console.log(`  ${name}: using preprocessed data`);
     } else {
       p = resolve(GEOJSON_DIR, `${name}.ndjson`);
-      if (usePreprocessed) {
-        console.log(`  ${name}: using raw data (not in preprocessed manifest)`);
-      }
     }
 
     if (existsSync(p) && statSync(p).size > 0) {
-      // conservation-priority: detail tier only (see comment above)
-      if (name !== "conservation-priority") {
-        overviewInputs.push("-L", `${name}:${p}`);
-      }
+      overviewInputs.push("-L", `${name}:${p}`);
       detailInputs.push("-L", `${name}:${p}`);
     } else if (existsSync(p) && statSync(p).size === 0) {
       console.log(`  Skipping ${name}: NDJSON exists but is empty (0 bytes)`);
@@ -972,7 +978,9 @@ function runTippecanoe(): boolean {
       "--buffer=16",
       // Force timeline properties to string so MapLibre filter expressions work
       "--attribute-type=FIRE_YEAR:string",
-      "--attribute-type=DISTURBANCE_START_DATE:string",
+      // DISTURBANCE_START_DATE is already a string in NDJSON when present.
+      // Do NOT force it to string via --attribute-type — tippecanoe converts
+      // JSON null to literal "null" string, which then fails pattern validation.
       "--force",
       ...overviewInputs,
     ].join(" ");
@@ -993,7 +1001,9 @@ function runTippecanoe(): boolean {
       "--buffer=16",
       // Force timeline properties to string so MapLibre filter expressions work
       "--attribute-type=FIRE_YEAR:string",
-      "--attribute-type=DISTURBANCE_START_DATE:string",
+      // DISTURBANCE_START_DATE is already a string in NDJSON when present.
+      // Do NOT force it to string via --attribute-type — tippecanoe converts
+      // JSON null to literal "null" string, which then fails pattern validation.
       "--force",
       ...detailInputs,
     ].join(" ");

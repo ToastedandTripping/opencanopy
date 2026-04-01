@@ -95,6 +95,11 @@ const AUDITS: AuditEntry[] = [
     script: "audit:temporal",
     reportFile: "temporal-results.json",
   },
+  {
+    label: "CrossSource",
+    script: "audit:crosssource-lite",
+    reportFile: "crosssource-lite-results.json",
+  },
 ];
 
 // ── Result tracking ───────────────────────────────────────────────────────────

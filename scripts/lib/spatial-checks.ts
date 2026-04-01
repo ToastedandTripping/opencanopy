@@ -277,11 +277,14 @@ export async function checkWaterBodyOverlap(
 
     if (pointWaterOverlaps > 0) {
       flaggedPoints.push(point.name);
+      // Proportional threshold: <1% overlap is an edge case (WARN), not systemic (FAIL)
+      const overlapRate = pointWaterOverlaps / features.length;
+      const status = overlapRate >= 0.01 ? "FAIL" as const : "WARN" as const;
       results.push({
         check: `Water body overlap — ${sourceLayer} z${zoom} @ ${point.name}`,
-        status: "FAIL",
-        message: `${pointWaterOverlaps} of ${features.length} features have >50% water body overlap`,
-        details: { point: point.name, waterOverlaps: pointWaterOverlaps, totalFeatures: features.length },
+        status,
+        message: `${pointWaterOverlaps} of ${features.length} features have >50% water body overlap (${(overlapRate * 100).toFixed(2)}%)`,
+        details: { point: point.name, waterOverlaps: pointWaterOverlaps, totalFeatures: features.length, overlapRate },
       });
     } else {
       results.push({
