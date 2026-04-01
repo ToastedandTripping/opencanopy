@@ -18,6 +18,13 @@ import { PMTiles } from "pmtiles";
 import type { GeoJSON } from "geojson";
 import { latLonToTile } from "./tile-math";
 import { parseTile, getLayerFeatures } from "./mvt-reader";
+import {
+  propsMatch as _propsMatch,
+  fingerprintScore as _fingerprintScore,
+  buildPropertyComparison as _buildPropertyComparison,
+  findBestCandidate as _findBestCandidate,
+} from "./feature-matcher";
+import { THRESHOLDS } from "./audit-config";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -77,7 +84,23 @@ function extractFirstCoord(
 }
 
 /**
- * Fetch a tile from PMTiles. Returns null if the tile doesn't exist or errors.
+ * Tile cache — avoids redundant PMTiles reads when multiple features
+ * fall in the same tile (common for geographically clustered samples).
+ * Cache is per-session (module scope), cleared between audit runs.
+ */
+const tileCache = new Map<string, ArrayBuffer | null>();
+
+function tileCacheKey(z: number, x: number, y: number): string {
+  return `${z}/${x}/${y}`;
+}
+
+/** Clear the tile cache (call between independent audit runs if needed). */
+export function clearTileCache(): void {
+  tileCache.clear();
+}
+
+/**
+ * Fetch a tile from PMTiles with caching. Returns null if the tile doesn't exist or errors.
  */
 async function fetchTile(
   pmtiles: PMTiles,
@@ -85,94 +108,26 @@ async function fetchTile(
   x: number,
   y: number
 ): Promise<ArrayBuffer | null> {
+  const key = tileCacheKey(z, x, y);
+  if (tileCache.has(key)) return tileCache.get(key)!;
+
   try {
     const result = await pmtiles.getZxy(z, x, y);
-    if (!result || !result.data) return null;
-    return result.data;
+    const data = result?.data ?? null;
+    tileCache.set(key, data);
+    return data;
   } catch {
+    tileCache.set(key, null);
     return null;
   }
 }
 
-/**
- * Compute property fingerprint overlap between a source feature's properties
- * and a candidate tile feature's properties.
- *
- * Returns a score in [0, 1]: fraction of source property keys whose values
- * match the candidate. Only keys present in the source are scored.
- *
- * Null/undefined parity: if both sides are null or undefined (any combination),
- * the pair is treated as a match. MVT encoding drops null values, so a source
- * null and a missing tile key are semantically equivalent.
- */
-function fingerprintScore(
-  sourceProps: Record<string, unknown>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tileFeature: any
-): number {
-  const tileProps: Record<string, unknown> = tileFeature.properties ?? {};
-  const sourceKeys = Object.keys(sourceProps);
-  if (sourceKeys.length === 0) return 0; // no properties to compare — unverifiable, treat as unfound
-
-  let matches = 0;
-  for (const key of sourceKeys) {
-    const sv = sourceProps[key];
-    const tv = tileProps[key];
-    const match = (sv == null && tv == null) ? true : sv === tv;
-    if (match) matches++;
-  }
-  return matches / sourceKeys.length;
-}
-
-/**
- * Build a propertyComparison record: one entry per source property key,
- * each with { source, tile, match }.
- *
- * Null/undefined parity: if both sides are null or undefined (any combination),
- * the pair is considered a match. MVT encoding drops null values, so a source
- * null and a missing tile key are semantically equivalent.
- */
-function buildPropertyComparison(
-  sourceProps: Record<string, unknown>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tileFeature: any
-): Record<string, { source: unknown; tile: unknown; match: boolean }> {
-  const tileProps: Record<string, unknown> = tileFeature.properties ?? {};
-  const comparison: Record<string, { source: unknown; tile: unknown; match: boolean }> = {};
-
-  for (const key of Object.keys(sourceProps)) {
-    const source = sourceProps[key];
-    const tile = tileProps[key];
-    const match = (source == null && tile == null) ? true : source === tile;
-    comparison[key] = { source, tile, match };
-  }
-  return comparison;
-}
-
-/**
- * Find the best-matching tile feature in `features` for the given source
- * properties. Returns [bestFeature, score] or [null, 0].
- */
-function findBestCandidate(
-  features: unknown[],
-  sourceProps: Record<string, unknown>
-): [unknown, number] {
-  let bestFeature: unknown = null;
-  let bestScore = 0;
-
-  for (const feat of features) {
-    const score = fingerprintScore(sourceProps, feat);
-    if (score > bestScore) {
-      bestScore = score;
-      bestFeature = feat;
-    }
-  }
-  return [bestFeature, bestScore];
-}
-
-// ── Match threshold ───────────────────────────────────────────────────────────
-
-const MATCH_THRESHOLD = 0.5;
+// Delegate to feature-matcher.ts — single source of truth for matching logic
+const propsMatch = _propsMatch;
+const fingerprintScore = _fingerprintScore;
+const buildPropertyComparison = _buildPropertyComparison;
+const findBestCandidate = _findBestCandidate;
+const MATCH_THRESHOLD = THRESHOLDS.matchThreshold;
 
 // ── Core trace function ───────────────────────────────────────────────────────
 

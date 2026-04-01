@@ -84,13 +84,13 @@ export const ADVERSARIAL_POINTS: AdversarialPoint[] = [
     description: "Cutblocks with company identifier must be present near Revelstoke",
   },
   {
-    name: "Okanagan Lake",
-    lat: 49.9,
-    lon: -119.5,
+    name: "Pacific Ocean (West Vancouver Island)",
+    lat: 49.5,
+    lon: -128.5,
     layer: "forest-age",
-    expectedValue: null,  // absence check -- this is a water body
+    expectedValue: null,  // absence check -- open Pacific Ocean, no land
     propertyKey: undefined,
-    description: "NO forest-age features expected at Okanagan Lake (water body)",
+    description: "NO forest-age features expected in open Pacific Ocean",
   },
   {
     name: "Lytton 2021 Fire",

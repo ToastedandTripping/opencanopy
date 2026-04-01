@@ -36,42 +36,26 @@ import { NodeFileSource } from "./lib/node-file-source";
 import { parseTile, getLayerFeatures } from "./lib/mvt-reader";
 import { latLonToTile } from "./lib/tile-math";
 import { AuditResult, printResults, saveResults } from "./lib/audit-types";
-import { checkWaterBodyOverlap } from "./lib/spatial-checks";
-import { BC_EXTENDED_GRID } from "./lib/bc-sample-grid";
-import type { SamplePoint } from "./lib/bc-sample-grid";
+import { checkWaterBodyOverlap, loadLakes } from "./lib/spatial-checks";
+import {
+  PATHS,
+  ZOOMS,
+  POLYGON_LAYERS,
+  BC_EXTENDED_GRID,
+} from "./lib/audit-config";
+import type { SamplePoint } from "./lib/audit-config";
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PROJECT_ROOT = path.resolve(__dirname, "..");
-const PMTILES_PATH = path.resolve(PROJECT_ROOT, "data", "tiles", "opencanopy.pmtiles");
-const LAKES_PATH = path.resolve(PROJECT_ROOT, "data", "geojson", "reference", "fwa-lakes.ndjson");
-const REPORTS_DIR = path.resolve(PROJECT_ROOT, "data", "reports");
-const DEFAULT_OUTPUT = path.resolve(REPORTS_DIR, "spatial-results.json");
+const DEFAULT_OUTPUT = path.resolve(PATHS.reports, "spatial-results.json");
 
 /** Zoom level for all spatial checks */
-const CHECK_ZOOM = 10;
+const CHECK_ZOOM = ZOOMS.feature;
 
-/**
- * All polygon layers (excludes forestry-roads which is a line layer).
- * These are checked for water-body overlap in S1.
- */
-const POLYGON_LAYERS = [
-  "forest-age",
-  "tenure-cutblocks",
-  "fire-history",
-  "parks",
-  "conservancies",
-  "ogma",
-  "wildlife-habitat-areas",
-  "ungulate-winter-range",
-  "community-watersheds",
-  "mining-claims",
-] as const;
-
-type PolygonLayer = typeof POLYGON_LAYERS[number];
+type PolygonLayer = (typeof POLYGON_LAYERS)[number];
 
 // ── CLI argument parsing ──────────────────────────────────────────────────────
 
@@ -287,16 +271,16 @@ async function main(): Promise<void> {
     console.log(`Single-layer mode: ${filterLayer}\n`);
   }
 
-  mkdirSync(REPORTS_DIR, { recursive: true });
+  mkdirSync(PATHS.reports, { recursive: true });
 
   const results: AuditResult[] = [];
 
   // ── Check PMTiles availability ────────────────────────────────────────────
-  if (!existsSync(PMTILES_PATH)) {
+  if (!existsSync(PATHS.pmtiles)) {
     results.push({
       check: "Spatial audit — PMTiles availability",
       status: "FAIL",
-      message: `PMTiles file not found: ${PMTILES_PATH}. Run build-tiles first.`,
+      message: `PMTiles file not found: ${PATHS.pmtiles}. Run build-tiles first.`,
     });
     printResults(results);
     saveResults(results, outputPath);
@@ -306,7 +290,7 @@ async function main(): Promise<void> {
   results.push({
     check: "Spatial audit — PMTiles availability",
     status: "PASS",
-    message: `PMTiles archive found: ${PMTILES_PATH}`,
+    message: `PMTiles archive found: ${PATHS.pmtiles}`,
   });
 
   // ── Check lakes reference data ────────────────────────────────────────────
@@ -315,7 +299,7 @@ async function main(): Promise<void> {
   const needsLakes = !filterLayer || (POLYGON_LAYERS as readonly string[]).includes(filterLayer);
 
   if (!isForestAgeOnly && needsLakes) {
-    if (!existsSync(LAKES_PATH)) {
+    if (!existsSync(PATHS.lakes)) {
       console.log("  FWA lakes reference data not found. Attempting download...\n");
       try {
         execSync(`npx tsx ${path.resolve(__dirname, "download-reference-data.ts")}`, {
@@ -334,11 +318,11 @@ async function main(): Promise<void> {
       }
     }
 
-    if (!existsSync(LAKES_PATH)) {
+    if (!existsSync(PATHS.lakes)) {
       results.push({
         check: "Spatial audit — lakes reference data",
         status: "WARN",
-        message: `Lakes reference file still not found after download attempt: ${LAKES_PATH}`,
+        message: `Lakes reference file still not found after download attempt: ${PATHS.lakes}`,
       });
       printResults(results);
       saveResults(results, outputPath);
@@ -348,7 +332,7 @@ async function main(): Promise<void> {
     results.push({
       check: "Spatial audit — lakes reference data",
       status: "PASS",
-      message: `FWA lakes reference data found: ${LAKES_PATH}`,
+      message: `FWA lakes reference data found: ${PATHS.lakes}`,
     });
   }
 
@@ -364,10 +348,27 @@ async function main(): Promise<void> {
   // so it IS in layersToCheck unless filterLayer is something else entirely.
   // We run S1 if layersToCheck is non-empty AND lakes exist.
 
-  if (layersToCheck.length > 0 && existsSync(LAKES_PATH)) {
+  if (layersToCheck.length > 0 && existsSync(PATHS.lakes)) {
     console.log(
       `\nS1: Checking water body overlap at z${CHECK_ZOOM} for ${layersToCheck.length} layer(s)...`
     );
+
+    // Load lakes ONCE for all layers (was previously reloaded per layer — 10x redundant I/O)
+    console.log(`  Loading lake reference data...`);
+    const lakes = await loadLakes(PATHS.lakes);
+    console.log(`  Loaded ${lakes.length} lake polygons`);
+
+    // Pre-compute bboxes once
+    const turfBbox = require("@turf/bbox");
+    const bboxFn = turfBbox.bbox ?? turfBbox.default ?? turfBbox;
+    const lakeBboxes: Array<[number, number, number, number]> = lakes.map((l: unknown) => {
+      try {
+        return bboxFn(l);
+      } catch {
+        return [-180, -90, 180, 90] as [number, number, number, number];
+      }
+    });
+    const preloadedLakes = { lakes, lakeBboxes };
 
     // Per-layer overlap rates tracking
     const layerOverlapRates: Record<string, { overlaps: number; total: number }> = {};
@@ -375,11 +376,12 @@ async function main(): Promise<void> {
     for (const layer of layersToCheck) {
       console.log(`  Layer: ${layer}`);
       const overlapResults = await checkWaterBodyOverlap(
-        PMTILES_PATH,
-        LAKES_PATH,
+        PATHS.pmtiles,
+        PATHS.lakes,
         BC_EXTENDED_GRID,
         layer,
-        CHECK_ZOOM
+        CHECK_ZOOM,
+        preloadedLakes
       );
       results.push(...overlapResults);
 
@@ -418,7 +420,7 @@ async function main(): Promise<void> {
   if (runForestAge) {
     console.log(`\nS2: Forest-age classification consistency at z${CHECK_ZOOM} (${BC_EXTENDED_GRID.length} points)...`);
     const forestAgeResults = await checkForestAgeConsistency(
-      PMTILES_PATH,
+      PATHS.pmtiles,
       BC_EXTENDED_GRID,
       CHECK_ZOOM
     );

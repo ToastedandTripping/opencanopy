@@ -27,53 +27,31 @@
  */
 
 import path from "path";
-import { fileURLToPath } from "url";
 import { existsSync, mkdirSync } from "fs";
-import { PMTiles } from "pmtiles";
-import { NodeFileSource } from "./lib/node-file-source";
-import { parseTile, getLayerFeatures } from "./lib/mvt-reader";
-import { latLonToTile } from "./lib/tile-math";
 import { AuditResult, printResults, saveResults } from "./lib/audit-types";
-import { BC_EXTENDED_GRID, EXPECTED_SOURCE_LAYERS } from "./lib/bc-sample-grid";
 import {
-  TILE_PROPERTY_RULES,
+  PATHS,
+  ZOOMS,
+  BC_EXTENDED_GRID,
+  EXPECTED_SOURCE_LAYERS,
+  type SourceLayerName,
+} from "./lib/audit-config";
+import {
+  LAYER_PROPERTIES,
   KNOWN_COMPANY_IDS,
-  validateTileFeatureProperties,
-} from "./lib/property-validators";
-import type { SourceLayerName } from "./lib/bc-sample-grid";
+  validateDeep,
+} from "./lib/property-schema";
+import { TileReader, getLayerFeatures } from "./lib/tile-reader";
+import { latLonToTile } from "./lib/tile-math";
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const PROJECT_ROOT = path.resolve(__dirname, "..");
-const PMTILES_PATH = path.resolve(PROJECT_ROOT, "data", "tiles", "opencanopy.pmtiles");
-const REPORTS_DIR = path.resolve(PROJECT_ROOT, "data", "reports");
-const OUTPUT_PATH = path.resolve(REPORTS_DIR, "property-deep-results.json");
-
-/** Zoom level for all property checks. */
-const CHECK_ZOOM = 10;
+const OUTPUT_PATH = path.resolve(PATHS.reports, "property-deep-results.json");
 
 /** Current year ceiling for date validation. */
 const CURRENT_YEAR = new Date().getFullYear();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function fetchTile(
-  pmtiles: PMTiles,
-  z: number,
-  x: number,
-  y: number
-): Promise<ArrayBuffer | null> {
-  try {
-    const result = await pmtiles.getZxy(z, x, y);
-    if (!result || !result.data) return null;
-    return result.data;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Decode a numeric year from a raw property value.
@@ -96,13 +74,13 @@ async function main(): Promise<void> {
   const results: AuditResult[] = [];
 
   // -- PMTiles availability check -----------------------------------------------
-  if (!existsSync(PMTILES_PATH)) {
+  if (!existsSync(PATHS.pmtiles)) {
     results.push({
       check: "Property deep audit — PMTiles availability",
       status: "WARN",
-      message: `PMTiles archive not found: ${PMTILES_PATH}. Skipping property checks.`,
+      message: `PMTiles archive not found: ${PATHS.pmtiles}. Skipping property checks.`,
     });
-    mkdirSync(REPORTS_DIR, { recursive: true });
+    mkdirSync(PATHS.reports, { recursive: true });
     printResults(results);
     saveResults(results, OUTPUT_PATH);
     return;
@@ -111,14 +89,10 @@ async function main(): Promise<void> {
   results.push({
     check: "Property deep audit — PMTiles availability",
     status: "PASS",
-    message: `PMTiles archive found: ${PMTILES_PATH}`,
+    message: `PMTiles archive found: ${PATHS.pmtiles}`,
   });
 
-  const source = new NodeFileSource(PMTILES_PATH);
-  const pmtiles = new PMTiles(source);
-
-  // Rule lookup for quick access
-  const ruleMap = new Map(TILE_PROPERTY_RULES.map((r) => [r.layer, r]));
+  const reader = new TileReader(PATHS.pmtiles);
 
   // Per-layer tallies for P1 summary results
   const p1Tallies: Record<
@@ -145,17 +119,10 @@ async function main(): Promise<void> {
 
   // ── Iterate 36 grid points ──────────────────────────────────────────────────
   for (const point of BC_EXTENDED_GRID) {
-    const { x, y, z } = latLonToTile(point.lat, point.lon, CHECK_ZOOM);
-    const tileData = await fetchTile(pmtiles, z, x, y);
+    const { x, y, z } = latLonToTile(point.lat, point.lon, ZOOMS.feature);
+    const tile = await reader.getTile(z, x, y);
 
-    if (!tileData) continue; // tile not in archive — skip gracefully
-
-    let tile: ReturnType<typeof parseTile>;
-    try {
-      tile = parseTile(tileData);
-    } catch {
-      continue; // malformed tile — skip
-    }
+    if (!tile) continue; // tile not in archive — skip gracefully
 
     for (const layer of EXPECTED_SOURCE_LAYERS) {
       const rawFeatures = getLayerFeatures(tile, layer);
@@ -168,7 +135,7 @@ async function main(): Promise<void> {
         const props: Record<string, unknown> = feat.properties ?? {};
 
         // ── P1: Full property validation ────────────────────────────────────
-        const vResult = validateTileFeatureProperties(layer, props, fi);
+        const vResult = validateDeep(layer as SourceLayerName, props, fi);
         if (vResult) {
           p1Tallies[layer].features++;
           const violated = vResult.findings.some((f) => f.status !== "ok");
@@ -240,7 +207,6 @@ async function main(): Promise<void> {
 
   // ── Emit P1 results per layer ──────────────────────────────────────────────
   for (const layer of EXPECTED_SOURCE_LAYERS) {
-    const rule = ruleMap.get(layer);
     const { features, violations } = p1Tallies[layer];
 
     if (features === 0) {
@@ -248,7 +214,7 @@ async function main(): Promise<void> {
       results.push({
         check: `P1 Property validation — ${layer}`,
         status: "WARN",
-        message: `No ${layer} features found at any of the 36 grid points (z${CHECK_ZOOM}).`,
+        message: `No ${layer} features found at any of the 36 grid points (z${ZOOMS.feature}).`,
         layerName: layer,
       });
       continue;
@@ -264,7 +230,7 @@ async function main(): Promise<void> {
       message: `${features} features checked; ${violations} had violations (${(violationRate * 100).toFixed(1)}%).`,
       layerName: layer,
       details: {
-        requiredProperties: rule ? Object.keys(rule.properties) : [],
+        requiredProperties: Object.keys(LAYER_PROPERTIES[layer] || {}),
         featuresChecked: features,
         violations,
       },
@@ -356,11 +322,11 @@ async function main(): Promise<void> {
     });
   }
 
-  // ── Close source ───────────────────────────────────────────────────────────
-  await source.close();
+  // ── Close reader ───────────────────────────────────────────────────────────
+  await reader.close();
 
   // ── Print and save ─────────────────────────────────────────────────────────
-  mkdirSync(REPORTS_DIR, { recursive: true });
+  mkdirSync(PATHS.reports, { recursive: true });
   printResults(results);
   saveResults(results, OUTPUT_PATH);
 

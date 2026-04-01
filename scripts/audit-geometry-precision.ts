@@ -19,52 +19,39 @@
  */
 
 import path from "path";
-import { fileURLToPath } from "url";
 import { mkdirSync, writeFileSync } from "fs";
-import { PMTiles } from "pmtiles";
-import { NodeFileSource } from "./lib/node-file-source";
 import { sampleFeatures } from "./lib/ndjson-sampler";
 import { traceFeature } from "./lib/feature-tracer";
-import { parseTile, getLayerFeatures } from "./lib/mvt-reader";
+import { parseTile, getLayerFeatures } from "./lib/tile-reader";
 import { measurePrecision, type PrecisionResult } from "./lib/geometry-precision";
-import { EXPECTED_SOURCE_LAYERS } from "./lib/bc-sample-grid";
+import {
+  PATHS,
+  ZOOMS,
+  C,
+  THRESHOLDS,
+  POLYGON_LAYERS,
+  SAMPLING,
+  EXPECTED_SOURCE_LAYERS,
+} from "./lib/audit-config";
+import { findBestCandidate } from "./lib/feature-matcher";
+import { TileReader } from "./lib/tile-reader";
 import type { GeoJSON } from "geojson";
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PMTILES_PATH = path.join(PROJECT_ROOT, "data", "tiles", "opencanopy.pmtiles");
-const NDJSON_DIR = path.join(PROJECT_ROOT, "data", "geojson");
-const OUTPUT_PATH = path.join(PROJECT_ROOT, "data", "reports", "geometry-precision-results.json");
+const NDJSON_DIR = PATHS.geojson;
+const OUTPUT_PATH = path.join(PATHS.reports, "geometry-precision-results.json");
 
 /** Samples per layer per zoom level */
-const SAMPLES_PER_LAYER = 20;
+const SAMPLES_PER_LAYER = SAMPLING.precisionPerLayer;
 
 /** Zoom levels to measure */
-const MEASURE_ZOOMS = [7, 10] as const;
-
-/**
- * Polygon layers to measure.
- * Excludes forestry-roads (line layer, not polygon) and conservation-priority.
- * Matches the 10-layer set used in audit-spatial.ts.
- */
-const POLYGON_LAYERS = EXPECTED_SOURCE_LAYERS.filter(
-  (l) => l !== "forestry-roads" && l !== "conservation-priority"
-) as string[];
+const MEASURE_ZOOMS = ZOOMS.precision;
 
 /** Area divergence threshold for G3 WARN (10%) */
-const AREA_WARN_THRESHOLD_PCT = 10;
+const AREA_WARN_THRESHOLD_PCT = THRESHOLDS.areaPrecision;
 
-// ── ANSI colours ──────────────────────────────────────────────────────────────
-
-const C = {
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  red: "\x1b[31m",
-};
+// ── Utilities ─────────────────────────────────────────────────────────────────
 
 function tag(status: "PASS" | "WARN" | "FAIL"): string {
   const col = status === "PASS" ? C.green : status === "WARN" ? C.yellow : C.red;
@@ -97,73 +84,6 @@ function computeStats(values: number[]): {
   );
   const p95 = sorted[p95Idx];
   return { mean, median, max, p95, count: values.length };
-}
-
-// ── Property fingerprint matching (mirrors feature-tracer logic) ──────────────
-
-/**
- * Compute a property fingerprint match score in [0, 1] between source
- * properties and a candidate tile feature.
- *
- * Null/undefined parity: if both sides are null or undefined (any combination),
- * the pair is treated as a match. MVT encoding drops null values, so a source
- * null and a missing tile key are semantically equivalent.
- */
-function fingerprintScore(
-  sourceProps: Record<string, unknown>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tileFeature: any
-): number {
-  const tileProps: Record<string, unknown> = tileFeature.properties ?? {};
-  const keys = Object.keys(sourceProps);
-  if (keys.length === 0) return 0;
-  let matches = 0;
-  for (const key of keys) {
-    const sv = sourceProps[key];
-    const tv = tileProps[key];
-    const match = (sv == null && tv == null) ? true : sv === tv;
-    if (match) matches++;
-  }
-  return matches / keys.length;
-}
-
-const MATCH_THRESHOLD = 0.5;
-
-/**
- * Find the best-matching tile feature for the given source properties.
- * Returns null if nothing meets the threshold.
- */
-function findMatch(
-  features: unknown[],
-  sourceProps: Record<string, unknown>
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any | null {
-  let best: unknown = null;
-  let bestScore = 0;
-  for (const f of features) {
-    const score = fingerprintScore(sourceProps, f);
-    if (score > bestScore) {
-      bestScore = score;
-      best = f;
-    }
-  }
-  return bestScore >= MATCH_THRESHOLD ? best : null;
-}
-
-// ── PMTiles fetch helper ──────────────────────────────────────────────────────
-
-async function fetchTile(
-  pmtiles: PMTiles,
-  z: number,
-  x: number,
-  y: number
-): Promise<ArrayBuffer | null> {
-  try {
-    const result = await pmtiles.getZxy(z, x, y);
-    return result?.data ?? null;
-  } catch {
-    return null;
-  }
 }
 
 // ── Per-layer measurement ─────────────────────────────────────────────────────
@@ -207,7 +127,7 @@ function isZeroResult(r: PrecisionResult): boolean {
  * features found in neighbor tiles are not silently skipped.
  */
 async function measureLayer(
-  pmtiles: PMTiles,
+  reader: TileReader,
   features: GeoJSON.Feature[],
   layer: string,
   zoom: number
@@ -245,7 +165,7 @@ async function measureLayer(
     const sourceProps = (feature.properties ?? {}) as Record<string, unknown>;
 
     // Trace to find tile coord and verify existence at this zoom
-    const trace = await traceFeature(pmtiles, feature, layer, zoom);
+    const trace = await traceFeature(reader.raw, feature, layer, zoom);
     if (!trace.found) {
       skipped++;
       continue;
@@ -254,7 +174,7 @@ async function measureLayer(
     const { z, x, y } = trace.tileCoord;
 
     // Re-fetch the centroid tile to get raw MVT features with full geometry
-    const tileData = await fetchTile(pmtiles, z, x, y);
+    const tileData = await reader.getRawTile(z, x, y);
     let matchedRaw: unknown = null;
     let matchTileX = x;
     let matchTileY = y;
@@ -262,7 +182,8 @@ async function measureLayer(
     if (tileData) {
       const tile = parseTile(tileData);
       const tileFeatures = getLayerFeatures(tile, layer);
-      matchedRaw = findMatch(tileFeatures, sourceProps);
+      const [candidate] = findBestCandidate(tileFeatures, sourceProps);
+      matchedRaw = candidate;
     }
 
     // If the centroid tile didn't yield a match (feature may be in a neighbor
@@ -279,14 +200,14 @@ async function measureLayer(
           // Skip if edge clamping resolves this back to the primary tile
           if (nx === x && ny === y) continue;
 
-          const neighborData = await fetchTile(pmtiles, z, nx, ny);
+          const neighborData = await reader.getRawTile(z, nx, ny);
           if (!neighborData) continue;
 
           const neighborTile = parseTile(neighborData);
           const neighborFeatures = getLayerFeatures(neighborTile, layer);
-          const candidate = findMatch(neighborFeatures, sourceProps);
-          if (candidate) {
-            matchedRaw = candidate;
+          const [neighborCandidate] = findBestCandidate(neighborFeatures, sourceProps);
+          if (neighborCandidate) {
+            matchedRaw = neighborCandidate;
             matchTileX = nx;
             matchTileY = ny;
             neighborRematches++;
@@ -420,7 +341,7 @@ function computeVertexReduction(measurement: LayerZoomMeasurement): VertexReduct
 async function main(): Promise<void> {
   console.log(C.bold + "\nOpenCanopy Geometry Precision Audit" + C.reset);
   console.log(C.dim + "─".repeat(60) + C.reset);
-  console.log(`Layers: ${POLYGON_LAYERS.length}  Samples/layer: ${SAMPLES_PER_LAYER}  Zooms: ${MEASURE_ZOOMS.join(", ")}`);
+  console.log(`Layers: ${POLYGON_LAYERS.length}  Samples/layer: ${SAMPLES_PER_LAYER}  Zooms: ${[...MEASURE_ZOOMS].join(", ")}`);
   console.log(`Expected measurements: ${POLYGON_LAYERS.length * SAMPLES_PER_LAYER * MEASURE_ZOOMS.length}\n`);
 
   // Emit NOTE for any layers excluded from measurement
@@ -438,9 +359,8 @@ async function main(): Promise<void> {
   }
   if (EXCLUDED_LAYERS.length > 0) console.log();
 
-  // Open a single PMTiles source for the entire run
-  const source = new NodeFileSource(PMTILES_PATH);
-  const pmtiles = new PMTiles(source);
+  // Open a single TileReader for the entire run
+  const reader = new TileReader(PATHS.pmtiles);
 
   // ── Sample features for all layers upfront ────────────────────────────────
   // Keyed by layer name; features are reused across both zoom levels
@@ -488,7 +408,7 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const result = await measureLayer(pmtiles, features, layer, zoom);
+      const result = await measureLayer(reader, features, layer, zoom);
       allMeasurements.get(layer)!.set(zoom, result);
 
       if (result.lowCardinality) {
@@ -511,7 +431,7 @@ async function main(): Promise<void> {
     }
   }
 
-  await source.close();
+  await reader.close();
 
   // ── Build G1/G2 results ───────────────────────────────────────────────────
   console.log("\n" + C.bold + "G1: Hausdorff distance at z10" + C.reset);
