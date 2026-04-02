@@ -9,14 +9,11 @@
  */
 
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
+import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
 
 /** Raster overview tiles for forest-age at province zoom (z4-z8). */
 const RASTER_OVERVIEW_URL =
   "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png";
-
-/** PMTiles vector source for detail zoom (z9+). */
-const PMTILES_URL =
-  "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v6.pmtiles";
 
 /** All story layer IDs created by setupStoryLayers. */
 export const STORY_LAYER_IDS = [
@@ -36,7 +33,7 @@ export const STORY_LAYER_IDS = [
 export const STORY_SOURCE_IDS = [
   "terrain-rgb",
   "story-forest-age-raster",
-  "story-pmtiles",
+  PMTILES_SOURCE_ID,
 ] as const;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -139,10 +136,11 @@ export function setupStoryLayers(
   }
 
   // ── PMTiles vector source (detail layers) ───────────────────────
-  if (!map.getSource("story-pmtiles")) {
-    map.addSource("story-pmtiles", {
+  if (!map.getSource(PMTILES_SOURCE_ID)) {
+    map.addSource(PMTILES_SOURCE_ID, {
       type: "vector",
       url: PMTILES_URL,
+      maxzoom: PMTILES_MAX_ZOOM,
     });
   }
 
@@ -152,7 +150,7 @@ export function setupStoryLayers(
       {
         id: "story-forest-age-fill",
         type: "fill",
-        source: "story-pmtiles",
+        source: PMTILES_SOURCE_ID,
         "source-layer": "forest-age",
         minzoom: 9,
         paint: {
@@ -180,7 +178,7 @@ export function setupStoryLayers(
       {
         id: "story-forest-age-outline",
         type: "line",
-        source: "story-pmtiles",
+        source: PMTILES_SOURCE_ID,
         "source-layer": "forest-age",
         minzoom: 9,
         paint: {
@@ -200,7 +198,7 @@ export function setupStoryLayers(
       {
         id: "story-cutblocks-fill",
         type: "fill",
-        source: "story-pmtiles",
+        source: PMTILES_SOURCE_ID,
         "source-layer": "tenure-cutblocks",
         paint: {
           "fill-color": "#dc2626",
@@ -219,7 +217,7 @@ export function setupStoryLayers(
       {
         id: "story-cutblocks-outline",
         type: "line",
-        source: "story-pmtiles",
+        source: PMTILES_SOURCE_ID,
         "source-layer": "tenure-cutblocks",
         paint: {
           "line-color": "#dc2626",
@@ -238,7 +236,7 @@ export function setupStoryLayers(
       {
         id: "story-fire-history-fill",
         type: "fill",
-        source: "story-pmtiles",
+        source: PMTILES_SOURCE_ID,
         "source-layer": "fire-history",
         paint: {
           "fill-color": "#f59e0b",
@@ -257,7 +255,7 @@ export function setupStoryLayers(
       {
         id: "story-parks-fill",
         type: "fill",
-        source: "story-pmtiles",
+        source: PMTILES_SOURCE_ID,
         "source-layer": "parks",
         paint: {
           "fill-color": "rgba(255,255,255,0.1)",
@@ -275,7 +273,7 @@ export function setupStoryLayers(
       {
         id: "story-parks-outline",
         type: "line",
-        source: "story-pmtiles",
+        source: PMTILES_SOURCE_ID,
         "source-layer": "parks",
         paint: {
           "line-color": "#ffffff",
@@ -299,7 +297,7 @@ export function setupStoryLayers(
       {
         id: "story-harvested-hatch",
         type: "fill",
-        source: "story-pmtiles",
+        source: PMTILES_SOURCE_ID,
         "source-layer": "forest-age",
         minzoom: 9,
         filter: ["==", ["get", "class"], "harvested"],

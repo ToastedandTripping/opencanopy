@@ -41,11 +41,11 @@ describe("source + layer registration", () => {
     expect(call!.config.maxzoom).toBe(9);
   });
 
-  it("registers story-pmtiles source", () => {
+  it("registers opencanopy shared PMTiles source", () => {
     setupStoryLayers(map, { terrain: terrainConfig, hatchPattern: null });
-    expect(map.getSource("story-pmtiles")).toBeDefined();
+    expect(map.getSource("opencanopy")).toBeDefined();
     const call = map._getCalls().addSource.find(
-      (c) => c.id === "story-pmtiles"
+      (c) => c.id === "opencanopy"
     );
     expect(call).toBeDefined();
     expect(call!.config.type).toBe("vector");

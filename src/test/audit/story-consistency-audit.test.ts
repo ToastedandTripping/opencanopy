@@ -225,7 +225,7 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
   it("STORY_SOURCE_IDS includes expected sources", () => {
     // Document what sources the story registers
     const sourceIds = [...STORY_SOURCE_IDS];
-    expect(sourceIds).toContain("story-pmtiles");
+    expect(sourceIds).toContain("opencanopy");
     expect(sourceIds).toContain("story-forest-age-raster");
   });
 });

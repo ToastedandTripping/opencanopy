@@ -7,6 +7,7 @@ import type { LayerDefinition, BBox } from "@/types/layers";
 import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
+import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
 
 interface DataLayerProps {
   layer: LayerDefinition;
@@ -75,16 +76,16 @@ function PmtilesLayers({
     if (!map || !layer.tileSource) return;
 
     const mapInstance = map.getMap();
-    const sourceId = `source-${layer.id}-tiles`;
+    const sourceId = PMTILES_SOURCE_ID;
     let sourcedataHandler: ((e: maplibregl.MapSourceDataEvent) => void) | null = null;
 
-    /** Register the vector tile source (idempotent). */
+    /** Register the shared vector tile source (idempotent). */
     function addSource() {
       if (!mapInstance.getSource(sourceId)) {
         mapInstance.addSource(sourceId, {
           type: "vector",
-          url: layer.tileSource!.url,
-          attribution: layer.source.attribution,
+          url: PMTILES_URL,
+          maxzoom: PMTILES_MAX_ZOOM,
         });
         pipelineLog("pmtiles-source", layer.id, { sourceId, action: "registered" });
       }
@@ -97,7 +98,7 @@ function PmtilesLayers({
     function addLayersToMap() {
       try {
         const sourceLayer = layer.tileSource!.sourceLayer;
-        const maxzoom = tileMaxZoom + 1;
+        const maxzoom = 22;
         const minzoom = tileMinZoom ?? 0;
 
         // Bug 4 fix: insert data layers below basemap labels
@@ -263,7 +264,7 @@ function PmtilesLayers({
       }
       // Don't remove layers on unmount -- they persist across re-renders
     };
-  }, [map, layer.id, layer.tileSource, layer.style, layer.source.attribution, tileMaxZoom]);
+  }, [map, layer.id, layer.tileSource, layer.style]);
 
   // Update visibility reactively
   useEffect(() => {
@@ -400,6 +401,9 @@ function WfsLayers({
   wfsMinZoom,
 }: WfsLayersProps) {
   const { current: map } = useMap();
+
+  // Tiled layers use PMTiles at all zooms -- no WFS needed
+  if (layer.tileSource) return null;
 
   // 1. Initialization: add source + layers
   useEffect(() => {
@@ -863,8 +867,8 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
 
     const zoom = map.getZoom();
 
-    // Don't fetch WFS if we're in the PMTiles zoom range
-    if (zoom < wfsMinZoom || zoom > layer.zoomRange[1]) return;
+    // Don't fetch WFS outside the layer's zoom range
+    if (zoom < layer.zoomRange[0] || zoom > layer.zoomRange[1]) return;
 
     const bbox: BBox = [
       bounds.getWest(),
@@ -913,7 +917,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
       setLoading(false);
       setLayerLoading(layer.id, false);
     }
-  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, wfsMinZoom, setLayerLoading]);
+  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, setLayerLoading]);
 
   // Clear loading state on unmount
   useEffect(() => {
