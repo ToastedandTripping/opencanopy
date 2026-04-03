@@ -24,6 +24,7 @@ export const STORY_LAYER_IDS = [
   "story-cutblocks-fill",
   "story-cutblocks-outline",
   "story-fire-history-fill",
+  "story-fire-history-outline",
   "story-parks-fill",
   "story-parks-outline",
   "story-harvested-hatch",
@@ -243,6 +244,25 @@ export function setupStoryLayers(
           "fill-opacity": 0,
           "fill-opacity-transition": { duration: 400 },
           "fill-antialias": false,
+        },
+      },
+      firstSymbolId,
+    );
+  }
+
+  // Fire-history outline
+  if (!map.getLayer("story-fire-history-outline")) {
+    map.addLayer(
+      {
+        id: "story-fire-history-outline",
+        type: "line",
+        source: PMTILES_SOURCE_ID,
+        "source-layer": "fire-history",
+        paint: {
+          "line-color": "#f59e0b",
+          "line-width": 1,
+          "line-opacity": 0,
+          "line-opacity-transition": { duration: 400 },
         },
       },
       firstSymbolId,

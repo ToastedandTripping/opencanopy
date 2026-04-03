@@ -302,6 +302,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       type: "fill",
       paint: {
         "fill-color": "#f59e0b",
+        "fill-outline-color": "#f59e0b",
         "fill-opacity": [
           "interpolate",
           ["linear"],

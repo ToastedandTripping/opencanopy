@@ -121,6 +121,7 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
       "story-cutblocks-fill": "cutblocks",
       "story-cutblocks-outline": "cutblocks",
       "story-fire-history-fill": "fire-history",
+      "story-fire-history-outline": "fire-history",
       "story-parks-fill": "parks",
       "story-parks-outline": "parks",
       "story-harvested-hatch": "forest-age",

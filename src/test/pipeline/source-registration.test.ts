@@ -70,11 +70,11 @@ describe("source + layer registration", () => {
     }
   });
 
-  it("creates exactly 10 layers (plus terrain-controlled hillshade)", () => {
+  it("creates exactly 11 layers (plus terrain-controlled hillshade)", () => {
     setupStoryLayers(map, { terrain: terrainConfig, hatchPattern: null });
     const addLayerCalls = map._getCalls().addLayer;
-    // 10 story layers including hillshade
-    expect(addLayerCalls.length).toBe(10);
+    // 11 story layers including hillshade
+    expect(addLayerCalls.length).toBe(11);
   });
 
   // ── Initial opacity ─────────────────────────────────────────────
@@ -102,6 +102,7 @@ describe("source + layer registration", () => {
     const lineLayers = [
       "story-forest-age-outline",
       "story-cutblocks-outline",
+      "story-fire-history-outline",
       "story-parks-outline",
     ];
 
