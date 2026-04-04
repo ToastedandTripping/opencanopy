@@ -103,6 +103,7 @@ export function TimelineControl({
               onClick={() => onSetSpeed(opt.value)}
               className={`
                 px-2 py-1 rounded text-[10px] font-medium transition-colors
+                focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none
                 ${
                   playSpeed === opt.value
                     ? "bg-teal-400/20 text-teal-300"
@@ -125,6 +126,7 @@ export function TimelineControl({
               onClick={() => onSetStepSize(size)}
               className={`
                 px-2 py-1 rounded text-[10px] font-medium transition-colors
+                focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none
                 ${
                   stepSize === size
                     ? "bg-teal-400/20 text-teal-300"
@@ -142,7 +144,7 @@ export function TimelineControl({
 
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-7 h-7 rounded text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex items-center justify-center w-7 h-7 rounded text-zinc-500 hover:text-white hover:bg-white/10 transition-colors focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none"
             title="Close timeline"
             aria-label="Close timeline"
           >
@@ -188,7 +190,10 @@ export function TimelineControl({
             className="absolute inset-x-0 top-0 h-full pointer-events-none"
             aria-hidden="true"
           >
-            {decadeMarkers.map((year) => {
+            {decadeMarkers.filter((year) => {
+              const pct = yearToPercent(year);
+              return pct > 5 && pct < 95;
+            }).map((year) => {
               const pct = yearToPercent(year);
               return (
                 <div
