@@ -232,6 +232,67 @@ describe("Check 7: Property schema — timelineField values", () => {
   });
 });
 
+// ── Check 7: timelineRange must be set when timelineField is set ──────────────
+
+describe("Check 7: Property schema — timelineRange presence and validity", () => {
+  it("every layer with timelineField also has timelineRange", () => {
+    const violations: string[] = [];
+
+    for (const layer of LAYER_REGISTRY) {
+      if (!layer.timelineField) continue;
+
+      if (!layer.timelineRange) {
+        violations.push(
+          `layer "${layer.id}" has timelineField "${layer.timelineField}" ` +
+            `but is missing timelineRange. Add timelineRange: [startYear, endYear].`
+        );
+        continue;
+      }
+
+      const [start, end] = layer.timelineRange;
+
+      if (!Number.isInteger(start) || !Number.isInteger(end)) {
+        violations.push(
+          `layer "${layer.id}" timelineRange [${start}, ${end}] must contain integers.`
+        );
+      }
+      if (start >= end) {
+        violations.push(
+          `layer "${layer.id}" timelineRange [${start}, ${end}] is invalid: start must be < end.`
+        );
+      }
+      if (start < 1800 || end > 2100) {
+        violations.push(
+          `layer "${layer.id}" timelineRange [${start}, ${end}] looks unreasonable. ` +
+            "Expected year values between 1800 and 2100."
+        );
+      }
+    }
+
+    if (violations.length > 0) {
+      throw new Error(
+        `timelineRange validation failures:\n${violations.join("\n")}`
+      );
+    }
+
+    expect(violations).toHaveLength(0);
+  });
+
+  it("timelineRange values are consistent with known data extents", () => {
+    // Spot-check the specific values defined for each timeline layer.
+    // These come from the data source documentation and must be updated
+    // if the upstream data changes.
+    const fireHistory = LAYER_REGISTRY.find((l) => l.id === "fire-history");
+    expect(fireHistory?.timelineRange).toEqual([1917, 2025]);
+
+    const cutblocks = LAYER_REGISTRY.find((l) => l.id === "cutblocks");
+    expect(cutblocks?.timelineRange).toEqual([1950, 2025]);
+
+    const tenureCutblocks = LAYER_REGISTRY.find((l) => l.id === "tenure-cutblocks");
+    expect(tenureCutblocks?.timelineRange).toEqual([1950, 2025]);
+  });
+});
+
 // ── Check 12: Popup PRIORITY_KEYS property references ────────────────────────
 
 describe("Check 12: Popup property references", () => {

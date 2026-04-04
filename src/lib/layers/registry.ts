@@ -224,6 +224,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     legendItems: [{ color: "#dc2626", label: "Cutblock" }],
     fetchPriority: 1,
     timelineField: "DISTURBANCE_START_DATE",
+    timelineRange: [1950, 2025],
   },
 
   // ── Accountability layers ─────────────────────────────────────
@@ -278,6 +279,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     ],
     fetchPriority: 1,
     timelineField: "DISTURBANCE_START_DATE",
+    timelineRange: [1950, 2025],
   },
 
   // ── Disturbance layers ────────────────────────────────────────
@@ -322,6 +324,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     legendItems: [{ color: "#f59e0b", label: "Fire Perimeter" }],
     fetchPriority: 1,
     timelineField: "FIRE_YEAR",
+    timelineRange: [1917, 2025],
   },
 
   // ── Protection layers ──────────────────────────────────────────

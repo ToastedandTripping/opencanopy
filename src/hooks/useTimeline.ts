@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import type { LayerDefinition } from "@/types/layers";
 
 export interface TimelineState {
   /** Whether the timeline UI is shown */
@@ -11,22 +12,50 @@ export interface TimelineState {
   playing: boolean;
   /** Milliseconds per year step (400 = ~30s for 75 years) */
   playSpeed: number;
-  /** [startYear, endYear] */
+  /** [startYear, endYear] -- derived from active layers' timelineRange */
   range: [number, number];
 }
 
 const DEFAULT_RANGE: [number, number] = [1950, 2025];
 const DEFAULT_SPEED = 400;
 
-export function useTimeline() {
+/**
+ * Timeline hook for year-range animation.
+ *
+ * Accepts an optional list of active LayerDefinitions that have timelineField
+ * set. When provided, derives the merged [startYear, endYear] range from the
+ * union of all active layers' timelineRange values.
+ *
+ * IMPORTANT: range is derived (not stored in useState) to avoid the
+ * "useState freeze" bug (Razor W1) where the play interval closes over a
+ * stale range value. The range is computed on every render, so the interval
+ * always sees the current value via the effect dependency.
+ */
+export function useTimeline(activeTimelineLayers?: LayerDefinition[]) {
   const [enabled, setEnabled] = useState(false);
   const [currentYear, setCurrentYear] = useState(DEFAULT_RANGE[0]);
   const [playing, setPlaying] = useState(false);
   const [playSpeed, setPlaySpeedState] = useState(DEFAULT_SPEED);
   const [stepSize, setStepSize] = useState(1);
-  const [range] = useState<[number, number]>(DEFAULT_RANGE);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /**
+   * Merge the timelineRange values of all active layers.
+   * Takes the minimum start year and maximum end year across all active layers.
+   * Falls back to DEFAULT_RANGE when no active layers have timelineRange set.
+   */
+  const range = useMemo<[number, number]>(() => {
+    if (!activeTimelineLayers || activeTimelineLayers.length === 0) {
+      return DEFAULT_RANGE;
+    }
+    const layersWithRange = activeTimelineLayers.filter((l) => l.timelineRange);
+    if (layersWithRange.length === 0) return DEFAULT_RANGE;
+
+    const startYear = Math.min(...layersWithRange.map((l) => l.timelineRange![0]));
+    const endYear = Math.max(...layersWithRange.map((l) => l.timelineRange![1]));
+    return [startYear, endYear];
+  }, [activeTimelineLayers]);
 
   // Clean up interval on unmount
   useEffect(() => {
@@ -37,6 +66,16 @@ export function useTimeline() {
       }
     };
   }, []);
+
+  // Clamp currentYear when range changes (e.g. a layer is toggled off that
+  // extended the range, or a new layer with a different range is enabled).
+  useEffect(() => {
+    setCurrentYear((prev) => {
+      if (prev < range[0]) return range[0];
+      if (prev > range[1]) return range[1];
+      return prev;
+    });
+  }, [range]);
 
   // Manage the play interval -- restart whenever playing, playSpeed, or range changes
   useEffect(() => {
@@ -67,17 +106,19 @@ export function useTimeline() {
     };
   }, [playing, playSpeed, range, stepSize]);
 
+  // enable() and disable() reset to range[0], not DEFAULT_RANGE[0].
+  // Deps include range to avoid stale closure (Razor W2).
   const enable = useCallback(() => {
     setEnabled(true);
-    setCurrentYear(DEFAULT_RANGE[0]);
+    setCurrentYear(range[0]);
     setPlaying(false);
-  }, []);
+  }, [range]);
 
   const disable = useCallback(() => {
     setEnabled(false);
     setPlaying(false);
-    setCurrentYear(DEFAULT_RANGE[0]);
-  }, []);
+    setCurrentYear(range[0]);
+  }, [range]);
 
   const play = useCallback(() => {
     // If at the end, restart from the beginning

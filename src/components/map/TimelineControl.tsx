@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 interface TimelineControlProps {
   currentYear: number;
@@ -21,8 +21,6 @@ const SPEED_OPTIONS = [
   { label: "2x", value: 200 },
 ] as const;
 
-const DECADE_MARKERS = [1960, 1970, 1980, 1990, 2000, 2010, 2020];
-
 /**
  * Cinematic timeline scrubber for animating feature accumulation over time.
  * Positioned above the preset chips bar at the bottom of the map.
@@ -40,6 +38,22 @@ export function TimelineControl({
   onClose,
 }: TimelineControlProps) {
   const totalYears = range[1] - range[0];
+
+  /**
+   * Compute decade markers dynamically from the active range.
+   * Rounds up from range[0] to the nearest decade, then steps by 10
+   * through to range[1]. This ensures markers adapt when fire-history
+   * expands the range back to 1917.
+   */
+  const decadeMarkers = useMemo<number[]>(() => {
+    const markers: number[] = [];
+    // First decade boundary at or above range[0]
+    const firstDecade = Math.ceil(range[0] / 10) * 10;
+    for (let y = firstDecade; y <= range[1]; y += 10) {
+      markers.push(y);
+    }
+    return markers;
+  }, [range]);
 
   const handleSliderChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,7 +164,7 @@ export function TimelineControl({
       <div className="relative">
         {/* Decade markers -- skip extremes to avoid edge clipping */}
         <div className="relative h-4 mb-0.5" aria-hidden="true">
-          {DECADE_MARKERS.filter((year) => {
+          {decadeMarkers.filter((year) => {
             const pct = yearToPercent(year);
             return pct > 5 && pct < 95;
           }).map((year) => {
@@ -174,7 +188,7 @@ export function TimelineControl({
             className="absolute inset-x-0 top-0 h-full pointer-events-none"
             aria-hidden="true"
           >
-            {DECADE_MARKERS.map((year) => {
+            {decadeMarkers.map((year) => {
               const pct = yearToPercent(year);
               return (
                 <div

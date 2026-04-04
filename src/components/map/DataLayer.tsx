@@ -8,6 +8,12 @@ import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
+import {
+  buildYearExpression,
+  buildYearFilter,
+  buildAgeGradedOpacity,
+  composeFilters,
+} from "@/lib/timeline/filter-expressions";
 
 interface DataLayerProps {
   layer: LayerDefinition;
@@ -61,6 +67,7 @@ function PmtilesLayers({
   visible,
   opacity,
   classFilters,
+  yearFilter,
 }: {
   layer: LayerDefinition;
   tileMaxZoom: number;
@@ -68,6 +75,7 @@ function PmtilesLayers({
   visible: boolean;
   opacity: number;
   classFilters?: Record<string, string[]>;
+  yearFilter?: number | null;
 }) {
   const { current: map } = useMap();
 
@@ -296,25 +304,88 @@ function PmtilesLayers({
     }
   }, [map, layer.id, layer.tileSource, layer.style.paint, visible]);
 
-  // Apply class filters to PMTiles layers
+  /**
+   * Merged filter + opacity effect for PMTiles layers.
+   *
+   * This is the SINGLE AUTHORITY for all filter state on fill + outline layers.
+   * Handles class filters, year filters, and age-graded opacity in one effect
+   * to prevent filter-clobbering race conditions between separate effects.
+   *
+   * When yearFilter is active:
+   *   - Fill: composed filter (base + class + year) + age-graded opacity
+   *   - Outline: same composed filter + proportionally reduced line-opacity
+   *     (avoids Razor W4: ghost rings with invisible fill at -50yr age-grading)
+   *
+   * When yearFilter is null:
+   *   - Restores class-only filter + registry default opacity
+   */
   useEffect(() => {
-    if (!map || !layer.tileSource) return;
+    if (!map || !layer.tileSource || layer.style.type !== "fill") return;
     const mapInstance = map.getMap();
     const fillId = `layer-${layer.id}-tiles-fill`;
     const outlineId = `layer-${layer.id}-tiles-outline`;
+    if (!mapInstance.getLayer(fillId)) return;
 
-    const activeFilter = classFilters?.[layer.id];
-    if (activeFilter && mapInstance.getLayer(fillId)) {
-      const values = activeFilter.map(label => CLASS_LABEL_MAP[label]).filter(Boolean);
-      const filter = ["in", ["get", "class"], ["literal", values]] as unknown as FilterSpecification;
-      mapInstance.setFilter(fillId, filter);
-      if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, filter);
+    // Build class filter expression
+    const activeClassFilter = classFilters?.[layer.id];
+    const classFilterExpr: unknown[] | null = activeClassFilter
+      ? ["in", ["get", "class"], ["literal", activeClassFilter.map(label => CLASS_LABEL_MAP[label]).filter(Boolean)]] as unknown[]
+      : null;
+
+    // Build base registry filter (e.g. cutblocks area guard)
+    const baseFilter = (layer.style.filter ?? null) as unknown[] | null;
+
+    if (yearFilter != null && layer.timelineField) {
+      // Timeline active: compose all filters and apply age-graded opacity
+      const yearFilterExpr = buildYearFilter(layer.timelineField, yearFilter) as unknown[];
+      const composedFilter = composeFilters(baseFilter, classFilterExpr, yearFilterExpr) as unknown as FilterSpecification | null;
+
+      mapInstance.setFilter(fillId, composedFilter);
+      if (mapInstance.getLayer(outlineId)) {
+        mapInstance.setFilter(outlineId, composedFilter);
+      }
+
+      // Age-graded fill opacity: bright at 0yr, fade to 0.15 at 50yr+
+      const ageOpacity = buildAgeGradedOpacity(layer.timelineField, yearFilter);
+      mapInstance.setPaintProperty(fillId, "fill-opacity", ageOpacity);
+
+      // Outline opacity: scale proportionally to fill so rings disappear
+      // when fill is nearly invisible (avoids Razor W4 ghost rings).
+      // Fill range: 0.15-0.8 -> outline range: 0.05-0.3
+      mapInstance.setPaintProperty(outlineId, "line-opacity", [
+        "interpolate",
+        ["linear"],
+        ["-", yearFilter, buildYearExpression(layer.timelineField)],
+        0, 0.3,
+        20, 0.15,
+        50, 0.05,
+      ]);
+
+      pipelineLog("setFilter", layer.id, { type: "pmtiles-year", year: yearFilter, classFilter: activeClassFilter ?? "none" });
     } else {
-      if (mapInstance.getLayer(fillId)) mapInstance.setFilter(fillId, null);
-      if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, null);
+      // No timeline: class filter only, restore registry default opacity
+      const composedFilter = composeFilters(baseFilter, classFilterExpr, null) as unknown as FilterSpecification | null;
+
+      mapInstance.setFilter(fillId, composedFilter);
+      if (mapInstance.getLayer(outlineId)) {
+        mapInstance.setFilter(outlineId, composedFilter);
+      }
+
+      // Restore registry fill-opacity expression
+      if (layer.style.paint["fill-opacity"] != null) {
+        mapInstance.setPaintProperty(fillId, "fill-opacity", layer.style.paint["fill-opacity"]);
+      }
+      // Restore default outline line-opacity expression
+      mapInstance.setPaintProperty(outlineId, "line-opacity", [
+        "interpolate", ["linear"], ["zoom"],
+        5, 0,
+        8, 0.2,
+        10, 0.4,
+      ]);
+
+      pipelineLog("setFilter", layer.id, { type: "pmtiles-class", filter: activeClassFilter ?? "none" });
     }
-    pipelineLog("setFilter", layer.id, { type: "pmtiles", filter: activeFilter ?? "none" });
-  }, [map, layer.id, layer.tileSource, classFilters]);
+  }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.filter, layer.style.paint, layer.timelineField, classFilters, yearFilter]);
 
   // Override fill-color when a single class is filtered to match raster theme.
   // Prevents jarring color jump at raster->vector zoom transition
@@ -855,10 +926,8 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
     };
   }, [data, layer.timelineField, yearFilter]);
 
-  // When timeline is active and layer has a tileSource, hide PMTiles
-  // so only the filtered WFS data shows
-  const timelineHidesTiles = !!layer.timelineField && yearFilter != null;
-  const tileTargetOpacity = timelineHidesTiles ? 0 : targetOpacity;
+  // PMTiles stay visible during timeline -- filtered on the GPU, not hidden.
+  // The merged filter+opacity effect in PmtilesLayers handles all state.
 
   // Fetch WFS data when viewport changes
   const loadData = useCallback(async () => {
@@ -1049,9 +1118,10 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
             layer={layer}
             tileMaxZoom={tileMaxZoom}
             tileMinZoom={hasRasterOverview ? rasterMaxZoom + 1 : undefined}
-            visible={visible && !timelineHidesTiles}
-            opacity={tileTargetOpacity}
+            visible={visible}
+            opacity={targetOpacity}
             classFilters={classFilters}
+            yearFilter={yearFilter}
           />
         )}
 

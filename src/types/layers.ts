@@ -97,6 +97,10 @@ export interface LayerDefinition {
   fetchPriority?: number;
   /** Property name containing a date value for timeline filtering (e.g. "DISTURBANCE_START_DATE") */
   timelineField?: string;
+  /** [startYear, endYear] inclusive range for timeline slider when this layer is active.
+   *  Derived from the earliest known data for the source layer.
+   *  Required when timelineField is set. */
+  timelineRange?: [number, number];
 }
 
 /**

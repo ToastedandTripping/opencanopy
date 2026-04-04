@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { CanopyMap } from "@/components/map";
 import { DrawTool } from "@/components/map/DrawTool";
@@ -69,10 +69,20 @@ export default function Home() {
     setLayers,
   } = useLayerState();
 
-  const timeline = useTimeline();
+  // Compute active timeline layers: enabled layers that have a timelineField.
+  // This drives both the dynamic range in useTimeline and the
+  // timelineEligible gate for showing the timeline button.
+  const activeTimelineLayers = useMemo(
+    () => enabledLayers.map(id => getLayer(id)).filter(
+      (l): l is NonNullable<ReturnType<typeof getLayer>> => l != null && !!l.timelineField
+    ),
+    [enabledLayers]
+  );
+
+  const timeline = useTimeline(activeTimelineLayers);
 
   // Auto-disable timeline when no timeline-eligible layers are enabled
-  const timelineEligible = enabledLayers.some(id => getLayer(id)?.timelineField);
+  const timelineEligible = activeTimelineLayers.length > 0;
   useEffect(() => {
     if (timeline.enabled && !timelineEligible) {
       timeline.disable();
