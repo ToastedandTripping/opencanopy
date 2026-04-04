@@ -846,7 +846,9 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
         if (typeof raw === "number") {
           year = raw;
         } else {
-          year = new Date(String(raw)).getFullYear();
+          // Extract year via string slice (consistent with story map
+          // visibility.ts — works for both "2015" and "2015-06-01")
+          year = parseInt(String(raw).slice(0, 4), 10);
         }
         return !isNaN(year) && year <= yearFilter;
       }),

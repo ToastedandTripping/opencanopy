@@ -79,7 +79,7 @@ export default function Home() {
     }
   }, [timelineEligible, timeline.enabled, timeline.disable]);
 
-  const cutblocksEnabled = timelineEligible;
+  const showTimelineButton = timelineEligible;
 
   const handleLayerRestore = useCallback(
     (layers: string[], preset: string | null) => {
@@ -646,11 +646,11 @@ export default function Home() {
             {drawActive ? "Drawing..." : "Select"}
           </button>
           {/* Timeline button -- only when cutblocks is enabled */}
-          {cutblocksEnabled && (
+          {showTimelineButton && (
             <button
               onClick={() => timeline.enabled ? timeline.disable() : timeline.enable()}
-              title={timeline.enabled ? "Close timeline (Esc)" : "Open logging timeline"}
-              aria-label={timeline.enabled ? "Close logging timeline" : "Open logging timeline"}
+              title={timeline.enabled ? "Close timeline (Esc)" : "Open timeline"}
+              aria-label={timeline.enabled ? "Close timeline" : "Open timeline"}
               aria-pressed={timeline.enabled}
               className={`
                 flex items-center gap-1.5 px-2.5 py-2 min-h-[44px] rounded-lg shrink-0

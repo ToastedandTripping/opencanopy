@@ -24,7 +24,7 @@ const SPEED_OPTIONS = [
 const DECADE_MARKERS = [1960, 1970, 1980, 1990, 2000, 2010, 2020];
 
 /**
- * Cinematic timeline scrubber for animating cutblock accumulation over time.
+ * Cinematic timeline scrubber for animating feature accumulation over time.
  * Positioned above the preset chips bar at the bottom of the map.
  */
 export function TimelineControl({
