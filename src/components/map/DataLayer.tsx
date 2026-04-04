@@ -352,14 +352,16 @@ function PmtilesLayers({
       // Outline opacity: scale proportionally to fill so rings disappear
       // when fill is nearly invisible (avoids Razor W4 ghost rings).
       // Fill range: 0.15-0.8 -> outline range: 0.05-0.3
-      mapInstance.setPaintProperty(outlineId, "line-opacity", [
-        "interpolate",
-        ["linear"],
-        ["-", yearFilter, buildYearExpression(layer.timelineField)],
-        0, 0.3,
-        20, 0.15,
-        50, 0.05,
-      ]);
+      if (mapInstance.getLayer(outlineId)) {
+        mapInstance.setPaintProperty(outlineId, "line-opacity", [
+          "interpolate",
+          ["linear"],
+          ["-", yearFilter, buildYearExpression(layer.timelineField)],
+          0, 0.3,
+          20, 0.15,
+          50, 0.05,
+        ]);
+      }
 
       pipelineLog("setFilter", layer.id, { type: "pmtiles-year", year: yearFilter, classFilter: activeClassFilter ?? "none" });
     } else {
@@ -371,17 +373,20 @@ function PmtilesLayers({
         mapInstance.setFilter(outlineId, composedFilter);
       }
 
-      // Restore registry fill-opacity expression
-      if (layer.style.paint["fill-opacity"] != null) {
-        mapInstance.setPaintProperty(fillId, "fill-opacity", layer.style.paint["fill-opacity"]);
-      }
+      // Restore registry fill-opacity expression.
+      // Always call setPaintProperty even when registry value is null/undefined
+      // so any age-graded interpolation expression from the active phase is cleared.
+      const restoreOpacity = layer.style.paint["fill-opacity"] ?? layer.style.opacity ?? 0.7;
+      mapInstance.setPaintProperty(fillId, "fill-opacity", restoreOpacity);
       // Restore default outline line-opacity expression
-      mapInstance.setPaintProperty(outlineId, "line-opacity", [
-        "interpolate", ["linear"], ["zoom"],
-        5, 0,
-        8, 0.2,
-        10, 0.4,
-      ]);
+      if (mapInstance.getLayer(outlineId)) {
+        mapInstance.setPaintProperty(outlineId, "line-opacity", [
+          "interpolate", ["linear"], ["zoom"],
+          5, 0,
+          8, 0.2,
+          10, 0.4,
+        ]);
+      }
 
       pipelineLog("setFilter", layer.id, { type: "pmtiles-class", filter: activeClassFilter ?? "none" });
     }
