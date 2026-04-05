@@ -305,6 +305,8 @@ async function downloadLayerCells(
   extractProperties: PropertyExtractor,
 ): Promise<number> {
   let total = 0;
+  let dupes = 0;
+  const seenIds = new Set<string>();
 
   for (let i = 0; i < grid.length; i++) {
     const cell = grid[i];
@@ -327,6 +329,10 @@ async function downloadLayerCells(
     const features: GeoJSON.Feature[] = [];
     for (const f of data.features) {
       if (!f.geometry) continue;
+      // Dedup: features spanning grid cell boundaries appear in multiple cells
+      const fid = String(f.properties.OBJECTID ?? (f as Record<string, unknown>).id ?? "");
+      if (fid && seenIds.has(fid)) { dupes++; continue; }
+      if (fid) seenIds.add(fid);
       const extracted = extractProperties(f.properties);
       if (!extracted) continue;
       features.push({
@@ -347,6 +353,7 @@ async function downloadLayerCells(
     }
   }
 
+  if (dupes > 0) console.log(`  Deduplicated ${dupes} boundary-spanning features`);
   return total;
 }
 
@@ -962,53 +969,48 @@ function runTippecanoe(): boolean {
     // ── Tier 1: Overview (z4-z7) ──
     // 10MB tile cap with coalescing. This was the original working configuration
     // that successfully rendered at z5 (confirmed: "1.6M+ features rendering").
-    // The ONLY issue was incomplete source data (7 truncated grid cells), now fixed.
-    // 10MB is large enough for MapLibre to parse but triggers coalescing on the
-    // densest tiles to keep them manageable.
-    console.log("\nTier 1: Overview tiles (z4-z7, 10MB cap + coalesce)...");
+    // ── Tier 1: Overview (z4-z7) ──
+    // Coalescing at 500KB tile cap. -pn preserves shared polygon boundaries
+    // (replaces deprecated --detect-shared-borders). Buffer 10 for clean edges.
+    console.log("\nTier 1: Overview tiles (z4-z7, 500KB cap + coalesce + shared nodes)...");
     const overviewCmd = [
       "tippecanoe",
       "-o", overviewPath,
       "-P",
       "-Z", "4", "-z", "7",
       "--no-feature-limit",
-      "-M", "10000000",
+      "-M", "500000",
       "--coalesce-smallest-as-needed",
       "--simplification=10",
-      "--buffer=16",
-      // Force timeline properties to string so MapLibre filter expressions work
+      "--no-simplification-of-shared-nodes",
+      "--buffer=10",
       "--attribute-type=FIRE_YEAR:string",
-      // DISTURBANCE_START_DATE is already a string in NDJSON when present.
-      // Do NOT force it to string via --attribute-type — tippecanoe converts
-      // JSON null to literal "null" string, which then fails pattern validation.
       "--force",
       ...overviewInputs,
     ].join(" ");
     console.log(`  $ ${overviewCmd}\n`);
     execSync(overviewCmd, { stdio: "inherit", timeout: 3_600_000 });
 
-    // ── Tier 2: Detail (z8-z10) ──
-    // All features, moderate simplification for accurate boundaries.
-    // conservation-priority is included here (excluded from overview tier).
-    console.log("\nTier 2: Detail tiles (z8-z10, moderate simplification)...");
+    // ── Tier 2: Detail (z8-z12) ──
+    // All features preserved, light simplification for crisp boundaries.
+    // z12 at 38m/px captures all meaningful VRI polygon detail (source data
+    // is 2.5-12m vertex spacing). MapLibre overzooms z12 tiles to z14+.
+    console.log("\nTier 2: Detail tiles (z8-z12, light simplification + shared nodes)...");
     const detailCmd = [
       "tippecanoe",
       "-o", detailPath,
       "-P",
-      "-Z", "8", "-z", "10",
+      "-Z", "8", "-z", "12",
       "--no-feature-limit", "--no-tile-size-limit",
-      "--simplification=8",
-      "--buffer=16",
-      // Force timeline properties to string so MapLibre filter expressions work
+      "--simplification=2",
+      "--no-simplification-of-shared-nodes",
+      "--buffer=10",
       "--attribute-type=FIRE_YEAR:string",
-      // DISTURBANCE_START_DATE is already a string in NDJSON when present.
-      // Do NOT force it to string via --attribute-type — tippecanoe converts
-      // JSON null to literal "null" string, which then fails pattern validation.
       "--force",
       ...detailInputs,
     ].join(" ");
     console.log(`  $ ${detailCmd}\n`);
-    execSync(detailCmd, { stdio: "inherit", timeout: 3_600_000 });
+    execSync(detailCmd, { stdio: "inherit", timeout: 7_200_000 });
 
     // ── Merge ──
     console.log("\nMerging overview + detail...");
