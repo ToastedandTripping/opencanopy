@@ -122,7 +122,7 @@ def load_features(path: Path, class_field: str = "class") -> list:
                     count += 1
                     if count % 500000 == 0:
                         print(f"  Loaded {count:,} features...")
-            except (json.JSONDecodeError, KeyError):
+            except Exception:
                 continue
     print(f"  Total: {count:,} features loaded from {path.name}")
     return features
