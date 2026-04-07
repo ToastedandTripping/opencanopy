@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Rasterize forest-age NDJSON into PNG overview tiles (z4-z7).
+Rasterize forest-age NDJSON into PNG overview tiles (z4-z10).
 
 Generates multiple themed raster overlays:
   1. forest-age: 4-class coloring (green/light-green/orange/red)
   2. old-growth: gold old growth on dark background
   3. conservation-gap: red where old growth is unprotected
 
-Each theme produces a directory of PNG tiles in TMS layout (z/x/y.png)
-that MapLibre can render as raster sources at z4-z7, replacing the
+Each theme produces a directory of PNG tiles in XYZ layout (z/x/y.png)
+that MapLibre can render as raster sources at z4-z10, replacing the
 vector tile approach that crashes Chrome at province scale.
 
 Usage:
@@ -72,6 +72,14 @@ THEMES = {
 # Tile resolution (pixels per tile)
 TILE_SIZE = 512
 
+# Paint order: background classes first, ecologically important last.
+# Old-growth must always win overlaps. Any class not listed here is
+# painted before the ordered classes (insertion order, as fallback).
+PAINT_ORDER = [
+    "harvested", "young", "mature", "old-growth",
+    "old-growth-unprotected", "old-growth-protected",
+]
+
 # ── Tile math ────────────────────────────────────────────────────
 
 def lng_to_tile_x(lng: float, zoom: int) -> int:
@@ -95,7 +103,11 @@ def tile_bounds(z: int, x: int, y: int) -> tuple:
 # ── Feature loading ──────────────────────────────────────────────
 
 def load_features(path: Path, class_field: str = "class") -> list:
-    """Load NDJSON features, return list of (geometry, class_name) tuples."""
+    """Load NDJSON features, return list of (geometry, class_name, bbox) tuples.
+
+    bbox is (minx, miny, maxx, maxy) pre-computed from the shapely geometry so
+    that features_in_bounds does not need to re-parse geometry on every tile check.
+    """
     features = []
     count = 0
     with open(path) as f:
@@ -105,7 +117,8 @@ def load_features(path: Path, class_field: str = "class") -> list:
                 geom = feat.get("geometry")
                 cls = feat.get("properties", {}).get(class_field)
                 if geom and cls:
-                    features.append((geom, cls))
+                    bbox = shape(geom).bounds  # (minx, miny, maxx, maxy)
+                    features.append((geom, cls, bbox))
                     count += 1
                     if count % 500000 == 0:
                         print(f"  Loaded {count:,} features...")
@@ -152,7 +165,13 @@ def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_
         if color and color[3] > 0:  # Skip transparent
             by_class[cls].append(geom)
 
-    for cls, geometries in by_class.items():
+    # Paint in explicit order: unrecognised classes first, then PAINT_ORDER.
+    # This ensures old-growth always wins overlaps regardless of NDJSON order.
+    unknown_classes = [c for c in by_class if c not in PAINT_ORDER]
+    ordered_classes = unknown_classes + [c for c in PAINT_ORDER if c in by_class]
+
+    for cls in ordered_classes:
+        geometries = by_class[cls]
         color = theme[cls]
         # Rasterize all geometries of this class at once
         shapes = [(g, 1) for g in geometries]
@@ -176,29 +195,20 @@ def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_
 
 
 def features_in_bounds(features: list, bounds: tuple) -> list:
-    """Filter features that MIGHT intersect the given bounds (fast bbox check)."""
+    """Filter features whose bounding box intersects the tile bounds (with buffer).
+
+    Expects features as (geom, cls, bbox) 3-tuples from load_features.
+    Returns (geom, cls) 2-tuples so rasterize_tile is unaffected.
+    """
     west, south, east, north = bounds
+    buffer = max(east - west, north - south) * 0.3
+    bwest, bsouth, beast, bnorth = west - buffer, south - buffer, east + buffer, north + buffer
     result = []
-    for geom, cls in features:
-        # Quick bbox check on first coordinate
-        coords = geom.get("coordinates", [])
-        if not coords:
-            continue
-        # Get a representative point
-        try:
-            if geom["type"] == "Polygon":
-                pt = coords[0][0]
-            elif geom["type"] == "MultiPolygon":
-                pt = coords[0][0][0]
-            else:
-                continue
-            lon, lat = pt[0], pt[1]
-            # Generous buffer for large polygons
-            buffer = max(east - west, north - south) * 0.5
-            if west - buffer <= lon <= east + buffer and south - buffer <= lat <= north + buffer:
-                result.append((geom, cls))
-        except (IndexError, TypeError):
-            continue
+    for geom, cls, bbox in features:
+        minx, miny, maxx, maxy = bbox
+        # Standard bbox overlap test
+        if maxx >= bwest and minx <= beast and maxy >= bsouth and miny <= bnorth:
+            result.append((geom, cls))
     return result
 
 
@@ -263,9 +273,7 @@ def build_theme(theme_name: str, features: list, zoom_range: range = range(4, 11
                     continue
 
                 # Write PNG
-                # Use TMS y-flip for web tile servers
-                tms_y = (1 << z) - 1 - y
-                tile_path = theme_dir / str(z) / str(x) / f"{tms_y}.png"
+                tile_path = theme_dir / str(z) / str(x) / f"{y}.png"
                 write_tile_png(rgba, tile_path)
                 z_written += 1
 
