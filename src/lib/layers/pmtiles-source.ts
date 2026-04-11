@@ -8,12 +8,12 @@
  */
 
 import { Protocol } from "pmtiles";
-import maplibregl from "maplibre-gl";
+import { addProtocol } from "maplibre-gl";
 
 let protocol: Protocol | null = null;
 
 export function initPMTiles(): void {
   if (protocol) return;
   protocol = new Protocol();
-  maplibregl.addProtocol("pmtiles", protocol.tile);
+  addProtocol("pmtiles", protocol.tile);
 }

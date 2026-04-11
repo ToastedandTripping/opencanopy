@@ -15,8 +15,18 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const PRODUCTION_URL = 'https://opencanopy.ca/map';
+
+// Parse the PMTiles CDN URL from registry.ts at test setup time.
+// This auto-updates when PMTILES_URL is bumped to a new version — no manual
+// test edits required on version bumps.
+const REGISTRY_PATH = join(__dirname, '../../src/lib/layers/registry.ts');
+const REGISTRY_CONTENT = readFileSync(REGISTRY_PATH, 'utf-8');
+const PMTILES_URL_MATCH = REGISTRY_CONTENT.match(/pmtiles:\/\/(https:\/\/[^"]+\.pmtiles)/);
+const PMTILES_CDN_URL = PMTILES_URL_MATCH?.[1] ?? '';
 
 // Override baseURL for this spec — we always hit production
 test.use({ baseURL: PRODUCTION_URL });
@@ -102,47 +112,59 @@ test('map reaches idle state on production', async ({ page }) => {
   expect(idle, 'Map should reach idle state within 60 seconds').toBe(true);
 });
 
-test('forest-age layer renders features at z5 on production', async ({ page }) => {
+test('PMTiles file accessible on R2', async ({ request }) => {
+  expect(PMTILES_CDN_URL, 'Could not parse PMTiles URL from registry.ts').toBeTruthy();
+  const resp = await request.head(PMTILES_CDN_URL);
+  expect(resp.status(), `PMTiles should return 200: ${PMTILES_CDN_URL}`).toBe(200);
+  // PMTiles requires HTTP Range requests
+  const rangeResp = await request.fetch(PMTILES_CDN_URL, {
+    method: 'GET',
+    headers: { Range: 'bytes=0-511' },
+  });
+  expect(rangeResp.status(), 'PMTiles should support Range requests').toBe(206);
+});
+
+test('forest-age raster overview renders at z5 on production', async ({ page }) => {
+  // At z5, forest-age renders via pre-rendered raster tiles (not vector).
+  // Verify the raster layer exists and is visible.
   await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
   await waitForMapIdle(page, 60000);
 
-  // Wait with retries for features to appear
-  let featureCount = 0;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    featureCount = await queryFeatureCount(page, 'forest-age');
-    if (featureCount > 0) break;
-    if (attempt < 2) await page.waitForTimeout(10000);
-  }
+  const rasterState = await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = (window as any).__opencanopy_map;
+    if (!map) return { found: false };
+    const layer = map.getLayer('layer-forest-age-raster');
+    return {
+      found: !!layer,
+      visibility: layer ? map.getLayoutProperty('layer-forest-age-raster', 'visibility') : null,
+    };
+  });
 
-  if (featureCount === -1) {
-    // Map instance not accessible — skip feature check but don't fail
-    console.warn('Could not access map instance for queryRenderedFeatures check');
-    test.skip();
-    return;
-  }
-
-  expect(featureCount, 'forest-age should have rendered features at z5').toBeGreaterThan(0);
+  expect(rasterState.found, 'forest-age raster layer should exist at z5').toBe(true);
+  expect(rasterState.visibility, 'forest-age raster should be visible').toBe('visible');
 });
 
-test('tenure-cutblocks layer renders features at z7 on production', async ({ page }) => {
+test('forest-age vector tiles render features at z11 on production', async ({ page }) => {
+  // At z11, forest-age renders via PMTiles vector tiles (raster handoff at z10→z11).
+  // Use the MapLibre layer ID, not the source-layer name.
   await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
 
-  // Navigate to z7 (BC center) — map starts at DEFAULT_ZOOM=5
+  // Navigate to a definitely-forested area at z11 (Prince George vicinity)
   await page.evaluate(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const map = (window as any).__opencanopy_map;
     if (!map) return;
-    map.flyTo({ center: [-125.0, 52.0], zoom: 7, duration: 0 });
+    map.flyTo({ center: [-122.7, 53.9], zoom: 11, duration: 0 });
   });
 
   await waitForMapIdle(page, 60000);
 
-  // Wait with retries for cutblocks to render
   let featureCount = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
-    featureCount = await queryFeatureCount(page, 'tenure-cutblocks');
+    featureCount = await queryFeatureCount(page, 'layer-forest-age-tiles-fill');
     if (featureCount > 0) break;
     if (attempt < 2) await page.waitForTimeout(10000);
   }
@@ -153,5 +175,45 @@ test('tenure-cutblocks layer renders features at z7 on production', async ({ pag
     return;
   }
 
-  expect(featureCount, 'tenure-cutblocks should have rendered features at z7').toBeGreaterThan(0);
+  expect(
+    featureCount,
+    'forest-age vector tiles should have rendered features at z11 over a forested area'
+  ).toBeGreaterThan(0);
+});
+
+test('tenure-cutblocks vector tiles render features at z11 on production', async ({ page }) => {
+  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
+
+  // Navigate to central interior at z11 where cutblocks should be dense
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = (window as any).__opencanopy_map;
+    if (!map) return;
+    map.flyTo({ center: [-122.7, 53.9], zoom: 11, duration: 0 });
+    // Ensure tenure-cutblocks layer is visible (may be default-disabled)
+    if (map.getLayer('layer-tenure-cutblocks-tiles-fill')) {
+      map.setLayoutProperty('layer-tenure-cutblocks-tiles-fill', 'visibility', 'visible');
+    }
+  });
+
+  await waitForMapIdle(page, 60000);
+
+  let featureCount = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    featureCount = await queryFeatureCount(page, 'layer-tenure-cutblocks-tiles-fill');
+    if (featureCount > 0) break;
+    if (attempt < 2) await page.waitForTimeout(10000);
+  }
+
+  if (featureCount === -1) {
+    console.warn('Could not access map instance for queryRenderedFeatures check');
+    test.skip();
+    return;
+  }
+
+  expect(
+    featureCount,
+    'tenure-cutblocks should have rendered features at z11'
+  ).toBeGreaterThan(0);
 });

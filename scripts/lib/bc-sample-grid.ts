@@ -58,6 +58,34 @@ export const EXPECTED_SOURCE_LAYERS = [
 export type SourceLayerName = typeof EXPECTED_SOURCE_LAYERS[number];
 
 /**
+ * Maps PMTiles source-layer names to their primary MapLibre layer IDs.
+ *
+ * Convention from src/components/map/DataLayer.tsx:
+ *   layer-{registryId}-tiles-{fill|line|outline}
+ *
+ * The suffix comes from style.type in src/lib/layers/registry.ts:
+ *   fill → -tiles-fill (also creates -tiles-outline)
+ *   line → -tiles-line
+ *
+ * MapLibre's queryRenderedFeatures({ layers: [...] }) requires MapLibre
+ * layer IDs, NOT source-layer names. Use this mapping to translate.
+ */
+export const SOURCE_TO_MAPLIBRE: Record<SourceLayerName, string> = {
+  "forest-age": "layer-forest-age-tiles-fill",
+  "tenure-cutblocks": "layer-tenure-cutblocks-tiles-fill",
+  "fire-history": "layer-fire-history-tiles-fill",
+  "parks": "layer-parks-tiles-fill",
+  "conservancies": "layer-conservancies-tiles-line",
+  "ogma": "layer-ogma-tiles-line",
+  "wildlife-habitat-areas": "layer-wildlife-habitat-areas-tiles-fill",
+  "ungulate-winter-range": "layer-ungulate-winter-range-tiles-fill",
+  "community-watersheds": "layer-community-watersheds-tiles-fill",
+  "mining-claims": "layer-mining-claims-tiles-fill",
+  "forestry-roads": "layer-forestry-roads-tiles-line",
+  "conservation-priority": "layer-conservation-priority-tiles-fill",
+};
+
+/**
  * 36-point 6×6 grid covering the full BC extent.
  *
  * Latitude range:  48.5 → 59.5 in 6 steps (~2.2° spacing)

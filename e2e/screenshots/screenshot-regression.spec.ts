@@ -23,6 +23,7 @@ import {
   SCREENSHOT_VIEWPORTS,
   BC_SAMPLE_POINTS,
   EXPECTED_SOURCE_LAYERS,
+  SOURCE_TO_MAPLIBRE,
 } from '../../scripts/lib/bc-sample-grid';
 
 const BASELINES_DIR = join(__dirname, 'baselines');
@@ -180,26 +181,33 @@ test.describe('Screenshot Regression — 12 layer isolation at BC center', () =>
     const slug = `layer-${layerName}-z${CENTER_ZOOM}`;
 
     test(`layer isolation: ${layerName}`, async ({ page }) => {
-      // Verify layer exists and has rendered features at this viewport
+      // queryRenderedFeatures takes MapLibre layer IDs, not source-layer names.
+      // Use SOURCE_TO_MAPLIBRE to translate.
+      const mapLibreLayerId = SOURCE_TO_MAPLIBRE[layerName];
+
       const featureCount = await page.evaluate(
         (layer: string) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const map = (window as any).__opencanopy_map;
           if (!map || typeof map.queryRenderedFeatures !== 'function') return -1;
+          if (!map.getLayer(layer)) return -2;
           return map.queryRenderedFeatures(undefined, { layers: [layer] }).length;
         },
-        layerName
+        mapLibreLayerId
       );
 
       // Feature count of -1 means map instance not accessible.
-      // Skip rather than risk saving a blank/wrong screenshot as a golden baseline.
+      // -2 means the MapLibre layer doesn't exist (PMTiles source failed to load).
       if (featureCount === -1) {
         console.warn(`[warn] Could not access map instance for layer ${layerName} — skipping`);
         test.skip();
         return;
       }
+      if (featureCount === -2) {
+        console.warn(`[warn] MapLibre layer ${mapLibreLayerId} not found — PMTiles source may have failed to load`);
+      }
 
-      console.log(`[info] Layer ${layerName} has ${featureCount} rendered features at z${CENTER_ZOOM}`);
+      console.log(`[info] Layer ${mapLibreLayerId} has ${featureCount} rendered features at z${CENTER_ZOOM}`);
 
       const screenshotPath = join(DIFFS_DIR, `${slug}-actual.png`);
       await captureAndCompare(page, slug, screenshotPath);
