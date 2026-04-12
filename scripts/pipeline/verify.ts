@@ -6,6 +6,7 @@
  *      minZoom=4, maxZoom=12
  *   2. Check bounds cover BC (-140 to -113 lon, 48 to 61 lat — approximate)
  *   3. Check file size > 500MB
+ *   4. Read PMTiles metadata — verify all expected vector layers are present
  *
  * All checks are logged as PASS/FAIL. Exits with code 1 if any check fails.
  *
@@ -17,6 +18,8 @@
 import { existsSync, statSync, openSync, readSync, closeSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { PMTiles } from "pmtiles";
+import { NodeFileSource } from "../lib/node-file-source.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -46,10 +49,10 @@ const PROJECT_ROOT = resolve(__dirname, "../..");
 // Byte 99:     Tile type (uint8) — 1=MVT, 2=PNG, 3=JPEG, 4=WEBP
 // Byte 100:    Min zoom (uint8)
 // Byte 101:    Max zoom (uint8)
-// Bytes 102-109: Min longitude (float64 LE, degrees)
-// Bytes 110-117: Min latitude (float64 LE, degrees)
-// Bytes 118-125: Max longitude (float64 LE, degrees)
-// Bytes 126-?: Max latitude (float64 LE, degrees)
+// Bytes 102-105: Min longitude (int32 LE, degrees * 10_000_000)
+// Bytes 106-109: Min latitude  (int32 LE, degrees * 10_000_000)
+// Bytes 110-113: Max longitude (int32 LE, degrees * 10_000_000)
+// Bytes 114-117: Max latitude  (int32 LE, degrees * 10_000_000)
 
 interface PMTilesHeader {
   version: number;
@@ -77,10 +80,10 @@ function readHeader(filePath: string): PMTilesHeader {
   const tileType = buf.readUInt8(99);
   const minZoom = buf.readUInt8(100);
   const maxZoom = buf.readUInt8(101);
-  const minLon = buf.readDoubleLE(102);
-  const minLat = buf.readDoubleLE(110);
-  const maxLon = buf.readDoubleLE(118);
-  const maxLat = buf.readDoubleLE(126);
+  const minLon = buf.readInt32LE(102) / 1e7;
+  const minLat = buf.readInt32LE(106) / 1e7;
+  const maxLon = buf.readInt32LE(110) / 1e7;
+  const maxLat = buf.readInt32LE(114) / 1e7;
 
   return { version, tileType, minZoom, maxZoom, minLon, minLat, maxLon, maxLat };
 }
@@ -213,6 +216,54 @@ async function main(): Promise<void> {
     `lon [${bcMinLon}, ${bcMaxLon}] lat [${bcMinLat}, ${bcMaxLat}]`,
     `lon [${header.minLon.toFixed(2)}, ${header.maxLon.toFixed(2)}] lat [${header.minLat.toFixed(2)}, ${header.maxLat.toFixed(2)}]`
   ));
+
+  // ── Check 8: vector_layers metadata ──
+  // Use PMTiles library to read tippecanoe-written metadata JSON and verify
+  // all expected layers are present by name.
+  const EXPECTED_LAYERS = [
+    "forest-age",
+    "tenure-cutblocks",
+    "fire-history",
+    "parks",
+    "conservancies",
+    "ogma",
+    "wildlife-habitat-areas",
+    "ungulate-winter-range",
+    "community-watersheds",
+    "mining-claims",
+    "forestry-roads",
+    "conservation-priority",
+  ];
+
+  try {
+    console.log("  Checking vector_layers metadata...");
+    const source = new NodeFileSource(pmtilesPath);
+    const pmtilesInstance = new PMTiles(source);
+    const metadata = await pmtilesInstance.getMetadata();
+    const vectorLayers: Array<{ id: string }> =
+      (metadata as Record<string, unknown>)?.vector_layers as Array<{ id: string }> ?? [];
+    const layerNames = vectorLayers.map((l) => l.id);
+
+    for (const expected of EXPECTED_LAYERS) {
+      const layerPresent = layerNames.includes(expected);
+      results.push(check(
+        `Layer: ${expected}`,
+        layerPresent,
+        "present in vector_layers",
+        layerPresent ? "present" : "MISSING"
+      ));
+    }
+
+    await source.close();
+  } catch (err) {
+    console.error(`  FAIL: Could not read PMTiles metadata: ${(err as Error).message}`);
+    results.push(check(
+      "vector_layers metadata",
+      false,
+      "readable metadata",
+      `error: ${(err as Error).message}`
+    ));
+  }
 
   // ── Summary ──
   console.log();

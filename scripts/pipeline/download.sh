@@ -48,6 +48,9 @@ if [ "$SKIP_VRI" = false ]; then
   echo "  Selecting: FEATURE_ID, PROJ_AGE_1, HARVEST_DATE, SPECIES_CD_1"
   echo "  This will take 30-60 minutes..."
 
+  # Clean up VRI temp file if ogr2ogr fails or script is interrupted
+  trap '[ -f "$VRI_RAW_TMP" ] && rm -f "$VRI_RAW_TMP"' EXIT
+
   # -f GeoJSONSeq: one feature per line (NDJSON)
   # -t_srs EPSG:4326: reproject from BC Albers (EPSG:3005) to WGS84
   # -select: drop ~196 unneeded columns to reduce output from ~15GB to ~4GB
@@ -56,6 +59,8 @@ if [ "$SKIP_VRI" = false ]; then
     -select "FEATURE_ID,PROJ_AGE_1,HARVEST_DATE,SPECIES_CD_1" \
     -progress
 
+  # ogr2ogr succeeded — clear the trap before moving the file
+  trap - EXIT
   mv "$VRI_RAW_TMP" "$VRI_RAW"
 
   VRI_COUNT=$(wc -l < "$VRI_RAW")

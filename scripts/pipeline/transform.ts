@@ -62,6 +62,7 @@ async function transformVri(): Promise<void> {
   let total = 0;
   let written = 0;
   let dropped = 0;
+  let skippedNullGeometry = 0;
   const classCounts: Record<ForestClass, number> = {
     "old-growth": 0,
     "mature": 0,
@@ -84,6 +85,12 @@ async function transformVri(): Promise<void> {
     try {
       feature = JSON.parse(trimmed);
     } catch {
+      dropped++;
+      continue;
+    }
+
+    if (!feature.geometry) {
+      skippedNullGeometry++;
       dropped++;
       continue;
     }
@@ -130,7 +137,10 @@ async function transformVri(): Promise<void> {
   console.log(`  forest-age transform complete:`);
   console.log(`    Total read:    ${total.toLocaleString()}`);
   console.log(`    Written:       ${written.toLocaleString()}`);
-  console.log(`    Dropped:       ${dropped.toLocaleString()} (no classify result)`);
+  console.log(`    Dropped:       ${dropped.toLocaleString()} (parse errors + null geometry + no classify result)`);
+  if (skippedNullGeometry > 0) {
+    console.log(`    Null geometry: ${skippedNullGeometry.toLocaleString()} features skipped`);
+  }
   console.log(`    Classes:`);
   for (const [cls, count] of Object.entries(classCounts)) {
     const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
@@ -161,6 +171,7 @@ async function transformLayer(layerName: string, extract: (props: Record<string,
   let total = 0;
   let written = 0;
   let dropped = 0;
+  let skippedNullGeometry = 0;
 
   for await (const line of rl) {
     const trimmed = line.trim();
@@ -177,6 +188,12 @@ async function transformLayer(layerName: string, extract: (props: Record<string,
     try {
       feature = JSON.parse(trimmed);
     } catch {
+      dropped++;
+      continue;
+    }
+
+    if (!feature.geometry) {
+      skippedNullGeometry++;
       dropped++;
       continue;
     }
@@ -207,7 +224,8 @@ async function transformLayer(layerName: string, extract: (props: Record<string,
 
   renameSync(tmpPath, outputPath);
 
-  console.log(`  ${layerName}: ${total.toLocaleString()} in → ${written.toLocaleString()} out (${dropped.toLocaleString()} dropped)`);
+  const nullGeoNote = skippedNullGeometry > 0 ? `, ${skippedNullGeometry.toLocaleString()} null geometry` : "";
+  console.log(`  ${layerName}: ${total.toLocaleString()} in → ${written.toLocaleString()} out (${dropped.toLocaleString()} dropped${nullGeoNote})`);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────

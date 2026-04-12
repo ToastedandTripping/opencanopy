@@ -79,48 +79,56 @@ function archiveCurrentTiles(): void {
 // ── Build input layer list ────────────────────────────────────────────────────
 
 /**
- * For forest-age: use preprocessed version (has water subtraction applied).
- * For all other layers: use data/geojson/{layer}.ndjson directly.
+ * For all layers: prefer data/geojson/preprocessed/{layer}.ndjson if it exists
+ * (preprocess.ts validates and may water-subtract the data). Falls back to
+ * data/geojson/{layer}.ndjson only if no preprocessed version is present.
+ *
+ * Exception: forest-age REQUIRES a preprocessed version (has water subtraction
+ * applied). Missing preprocessed forest-age is a hard error — using raw data
+ * would ship un-water-subtracted tiles.
  */
 function buildLayerInputs(): { name: string; path: string }[] {
   const layers = [
-    { name: "forest-age",            preprocessed: true },
-    { name: "parks",                  preprocessed: false },
-    { name: "conservancies",          preprocessed: false },
-    { name: "tenure-cutblocks",       preprocessed: false },
-    { name: "fire-history",           preprocessed: false },
-    { name: "ogma",                   preprocessed: false },
-    { name: "wildlife-habitat-areas", preprocessed: false },
-    { name: "ungulate-winter-range",  preprocessed: false },
-    { name: "community-watersheds",   preprocessed: false },
-    { name: "mining-claims",          preprocessed: false },
-    { name: "forestry-roads",         preprocessed: false },
-    { name: "conservation-priority",  preprocessed: false },
+    "forest-age",
+    "parks",
+    "conservancies",
+    "tenure-cutblocks",
+    "fire-history",
+    "ogma",
+    "wildlife-habitat-areas",
+    "ungulate-winter-range",
+    "community-watersheds",
+    "mining-claims",
+    "forestry-roads",
+    "conservation-priority",
   ];
 
   const inputs: { name: string; path: string }[] = [];
 
-  for (const layer of layers) {
-    let p: string;
-    if (layer.preprocessed) {
-      p = resolve(PREPROCESSED_DIR, `${layer.name}.ndjson`);
-      if (!existsSync(p)) {
-        // Fall back to raw if preprocessed doesn't exist yet
-        console.warn(`  WARNING: preprocessed ${layer.name} not found, falling back to raw`);
-        p = resolve(GEOJSON_DIR, `${layer.name}.ndjson`);
-      } else {
-        console.log(`  ${layer.name}: using preprocessed data`);
-      }
+  for (const name of layers) {
+    const preprocessedPath = resolve(PREPROCESSED_DIR, `${name}.ndjson`);
+    const rawPath = resolve(GEOJSON_DIR, `${name}.ndjson`);
+
+    let inputPath: string;
+    if (existsSync(preprocessedPath)) {
+      inputPath = preprocessedPath;
+      console.log(`  ${name}: using preprocessed data`);
+    } else if (name === "forest-age") {
+      // forest-age requires water subtraction — raw data must not be used
+      console.error(`  ERROR: preprocessed forest-age not found at ${preprocessedPath}`);
+      console.error(`  Run Phase 3 first: npx tsx scripts/pipeline/preprocess.ts`);
+      process.exit(1);
     } else {
-      p = resolve(GEOJSON_DIR, `${layer.name}.ndjson`);
+      inputPath = rawPath;
+      console.log(`  ${name}: preprocessed not found, using raw`);
     }
 
-    if (!existsSync(p)) {
-      console.warn(`  WARNING: ${layer.name} not found at ${p} — skipping`);
+    if (!existsSync(inputPath)) {
+      console.warn(`  WARNING: ${name} not found at ${inputPath} — skipping`);
       continue;
     }
 
-    inputs.push({ name: layer.name, path: p });
+    inputs.push({ name, path: inputPath });
   }
 
   return inputs;
