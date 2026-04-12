@@ -972,17 +972,27 @@ function runTippecanoe(): boolean {
     // ── Tier 1: Overview (z4-z7) ──
     // Coalescing at 500KB tile cap. -pn preserves shared polygon boundaries
     // (replaces deprecated --detect-shared-borders). Buffer 10 for clean edges.
-    console.log("\nTier 1: Overview tiles (z4-z7, 500KB cap + coalesce + shared nodes)...");
+    // Tier 1 tuning for 6.2M dense forest polygons at z4-z7:
+    // 1. --no-simplification-of-shared-nodes is OMITTED (unlike Tier 2). At
+    //    z4 one pixel covers 10km; sub-pixel boundary gaps from vertex merge
+    //    are invisible. Keeping it creates a math trap: pinned vertices mean
+    //    tippecanoe's cap + drop logic can't shrink dense tiles.
+    // 2. -M 2500000 (2.5MB cap): the 500KB cap was aspirational. Observed
+    //    floor for the densest z4 tile (4/2/5, central BC forest) is ~2MB
+    //    even with shared-node simplification allowed. 2.5MB gives 25%
+    //    headroom so tippecanoe never enters the retry-loop + memory-growth
+    //    pattern that OOM'd on Apr 11 2026. Still 4x smaller than Tier 2
+    //    (which is --no-tile-size-limit).
+    console.log("\nTier 1: Overview tiles (z4-z7, 2.5MB cap + coalesce)...");
     const overviewCmd = [
       "tippecanoe",
       "-o", overviewPath,
       "-P",
       "-Z", "4", "-z", "7",
       "--no-feature-limit",
-      "-M", "500000",
+      "-M", "2500000",
       "--coalesce-smallest-as-needed",
       "--simplification=10",
-      "--no-simplification-of-shared-nodes",
       "--buffer=10",
       "--attribute-type=FIRE_YEAR:string",
       "--force",
