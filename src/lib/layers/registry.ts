@@ -67,7 +67,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     rasterOverview: {
       urlTemplate: "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png",
       minZoom: 4,
-      maxZoom: 10,
+      maxZoom: 9,
     },
     rasterOverviewClassUrl: "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/{class}/{z}/{x}/{y}.png",
     style: {
