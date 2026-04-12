@@ -38,7 +38,13 @@
     "audit:trend": "npx tsx scripts/audit-trend.ts",
     "audit:property-deep": "npx tsx scripts/audit-property-deep.ts",
     "audit:all": "npx tsx scripts/audit-all.ts",
-    "audit:ci": "npx tsx scripts/audit-all.ts --ci --fail-on-warn"
+    "audit:ci": "npx tsx scripts/audit-all.ts --ci --fail-on-warn",
+    "rebuild": "bash scripts/pipeline/rebuild.sh",
+    "download": "bash scripts/pipeline/download.sh",
+    "transform": "npx tsx scripts/pipeline/transform.ts",
+    "preprocess:v2": "NODE_OPTIONS='--max-old-space-size=8192' npx tsx scripts/pipeline/preprocess.ts",
+    "build-tiles:v2": "npx tsx scripts/pipeline/build-tiles.ts",
+    "verify": "npx tsx scripts/pipeline/verify.ts"
   },
   "dependencies": {
     "@turf/area": "^7.3.4",
