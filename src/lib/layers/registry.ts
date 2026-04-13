@@ -4,7 +4,7 @@ import {
   companyColorExpression,
 } from "@/data/companies";
 
-export const PMTILES_URL = "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v8.pmtiles";
+export const PMTILES_URL = "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v9.pmtiles";
 export const PMTILES_SOURCE_ID = "opencanopy";
 export const PMTILES_MAX_ZOOM = 12;
 
