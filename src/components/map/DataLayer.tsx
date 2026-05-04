@@ -1123,7 +1123,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
           <PmtilesLayers
             layer={layer}
             tileMaxZoom={tileMaxZoom}
-            tileMinZoom={hasRasterOverview ? rasterMaxZoom + 1 : undefined}
+            tileMinZoom={hasRasterOverview ? rasterMaxZoom + 1 : 0}
             visible={visible}
             opacity={targetOpacity}
             classFilters={classFilters}

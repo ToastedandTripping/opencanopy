@@ -166,6 +166,7 @@ utilities in `scripts/lib/audit-*.ts`.
 | `audit-temporal.ts` | Year field parsing for timeline layers |
 | `audit-tiles.ts` | PMTiles metadata, layer existence, zoom ranges |
 | `audit-trend.ts` | Statistical trend analysis across builds |
+| `audit-cross-zoom.ts` | Cross-zoom classification consistency (z6 vs z12) |
 | `audit-all.ts` | Unified runner for the full suite |
 
 ## Key Files

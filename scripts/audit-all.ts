@@ -1,16 +1,18 @@
 /**
  * OpenCanopy Unified Audit Runner
  *
- * Runs all 7 audits in sequence, streaming output in real time.
+ * Runs all 9 audits in sequence, streaming output in real time.
  *
  * Audit sequence:
- *   1. audit:tiles         — tile presence and layer coverage
- *   2. audit:fidelity      — source-fidelity (property/feature preservation)
- *   3. audit:spatial       — spatial/water-body checks
- *   4. audit:adversarial   — adversarial property checks
- *   5. audit:property-deep — deep per-layer property validation
- *   6. audit:precision     — geometry precision
- *   7. audit:temporal      — temporal consistency
+ *   1. audit:tiles            — tile presence and layer coverage
+ *   2. audit:fidelity         — source-fidelity (property/feature preservation)
+ *   3. audit:spatial          — spatial/water-body checks
+ *   4. audit:adversarial      — adversarial property checks
+ *   5. audit:property-deep    — deep per-layer property validation
+ *   6. audit:precision        — geometry precision
+ *   7. audit:temporal         — temporal consistency
+ *   8. audit:crosssource-lite — cross-layer overlap consistency
+ *   9. audit:cross-zoom       — cross-zoom classification consistency
  *
  * Flags:
  *   --ci              Exit non-zero if any audit exits with FAIL.
@@ -99,6 +101,11 @@ const AUDITS: AuditEntry[] = [
     label: "CrossSource",
     script: "audit:crosssource-lite",
     reportFile: "crosssource-lite-results.json",
+  },
+  {
+    label: "CrossZoom",
+    script: "audit:cross-zoom",
+    reportFile: "cross-zoom-results.json",
   },
 ];
 

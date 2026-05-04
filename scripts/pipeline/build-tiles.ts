@@ -21,6 +21,7 @@ import {
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
+import { validateTileFlags } from "../lib/validate-tile-flags";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -182,9 +183,22 @@ function runTippecanoe(inputs: { name: string; path: string }[]): void {
     "--attribute-type=species:string",
     "--attribute-type=DISTURBANCE_START_DATE:string",
     "--attribute-type=company_id:string",
+    "--attribute-type=PLANNED_GROSS_BLOCK_AREA:float",
     "--force",
     layerFlags,
   ].join(" \\\n  ");
+
+  const validation = validateTileFlags(cmd);
+  if (!validation.valid) {
+    console.error("  Tile flag validation FAILED:");
+    for (const e of validation.errors) console.error(`    - ${e}`);
+    process.exit(1);
+  }
+  if (validation.warnings.length > 0) {
+    console.warn("  Tile flag warnings:");
+    for (const w of validation.warnings) console.warn(`    - ${w}`);
+    console.log();
+  }
 
   console.log("  Running tippecanoe (single-pass, all layers)...");
   console.log("  Expected: 2-3 hours, ~1.5-2.0GB output");

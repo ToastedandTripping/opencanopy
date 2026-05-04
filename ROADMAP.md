@@ -42,11 +42,16 @@ and decoupled color definitions between raster and vector pipelines.
   issue #523), raised tile budget to 5MB, detail grids to 2048/1024-unit,
   buffer to 64, pinned 6 attribute types, removed `--extend-zooms-if-still-dropping`.
   Test config updated to match.
+- Phase 3: tileMinZoom structural guard — explicit `0` fallback for non-raster
+  layers (was `undefined`, defensively identical via `?? 0` in PmtilesLayers).
+- Phase 4: Cross-zoom classification audit (`audit-cross-zoom.ts`) — traces
+  features at z6 vs z12, fails on classification mismatch. Tile flag
+  pre-validation (`validate-tile-flags.ts`) — catches misconfigurations before
+  2-3hr rebuild. `PLANNED_GROSS_BLOCK_AREA` attribute type pinned.
 
 **Remaining (see plan at `.claude/plans/tingly-bouncing-plum.md`):**
-- Phase 3: tileMinZoom structural guard
-- Phase 4: Cross-zoom classification audit + flag pre-validation scripts
-- Phase 5: Raster-to-vector crossfade at z9.5-z10.5
+- Tile rebuild (v9 → v10) — all flag/guard changes committed, awaiting rebuild
+- Phase 5: Raster-to-vector crossfade at z9-z10 (after v10 deploy)
 
 Synthesis work paused until base data layer is trustworthy.
 
