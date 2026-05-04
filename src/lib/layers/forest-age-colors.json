@@ -1,0 +1,27 @@
+{
+  "old-growth": {
+    "hex": "#15803d",
+    "rgba": [21, 128, 61, 200],
+    "label": "Old Growth (250+ yr)"
+  },
+  "mature": {
+    "hex": "#4ade80",
+    "rgba": [74, 222, 128, 200],
+    "label": "Mature (80-250 yr)"
+  },
+  "young": {
+    "hex": "#f97316",
+    "rgba": [249, 115, 22, 200],
+    "label": "Young (<80 yr)"
+  },
+  "harvested": {
+    "hex": "#ef4444",
+    "rgba": [239, 68, 68, 200],
+    "label": "Harvested"
+  },
+  "old-growth-isolated": {
+    "hex": "#eab308",
+    "rgba": [234, 179, 8, 230],
+    "label": "Old Growth (isolated view)"
+  }
+}

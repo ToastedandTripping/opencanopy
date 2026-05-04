@@ -39,23 +39,31 @@ PARKS_PATH = Path(__file__).parent.parent / "data" / "geojson" / "parks.ndjson"
 OGMA_PATH = Path(__file__).parent.parent / "data" / "geojson" / "ogma.ndjson"
 OUTPUT_DIR = Path(__file__).parent.parent / "data" / "raster-tiles"
 
+# Shared color constants (single source of truth with TypeScript layer registry)
+COLORS_PATH = Path(__file__).parent.parent / "src" / "lib" / "layers" / "forest-age-colors.json"
+with open(COLORS_PATH) as _f:
+    _COLORS = json.load(_f)
+
+def _rgba(key: str) -> tuple:
+    return tuple(_COLORS[key]["rgba"])
+
 # BC extent in WGS84 (approximate, covers all VRI data)
 BC_BOUNDS = (-139.5, 48.0, -114.0, 60.5)  # west, south, east, north
 
-# Color themes: RGBA tuples
+# Color themes: RGBA tuples derived from shared constants
 THEMES = {
     "forest-age": {
-        "old-growth": (21, 128, 61, 200),     # #15803d green
-        "mature": (74, 222, 128, 200),          # #4ade80 light green
-        "young": (249, 115, 22, 200),            # #f97316 orange
-        "harvested": (239, 68, 68, 200),         # #ef4444 red
-        "background": (0, 0, 0, 0),              # transparent
+        "old-growth": _rgba("old-growth"),
+        "mature": _rgba("mature"),
+        "young": _rgba("young"),
+        "harvested": _rgba("harvested"),
+        "background": (0, 0, 0, 0),
     },
     "old-growth": {
-        "old-growth": (234, 179, 8, 230),        # #eab308 gold
-        "mature": (30, 30, 30, 80),              # faint dark
-        "young": (30, 30, 30, 60),               # faint dark
-        "harvested": (30, 30, 30, 60),           # faint dark
+        "old-growth": _rgba("old-growth-isolated"),
+        "mature": (30, 30, 30, 80),
+        "young": (30, 30, 30, 60),
+        "harvested": (30, 30, 30, 60),
         "background": (0, 0, 0, 0),
     },
     "conservation-gap": {

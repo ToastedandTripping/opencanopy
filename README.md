@@ -6,10 +6,10 @@ Open-source conservation mapping for British Columbia. Visualize old-growth fore
 
 ## What It Does
 
-- Interactive map with 8 data layers (forest age, cutblocks, fish streams, species at risk, parks, conservancies)
+- Interactive map with 18 data layers across 7 categories (forest age, cutblocks, fire history, parks, conservancies, OGMAs, wildlife habitat, species at risk, community watersheds, mining claims, forestry roads, and more)
 - Draw-a-box carbon calculator: select any area to see tonnes of CO2 stored, equivalent cars/homes/flights
 - Shareable URLs: every view is a link
-- Layer presets: Overview, Threats, Ecology, Protection
+- 11 layer presets: Overview, Threats, Ecology, Protection, Accountability, Risk, Fire + Logging, Industrial, Drinking Water, Conservation Gap, Species
 - Curated hot spots: Eldred Valley, Fairy Creek, Inland Rainforest, and more
 
 ## Data Sources
@@ -29,7 +29,7 @@ All data is freely available from BC government sources:
 
 ### Development
 ```bash
-git clone https://github.com/secretsaunacompany/opencanopy.git
+git clone https://github.com/ToastedandTripping/opencanopy.git
 cd opencanopy
 cp .env.example .env.local
 # Add your MapTiler API key to .env.local
@@ -49,6 +49,10 @@ npm run build
 See [METHODOLOGY.md](METHODOLOGY.md) for details on the carbon estimation model, species density tables, and data sources.
 
 **Important:** Carbon estimates are approximate and intended for comparative purposes. They are not audited carbon accounting. Accuracy improves at higher zoom levels.
+
+## Architecture
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the rendering pipeline, data pipeline, layer registry, and audit methodology.
 
 ## Contributing
 

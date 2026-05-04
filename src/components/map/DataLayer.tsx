@@ -14,6 +14,7 @@ import {
   buildAgeGradedOpacity,
   composeFilters,
 } from "@/lib/timeline/filter-expressions";
+import forestAgeColors from "@/lib/layers/forest-age-colors.json";
 
 interface DataLayerProps {
   layer: LayerDefinition;
@@ -45,7 +46,7 @@ const CLASS_NAMES = ["old-growth", "mature", "harvested", "young"];
  *  the vector PMTiles fill-color must match to avoid a jarring color jump at
  *  the raster-to-vector zoom transition (e.g. gold old-growth raster -> green vector). */
 const RASTER_THEME_COLORS: Record<string, string> = {
-  "old-growth": "#eab308",  // gold (default vector color is #0d5c2a green)
+  "old-growth": forestAgeColors["old-growth-isolated"].hex,
 };
 
 const EMPTY_FC: GeoJSON.FeatureCollection = {
