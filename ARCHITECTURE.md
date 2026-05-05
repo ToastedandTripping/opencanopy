@@ -201,3 +201,28 @@ utilities in `scripts/lib/audit-*.ts`.
 4. **Raster-to-vector color continuity**: `RASTER_THEME_COLORS` in
    `DataLayer.tsx` is derived from `forest-age-colors.json`. Any new
    per-class raster theme must add an entry to the shared JSON.
+
+## Landing Page Architecture (planned)
+
+The scrollytelling landing page uses a hybrid rendering approach to
+separate cinematic scroll performance from data exploration:
+
+```
+Sections 1-3    Pre-rendered assets (photos + composited PNGs)
+                No MapLibre. Pure CSS/JS crossfade driven by scroll.
+                Timeline: 12-15 frames at key years (1950-2025),
+                forest-age raster base + accumulated cutblocks overlay.
+
+Section 4       Crossfade to live MapLibre
+                Last pre-rendered frame opacity-swaps with MapLibre
+                canvas at matching viewport. Camera dive to Fairy Creek.
+
+Sections 5-6    Live MapLibre + photography
+                Full data fidelity (PMTiles + WFS).
+                Closer section returns to static photo + CTA.
+```
+
+This separation exists because rendering millions of vector polygons
+at province scale during smooth scroll destroys frame rate. The raster
+tier and pre-rendered frames handle the cinematic sections; the vector
+tile engine handles the interactive sections.

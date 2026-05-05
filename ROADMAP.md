@@ -55,13 +55,34 @@ and decoupled color definitions between raster and vector pipelines.
 
 Synthesis work paused until base data layer is trustworthy.
 
+## Next: Landing Page Redesign (2026-05-05)
+
+Scrollytelling overhaul replacing all-MapLibre scroll sections with a
+hybrid photo + pre-rendered frames + live map experience.
+
+**Direction:** Pre-rendered timeline frames (Option A). 12-15 composited
+PNGs showing cutblock accumulation 1950-2025. No MapLibre during scroll
+section — pure CSS/JS crossfade at 60fps. Live map activates only for
+the camera dive to Fairy Creek and interactive exploration.
+
+**Structure:**
+1. Photo hero (old-growth canopy with mist, full-bleed)
+2. Photo → raster overview crossfade
+3. Timeline spread (pre-rendered frames, year counter)
+4. Transition to live MapLibre (camera dive to Fairy Creek)
+5. Old-growth detail (hatch pattern, bearing drift)
+6. Photo closer + CTA (person among ancient cedars)
+
+**Typography:** Instrument Serif (display) + Atkinson Hyperlegible Next
+(body) + DM Mono (year counter/data). Design brief selection pending.
+
 ## Reference
 
 - Architecture: `ARCHITECTURE.md`
-- Audit scripts: `scripts/audit-*.ts` (11 scripts — source-to-tile tracing,
+- Audit scripts: `scripts/audit-*.ts` (12 scripts — source-to-tile tracing,
   geometry precision, spatial validation, adversarial testing, cross-source
   consistency, deep property validation, temporal checks, tile metadata,
-  trend analysis, unified runner)
+  trend analysis, cross-zoom classification, unified runner)
 - Audit support: `scripts/lib/audit-*.ts` (shared types, config, archiving)
 - Repo: github.com/ToastedandTripping/opencanopy
 - Outstanding audit items (non-blocking):
