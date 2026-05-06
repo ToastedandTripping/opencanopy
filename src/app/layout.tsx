@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import { Instrument_Serif, Atkinson_Hyperlegible, DM_Mono } from "next/font/google";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
+const instrumentSerif = Instrument_Serif({
   variable: "--font-display",
   subsets: ["latin"],
+  weight: "400",
   display: "swap",
 });
 
-const inter = Inter({
+const atkinson = Atkinson_Hyperlegible({
   variable: "--font-body",
   subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: "400",
   display: "swap",
 });
 
@@ -46,7 +55,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${jakarta.variable} ${inter.variable} h-full antialiased dark`}
+      className={`${instrumentSerif.variable} ${atkinson.variable} ${dmMono.variable} h-full antialiased dark`}
     >
       <head>
         <meta

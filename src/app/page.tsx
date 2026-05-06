@@ -1,27 +1,23 @@
-"use client";
-
-import dynamic from "next/dynamic";
-
-const ScrollytellingContainer = dynamic(
-  () =>
-    import("@/components/story/ScrollytellingContainer").then((m) => ({
-      default: m.ScrollytellingContainer,
-    })),
-  { ssr: false }
-);
-
-const CtaSection = dynamic(
-  () =>
-    import("@/components/story/CtaSection").then((m) => ({
-      default: m.CtaSection,
-    }))
-);
+import { LandingNav } from "@/components/landing/LandingNav";
+import { PhotoHero } from "@/components/landing/PhotoHero";
+import { ProblemSection } from "@/components/landing/ProblemSection";
+import { MapReveal } from "@/components/landing/MapReveal";
+import { CapabilitiesSection } from "@/components/landing/CapabilitiesSection";
+import { PhotoCloser } from "@/components/landing/PhotoCloser";
+import { SupportSection } from "@/components/landing/SupportSection";
+import { Footer } from "@/components/landing/Footer";
 
 export default function LandingPage() {
   return (
     <main>
-      <ScrollytellingContainer />
-      <CtaSection />
+      <LandingNav />
+      <PhotoHero />
+      <ProblemSection />
+      <MapReveal />
+      <CapabilitiesSection />
+      <PhotoCloser />
+      <SupportSection />
+      <Footer />
     </main>
   );
 }
