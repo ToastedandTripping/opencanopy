@@ -152,6 +152,8 @@ function runTippecanoe(inputs: { name: string; path: string }[]): void {
     .map(({ name, path }) => `-L ${name}:${path}`)
     .join(" \\\n  ");
 
+  // -P removed: sequential input reading uses far less peak memory (prevents OOM on 32GB)
+  // nice/ionice: lowest priority so system stays responsive during 4-5hr build
   // --drop-densest-as-needed: prefer dropping features over coalescing
   //   (coalesce silently reassigns classification attributes — issue #523)
   // --low-detail=11: 2048-unit grid at overview zooms (was 9/512-unit,
@@ -162,9 +164,8 @@ function runTippecanoe(inputs: { name: string; path: string }[]): void {
   // -M 5000000: 5MB tile cap (raised to reduce drop frequency with new strategy)
   // --attribute-type: pin types to prevent silent inference divergence across tiles
   const cmd = [
-    "tippecanoe",
+    "nice -n 19 ionice -c 3 tippecanoe",
     `-o ${outputPath}`,
-    "-P",
     "-Z 4 -z 12",
     "--no-feature-limit",
     "--drop-densest-as-needed",
@@ -200,8 +201,8 @@ function runTippecanoe(inputs: { name: string; path: string }[]): void {
     console.log();
   }
 
-  console.log("  Running tippecanoe (single-pass, all layers)...");
-  console.log("  Expected: 2-3 hours, ~1.5-2.0GB output");
+  console.log("  Running tippecanoe (single-pass, sequential read, throttled)...");
+  console.log("  Expected: 4-5 hours (throttled), ~1.5-2.0GB output");
   console.log();
   console.log("  Command:");
   console.log("  " + cmd.replace(/\n  /g, "\n  "));
@@ -209,7 +210,7 @@ function runTippecanoe(inputs: { name: string; path: string }[]): void {
 
   execSync(cmd, {
     stdio: "inherit",
-    timeout: 14_400_000, // 4 hours
+    timeout: 28_800_000, // 8 hours (throttled build)
   });
 }
 
