@@ -21,6 +21,7 @@ import {
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
+import { validateTileFlags } from "../lib/validate-tile-flags";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -151,42 +152,57 @@ function runTippecanoe(inputs: { name: string; path: string }[]): void {
     .map(({ name, path }) => `-L ${name}:${path}`)
     .join(" \\\n  ");
 
-  // Exact tippecanoe command from the plan. Flags documented in plan:
-  //   --low-detail=9: 512-unit grid at z4-z7 (prevents OOM on overview tiles)
-  //   --minimum-detail=7: 5-level fallback chain before coalescing
-  //   --full-detail=12: 4096-unit grid at z12 (full polygon boundary fidelity)
-  //   --simplification=3: moderate Douglas-Peucker below maxzoom
-  //   --simplification-at-maximum-zoom=1: minimal simplification at z12
-  //   --no-simplification-of-shared-nodes: preserves polygon boundary convergence at z8+
-  //   --no-tiny-polygon-reduction: coalesce into neighbors, not probabilistic placeholders
-  //   -M 2500000: 2.5MB tile cap (proven safe for densest BC tiles)
-  //   --extend-zooms-if-still-dropping: safety valve for extremely dense areas
-  //   --coalesce-smallest-as-needed: merge small polygons into neighbors
-  //   --attribute-type=FIRE_YEAR:string: ensure FIRE_YEAR is always a string attribute
+  // -P removed: sequential input reading uses far less peak memory (prevents OOM on 32GB)
+  // nice/ionice: lowest priority so system stays responsive during 4-5hr build
+  // --drop-densest-as-needed: prefer dropping features over coalescing
+  //   (coalesce silently reassigns classification attributes — issue #523)
+  // --low-detail=11: 2048-unit grid at overview zooms (was 9/512-unit,
+  //   which quantized small polygons to zero area at z4)
+  // --minimum-detail=10: 1024-unit floor (was 7/128-unit)
+  // --full-detail=12: 4096-unit grid at z12 (full polygon boundary fidelity)
+  // --buffer=64: industry standard for polygon coverage (~15% tile size increase)
+  // -M 5000000: 5MB tile cap (raised to reduce drop frequency with new strategy)
+  // --attribute-type: pin types to prevent silent inference divergence across tiles
   const cmd = [
-    "tippecanoe",
+    "nice -n 19 ionice -c 3 tippecanoe",
     `-o ${outputPath}`,
-    "-P",
     "-Z 4 -z 12",
     "--no-feature-limit",
-    "--coalesce-smallest-as-needed",
-    "-M 2500000",
-    "--extend-zooms-if-still-dropping",
-    "--low-detail=9",
-    "--minimum-detail=7",
+    "--drop-densest-as-needed",
+    "-M 5000000",
+    "--low-detail=11",
+    "--minimum-detail=10",
     "--full-detail=12",
     "--simplification=3",
     "--simplification-at-maximum-zoom=1",
     "--no-simplification-of-shared-nodes",
     "--no-tiny-polygon-reduction",
-    "--buffer=10",
+    "--buffer=64",
     "--attribute-type=FIRE_YEAR:string",
+    "--attribute-type=class:string",
+    "--attribute-type=age:int",
+    "--attribute-type=species:string",
+    "--attribute-type=DISTURBANCE_START_DATE:string",
+    "--attribute-type=company_id:string",
+    "--attribute-type=PLANNED_GROSS_BLOCK_AREA:float",
     "--force",
     layerFlags,
   ].join(" \\\n  ");
 
-  console.log("  Running tippecanoe (single-pass, all layers)...");
-  console.log("  Expected: 2-3 hours, ~1.5-2.0GB output");
+  const validation = validateTileFlags(cmd);
+  if (!validation.valid) {
+    console.error("  Tile flag validation FAILED:");
+    for (const e of validation.errors) console.error(`    - ${e}`);
+    process.exit(1);
+  }
+  if (validation.warnings.length > 0) {
+    console.warn("  Tile flag warnings:");
+    for (const w of validation.warnings) console.warn(`    - ${w}`);
+    console.log();
+  }
+
+  console.log("  Running tippecanoe (single-pass, sequential read, throttled)...");
+  console.log("  Expected: 4-5 hours (throttled), ~1.5-2.0GB output");
   console.log();
   console.log("  Command:");
   console.log("  " + cmd.replace(/\n  /g, "\n  "));
@@ -194,7 +210,7 @@ function runTippecanoe(inputs: { name: string; path: string }[]): void {
 
   execSync(cmd, {
     stdio: "inherit",
-    timeout: 14_400_000, // 4 hours
+    timeout: 28_800_000, // 8 hours (throttled build)
   });
 }
 
