@@ -38,8 +38,17 @@ echo "=== Phase 3: Preprocess ==="
 NODE_OPTIONS='--max-old-space-size=8192' npx tsx scripts/pipeline/preprocess.ts
 
 echo ""
-echo "=== Phase 4: Build Tiles ==="
-npx tsx scripts/pipeline/build-tiles.ts
+echo "=== Checkpoint: Saving preprocessed data ==="
+CHECKPOINT_DIR="data/checkpoint/preprocessed-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$CHECKPOINT_DIR"
+rsync -a data/geojson/preprocessed/ "$CHECKPOINT_DIR/"
+echo "  Saved to $CHECKPOINT_DIR ($(du -sh "$CHECKPOINT_DIR" | cut -f1))"
+echo "  To resume from checkpoint: cp -a $CHECKPOINT_DIR/* data/geojson/preprocessed/"
+
+echo ""
+echo "=== Phase 4: Build Tiles (throttled) ==="
+systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=4G \
+  npx tsx scripts/pipeline/build-tiles.ts
 
 echo ""
 echo "=== Phase 5: Verify ==="
