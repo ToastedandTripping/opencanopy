@@ -10,6 +10,7 @@
 
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
+import forestAgeColors from "@/lib/layers/forest-age-colors.json";
 
 /** Raster overview tiles for forest-age at province zoom (z4-z8). */
 const RASTER_OVERVIEW_URL =
@@ -158,10 +159,10 @@ export function setupStoryLayers(
           "fill-color": [
             "match",
             ["get", "class"],
-            "old-growth", "#0d5c2a",
-            "mature", "#4ade80",
-            "young", "#f97316",
-            "harvested", "#ef4444",
+            "old-growth", forestAgeColors["old-growth"].hex,
+            "mature", forestAgeColors["mature"].hex,
+            "young", forestAgeColors["young"].hex,
+            "harvested", forestAgeColors["harvested"].hex,
             "#6b7280",
           ],
           "fill-opacity": 0,

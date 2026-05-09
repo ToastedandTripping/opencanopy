@@ -3,6 +3,7 @@ import {
   COMPANY_REGISTRY,
   companyColorExpression,
 } from "@/data/companies";
+import forestAgeColors from "./forest-age-colors.json";
 
 export const PMTILES_URL = "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v10.pmtiles";
 export const PMTILES_SOURCE_ID = "opencanopy";
@@ -80,13 +81,13 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
             "match",
             ["get", "class"],
             "old-growth",
-            "#0d5c2a",
+            forestAgeColors["old-growth"].hex,
             "mature",
-            "#4ade80",
+            forestAgeColors["mature"].hex,
             "young",
-            "#f97316",
+            forestAgeColors["young"].hex,
             "harvested",
-            "#ef4444",
+            forestAgeColors["harvested"].hex,
             "#6b7280",
           ],
           "#6b7280",
@@ -108,10 +109,10 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     defaultEnabled: true,
     interactive: true,
     legendItems: [
-      { color: "#0d5c2a", label: "Old Growth (250+ yr)" },
-      { color: "#4ade80", label: "Mature (80-250 yr)" },
-      { color: "#f97316", label: "Young (<80 yr)" },
-      { color: "#ef4444", label: "Harvested" },
+      { color: forestAgeColors["old-growth"].hex, label: forestAgeColors["old-growth"].label },
+      { color: forestAgeColors["mature"].hex, label: forestAgeColors["mature"].label },
+      { color: forestAgeColors["young"].hex, label: forestAgeColors["young"].label },
+      { color: forestAgeColors["harvested"].hex, label: forestAgeColors["harvested"].label },
     ],
     fetchPriority: 0,
   },

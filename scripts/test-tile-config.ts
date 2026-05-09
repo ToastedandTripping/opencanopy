@@ -188,7 +188,7 @@ export function buildTippecanoeCommands(cfg: TileConfig, outputName: string): {
     "-Z", "4", "-z", "7",
     "--no-feature-limit",
     "-M", String(cfg.maxTileSize),
-    "--coalesce-smallest-as-needed",
+    "--drop-densest-as-needed",
     `--simplification=${cfg.simplificationOverview}`,
     ...extraFlags,
     "--force",

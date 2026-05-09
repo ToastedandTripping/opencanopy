@@ -1,5 +1,6 @@
 import type { SelectionStats, FinancialValue } from "@/lib/carbon";
 import { getLayer } from "@/lib/layers";
+import forestAgeColors from "@/lib/layers/forest-age-colors.json";
 
 export interface ReportOptions {
   mapImageDataUrl: string;
@@ -49,10 +50,10 @@ function buildReportHtml(options: ReportOptions): string {
   const { mapImageDataUrl, stats, financial, enabledLayers, watershedName, timestamp } = options;
 
   const ageClasses = [
-    { label: "Old growth (250+ yr)", ha: stats.oldGrowthHa, color: "#15803d" },
-    { label: "Mature (80-250 yr)", ha: stats.matureHa, color: "#4ade80" },
-    { label: "Young (<80 yr)", ha: stats.youngHa, color: "#f97316" },
-    { label: "Harvested", ha: stats.harvestedHa, color: "#ef4444" },
+    { label: forestAgeColors["old-growth"].label, ha: stats.oldGrowthHa, color: forestAgeColors["old-growth"].hex },
+    { label: forestAgeColors["mature"].label, ha: stats.matureHa, color: forestAgeColors["mature"].hex },
+    { label: forestAgeColors["young"].label, ha: stats.youngHa, color: forestAgeColors["young"].hex },
+    { label: forestAgeColors["harvested"].label, ha: stats.harvestedHa, color: forestAgeColors["harvested"].hex },
     { label: "Unknown age", ha: stats.unknownHa, color: "#71717a" },
   ].filter((c) => c.ha >= 0.01);
 

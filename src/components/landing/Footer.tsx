@@ -6,14 +6,13 @@ export function Footer() {
           <p className="text-sm text-zinc-400">
             Built by{" "}
             <a
-              href="https://secretsaunacompany.com"
+              href="https://github.com/ToastedandTripping/opencanopy"
               target="_blank"
               rel="noopener noreferrer"
               className="text-zinc-300 hover:text-white transition-colors"
             >
-              Secret Sauna Company
+              OpenCanopy
             </a>
-            , Squamish, BC
           </p>
           <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-500">
             <a

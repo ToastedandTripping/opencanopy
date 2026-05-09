@@ -32,6 +32,7 @@
 
 import { describe, it, expect } from "vitest";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
+import forestAgeColors from "@/lib/layers/forest-age-colors.json";
 
 // ── Color utilities ───────────────────────────────────────────────────────────
 
@@ -85,10 +86,10 @@ function luminanceDelta(a: RGB, b: RGB): number {
 // ── Raster colors (from build-raster-tiles.py) ───────────────────────────────
 
 const RASTER_COLORS: Record<string, string> = {
-  "old-growth": "#15803d", // Tailwind green-700
-  mature: "#4ade80", // Tailwind green-400
-  young: "#f97316", // Tailwind orange-500
-  harvested: "#ef4444", // Tailwind red-500
+  "old-growth": forestAgeColors["old-growth"].hex,
+  mature: forestAgeColors["mature"].hex,
+  young: forestAgeColors["young"].hex,
+  harvested: forestAgeColors["harvested"].hex,
 };
 
 // ── Extract vector colors from registry ───────────────────────────────────────
@@ -197,27 +198,7 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
           const distance = rgbDistance(rasterRGB, vectorRGB);
           const lumDelta = luminanceDelta(rasterRGB, vectorRGB);
 
-          // Known exception: old-growth intentionally diverges
-          // Raster #15803d is lighter green (province scale visibility)
-          // Vector #0d5c2a is darker green (detail scale richness)
-          // RGB distance ~41.5 (below the warn threshold of 50, but luminance
-          // delta is significant: raster is ~2x brighter than vector).
-          // This transition is acceptable but documented here.
-          if (className === "old-growth") {
-            // Document the known mismatch values
-            expect(rasterHex).toBe("#15803d");
-            expect(vectorHex).toBe("#0d5c2a");
-
-            // Distance should be in the moderate range (regression test)
-            // If either color changes, this test will catch it.
-            // RGB distance is ~41.5 -- below the 50 WARN threshold but
-            // luminance delta is 0.08 (above the 0.10 warn threshold at 2dp).
-            expect(distance).toBeGreaterThan(20); // detect accidental convergence
-            expect(distance).toBeLessThan(RGB_DISTANCE_FAIL); // detect divergence
-            return;
-          }
-
-          // All other classes should have close raster/vector colors
+          // All classes should have matching raster/vector colors (shared source of truth)
           if (distance > RGB_DISTANCE_FAIL) {
             throw new Error(
               `class "${className}" has jarring color mismatch: ` +
@@ -256,31 +237,21 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
     }
   });
 
-  it("documents old-growth raster/vector mismatch as known issue", () => {
-    /**
-     * KNOWN ISSUE: old-growth raster (#15803d) vs vector (#0d5c2a)
-     *
-     * RGB distance: ~41.5 (perceptible but below the 50-unit warn threshold)
-     * Luminance: raster=0.159, vector=0.079 (raster is ~2x brighter)
-     *
-     * The raster was built with green-700 for province-scale legibility
-     * against the basemap. The vector uses a deeper forest green for
-     * detail-scale richness. The zoom crossfade at z9 partially masks
-     * the transition via opacity interpolation (both layers fade together).
-     *
-     * To fix: align either the raster color or the vector color.
-     * Recommended: change vector to #15803d and rebuild.
-     * Impact: minor -- the current mismatch is acceptable for a v1 launch.
-     */
-    const rasterRGB = parseHex("#15803d");
-    const vectorRGB = parseHex("#0d5c2a");
-    const distance = rgbDistance(rasterRGB, vectorRGB);
+  it("all forest-age colors are sourced from shared constants", () => {
+    const vectorColors = forestAgeLayer
+      ? extractMatchColors(forestAgeLayer.style.paint["fill-color"])
+      : null;
 
-    // Document the current state (regression detection)
-    // RGB distance: ~41.5 (perceptible but not jarring)
-    // Luminance: raster=0.159, vector=0.079 (raster is ~2x brighter)
-    expect(distance).toBeCloseTo(41.5, 0); // ~41.5 RGB units
-    expect(relativeLuminance(rasterRGB)).toBeCloseTo(0.159, 2);
-    expect(relativeLuminance(vectorRGB)).toBeCloseTo(0.079, 2);
+    for (const className of Object.keys(RASTER_COLORS)) {
+      const rasterHex = RASTER_COLORS[className];
+      const vectorHex = vectorColors?.[className];
+      if (!vectorHex) continue;
+
+      const distance = rgbDistance(parseHex(rasterHex), parseHex(vectorHex));
+      expect(
+        distance,
+        `class "${className}" raster/vector colors must be identical (shared source of truth)`
+      ).toBe(0);
+    }
   });
 });

@@ -36,6 +36,7 @@
     "audit:adversarial": "npx tsx scripts/audit-adversarial.ts",
     "audit:crosssource-lite": "npx tsx scripts/audit-crosssource-lite.ts",
     "audit:trend": "npx tsx scripts/audit-trend.ts",
+    "audit:cross-zoom": "npx tsx scripts/audit-cross-zoom.ts",
     "audit:property-deep": "npx tsx scripts/audit-property-deep.ts",
     "audit:all": "npx tsx scripts/audit-all.ts",
     "audit:ci": "npx tsx scripts/audit-all.ts --ci --fail-on-warn",
