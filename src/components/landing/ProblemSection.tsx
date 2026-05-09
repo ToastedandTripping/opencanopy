@@ -2,7 +2,7 @@
 
 export function ProblemSection() {
   return (
-    <section id="problem" className="relative z-10 bg-[var(--color-surface-0)] py-28 md:py-36">
+    <section id="problem" className="relative z-10 bg-[var(--color-surface-0)] py-36 md:py-48">
       <div className="max-w-4xl mx-auto px-6 md:px-16">
         <h2
           className="text-3xl md:text-5xl text-white tracking-tight leading-tight"

@@ -9,6 +9,7 @@ export function PhotoCloser() {
         src="/images/landing/closer-cedars.webp"
         alt="A person standing among ancient old-growth cedars"
         fill
+        loading="eager"
         className="object-cover object-center"
         sizes="100vw"
       />

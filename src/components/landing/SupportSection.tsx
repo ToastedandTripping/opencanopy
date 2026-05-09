@@ -2,7 +2,7 @@
 
 export function SupportSection() {
   return (
-    <section className="relative z-10 bg-[var(--color-surface-0)] py-20 md:py-28">
+    <section className="relative z-10 bg-[var(--color-surface-0)] py-36 md:py-48">
       <div className="max-w-3xl mx-auto px-6 md:px-16 text-center">
         <h2
           className="text-2xl md:text-3xl text-white tracking-tight"
