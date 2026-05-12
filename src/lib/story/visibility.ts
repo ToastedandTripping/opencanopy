@@ -17,6 +17,7 @@ import { pipelineLog } from "@/lib/debug/pipeline-logger";
 export interface VisibilityMap {
   getLayer(id: string): unknown;
   isStyleLoaded(): boolean | void;
+  once(event: string, callback: () => void): void;
   setPaintProperty(layerId: string, prop: string, value: any): void;  // eslint-disable-line @typescript-eslint/no-explicit-any
   setFilter(layerId: string, filter: any): void;                      // eslint-disable-line @typescript-eslint/no-explicit-any
 }
@@ -34,13 +35,10 @@ export function applyLayerVisibility(
   layers: ChapterLayer[],
   hatchEnabled: boolean,
   yearFilter: number | null,
-  retryCount = 0
 ): void {
   if (!map.isStyleLoaded()) {
-    pipelineLog("visibility-effect", "style not loaded, scheduling retry");
-    if (retryCount < 3) {
-      requestAnimationFrame(() => applyLayerVisibility(map, layers, hatchEnabled, yearFilter, retryCount + 1));
-    }
+    pipelineLog("visibility-effect", "style not loaded, deferring to idle");
+    map.once("idle", () => applyLayerVisibility(map, layers, hatchEnabled, yearFilter));
     return;
   }
 
@@ -126,13 +124,10 @@ export function applyTimelineFilter(
   map: VisibilityMap,
   layers: ChapterLayer[],
   yearFilter: number | null,
-  retryCount = 0
 ): void {
   if (!map.isStyleLoaded()) {
-    pipelineLog("timeline-effect", "style not loaded, scheduling retry");
-    if (retryCount < 3) {
-      requestAnimationFrame(() => applyTimelineFilter(map, layers, yearFilter, retryCount + 1));
-    }
+    pipelineLog("timeline-effect", "style not loaded, deferring to idle");
+    map.once("idle", () => applyTimelineFilter(map, layers, yearFilter));
     return;
   }
 
