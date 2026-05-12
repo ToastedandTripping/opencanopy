@@ -53,6 +53,16 @@ export default function RootLayout({
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1"
         />
+        <link
+          rel="preconnect"
+          href="https://pub-b5568be386ef4e638b4e49af41395600.r2.dev"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://api.maptiler.com"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="h-full bg-[#0a0a0c] text-white">{children}</body>
     </html>
