@@ -217,6 +217,17 @@ export function createMockMap() {
       eventListeners.get(event)?.delete(callback);
     }),
 
+    once: vi.fn((event: string, callback: (...args: unknown[]) => void) => {
+      const wrapped = (...args: unknown[]) => {
+        eventListeners.get(event)?.delete(wrapped);
+        callback(...args);
+      };
+      if (!eventListeners.has(event)) {
+        eventListeners.set(event, new Set());
+      }
+      eventListeners.get(event)!.add(wrapped);
+    }),
+
     // ── Image management ──────────────────────────────────────────
     addImage: vi.fn(),
     hasImage: vi.fn(() => false),
