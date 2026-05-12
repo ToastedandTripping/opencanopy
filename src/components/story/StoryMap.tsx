@@ -9,6 +9,7 @@ import type { ChapterCamera, ChapterTerrain, ChapterFog, ChapterLayer } from "@/
 import { createHatchPattern } from "./HatchPattern";
 import { setupStoryLayers } from "@/lib/story/setup-layers";
 import { applyLayerVisibility, applyTimelineFilter } from "@/lib/story/visibility";
+import { prefetchStoryTiles, prefetchTerrainTiles } from "@/lib/story/prefetch";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
 initPMTiles();
@@ -193,27 +194,11 @@ export function StoryMap({
 
     pipelineLog("onLoad", "layers registered");
 
-    // ── Terrain tile prefetch for Fairy Creek ───────────────────────
-    // Pre-request DEM tiles at Fairy Creek so the valley dive is smooth.
-    // We use a hidden <img> approach to warm the CDN/browser tile cache
-    // without moving the visible map camera.
-    if (TERRAIN_SOURCE.enabled && typeof Image !== "undefined") {
-      const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
-      if (MAPTILER_KEY) {
-        // Request z12 DEM tiles covering Fairy Creek area (-124.55, 48.64)
-        // Tile coordinates: z12/x649/y1448, z12/x650/y1448
-        const tilesToPrefetch = [
-          [12, 649, 1448],
-          [12, 650, 1448],
-          [12, 649, 1449],
-          [12, 650, 1449],
-        ];
-        for (const [z, x, y] of tilesToPrefetch) {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.src = `https://api.maptiler.com/tiles/terrain-rgb-v2/${z}/${x}/${y}.webp?key=${MAPTILER_KEY}`;
-        }
-      }
+    // Prefetch raster + terrain tiles for all chapter viewports
+    prefetchStoryTiles();
+    const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
+    if (TERRAIN_SOURCE.enabled && maptilerKey) {
+      prefetchTerrainTiles(maptilerKey);
     }
 
     // Signal that map is loaded -- triggers layer visibility + timeline effects
