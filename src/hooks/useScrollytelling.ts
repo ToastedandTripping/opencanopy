@@ -124,8 +124,9 @@ export function useScrollytelling() {
         .onStepEnter((response) => {
           if (destroyed) return;
           pipelineLog("onStepEnter", `index=${response.index}`);
+          progressRef.current = 0;
           setActiveChapterIndex(response.index);
-          updateCamera(response.index, progressRef.current);
+          updateCamera(response.index, 0);
         })
         .onStepProgress((response) => {
           if (destroyed) return;
