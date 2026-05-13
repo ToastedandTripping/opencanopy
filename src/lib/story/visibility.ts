@@ -165,16 +165,18 @@ export function applyTimelineFilter(
     map.setFilter(fillId, composedFilter);
     if (map.getLayer(outlineId)) map.setFilter(outlineId, composedFilter);
 
-    map.setPaintProperty(fillId, "fill-opacity", [
+    map.setPaintProperty(fillId, "fill-opacity", 0.7);
+
+    map.setPaintProperty(fillId, "fill-color", [
       "interpolate",
       ["linear"],
       ["-", yearFilter, yearExpr],
       0,
-      0.8,
-      20,
-      0.4,
+      "#ef4444",
+      25,
+      "#b91c1c",
       50,
-      0.15,
+      "#7f1d1d",
     ]);
   } else {
     map.setFilter(fillId, classFilterExpr);
@@ -183,5 +185,6 @@ export function applyTimelineFilter(
 
     const scalarOpacity = cutblocksLayer?.opacity ?? 0;
     map.setPaintProperty(fillId, "fill-opacity", scalarOpacity);
+    map.setPaintProperty(fillId, "fill-color", "#dc2626");
   }
 }

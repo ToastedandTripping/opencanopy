@@ -167,7 +167,7 @@ describe("visibility lifecycle", () => {
       expect(map.getPaintProperty("story-cutblocks-fill", "fill-opacity")).toBe(0.8);
     });
 
-    it("timeline effect sets age-graded fill-opacity expression", () => {
+    it("timeline effect sets constant opacity and color expression", () => {
       simulateOnLoad();
 
       const layers: ChapterLayer[] = [
@@ -176,13 +176,20 @@ describe("visibility lifecycle", () => {
 
       applyTimelineFilter(map, layers, 1990);
 
-      // fill-opacity should be a data-driven expression, not a scalar
+      // fill-opacity should be a constant (cumulative visibility)
       const opacity = map.getPaintProperty(
         "story-cutblocks-fill",
         "fill-opacity"
       );
-      expect(Array.isArray(opacity)).toBe(true);
-      expect(opacity[0]).toBe("interpolate");
+      expect(opacity).toBe(0.7);
+
+      // fill-color should be a data-driven expression for age grading
+      const color = map.getPaintProperty(
+        "story-cutblocks-fill",
+        "fill-color"
+      );
+      expect(Array.isArray(color)).toBe(true);
+      expect(color[0]).toBe("interpolate");
     });
 
     it("timeline effect sets year filter on cutblocks", () => {
@@ -203,7 +210,7 @@ describe("visibility lifecycle", () => {
       expect(filter).toBeDefined();
     });
 
-    it("timeline effect resets to scalar opacity when yearFilter becomes null", () => {
+    it("timeline effect resets to scalar opacity and static color when yearFilter becomes null", () => {
       simulateOnLoad();
 
       const layers: ChapterLayer[] = [
@@ -212,12 +219,12 @@ describe("visibility lifecycle", () => {
 
       // First apply timeline
       applyTimelineFilter(map, layers, 1990);
-      // Verify expression was set
+      // Verify constant opacity was set
       let opacity = map.getPaintProperty(
         "story-cutblocks-fill",
         "fill-opacity"
       );
-      expect(Array.isArray(opacity)).toBe(true);
+      expect(opacity).toBe(0.7);
 
       // Then reset
       applyTimelineFilter(map, layers, null);
@@ -390,12 +397,12 @@ describe("visibility lifecycle", () => {
         map.getPaintProperty("story-forest-age-raster", "raster-opacity")
       ).toBe(0.4);
 
-      // Cutblocks fill-opacity: should be data-driven expression (from timeline)
+      // Cutblocks fill-opacity: constant during timeline (cumulative visibility)
       const cutblockOpacity = map.getPaintProperty(
         "story-cutblocks-fill",
         "fill-opacity"
       );
-      expect(Array.isArray(cutblockOpacity)).toBe(true);
+      expect(cutblockOpacity).toBe(0.7);
     });
 
     it("simulates chapter transition: logging-timeline -> fire (timeline cleared)", () => {

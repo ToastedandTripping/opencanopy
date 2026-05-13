@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { HeroSection } from "@/components/story/HeroSection";
 
 const ScrollytellingContainer = dynamic(
   () =>
@@ -20,6 +21,7 @@ const CtaSection = dynamic(
 export default function LandingPage() {
   return (
     <main>
+      <HeroSection />
       <ScrollytellingContainer />
       <CtaSection />
     </main>

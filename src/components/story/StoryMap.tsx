@@ -59,12 +59,11 @@ export function StoryMap({
     const map = mapRef.current?.getMap();
     if (!map || !map.isStyleLoaded()) return;
 
-    map.easeTo({
+    map.jumpTo({
       center: camera.center,
       zoom: camera.zoom,
       pitch: supports3D ? camera.pitch : 0,
       bearing: camera.bearing,
-      duration: 0,
     });
   }, [camera, supports3D]);
 
@@ -153,7 +152,7 @@ export function StoryMap({
     }
   }, [fog, supports3D]);
 
-  // Apply layer visibility and opacity
+  // Apply layer visibility and opacity (only on chapter change, not every scroll frame)
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
@@ -166,7 +165,7 @@ export function StoryMap({
       mapLoaded,
     });
     applyLayerVisibility(map, layers, hatchEnabled, yearFilter);
-  }, [layers, hatchEnabled, yearFilter, mapLoaded]);
+  }, [layers, hatchEnabled, mapLoaded]); // yearFilter excluded — timeline effect handles cutblocks
 
   // Apply timeline year filter + age-grading to cutblocks tiles.
   useEffect(() => {

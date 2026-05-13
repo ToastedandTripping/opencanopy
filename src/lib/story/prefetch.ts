@@ -53,13 +53,17 @@ function viewportTiles(
   return tiles;
 }
 
+let storyPrefetchStarted = false;
+
 /**
  * Prefetch raster overview tiles for all chapter viewports.
  * Uses Image() elements so tiles land in the browser HTTP cache.
  * MapLibre will reuse them when it requests the same URLs.
+ * Idempotent: safe to call from both HeroSection and StoryMap.
  */
 export function prefetchStoryTiles(): void {
-  if (typeof Image === "undefined") return;
+  if (storyPrefetchStarted || typeof Image === "undefined") return;
+  storyPrefetchStarted = true;
 
   const seen = new Set<string>();
   const urls: string[] = [];
@@ -107,12 +111,16 @@ export function prefetchStoryTiles(): void {
   loadBatch();
 }
 
+let terrainPrefetchStarted = false;
+
 /**
  * Prefetch terrain DEM tiles for chapters that use 3D terrain.
  * Extends the existing Fairy Creek prefetch to cover all terrain chapters.
+ * Idempotent: safe to call from both HeroSection and StoryMap.
  */
 export function prefetchTerrainTiles(maptilerKey: string): void {
-  if (typeof Image === "undefined" || !maptilerKey) return;
+  if (terrainPrefetchStarted || typeof Image === "undefined" || !maptilerKey) return;
+  terrainPrefetchStarted = true;
 
   const seen = new Set<string>();
 
