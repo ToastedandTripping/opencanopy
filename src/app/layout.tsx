@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -65,6 +66,12 @@ export default function RootLayout({
         />
       </head>
       <body className="h-full bg-[#0a0a0c] text-white">{children}</body>
+      <Script
+        src="https://ssc-ops.netlify.app/tracker.js"
+        data-site-id="opencanopy"
+        data-endpoint="https://ssc-ops.netlify.app/.netlify/functions/track"
+        strategy="afterInteractive"
+      />
     </html>
   );
 }
