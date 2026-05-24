@@ -74,8 +74,8 @@ export const CHAPTERS: Chapter[] = [
     camera: {
       center: [-125.5, 54.0],
       zoom: 5,
-      pitch: 5,
-      bearing: 10,
+      pitch: 0,
+      bearing: 0,
     },
     terrain: { enabled: false, exaggeration: 0 },
     layers: [
@@ -83,7 +83,7 @@ export const CHAPTERS: Chapter[] = [
       { id: "cutblocks", opacity: 0.8 },
     ],
     timelineScrub: { start: 1950, end: 2025 },
-    scrollHeight: 200,
+    scrollHeight: 800,
   },
   {
     id: "fire",

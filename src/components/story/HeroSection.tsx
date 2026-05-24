@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { prefetchStoryTiles, prefetchTerrainTiles } from "@/lib/story/prefetch";
+import { prefetchStoryTiles, prefetchTerrainTiles, prefetchYearOverlays } from "@/lib/story/prefetch";
 
 function useRevealOnScroll() {
   const refs = useRef<(HTMLDivElement | null)[]>([]);
@@ -45,6 +45,7 @@ export function HeroSection() {
 
   useEffect(() => {
     prefetchStoryTiles();
+    prefetchYearOverlays();
     const key = process.env.NEXT_PUBLIC_MAPTILER_KEY;
     if (key) prefetchTerrainTiles(key);
   }, []);

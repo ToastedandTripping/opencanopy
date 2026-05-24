@@ -60,6 +60,16 @@ export function applyLayerVisibility(
     );
   }
 
+  // Forest base: green silhouette visible when forest-age is active
+  const forestBaseId = "story-forest-base";
+  if (map.getLayer(forestBaseId)) {
+    map.setPaintProperty(
+      forestBaseId,
+      "raster-opacity",
+      forestAgeActive ? 0.7 : 0
+    );
+  }
+
   for (const layerId of layerIds) {
     const storyLayer = activeLayers[layerId];
     const opacity = storyLayer?.opacity ?? 0;

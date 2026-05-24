@@ -7,9 +7,9 @@ import { MAP_STYLES, TERRAIN_SOURCE } from "@/lib/mapConfig";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import type { ChapterCamera, ChapterTerrain, ChapterFog, ChapterLayer } from "@/data/chapters";
 import { createHatchPattern } from "./HatchPattern";
-import { setupStoryLayers } from "@/lib/story/setup-layers";
+import { setupStoryLayers, YEAR_OVERLAY_URL_PATTERN, YEAR_OVERLAY_RANGE } from "@/lib/story/setup-layers";
 import { applyLayerVisibility, applyTimelineFilter } from "@/lib/story/visibility";
-import { prefetchStoryTiles, prefetchTerrainTiles } from "@/lib/story/prefetch";
+import { prefetchStoryTiles, prefetchTerrainTiles, prefetchYearOverlays } from "@/lib/story/prefetch";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
 initPMTiles();
@@ -175,6 +175,30 @@ export function StoryMap({
     applyTimelineFilter(map, layers, yearFilter);
   }, [yearFilter, layers, mapLoaded]);
 
+  // Swap year overlay image on scroll (province-scale raster cutblocks).
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapLoaded) return;
+
+    const overlayLayerId = "story-year-overlay";
+    const overlaySourceId = "story-year-overlay";
+    if (!map.getLayer(overlayLayerId) || !map.getSource(overlaySourceId)) return;
+
+    if (yearFilter != null) {
+      const clampedYear = Math.max(YEAR_OVERLAY_RANGE.start, Math.min(YEAR_OVERLAY_RANGE.end, yearFilter));
+      const url = YEAR_OVERLAY_URL_PATTERN.replace("{year}", String(clampedYear));
+
+      const src = map.getSource(overlaySourceId);
+      if (src && "updateImage" in src) {
+        (src as { updateImage: (opts: { url: string }) => void }).updateImage({ url });
+      }
+
+      map.setPaintProperty(overlayLayerId, "raster-opacity", 0.85);
+    } else {
+      map.setPaintProperty(overlayLayerId, "raster-opacity", 0);
+    }
+  }, [yearFilter, mapLoaded]);
+
   // On map load: add sources, layers, terrain, hatch pattern
   const onLoad = useCallback(() => {
     const map = mapRef.current?.getMap();
@@ -193,8 +217,9 @@ export function StoryMap({
 
     pipelineLog("onLoad", "layers registered");
 
-    // Prefetch raster + terrain tiles for all chapter viewports
+    // Prefetch raster tiles, terrain tiles, and year overlays
     prefetchStoryTiles();
+    prefetchYearOverlays();
     const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
     if (TERRAIN_SOURCE.enabled && maptilerKey) {
       prefetchTerrainTiles(maptilerKey);

@@ -15,10 +15,25 @@ import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/r
 const RASTER_OVERVIEW_URL =
   "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png";
 
+/** Overlay image bounds: [west, south, east, north] matching build-year-overlays.py BC_BOUNDS */
+export const OVERLAY_BOUNDS: [number, number, number, number] = [-139.5, 48.0, -114.0, 60.5];
+
+const R2_BASE = "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev";
+
+/** URL pattern for pre-rendered cutblock year overlays. */
+export const YEAR_OVERLAY_URL_PATTERN = `${R2_BASE}/raster/cutblocks-by-year/{year}.png`;
+
+/** Static green forest base overlay (sampled from forest-age data). */
+export const FOREST_BASE_URL = `${R2_BASE}/raster/cutblocks-by-year/forest-base.png`;
+
+export const YEAR_OVERLAY_RANGE = { start: 1950, end: 2025 } as const;
+
 /** All story layer IDs created by setupStoryLayers. */
 export const STORY_LAYER_IDS = [
   "story-hillshade",
+  "story-forest-base",
   "story-forest-age-raster",
+  "story-year-overlay",
   "story-forest-age-fill",
   "story-forest-age-outline",
   "story-cutblocks-fill",
@@ -33,7 +48,9 @@ export const STORY_LAYER_IDS = [
 /** All source IDs registered by setupStoryLayers. */
 export const STORY_SOURCE_IDS = [
   "terrain-rgb",
+  "story-forest-base",
   "story-forest-age-raster",
+  "story-year-overlay",
   PMTILES_SOURCE_ID,
 ] as const;
 
@@ -109,6 +126,37 @@ export function setupStoryLayers(
     );
   }
 
+  // ── Forest base image overlay (green silhouette of BC forests) ──
+  if (!map.getSource("story-forest-base")) {
+    const [west, south, east, north] = OVERLAY_BOUNDS;
+    map.addSource("story-forest-base", {
+      type: "image",
+      url: FOREST_BASE_URL,
+      coordinates: [
+        [west, north],
+        [east, north],
+        [east, south],
+        [west, south],
+      ],
+    });
+  }
+
+  if (!map.getLayer("story-forest-base")) {
+    map.addLayer(
+      {
+        id: "story-forest-base",
+        type: "raster",
+        source: "story-forest-base",
+        paint: {
+          "raster-opacity": 0,
+          "raster-opacity-transition": { duration: 600 },
+          "raster-fade-duration": 0,
+        },
+      },
+      firstSymbolId,
+    );
+  }
+
   // ── Raster overview source (forest-age, z4-z8) ──────────────────
   if (!map.getSource("story-forest-age-raster")) {
     map.addSource("story-forest-age-raster", {
@@ -130,6 +178,37 @@ export function setupStoryLayers(
         paint: {
           "raster-opacity": 0,
           "raster-opacity-transition": { duration: 400 },
+        },
+      },
+      firstSymbolId,
+    );
+  }
+
+  // ── Year overlay image source (cutblocks by year, province zoom) ─
+  if (!map.getSource("story-year-overlay")) {
+    const [west, south, east, north] = OVERLAY_BOUNDS;
+    map.addSource("story-year-overlay", {
+      type: "image",
+      url: YEAR_OVERLAY_URL_PATTERN.replace("{year}", String(YEAR_OVERLAY_RANGE.start)),
+      coordinates: [
+        [west, north],  // top-left
+        [east, north],  // top-right
+        [east, south],  // bottom-right
+        [west, south],  // bottom-left
+      ],
+    });
+  }
+
+  if (!map.getLayer("story-year-overlay")) {
+    map.addLayer(
+      {
+        id: "story-year-overlay",
+        type: "raster",
+        source: "story-year-overlay",
+        paint: {
+          "raster-opacity": 0,
+          "raster-opacity-transition": { duration: 200 },
+          "raster-fade-duration": 0,
         },
       },
       firstSymbolId,
@@ -201,6 +280,7 @@ export function setupStoryLayers(
         type: "fill",
         source: PMTILES_SOURCE_ID,
         "source-layer": "tenure-cutblocks",
+        minzoom: 9,
         paint: {
           "fill-color": "#dc2626",
           "fill-opacity": 0,
@@ -220,6 +300,7 @@ export function setupStoryLayers(
         type: "line",
         source: PMTILES_SOURCE_ID,
         "source-layer": "tenure-cutblocks",
+        minzoom: 9,
         paint: {
           "line-color": "#dc2626",
           "line-width": 0.5,
@@ -239,6 +320,7 @@ export function setupStoryLayers(
         type: "fill",
         source: PMTILES_SOURCE_ID,
         "source-layer": "fire-history",
+        minzoom: 9,
         paint: {
           "fill-color": "#f59e0b",
           "fill-opacity": 0,
@@ -258,6 +340,7 @@ export function setupStoryLayers(
         type: "line",
         source: PMTILES_SOURCE_ID,
         "source-layer": "fire-history",
+        minzoom: 9,
         paint: {
           "line-color": "#f59e0b",
           "line-width": 1,
@@ -277,6 +360,7 @@ export function setupStoryLayers(
         type: "fill",
         source: PMTILES_SOURCE_ID,
         "source-layer": "parks",
+        minzoom: 9,
         paint: {
           "fill-color": "rgba(255,255,255,0.1)",
           "fill-opacity": 0,
@@ -295,6 +379,7 @@ export function setupStoryLayers(
         type: "line",
         source: PMTILES_SOURCE_ID,
         "source-layer": "parks",
+        minzoom: 9,
         paint: {
           "line-color": "#ffffff",
           "line-width": 1,

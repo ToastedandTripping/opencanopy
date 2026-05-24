@@ -70,11 +70,11 @@ describe("source + layer registration", () => {
     }
   });
 
-  it("creates exactly 11 layers (plus terrain-controlled hillshade)", () => {
+  it("creates exactly 13 layers (plus terrain-controlled hillshade)", () => {
     setupStoryLayers(map, { terrain: terrainConfig, hatchPattern: null });
     const addLayerCalls = map._getCalls().addLayer;
-    // 11 story layers including hillshade
-    expect(addLayerCalls.length).toBe(11);
+    // 13 story layers: hillshade, forest-base, raster, year-overlay, fills/outlines, hatch
+    expect(addLayerCalls.length).toBe(13);
   });
 
   // ── Initial opacity ─────────────────────────────────────────────

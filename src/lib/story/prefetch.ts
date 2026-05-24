@@ -7,6 +7,7 @@
  */
 
 import { CHAPTERS } from "@/data/chapters";
+import { YEAR_OVERLAY_URL_PATTERN, YEAR_OVERLAY_RANGE } from "@/lib/story/setup-layers";
 
 const R2_BASE = "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev";
 const RASTER_URL_TEMPLATE = `${R2_BASE}/raster/forest-age/{z}/{x}/{y}.png`;
@@ -139,4 +140,42 @@ export function prefetchTerrainTiles(maptilerKey: string): void {
       img.src = `https://api.maptiler.com/tiles/terrain-rgb-v2/${tz}/${x}/${y}.webp?key=${maptilerKey}`;
     }
   }
+}
+
+let yearOverlayPrefetchStarted = false;
+
+// Keep references so browser doesn't GC the decoded images before MapLibre needs them.
+const yearOverlayCache: HTMLImageElement[] = [];
+
+/**
+ * Prefetch all per-year cutblock overlay PNGs (1950-2025).
+ * ~3MB total. Stored in yearOverlayCache so they stay decoded in memory
+ * for instant swaps during timeline scrubbing.
+ * Idempotent: safe to call from both HeroSection and StoryMap.
+ */
+export function prefetchYearOverlays(): void {
+  if (yearOverlayPrefetchStarted || typeof Image === "undefined") return;
+  yearOverlayPrefetchStarted = true;
+
+  const urls: string[] = [];
+  for (let yr = YEAR_OVERLAY_RANGE.start; yr <= YEAR_OVERLAY_RANGE.end; yr++) {
+    urls.push(YEAR_OVERLAY_URL_PATTERN.replace("{year}", String(yr)));
+  }
+
+  let idx = 0;
+  const BATCH = 10;
+
+  function loadBatch() {
+    const end = Math.min(idx + BATCH, urls.length);
+    for (; idx < end; idx++) {
+      const img = new Image();
+      img.src = urls[idx];
+      yearOverlayCache.push(img);
+    }
+    if (idx < urls.length) {
+      setTimeout(loadBatch, 30);
+    }
+  }
+
+  loadBatch();
 }
