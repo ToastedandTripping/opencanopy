@@ -54,7 +54,6 @@ data/tiles/test/
 /public/data/tiles/
 data/raster/*.tif
 data/raster-tiles/
-/public/raster/cutblocks-by-year/
 
 # V2 Diagnostic Pipeline — generated artifacts
 e2e/screenshots/baselines/

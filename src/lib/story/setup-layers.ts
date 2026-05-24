@@ -18,13 +18,11 @@ const RASTER_OVERVIEW_URL =
 /** Overlay image bounds: [west, south, east, north] matching build-year-overlays.py BC_BOUNDS */
 export const OVERLAY_BOUNDS: [number, number, number, number] = [-139.5, 48.0, -114.0, 60.5];
 
-const R2_BASE = "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev";
-
-/** URL pattern for pre-rendered cutblock year overlays. */
-export const YEAR_OVERLAY_URL_PATTERN = `${R2_BASE}/raster/cutblocks-by-year/{year}.png`;
+/** URL pattern for pre-rendered cutblock year overlays (same-origin, deployed via public/). */
+export const YEAR_OVERLAY_URL_PATTERN = "/raster/cutblocks-by-year/{year}.png";
 
 /** Static green forest base overlay (sampled from forest-age data). */
-export const FOREST_BASE_URL = `${R2_BASE}/raster/cutblocks-by-year/forest-base.png`;
+export const FOREST_BASE_URL = "/raster/cutblocks-by-year/forest-base.png";
 
 export const YEAR_OVERLAY_RANGE = { start: 1950, end: 2025 } as const;
 
