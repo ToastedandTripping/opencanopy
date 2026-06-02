@@ -63,3 +63,9 @@ data/tiles/archive/
 data/reports/
 # audit-crosssource.py no longer writes this file (C2 fix), but ignore any existing copy
 scripts/lib/pmtiles-point-reader.mjs
+
+# Generated/cache artifacts (kept out of git, not deleted)
+.wrangler/
+/data/checkpoint/
+scripts/__pycache__/
+/test-results/
