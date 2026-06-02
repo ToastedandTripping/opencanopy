@@ -105,7 +105,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       opacity: 0.7,
     },
     zoomRange: [5, 18],
-    defaultEnabled: true,
+    defaultEnabled: false,
     interactive: true,
     legendItems: [
       { color: "#0d5c2a", label: "Old Growth (250+ yr)" },
@@ -385,7 +385,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       opacity: 1,
     },
     zoomRange: [5, 18],
-    defaultEnabled: true,
+    defaultEnabled: false,
     interactive: true,
     legendItems: [{ color: "#ffffff", label: "Provincial Park" }],
     fetchPriority: 0,

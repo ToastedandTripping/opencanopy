@@ -5,7 +5,7 @@ import { getDefaultLayers } from "@/lib/layers";
 import { LAYER_PRESETS } from "@/lib/layers";
 import { LAYER_REGISTRY } from "@/lib/layers";
 
-const STORAGE_KEY = "opencanopy-layers";
+const STORAGE_KEY = "opencanopy-layers-v2";
 
 /** Parse layer IDs from URL hash `layers=` param */
 function parseLayersFromHash(): string[] | null {
