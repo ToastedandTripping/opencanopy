@@ -43,8 +43,19 @@ function readFromStorage(): string[] | null {
   }
 }
 
+/**
+ * Resolve the initial enabled layers using the documented priority order:
+ * URL hash -> localStorage -> registry defaults.
+ *
+ * Exported so useMapState can seed its URL-sync baseline from the SAME resolved
+ * value this hook hydrates to, preventing a spurious history entry on load.
+ */
+export function resolveInitialLayers(): string[] {
+  return parseLayersFromHash() ?? readFromStorage() ?? getDefaultLayers();
+}
+
 /** Determine which preset (if any) exactly matches the given layers */
-function computeActivePreset(layers: string[]): string | null {
+export function computeActivePreset(layers: string[]): string | null {
   const sorted = [...layers].sort();
   for (const preset of LAYER_PRESETS) {
     const presetSorted = [...preset.layers].sort();
@@ -92,23 +103,17 @@ export function useLayerState(): LayerStateReturn {
     return getDefaultLayers();
   });
 
-  // Hydrate from URL -> localStorage -> defaults on mount
+  // Hydrate from URL -> localStorage on mount. Only set when a non-default
+  // source provides layers, so the common no-layers case keeps the useState
+  // default and avoids an extra render. (Defaults already set via initializer.)
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
 
-    const fromUrl = parseLayersFromHash();
-    if (fromUrl) {
-      setEnabledLayers(fromUrl);
-      return;
+    const fromUrlOrStorage = parseLayersFromHash() ?? readFromStorage();
+    if (fromUrlOrStorage) {
+      setEnabledLayers(fromUrlOrStorage);
     }
-
-    const fromStorage = readFromStorage();
-    if (fromStorage) {
-      setEnabledLayers(fromStorage);
-      return;
-    }
-    // Defaults already set via useState initializer
   }, []);
 
   // Persist to localStorage on every change
