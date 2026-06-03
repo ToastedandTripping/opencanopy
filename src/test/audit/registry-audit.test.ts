@@ -277,3 +277,45 @@ describe("Check 4: Filter expression validation", () => {
     }
   });
 });
+
+// ── Check 5: Province-scale crash guard ──────────────────────────────────────
+//
+// The "forest-age" PMTiles source layer holds ~6.2M polygons. Vector-rendering
+// it at province zoom crashes low-end browsers, which is why the primary
+// forest-age layer ships a rasterOverview (PNG tiles for z4-z9). Any OTHER fill
+// layer sharing that source layer must avoid the same crash: either it provides
+// its own rasterOverview, or it gates the PMTiles vector tiles to z>=9 via
+// tileSource.minZoom. (logging-risk takes the minZoom path.)
+
+describe("Check 5: Province-scale crash guard (forest-age source)", () => {
+  const DENSE_SOURCE = "forest-age";
+  const MIN_SAFE_ZOOM = 9;
+
+  const forestAgeFillLayers = LAYER_REGISTRY.filter(
+    (l) =>
+      l.tileSource?.sourceLayer === DENSE_SOURCE && l.style.type === "fill"
+  );
+
+  it("has at least the two known forest-age fill layers", () => {
+    const ids = forestAgeFillLayers.map((l) => l.id).sort();
+    expect(ids).toContain("forest-age");
+    expect(ids).toContain("logging-risk");
+  });
+
+  it("every forest-age fill layer has a rasterOverview OR tileSource.minZoom >= 9", () => {
+    const offenders: string[] = [];
+    for (const layer of forestAgeFillLayers) {
+      const hasRaster = !!layer.rasterOverview;
+      const gated = (layer.tileSource?.minZoom ?? 0) >= MIN_SAFE_ZOOM;
+      if (!hasRaster && !gated) {
+        offenders.push(layer.id);
+      }
+    }
+    expect(
+      offenders,
+      `These forest-age fill layers render ~6.2M polygons at province zoom ` +
+        `with no rasterOverview and no minZoom guard (Chrome crash risk): ` +
+        `${offenders.join(", ")}. Add a rasterOverview or set tileSource.minZoom >= ${MIN_SAFE_ZOOM}.`
+    ).toHaveLength(0);
+  });
+});

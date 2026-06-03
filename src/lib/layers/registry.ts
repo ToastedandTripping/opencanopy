@@ -134,6 +134,10 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       url: PMTILES_URL,
       sourceLayer: "forest-age",
       maxZoom: PMTILES_MAX_ZOOM,
+      // Crash guard: forest-age is ~6.2M polygons. Unlike the primary
+      // forest-age layer, this proxy has no rasterOverview, so gate the
+      // vector tiles to z>=9 to avoid province-scale WebGL crashes.
+      minZoom: 9,
     },
     style: {
       type: "fill",
@@ -169,7 +173,9 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       },
       opacity: 0.6,
     },
-    zoomRange: [5, 18],
+    // Gated to z>=9 (see tileSource.minZoom) to avoid a province-scale crash;
+    // zoomRange reflects the actual visible range.
+    zoomRange: [9, 18],
     defaultEnabled: false,
     interactive: true,
     legendItems: [

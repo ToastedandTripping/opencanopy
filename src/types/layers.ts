@@ -31,6 +31,11 @@ export interface TileSource {
   sourceLayer: string;
   /** Max zoom level for tile data (WFS takes over above this) */
   maxZoom: number;
+  /** Optional minimum zoom for the PMTiles vector tiles. Use to gate very dense
+   *  source layers (e.g. the 6.2M-feature forest-age layer) so they don't
+   *  vector-render at province scale and crash the browser. Defaults to 0.
+   *  Ignored when the layer has a rasterOverview (the overview's maxZoom+1 wins). */
+  minZoom?: number;
 }
 
 /** MapLibre paint/layout style specification */
