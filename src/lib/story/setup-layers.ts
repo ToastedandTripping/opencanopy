@@ -10,10 +10,13 @@
 
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
+import { FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
 
-/** Raster overview tiles for forest-age at province zoom (z4-z8). */
-const RASTER_OVERVIEW_URL =
-  "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png";
+/** Raster overview tiles for forest-age at province zoom (z4-z8).
+ *  Re-exported from the shared r2-config so the story map and the interactive
+ *  registry are guaranteed to request the same tiles (asserted in
+ *  story-consistency-audit). */
+export const RASTER_OVERVIEW_URL = FOREST_AGE_RASTER_URL;
 
 /** Overlay image bounds: [west, south, east, north] matching build-year-overlays.py BC_BOUNDS */
 export const OVERLAY_BOUNDS: [number, number, number, number] = [-139.5, 48.0, -114.0, 60.5];

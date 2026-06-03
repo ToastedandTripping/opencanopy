@@ -19,7 +19,9 @@ import { LAYER_REGISTRY } from "@/lib/layers/registry";
 import {
   STORY_LAYER_IDS,
   STORY_SOURCE_IDS,
+  RASTER_OVERVIEW_URL,
 } from "@/lib/story/setup-layers";
+import { FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
 import { CHAPTERS } from "@/data/chapters";
 
 // ── Known PMTiles source layers (mirrors KNOWN_SOURCE_LAYERS in registry-audit) ─
@@ -62,19 +64,10 @@ function extractSourceLayerNames(source: string): string[] {
   return names;
 }
 
-/** Extract the raster tiles URL from the setup-layers source. */
-function extractRasterOverviewUrl(source: string): string | null {
-  // Matches: "https://.../{z}/{x}/{y}.png"
-  const pattern = /const RASTER_OVERVIEW_URL\s*=\s*\n?\s*"([^"]+)"/;
-  const match = source.match(pattern);
-  return match ? match[1] : null;
-}
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("Check 9: Story page ↔ Registry consistency", () => {
   const sourceLayerNames = extractSourceLayerNames(setupLayersSource);
-  const rasterOverviewUrl = extractRasterOverviewUrl(setupLayersSource);
 
   it("STORY_LAYER_IDS is exported and non-empty", () => {
     expect(STORY_LAYER_IDS).toBeDefined();
@@ -195,31 +188,32 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
   });
 
   describe("raster overview URL matches registry", () => {
-    it("setup-layers.ts RASTER_OVERVIEW_URL is extractable", () => {
-      expect(
-        rasterOverviewUrl,
-        "Could not extract RASTER_OVERVIEW_URL from setup-layers.ts. " +
-          "Has the constant name or format changed?"
-      ).not.toBeNull();
+    // The story map and the interactive registry both import FOREST_AGE_RASTER_URL
+    // from @/lib/r2-config (single source of truth). These checks assert that
+    // single source actually flows to both consumers at runtime, so the story
+    // never renders different raster tiles than the main map.
+    it("setup-layers.ts RASTER_OVERVIEW_URL is exported and non-empty", () => {
+      expect(RASTER_OVERVIEW_URL).toBeTruthy();
+      expect(RASTER_OVERVIEW_URL).toContain("{z}");
     });
 
-    it("setup-layers.ts RASTER_OVERVIEW_URL matches forest-age registry rasterOverview", () => {
-      if (!rasterOverviewUrl) return; // Covered by previous test
+    it("setup-layers RASTER_OVERVIEW_URL === shared FOREST_AGE_RASTER_URL", () => {
+      expect(
+        RASTER_OVERVIEW_URL,
+        "setup-layers.ts no longer uses the shared r2-config constant."
+      ).toBe(FOREST_AGE_RASTER_URL);
+    });
 
+    it("forest-age registry rasterOverview === shared FOREST_AGE_RASTER_URL", () => {
       const forestAge = LAYER_REGISTRY.find((l) => l.id === "forest-age");
       expect(forestAge, "forest-age layer not found in registry").toBeDefined();
       expect(
-        forestAge?.rasterOverview,
-        "forest-age registry entry has no rasterOverview"
-      ).toBeDefined();
-
-      expect(
-        rasterOverviewUrl,
-        `setup-layers.ts RASTER_OVERVIEW_URL "${rasterOverviewUrl}" ` +
-          `does not match registry rasterOverview.urlTemplate ` +
-          `"${forestAge?.rasterOverview?.urlTemplate}". ` +
+        forestAge?.rasterOverview?.urlTemplate,
+        `registry rasterOverview.urlTemplate ` +
+          `"${forestAge?.rasterOverview?.urlTemplate}" does not match the shared ` +
+          `FOREST_AGE_RASTER_URL "${FOREST_AGE_RASTER_URL}". ` +
           "The story will render different raster tiles than the main map."
-      ).toBe(forestAge?.rasterOverview?.urlTemplate);
+      ).toBe(FOREST_AGE_RASTER_URL);
     });
   });
 

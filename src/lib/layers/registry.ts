@@ -3,8 +3,9 @@ import {
   COMPANY_REGISTRY,
   companyColorExpression,
 } from "@/data/companies";
+import { R2_PUBLIC_BASE, FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
 
-export const PMTILES_URL = "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v10.pmtiles";
+export const PMTILES_URL = `pmtiles://${R2_PUBLIC_BASE}/opencanopy-v10.pmtiles`;
 export const PMTILES_SOURCE_ID = "opencanopy";
 export const PMTILES_MAX_ZOOM = 12;
 
@@ -42,8 +43,9 @@ const WFS_ENDPOINTS = {
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
 
 /**
- * All 8 launch layers for OpenCanopy.
- * Each defines its data source, visual style, zoom behavior, and legend.
+ * The OpenCanopy layer registry.
+ * Each entry defines a layer's data source, visual style, zoom behavior, and
+ * legend. Adding a layer is a single object here (see CONTRIBUTING.md).
  */
 export const LAYER_REGISTRY: LayerDefinition[] = [
   // ── Forest layers ──────────────────────────────────────────────
@@ -65,11 +67,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       maxZoom: PMTILES_MAX_ZOOM,
     },
     rasterOverview: {
-      urlTemplate: "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png",
+      urlTemplate: FOREST_AGE_RASTER_URL,
       minZoom: 4,
       maxZoom: 9,
     },
-    rasterOverviewClassUrl: "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/{class}/{z}/{x}/{y}.png",
+    rasterOverviewClassUrl: `${R2_PUBLIC_BASE}/raster/{class}/{z}/{x}/{y}.png`,
     style: {
       type: "fill",
       paint: {
