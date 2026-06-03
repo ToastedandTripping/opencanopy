@@ -1,6 +1,7 @@
 "use client";
 
 import { Popup } from "react-map-gl/maplibre";
+import { getCompanyDisplayName } from "@/data/companies";
 
 interface MapPopupProps {
   longitude: number;
@@ -12,6 +13,7 @@ interface MapPopupProps {
 /** Format a VRI property name into something human-readable */
 function formatPropertyName(key: string): string {
   const labels: Record<string, string> = {
+    company_id: "Company",
     PROJ_AGE_1: "Stand Age",
     SPECIES_CD_1: "Dominant Species",
     SPECIES_PCT_1: "Species %",
@@ -81,6 +83,9 @@ function formatPropertyName(key: string): string {
 function formatPropertyValue(key: string, value: unknown): string {
   if (value === null || value === undefined) return "--";
 
+  if (key === "company_id") {
+    return getCompanyDisplayName(String(value));
+  }
   if (key === "FEATURE_AREA_SQM" && typeof value === "number") {
     return `${(value / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 })} ha`;
   }
@@ -112,6 +117,8 @@ function formatPropertyValue(key: string, value: unknown): string {
 
 /** Properties to show, in priority order */
 const PRIORITY_KEYS = [
+  // Logging Companies (tenure-cutblocks): the licensee is the headline fact
+  "company_id",
   "class",
   "PROJ_AGE_1",
   "SPECIES_CD_1",

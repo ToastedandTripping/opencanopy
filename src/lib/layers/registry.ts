@@ -1,6 +1,7 @@
 import type { LayerDefinition } from "@/types/layers";
 import {
-  COMPANY_REGISTRY,
+  PRESENT_COMPANIES,
+  OTHER_COMPANY_COLOR,
   companyColorExpression,
 } from "@/data/companies";
 import { R2_PUBLIC_BASE, FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
@@ -279,11 +280,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     defaultEnabled: false,
     interactive: true,
     legendItems: [
-      ...COMPANY_REGISTRY.slice(0, 7).map((c) => ({
+      ...PRESENT_COMPANIES.map((c) => ({
         color: c.color,
         label: c.displayName,
       })),
-      { color: "#6b7280", label: "Other" },
+      { color: OTHER_COMPANY_COLOR, label: "Other" },
     ],
     fetchPriority: 1,
     timelineField: "DISTURBANCE_START_DATE",
