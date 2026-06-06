@@ -9,6 +9,7 @@ import {
   DEFAULT_BEARING,
   MAP_STYLES,
 } from "@/lib/mapConfig";
+import { resolveInitialLayers, computeActivePreset } from "@/hooks/useLayerState";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -258,12 +259,20 @@ export function useMapState({
   // Update URL on layer/preset change (pushState for back-nav)
   useEffect(() => {
     const layerKey = enabledLayers.join(",") + "|" + (activePreset || "");
-    if (layerKey === lastLayerHash.current) return;
-    // Skip on initial mount to avoid double-write
+
+    // First run: seed the baseline from the URL/storage-resolved initial layers,
+    // NOT the pre-hydration default. useLayerState hydrates layers in a post-mount
+    // effect (a second render); seeding to the resolved value means that hydration
+    // render matches the baseline and does NOT push a spurious history entry.
+    // Without this, opening a shared "#layers=" link traps the Back button.
     if (!lastLayerHash.current) {
-      lastLayerHash.current = layerKey;
+      const initial = resolveInitialLayers();
+      lastLayerHash.current =
+        initial.join(",") + "|" + (computeActivePreset(initial) || "");
       return;
     }
+
+    if (layerKey === lastLayerHash.current) return;
     lastLayerHash.current = layerKey;
 
     const map = mapRef.current?.getMap();

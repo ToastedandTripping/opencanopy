@@ -62,18 +62,14 @@ const EMPTY_FC: GeoJSON.FeatureCollection = {
  */
 function PmtilesLayers({
   layer,
-  tileMaxZoom,
   tileMinZoom,
   visible,
-  opacity,
   classFilters,
   yearFilter,
 }: {
   layer: LayerDefinition;
-  tileMaxZoom: number;
   tileMinZoom?: number;
   visible: boolean;
-  opacity: number;
   classFilters?: Record<string, string[]>;
   yearFilter?: number | null;
 }) {
@@ -1121,10 +1117,8 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
         {hasTileSource && layer.tileSource && (
           <PmtilesLayers
             layer={layer}
-            tileMaxZoom={tileMaxZoom}
-            tileMinZoom={hasRasterOverview ? rasterMaxZoom + 1 : undefined}
+            tileMinZoom={hasRasterOverview ? rasterMaxZoom + 1 : layer.tileSource.minZoom}
             visible={visible}
-            opacity={targetOpacity}
             classFilters={classFilters}
             yearFilter={yearFilter}
           />

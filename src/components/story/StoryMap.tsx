@@ -51,7 +51,6 @@ export function StoryMap({
   const hatchAddedRef = useRef(false);
   const terrainExaggerationRef = useRef(0);
   const terrainAnimRef = useRef<number | null>(null);
-  const mapReadyRef = useRef(false);
   const [mapLoaded, setMapLoaded] = useState(false);
 
   // Apply camera on every update
@@ -226,7 +225,6 @@ export function StoryMap({
     }
 
     // Signal that map is loaded -- triggers layer visibility + timeline effects
-    mapReadyRef.current = true;
     setMapLoaded(true);
     pipelineLog("setMapLoaded", "true");
     pipelineLog("onLoad", "end");

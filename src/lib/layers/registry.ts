@@ -1,10 +1,12 @@
 import type { LayerDefinition } from "@/types/layers";
 import {
-  COMPANY_REGISTRY,
+  PRESENT_COMPANIES,
+  OTHER_COMPANY_COLOR,
   companyColorExpression,
 } from "@/data/companies";
+import { R2_PUBLIC_BASE, FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
 
-export const PMTILES_URL = "pmtiles://https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/opencanopy-v10.pmtiles";
+export const PMTILES_URL = `pmtiles://${R2_PUBLIC_BASE}/opencanopy-v10.pmtiles`;
 export const PMTILES_SOURCE_ID = "opencanopy";
 export const PMTILES_MAX_ZOOM = 12;
 
@@ -42,8 +44,9 @@ const WFS_ENDPOINTS = {
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
 
 /**
- * All 8 launch layers for OpenCanopy.
- * Each defines its data source, visual style, zoom behavior, and legend.
+ * The OpenCanopy layer registry.
+ * Each entry defines a layer's data source, visual style, zoom behavior, and
+ * legend. Adding a layer is a single object here (see CONTRIBUTING.md).
  */
 export const LAYER_REGISTRY: LayerDefinition[] = [
   // ── Forest layers ──────────────────────────────────────────────
@@ -65,11 +68,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       maxZoom: PMTILES_MAX_ZOOM,
     },
     rasterOverview: {
-      urlTemplate: "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/forest-age/{z}/{x}/{y}.png",
+      urlTemplate: FOREST_AGE_RASTER_URL,
       minZoom: 4,
       maxZoom: 9,
     },
-    rasterOverviewClassUrl: "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/raster/{class}/{z}/{x}/{y}.png",
+    rasterOverviewClassUrl: `${R2_PUBLIC_BASE}/raster/{class}/{z}/{x}/{y}.png`,
     style: {
       type: "fill",
       paint: {
@@ -105,7 +108,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       opacity: 0.7,
     },
     zoomRange: [5, 18],
-    defaultEnabled: true,
+    defaultEnabled: false,
     interactive: true,
     legendItems: [
       { color: "#0d5c2a", label: "Old Growth (250+ yr)" },
@@ -132,6 +135,10 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       url: PMTILES_URL,
       sourceLayer: "forest-age",
       maxZoom: PMTILES_MAX_ZOOM,
+      // Crash guard: forest-age is ~6.2M polygons. Unlike the primary
+      // forest-age layer, this proxy has no rasterOverview, so gate the
+      // vector tiles to z>=9 to avoid province-scale WebGL crashes.
+      minZoom: 9,
     },
     style: {
       type: "fill",
@@ -167,7 +174,9 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       },
       opacity: 0.6,
     },
-    zoomRange: [5, 18],
+    // Gated to z>=9 (see tileSource.minZoom) to avoid a province-scale crash;
+    // zoomRange reflects the actual visible range.
+    zoomRange: [9, 18],
     defaultEnabled: false,
     interactive: true,
     legendItems: [
@@ -271,11 +280,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     defaultEnabled: false,
     interactive: true,
     legendItems: [
-      ...COMPANY_REGISTRY.slice(0, 7).map((c) => ({
+      ...PRESENT_COMPANIES.map((c) => ({
         color: c.color,
         label: c.displayName,
       })),
-      { color: "#6b7280", label: "Other" },
+      { color: OTHER_COMPANY_COLOR, label: "Other" },
     ],
     fetchPriority: 1,
     timelineField: "DISTURBANCE_START_DATE",
@@ -385,7 +394,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       opacity: 1,
     },
     zoomRange: [5, 18],
-    defaultEnabled: true,
+    defaultEnabled: false,
     interactive: true,
     legendItems: [{ color: "#ffffff", label: "Provincial Park" }],
     fetchPriority: 0,

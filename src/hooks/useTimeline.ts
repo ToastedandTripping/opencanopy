@@ -120,19 +120,6 @@ export function useTimeline(activeTimelineLayers?: LayerDefinition[]) {
     setCurrentYear(range[0]);
   }, [range]);
 
-  const play = useCallback(() => {
-    // If at the end, restart from the beginning
-    setCurrentYear((prev) => {
-      if (prev >= range[1]) return range[0];
-      return prev;
-    });
-    setPlaying(true);
-  }, [range]);
-
-  const pause = useCallback(() => {
-    setPlaying(false);
-  }, []);
-
   const togglePlay = useCallback(() => {
     setPlaying((prev) => {
       if (!prev) {
@@ -177,8 +164,6 @@ export function useTimeline(activeTimelineLayers?: LayerDefinition[]) {
     range,
     enable,
     disable,
-    play,
-    pause,
     togglePlay,
     setYear,
     setSpeed,

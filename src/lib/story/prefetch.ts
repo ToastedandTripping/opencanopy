@@ -8,9 +8,9 @@
 
 import { CHAPTERS } from "@/data/chapters";
 import { YEAR_OVERLAY_URL_PATTERN, YEAR_OVERLAY_RANGE } from "@/lib/story/setup-layers";
+import { FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
 
-const R2_BASE = "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev";
-const RASTER_URL_TEMPLATE = `${R2_BASE}/raster/forest-age/{z}/{x}/{y}.png`;
+const RASTER_URL_TEMPLATE = FOREST_AGE_RASTER_URL;
 
 function lon2tile(lon: number, zoom: number): number {
   return Math.floor(((lon + 180) / 360) * (1 << zoom));

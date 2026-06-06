@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import Script from "next/script";
+import { R2_PUBLIC_BASE } from "@/lib/r2-config";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -56,7 +57,7 @@ export default function RootLayout({
         />
         <link
           rel="preconnect"
-          href="https://pub-b5568be386ef4e638b4e49af41395600.r2.dev"
+          href={R2_PUBLIC_BASE}
           crossOrigin="anonymous"
         />
         <link

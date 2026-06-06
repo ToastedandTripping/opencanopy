@@ -6,7 +6,7 @@ Open-source conservation mapping for British Columbia. Visualize old-growth fore
 
 ## What It Does
 
-- Interactive map with 8 data layers (forest age, cutblocks, fish streams, species at risk, parks, conservancies)
+- Interactive map with 17 BC government data layers (forest age, cutblocks, logging companies, fire history, old growth, parks, conservancies, OGMAs, fish streams, species at risk, wildlife habitat, mining claims, forestry roads, and more) plus a satellite basemap
 - Draw-a-box carbon calculator: select any area to see tonnes of CO2 stored, equivalent cars/homes/flights
 - Shareable URLs: every view is a link
 - Layer presets: Overview, Threats, Ecology, Protection
@@ -29,7 +29,7 @@ All data is freely available from BC government sources:
 
 ### Development
 ```bash
-git clone https://github.com/secretsaunacompany/opencanopy.git
+git clone https://github.com/ToastedandTripping/opencanopy.git
 cd opencanopy
 cp .env.example .env.local
 # Add your MapTiler API key to .env.local
