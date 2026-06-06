@@ -29,7 +29,7 @@ All data is freely available from BC government sources:
 
 ### Development
 ```bash
-git clone https://github.com/secretsaunacompany/opencanopy.git
+git clone https://github.com/ToastedandTripping/opencanopy.git
 cd opencanopy
 cp .env.example .env.local
 # Add your MapTiler API key to .env.local
