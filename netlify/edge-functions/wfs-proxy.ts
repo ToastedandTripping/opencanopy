@@ -493,6 +493,75 @@ function errorResponse(message: string, status = 400): Response {
   });
 }
 
+// ── Rate limiting (in-memory token bucket, per isolate) ─────────
+//
+// IMPORTANT: Netlify edge functions run in isolated V8 isolates per edge node.
+// This in-memory state is NOT shared across nodes or across isolate restarts.
+// It effectively blunts a single client hammering one edge node, but it is not
+// a substitute for a globally-distributed rate limit (which would require an
+// external store like Netlify Blobs or Redis). Netlify does not currently expose
+// a native config-based rate-limiting API for edge functions.
+//
+// Cap: 60 requests per 60 seconds per IP.
+// Map cap: max 5000 tracked IPs per isolate — once exceeded, oldest entries are
+// evicted to prevent unbounded memory growth on a long-lived isolate.
+
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 60;  // per window per IP
+const RATE_LIMIT_MAP_CAP = 5_000;    // max IPs tracked in memory
+
+interface BucketEntry {
+  count: number;
+  windowStart: number;
+}
+
+// Exported for unit testing the bucket logic in isolation.
+export function rateLimitMap(): Map<string, BucketEntry> {
+  return _rateLimitMap;
+}
+
+const _rateLimitMap = new Map<string, BucketEntry>();
+
+function checkRateLimit(ip: string): { allowed: boolean; retryAfter: number } {
+  const now = Date.now();
+
+  // Evict oldest entry if map is at cap
+  if (!_rateLimitMap.has(ip) && _rateLimitMap.size >= RATE_LIMIT_MAP_CAP) {
+    const firstKey = _rateLimitMap.keys().next().value;
+    if (firstKey !== undefined) {
+      _rateLimitMap.delete(firstKey);
+    }
+  }
+
+  const entry = _rateLimitMap.get(ip);
+
+  if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
+    // New window
+    _rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return { allowed: true, retryAfter: 0 };
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    const retryAfter = Math.ceil(
+      (RATE_LIMIT_WINDOW_MS - (now - entry.windowStart)) / 1000
+    );
+    return { allowed: false, retryAfter };
+  }
+
+  entry.count += 1;
+  return { allowed: true, retryAfter: 0 };
+}
+
+function rateLimitResponse(retryAfter: number): Response {
+  const headers = corsHeaders(); // preserve Access-Control-Allow-Origin: *
+  headers["Cache-Control"] = "no-cache"; // never cache a 429
+  headers["Retry-After"] = String(retryAfter);
+  return new Response(
+    JSON.stringify({ error: "Rate limit exceeded. Please slow down." }),
+    { status: 429, headers }
+  );
+}
+
 // ── Main handler ────────────────────────────────────────────────
 
 export default async function handler(
@@ -502,6 +571,18 @@ export default async function handler(
   // Handle CORS preflight
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });
+  }
+
+  // Rate limit by client IP (best-effort per isolate — see comment above)
+  const clientIp =
+    request.headers.get("x-nf-client-connection-ip") ??
+    (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ??
+    "unknown";
+
+  const { allowed, retryAfter } = checkRateLimit(clientIp);
+  if (!allowed) {
+    console.warn(`WFS proxy: rate limit exceeded for IP ${clientIp}`);
+    return rateLimitResponse(retryAfter);
   }
 
   // Only allow GET requests

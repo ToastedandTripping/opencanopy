@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import Script from "next/script";
 import { R2_PUBLIC_BASE } from "@/lib/r2-config";
@@ -17,6 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://opencanopy.ca"),
   title: "OpenCanopy | Conservation Mapping for BC",
   description:
     "Open-source interactive conservation mapping for British Columbia. Visualize old growth, carbon value, species at risk, and logging threats.",
@@ -40,6 +41,14 @@ export const metadata: Metadata = {
   },
 };
 
+// Viewport is exported separately per Next 16 API.
+// maximumScale: 1 is intentional — prevents iOS auto-zoom on a full-screen map.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -51,10 +60,6 @@ export default function RootLayout({
       className={`${jakarta.variable} ${inter.variable} h-full antialiased dark`}
     >
       <head>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1"
-        />
         <link
           rel="preconnect"
           href={R2_PUBLIC_BASE}
