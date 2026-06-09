@@ -5,6 +5,18 @@ import { getDefaultLayers } from "@/lib/layers";
 import { LAYER_PRESETS } from "@/lib/layers";
 import { LAYER_REGISTRY } from "@/lib/layers";
 
+// ── Shared-source mutual-exclusivity guard ───────────────────────────────
+// "logging-risk" and "forest-age" both use PMTiles source-layer "forest-age".
+// Enabling both simultaneously stacks conflicting fills on the same geometry.
+// When one is toggled on, auto-disable the other.
+//
+// Approach: targeted pair (simpler and more explicit than a dynamic
+// sourceLayer-collision scan, which would require comparing across PMTiles
+// entries in the registry and could miss intentional overlapping sources).
+const MUTUALLY_EXCLUSIVE_PAIRS: [string, string][] = [
+  ["forest-age", "logging-risk"],
+];
+
 const STORAGE_KEY = "opencanopy-layers-v2";
 
 /** Parse layer IDs from URL hash `layers=` param */
@@ -130,6 +142,15 @@ export function useLayerState(): LayerStateReturn {
     setEnabledLayers((prev) => {
       if (prev.includes(id)) {
         return prev.filter((l) => l !== id);
+      }
+      // Check mutual-exclusivity: enabling `id` may auto-disable its pair
+      const toDisable = new Set<string>();
+      for (const [a, b] of MUTUALLY_EXCLUSIVE_PAIRS) {
+        if (id === a && prev.includes(b)) toDisable.add(b);
+        if (id === b && prev.includes(a)) toDisable.add(a);
+      }
+      if (toDisable.size > 0) {
+        return [...prev.filter((l) => !toDisable.has(l)), id];
       }
       return [...prev, id];
     });

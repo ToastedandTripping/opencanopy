@@ -8,6 +8,9 @@ import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
+// pickDefinedPaint is available from @/lib/layers/paint — DataLayer uses inline
+// guards (added before the helper existed). The helper is tested and available
+// for new paint objects; DataLayer's existing guards are equivalent and left as-is.
 import {
   buildYearExpression,
   buildYearFilter,
@@ -66,12 +69,15 @@ function PmtilesLayers({
   visible,
   classFilters,
   yearFilter,
+  onError,
 }: {
   layer: LayerDefinition;
   tileMinZoom?: number;
   visible: boolean;
   classFilters?: Record<string, string[]>;
   yearFilter?: number | null;
+  /** Called when PMTiles source fails to load (timeout or addLayer error) */
+  onError?: (layerId: string) => void;
 }) {
   const { current: map } = useMap();
 
@@ -206,6 +212,7 @@ function PmtilesLayers({
       } catch (err) {
         // Bug 3 fix: surface errors instead of crashing silently
         console.error(`[OpenCanopy] Failed to add PMTiles layers for ${layer.id}:`, err);
+        onError?.(layer.id);
       }
     }
 
@@ -236,13 +243,14 @@ function PmtilesLayers({
       };
       mapInstance.on("sourcedata", sourcedataHandler);
 
-      // Timeout: if source doesn't load in 15s, give up and log a warning
+      // Timeout: if source doesn't load in 15s, report error status
       const timeoutId = setTimeout(() => {
         if (sourcedataHandler) {
           mapInstance.off("sourcedata", sourcedataHandler);
           sourcedataHandler = null;
           pipelineLog("pmtiles-source", layer.id + " TIMEOUT", { sourceId });
           console.warn(`[OpenCanopy] PMTiles source for ${layer.id} failed to load within 15s`);
+          onError?.(layer.id);
         }
       }, 15_000);
     }
@@ -896,7 +904,12 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
   const { current: map } = useMap();
   const [data, setData] = useState<GeoJSON.FeatureCollection>(EMPTY_FC);
   const [loading, setLoading] = useState(false);
-  const { setLayerLoading } = useLoadingContext();
+  const { setLayerLoading, setLayerStatus, clearLayerStatus } = useLoadingContext();
+
+  // PMTiles error callback — called from initSource timeout and addLayersToMap catch
+  const handlePmtilesError = useCallback((layerId: string) => {
+    setLayerStatus(layerId, "error");
+  }, [setLayerStatus]);
 
   const hasTileSource = !!layer.tileSource;
   const tileMaxZoom = layer.tileSource?.maxZoom ?? 0;
@@ -959,6 +972,8 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
       const MAX_WFS_AREA = 50000; // km^2
       if (approxAreaKm2 > MAX_WFS_AREA) {
         setData(EMPTY_FC);
+        // B.2: viewport too large → zoom status
+        setLayerStatus(layer.id, "zoom");
         return;
       }
     }
@@ -983,20 +998,27 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
       setData(fc);
       const elapsed = (performance.now() - fetchStart).toFixed(0);
       pipelineLog("wfs-data", layer.id, { features: fc.features.length, elapsed: elapsed + "ms" });
+      // B.2: success path — distinguish ok vs empty
+      setLayerStatus(layer.id, fc.features.length > 0 ? "ok" : "empty");
     } catch (err) {
       console.error(`Failed to load layer ${layer.id}:`, err);
+      // B.2: error path — clear stale features so error doesn't masquerade as data
+      setData(EMPTY_FC);
+      setLayerStatus(layer.id, "error");
     } finally {
       setLoading(false);
+      // Back-compat: only clears "loading" state, won't overwrite terminal status
       setLayerLoading(layer.id, false);
     }
-  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, setLayerLoading]);
+  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, setLayerLoading, setLayerStatus]);
 
-  // Clear loading state on unmount
+  // Clear status on unmount so disabled layers don't pollute the status map
   useEffect(() => {
     return () => {
       setLayerLoading(layer.id, false);
+      clearLayerStatus(layer.id);
     };
-  }, [layer.id, setLayerLoading]);
+  }, [layer.id, setLayerLoading, clearLayerStatus]);
 
   // Load data on mount and viewport changes
   useEffect(() => {
@@ -1121,6 +1143,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
             visible={visible}
             classFilters={classFilters}
             yearFilter={yearFilter}
+            onError={handlePmtilesError}
           />
         )}
 

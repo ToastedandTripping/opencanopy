@@ -9,10 +9,16 @@ import { getLayer } from "@/lib/layers";
  * beneath the bar.
  */
 export function LoadingBar() {
-  const { loadingLayers } = useLoadingContext();
-  const isLoading = loadingLayers.size > 0;
+  const { layerStatuses } = useLoadingContext();
 
-  const layerLabels = Array.from(loadingLayers)
+  // Derive loading layers from the status map (B.5 precedence: bar = any "loading")
+  const loadingIds: string[] = [];
+  for (const [id, status] of layerStatuses) {
+    if (status === "loading") loadingIds.push(id);
+  }
+  const isLoading = loadingIds.length > 0;
+
+  const layerLabels = loadingIds
     .map((id) => getLayer(id)?.label ?? id)
     .sort();
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import type { LayerCategory, LayerDefinition } from "@/types/layers";
-import { LAYER_REGISTRY } from "@/lib/layers";
+import { LAYER_REGISTRY_AVAILABLE as LAYER_REGISTRY } from "@/lib/layers";
 
 // ── Types ───────────────────────────────────────────────────
 

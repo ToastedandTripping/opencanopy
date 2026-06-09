@@ -484,6 +484,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       url: PMTILES_URL,
       sourceLayer: "conservation-priority",
       maxZoom: PMTILES_MAX_ZOOM,
+      // TODO(verify): No minZoom set — 258K polys renders from z0. Measured as
+      // ~25× smaller than the logging-risk 6.2M polygon set that needed gating.
+      // Leave config unchanged. Orchestrator should load at z5 during Workstream-F
+      // live verification and gate tileSource.minZoom (e.g. to 9) only if FPS
+      // measurably degrades. If gated, extend registry-audit Check 5.
     },
     style: {
       type: "fill",
@@ -817,6 +822,27 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
   },
 ];
 
+/**
+ * Runtime-filtered registry.
+ *
+ * Excludes layers that require missing environment configuration so they
+ * degrade gracefully (no silent undefined source.url). Currently:
+ *   - "satellite": requires NEXT_PUBLIC_MAPTILER_KEY
+ *
+ * LayerPanel, presets, and URL hydration all consume this export, so
+ * absent-key layers are simply invisible rather than crashing or rendering blank.
+ *
+ * The raw LAYER_REGISTRY still contains satellite for registry-audit and
+ * story tools that need the full set — consume it directly only when you
+ * need to enumerate all defined layers regardless of runtime availability.
+ */
+export const LAYER_REGISTRY_AVAILABLE: LayerDefinition[] = LAYER_REGISTRY.filter(
+  (l) => {
+    if (l.id === "satellite" && !MAPTILER_KEY) return false;
+    return true;
+  }
+);
+
 /** Look up a layer definition by ID */
 export function getLayer(id: string): LayerDefinition | undefined {
   return LAYER_REGISTRY.find((l) => l.id === id);
@@ -824,6 +850,6 @@ export function getLayer(id: string): LayerDefinition | undefined {
 
 /** Get all layers that should be enabled by default */
 export function getDefaultLayers(): string[] {
-  return LAYER_REGISTRY.filter((l) => l.defaultEnabled).map((l) => l.id);
+  return LAYER_REGISTRY_AVAILABLE.filter((l) => l.defaultEnabled).map((l) => l.id);
 }
 
