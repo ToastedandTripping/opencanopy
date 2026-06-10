@@ -16,6 +16,7 @@ import { LoadingProvider } from "@/contexts/LoadingContext";
 import type { HotSpot } from "@/data/hotspots";
 import { TimelineControl } from "@/components/map/TimelineControl";
 import { MapLegend } from "@/components/map/MapLegend";
+import { StatusToast } from "@/components/ui/StatusToast";
 import { getLayer } from "@/lib/layers";
 import { useLayerState } from "@/hooks/useLayerState";
 import { useMapState } from "@/hooks/useMapState";
@@ -266,12 +267,24 @@ export default function Home() {
         });
       };
 
-      let features = queryFeatures();
+      const features = queryFeatures();
 
       if (!features || features.length === 0) {
         if (!enabledLayers.includes("forest-age")) {
           toggleLayer("forest-age");
-          setTimeout(() => {
+          // Wait for tiles to actually render before retrying, not a fixed timer.
+          // Listen for the map's "idle" event (all pending renders done + tiles loaded).
+          // Fall back to a 3s timeout so this can never hang indefinitely.
+          const mapInstance = map.getMap();
+          let settled = false;
+          const FALLBACK_MS = 3000;
+
+          const doRetry = () => {
+            if (settled) return;
+            settled = true;
+            mapInstance.off("idle", doRetry);
+            clearTimeout(fallbackTimer);
+
             const retried = queryFeatures();
             if (retried && retried.length > 0) {
               const seen = new Set<string>();
@@ -292,7 +305,10 @@ export default function Home() {
               setCalcMessage("Zoom in to see forest data for this area.");
               setSelectionStats(EMPTY_STATS);
             }
-          }, 500);
+          };
+
+          const fallbackTimer = setTimeout(doRetry, FALLBACK_MS);
+          mapInstance.once("idle", doRetry);
           return;
         }
 
@@ -496,6 +512,9 @@ export default function Home() {
 
       {/* Loading indicator at top of viewport */}
       <LoadingBar />
+
+      {/* Error toast — shown for hard failures; auto-dismisses after 6s */}
+      <StatusToast />
 
       {/* Search bar -- top center on desktop, full width with margins on mobile */}
       <div className="absolute top-3 left-3 right-3 md:left-1/2 md:right-auto md:-translate-x-1/2 z-10 md:w-[min(320px,calc(100vw-8rem))]">

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="bg-[#111114] border-t border-white/5">
@@ -39,6 +41,12 @@ export function Footer() {
             >
               Contributing
             </a>
+            <Link
+              href="/privacy"
+              className="hover:text-zinc-300 transition-colors"
+            >
+              Privacy
+            </Link>
             <a
               href="mailto:opencanopymap@gmail.com"
               className="hover:text-zinc-300 transition-colors"

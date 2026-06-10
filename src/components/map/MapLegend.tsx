@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { getLayer } from "@/lib/layers";
 import type { LayerDefinition, LegendItem } from "@/types/layers";
+import { useLoadingContext } from "@/contexts/LoadingContext";
+import type { LayerStatus } from "@/contexts/LoadingContext";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -126,6 +128,28 @@ function ExpandedItems({
   );
 }
 
+// ── Per-layer status indicator ──────────────────────────────
+
+const STATUS_CONFIG: Record<
+  Exclude<LayerStatus, "ok">,
+  { text: string; className: string }
+> = {
+  loading: { text: "Loading…", className: "text-zinc-400" },
+  empty: { text: "No data here", className: "text-zinc-500" },
+  zoom: { text: "Zoom in", className: "text-zinc-500" },
+  error: { text: "BC data unavailable", className: "text-amber-400" },
+};
+
+function LayerStatusBadge({ status }: { status: LayerStatus | undefined }) {
+  if (!status || status === "ok") return null;
+  const config = STATUS_CONFIG[status];
+  return (
+    <span className={`text-[10px] leading-none shrink-0 ${config.className}`}>
+      {config.text}
+    </span>
+  );
+}
+
 // ── Legend row (compact + expandable) ───────────────────────
 
 function LegendRow({
@@ -135,6 +159,7 @@ function LegendRow({
   onDismiss,
   classFilters,
   onToggleClassFilter,
+  status,
 }: {
   layer: LayerDefinition;
   expanded: boolean;
@@ -142,9 +167,10 @@ function LegendRow({
   onDismiss: () => void;
   classFilters?: Record<string, string[]>;
   onToggleClassFilter?: (layerId: string, className: string) => void;
+  status?: LayerStatus;
 }) {
   return (
-    <div className="px-2 py-1.5">
+    <div className={`px-2 py-1.5${status === "error" ? " border-l-2 border-amber-400/40" : ""}`}>
       {/* Compact row */}
       <div className="flex items-center gap-2 min-h-[24px]">
         {/* Clickable name area with chevron */}
@@ -169,8 +195,12 @@ function LegendRow({
           </span>
         </button>
 
-        {/* Compact dots */}
-        {!expanded && <CompactDots layer={layer} />}
+        {/* Compact dots or status badge */}
+        {!expanded && (
+          status && status !== "ok"
+            ? <LayerStatusBadge status={status} />
+            : <CompactDots layer={layer} />
+        )}
 
         {/* Dismiss button */}
         <button
@@ -226,6 +256,7 @@ export function MapLegend({
   onToggleClassFilter,
 }: MapLegendProps) {
   const [expandedLayer, setExpandedLayer] = useState<string | null>(null);
+  const { layerStatuses } = useLoadingContext();
 
   // Resolve enabled IDs to full definitions, filter out satellite and empty legends
   const legendLayers = enabledLayers
@@ -274,6 +305,7 @@ export function MapLegend({
             onDismiss={() => handleDismiss(layer.id)}
             classFilters={classFilters}
             onToggleClassFilter={onToggleClassFilter}
+            status={layerStatuses.get(layer.id)}
           />
         ))}
       </div>

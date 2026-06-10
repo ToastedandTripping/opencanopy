@@ -18,11 +18,14 @@ import Map, {
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLES, INITIAL_VIEW_STATE, TERRAIN_SOURCE } from "@/lib/mapConfig";
-import { LAYER_REGISTRY, getLayer } from "@/lib/layers";
+import { LAYER_REGISTRY_AVAILABLE, getLayer } from "@/lib/layers";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import { DataLayer } from "./DataLayer";
 import { MapPopup } from "./MapPopup";
-import { TileProgress } from "./TileProgress";
+// TileProgress removed: it referenced per-layer sources `source-${id}-tiles`
+// but all PMTiles share one source (PMTILES_SOURCE_ID = "opencanopy"), so it
+// rendered null for every tiled layer and never fired. PMTiles errors are now
+// reported via setLayerStatus in DataLayer → LoadingContext → StatusToast.
 import { pipelineLog, pipelineHealthReport, isEnabled } from "@/lib/debug/pipeline-logger";
 
 // Register PMTiles protocol globally (idempotent, runs once)
@@ -104,7 +107,7 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__OC_HEALTH_REPORT = () => {
         const map = mapRef.current?.getMap();
-        if (map) pipelineHealthReport(map, LAYER_REGISTRY, enabledLayers);
+        if (map) pipelineHealthReport(map, LAYER_REGISTRY_AVAILABLE, enabledLayers);
       };
     }
     return () => {
@@ -206,10 +209,8 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
         />
         {/* Attribution collapsed by default to reduce bottom clutter */}
 
-        <TileProgress enabledLayers={enabledLayers} />
-
         {/* Render each registered layer */}
-        {LAYER_REGISTRY.map((layer) => (
+        {LAYER_REGISTRY_AVAILABLE.map((layer) => (
           <DataLayer
             key={layer.id}
             layer={layer}

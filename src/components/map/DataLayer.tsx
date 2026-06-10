@@ -8,6 +8,7 @@ import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
+import { pickDefinedPaint } from "@/lib/layers/paint";
 import {
   buildYearExpression,
   buildYearFilter,
@@ -66,12 +67,15 @@ function PmtilesLayers({
   visible,
   classFilters,
   yearFilter,
+  onError,
 }: {
   layer: LayerDefinition;
   tileMinZoom?: number;
   visible: boolean;
   classFilters?: Record<string, string[]>;
   yearFilter?: number | null;
+  /** Called when PMTiles source fails to load (timeout or addLayer error) */
+  onError?: (layerId: string) => void;
 }) {
   const { current: map } = useMap();
 
@@ -112,22 +116,16 @@ function PmtilesLayers({
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-tiles-fill`)) {
-            // Extract only valid fill paint properties (no undefined values)
-            const fillPaint: Record<string, unknown> = {
+            // Bug 2 fix: pass through the registry expression directly
+            // (may be a scalar or a MapLibre interpolation expression array).
+            // pickDefinedPaint strips any undefined-valued keys (invariant #4).
+            const fillPaint = pickDefinedPaint({
               "fill-antialias": false,
               "fill-opacity-transition": { duration: 300 },
-            };
-            // Bug 2 fix: pass through the registry expression directly
-            // (may be a scalar or a MapLibre interpolation expression array)
-            if (layer.style.paint["fill-opacity"] != null) {
-              fillPaint["fill-opacity"] = layer.style.paint["fill-opacity"];
-            }
-            if (layer.style.paint["fill-color"] != null) {
-              fillPaint["fill-color"] = layer.style.paint["fill-color"];
-            }
-            if (layer.style.paint["fill-outline-color"] != null) {
-              fillPaint["fill-outline-color"] = layer.style.paint["fill-outline-color"];
-            }
+              "fill-opacity": layer.style.paint["fill-opacity"],
+              "fill-color": layer.style.paint["fill-color"],
+              "fill-outline-color": layer.style.paint["fill-outline-color"],
+            });
 
             mapInstance.addLayer(
               {
@@ -206,6 +204,7 @@ function PmtilesLayers({
       } catch (err) {
         // Bug 3 fix: surface errors instead of crashing silently
         console.error(`[OpenCanopy] Failed to add PMTiles layers for ${layer.id}:`, err);
+        onError?.(layer.id);
       }
     }
 
@@ -236,13 +235,14 @@ function PmtilesLayers({
       };
       mapInstance.on("sourcedata", sourcedataHandler);
 
-      // Timeout: if source doesn't load in 15s, give up and log a warning
+      // Timeout: if source doesn't load in 15s, report error status
       const timeoutId = setTimeout(() => {
         if (sourcedataHandler) {
           mapInstance.off("sourcedata", sourcedataHandler);
           sourcedataHandler = null;
           pipelineLog("pmtiles-source", layer.id + " TIMEOUT", { sourceId });
           console.warn(`[OpenCanopy] PMTiles source for ${layer.id} failed to load within 15s`);
+          onError?.(layer.id);
         }
       }, 15_000);
     }
@@ -496,25 +496,16 @@ function WfsLayers({
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-fill`)) {
-            // Cherry-pick valid fill paint properties (no undefined values).
-            // Matches PmtilesLayers guard pattern -- preserves zoom-dependent
-            // opacity expressions without passing through undefined keys.
-            const fillPaint: Record<string, unknown> = {
+            // pickDefinedPaint strips undefined-valued keys (invariant #4),
+            // preserving zoom-dependent opacity expressions from the registry.
+            const fillPaint = pickDefinedPaint({
               "fill-antialias": false,
               "fill-opacity-transition": { duration: 300 },
-            };
-            if (layer.style.paint["fill-opacity"] != null) {
-              fillPaint["fill-opacity"] = layer.style.paint["fill-opacity"];
-            }
-            if (layer.style.paint["fill-color"] != null) {
-              fillPaint["fill-color"] = layer.style.paint["fill-color"];
-            }
-            if (layer.style.paint["fill-outline-color"] != null) {
-              fillPaint["fill-outline-color"] = layer.style.paint["fill-outline-color"];
-            }
-            if (layer.style.paint["fill-pattern"] != null) {
-              fillPaint["fill-pattern"] = layer.style.paint["fill-pattern"];
-            }
+              "fill-opacity": layer.style.paint["fill-opacity"],
+              "fill-color": layer.style.paint["fill-color"],
+              "fill-outline-color": layer.style.paint["fill-outline-color"],
+              "fill-pattern": layer.style.paint["fill-pattern"],
+            });
 
             mapInstance.addLayer(
               {
@@ -554,28 +545,18 @@ function WfsLayers({
           }
         } else if (layer.style.type === "line") {
           if (!mapInstance.getLayer(`layer-${layer.id}-line`)) {
-            // Cherry-pick valid line paint properties (no undefined values)
-            const linePaint: Record<string, unknown> = {
+            // pickDefinedPaint strips undefined-valued keys (invariant #4).
+            const linePaint = pickDefinedPaint({
               "line-opacity": visible
                 ? (layer.style.paint["line-opacity"] as number) ?? 0.8
                 : 0,
               "line-opacity-transition": { duration: 300 },
-            };
-            if (layer.style.paint["line-color"] != null) {
-              linePaint["line-color"] = layer.style.paint["line-color"];
-            }
-            if (layer.style.paint["line-width"] != null) {
-              linePaint["line-width"] = layer.style.paint["line-width"];
-            }
-            if (layer.style.paint["line-dasharray"] != null) {
-              linePaint["line-dasharray"] = layer.style.paint["line-dasharray"];
-            }
-            if (layer.style.paint["line-blur"] != null) {
-              linePaint["line-blur"] = layer.style.paint["line-blur"];
-            }
-            if (layer.style.paint["line-gap-width"] != null) {
-              linePaint["line-gap-width"] = layer.style.paint["line-gap-width"];
-            }
+              "line-color": layer.style.paint["line-color"],
+              "line-width": layer.style.paint["line-width"],
+              "line-dasharray": layer.style.paint["line-dasharray"],
+              "line-blur": layer.style.paint["line-blur"],
+              "line-gap-width": layer.style.paint["line-gap-width"],
+            });
 
             mapInstance.addLayer(
               {
@@ -640,29 +621,19 @@ function WfsLayers({
           }
           // Unclustered individual points
           if (!mapInstance.getLayer(`layer-${layer.id}-circle`)) {
-            // Cherry-pick valid circle paint properties (no undefined values)
-            const circlePaint: Record<string, unknown> = {
+            // pickDefinedPaint strips undefined-valued keys (invariant #4).
+            const circlePaint = pickDefinedPaint({
               "circle-opacity": visible
                 ? (layer.style.paint["circle-opacity"] as number) ?? 0.7
                 : 0,
               "circle-stroke-opacity": visible ? 1 : 0,
               "circle-opacity-transition": { duration: 300 },
-            };
-            if (layer.style.paint["circle-color"] != null) {
-              circlePaint["circle-color"] = layer.style.paint["circle-color"];
-            }
-            if (layer.style.paint["circle-radius"] != null) {
-              circlePaint["circle-radius"] = layer.style.paint["circle-radius"];
-            }
-            if (layer.style.paint["circle-stroke-color"] != null) {
-              circlePaint["circle-stroke-color"] = layer.style.paint["circle-stroke-color"];
-            }
-            if (layer.style.paint["circle-stroke-width"] != null) {
-              circlePaint["circle-stroke-width"] = layer.style.paint["circle-stroke-width"];
-            }
-            if (layer.style.paint["circle-blur"] != null) {
-              circlePaint["circle-blur"] = layer.style.paint["circle-blur"];
-            }
+              "circle-color": layer.style.paint["circle-color"],
+              "circle-radius": layer.style.paint["circle-radius"],
+              "circle-stroke-color": layer.style.paint["circle-stroke-color"],
+              "circle-stroke-width": layer.style.paint["circle-stroke-width"],
+              "circle-blur": layer.style.paint["circle-blur"],
+            });
 
             mapInstance.addLayer(
               {
@@ -896,7 +867,12 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
   const { current: map } = useMap();
   const [data, setData] = useState<GeoJSON.FeatureCollection>(EMPTY_FC);
   const [loading, setLoading] = useState(false);
-  const { setLayerLoading } = useLoadingContext();
+  const { setLayerLoading, setLayerStatus, clearLayerStatus } = useLoadingContext();
+
+  // PMTiles error callback — called from initSource timeout and addLayersToMap catch
+  const handlePmtilesError = useCallback((layerId: string) => {
+    setLayerStatus(layerId, "error");
+  }, [setLayerStatus]);
 
   const hasTileSource = !!layer.tileSource;
   const tileMaxZoom = layer.tileSource?.maxZoom ?? 0;
@@ -959,6 +935,14 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
       const MAX_WFS_AREA = 50000; // km^2
       if (approxAreaKm2 > MAX_WFS_AREA) {
         setData(EMPTY_FC);
+        // B.2: viewport too large → zoom status.
+        // Clear local loading state so it can't get stuck if a prior fetch
+        // was in-flight when the viewport suddenly widened. setLayerLoading is
+        // intentionally skipped here: it only clears "loading" status and
+        // won't overwrite the terminal "zoom" we just set via setLayerStatus.
+        // (This block is only reached for WFS-only layers — see !layer.tileSource guard above.)
+        setLoading(false);
+        setLayerStatus(layer.id, "zoom");
         return;
       }
     }
@@ -975,28 +959,55 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
 
     pipelineLog("wfs-fetch", layer.id, { bbox: paddedBbox, zoom });
 
-    setLoading(true);
-    setLayerLoading(layer.id, true);
+    // Dual-source rule: for tile-backed layers (hasTileSource), PMTiles are
+    // the user-visible source and always render with overzoom. The supplemental
+    // WFS fetch only provides high-zoom detail / interactivity data — a WFS
+    // failure does NOT mean "no data shown". So terminal status (error/empty/zoom/ok)
+    // is only surfaced for WFS-only layers (!hasTileSource); tile-backed layers
+    // report their status exclusively via the PMTiles path (handlePmtilesError).
+    // The "loading" status is also skipped for tile-backed layers to avoid a
+    // brief spinner when tiles are already rendered and the WFS is supplemental.
+    if (!hasTileSource) {
+      setLoading(true);
+      setLayerLoading(layer.id, true);
+    } else {
+      setLoading(true); // local loading flag still drives WfsLayers loading indicator
+    }
     const fetchStart = performance.now();
     try {
       const fc = await fetchLayerData(layer.id, paddedBbox, zoom, layer.fetchPriority);
       setData(fc);
       const elapsed = (performance.now() - fetchStart).toFixed(0);
       pipelineLog("wfs-data", layer.id, { features: fc.features.length, elapsed: elapsed + "ms" });
+      // B.2: success path — distinguish ok vs empty (WFS-only layers only)
+      if (!hasTileSource) {
+        setLayerStatus(layer.id, fc.features.length > 0 ? "ok" : "empty");
+      }
     } catch (err) {
       console.error(`Failed to load layer ${layer.id}:`, err);
+      // B.2: error path — clear stale features so error doesn't masquerade as data
+      setData(EMPTY_FC);
+      // Only surface "error" status for WFS-only layers; tile-backed layers
+      // still render via PMTiles so the WFS failure is not user-visible.
+      if (!hasTileSource) {
+        setLayerStatus(layer.id, "error");
+      }
     } finally {
       setLoading(false);
-      setLayerLoading(layer.id, false);
+      if (!hasTileSource) {
+        // Back-compat: only clears "loading" state, won't overwrite terminal status
+        setLayerLoading(layer.id, false);
+      }
     }
-  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, setLayerLoading]);
+  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, hasTileSource, setLayerLoading, setLayerStatus]);
 
-  // Clear loading state on unmount
+  // Clear status on unmount so disabled layers don't pollute the status map
   useEffect(() => {
     return () => {
       setLayerLoading(layer.id, false);
+      clearLayerStatus(layer.id);
     };
-  }, [layer.id, setLayerLoading]);
+  }, [layer.id, setLayerLoading, clearLayerStatus]);
 
   // Load data on mount and viewport changes
   useEffect(() => {
@@ -1121,6 +1132,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
             visible={visible}
             classFilters={classFilters}
             yearFilter={yearFilter}
+            onError={handlePmtilesError}
           />
         )}
 
