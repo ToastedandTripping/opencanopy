@@ -1,0 +1,1 @@
+/home/leesalo/shared/project-rules/commands/start.md
