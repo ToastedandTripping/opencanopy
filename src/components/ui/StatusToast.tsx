@@ -89,7 +89,7 @@ export function StatusToast() {
       role="status"
       aria-live="polite"
       className="
-        absolute bottom-28 left-3 z-40
+        absolute bottom-28 right-3 z-40
         md:bottom-28
         flex items-start gap-2
         bg-black/70 backdrop-blur-md border border-white/10 rounded-xl

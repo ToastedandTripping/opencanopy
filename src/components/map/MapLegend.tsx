@@ -137,14 +137,14 @@ const STATUS_CONFIG: Record<
   loading: { text: "Loading…", className: "text-zinc-400" },
   empty: { text: "No data here", className: "text-zinc-500" },
   zoom: { text: "Zoom in", className: "text-zinc-500" },
-  error: { text: "Couldn't reach BC data", className: "text-amber-500/80" },
+  error: { text: "BC data unavailable", className: "text-amber-400" },
 };
 
 function LayerStatusBadge({ status }: { status: LayerStatus | undefined }) {
   if (!status || status === "ok") return null;
   const config = STATUS_CONFIG[status];
   return (
-    <span className={`text-[9px] leading-none shrink-0 ${config.className}`}>
+    <span className={`text-[10px] leading-none shrink-0 ${config.className}`}>
       {config.text}
     </span>
   );
@@ -170,7 +170,7 @@ function LegendRow({
   status?: LayerStatus;
 }) {
   return (
-    <div className="px-2 py-1.5">
+    <div className={`px-2 py-1.5${status === "error" ? " border-l-2 border-amber-400/40" : ""}`}>
       {/* Compact row */}
       <div className="flex items-center gap-2 min-h-[24px]">
         {/* Clickable name area with chevron */}
