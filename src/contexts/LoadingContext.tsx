@@ -18,6 +18,11 @@ import {
 // "error"  = hard failure (network, 502, timeout).
 // "zoom"   = viewport too large for WFS fetch; user must zoom in.
 //
+// Dual-source rule: WFS-derived terminal status (error/empty/zoom) is only set
+// for WFS-only layers (!tileSource). Tile-backed layers report status exclusively
+// via the PMTiles path (handlePmtilesError) — their supplemental WFS fetch failing
+// does not mean "no data shown" since PMTiles always render with overzoom.
+//
 // Precedence contract (enforced by callers, not this context):
 //   LoadingBar  = any layer is "loading"  (global top affordance)
 //   MapLegend   = per-layer terminal state glyph

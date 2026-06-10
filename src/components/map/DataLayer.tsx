@@ -940,6 +940,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
         // was in-flight when the viewport suddenly widened. setLayerLoading is
         // intentionally skipped here: it only clears "loading" status and
         // won't overwrite the terminal "zoom" we just set via setLayerStatus.
+        // (This block is only reached for WFS-only layers — see !layer.tileSource guard above.)
         setLoading(false);
         setLayerStatus(layer.id, "zoom");
         return;
@@ -958,27 +959,47 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
 
     pipelineLog("wfs-fetch", layer.id, { bbox: paddedBbox, zoom });
 
-    setLoading(true);
-    setLayerLoading(layer.id, true);
+    // Dual-source rule: for tile-backed layers (hasTileSource), PMTiles are
+    // the user-visible source and always render with overzoom. The supplemental
+    // WFS fetch only provides high-zoom detail / interactivity data — a WFS
+    // failure does NOT mean "no data shown". So terminal status (error/empty/zoom/ok)
+    // is only surfaced for WFS-only layers (!hasTileSource); tile-backed layers
+    // report their status exclusively via the PMTiles path (handlePmtilesError).
+    // The "loading" status is also skipped for tile-backed layers to avoid a
+    // brief spinner when tiles are already rendered and the WFS is supplemental.
+    if (!hasTileSource) {
+      setLoading(true);
+      setLayerLoading(layer.id, true);
+    } else {
+      setLoading(true); // local loading flag still drives WfsLayers loading indicator
+    }
     const fetchStart = performance.now();
     try {
       const fc = await fetchLayerData(layer.id, paddedBbox, zoom, layer.fetchPriority);
       setData(fc);
       const elapsed = (performance.now() - fetchStart).toFixed(0);
       pipelineLog("wfs-data", layer.id, { features: fc.features.length, elapsed: elapsed + "ms" });
-      // B.2: success path — distinguish ok vs empty
-      setLayerStatus(layer.id, fc.features.length > 0 ? "ok" : "empty");
+      // B.2: success path — distinguish ok vs empty (WFS-only layers only)
+      if (!hasTileSource) {
+        setLayerStatus(layer.id, fc.features.length > 0 ? "ok" : "empty");
+      }
     } catch (err) {
       console.error(`Failed to load layer ${layer.id}:`, err);
       // B.2: error path — clear stale features so error doesn't masquerade as data
       setData(EMPTY_FC);
-      setLayerStatus(layer.id, "error");
+      // Only surface "error" status for WFS-only layers; tile-backed layers
+      // still render via PMTiles so the WFS failure is not user-visible.
+      if (!hasTileSource) {
+        setLayerStatus(layer.id, "error");
+      }
     } finally {
       setLoading(false);
-      // Back-compat: only clears "loading" state, won't overwrite terminal status
-      setLayerLoading(layer.id, false);
+      if (!hasTileSource) {
+        // Back-compat: only clears "loading" state, won't overwrite terminal status
+        setLayerLoading(layer.id, false);
+      }
     }
-  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, setLayerLoading, setLayerStatus]);
+  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, hasTileSource, setLayerLoading, setLayerStatus]);
 
   // Clear status on unmount so disabled layers don't pollute the status map
   useEffect(() => {
