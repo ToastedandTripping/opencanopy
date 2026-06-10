@@ -748,7 +748,7 @@ export default async function handler(
       }
 
       // Tenure-cutblocks: resolve company from CLIENT_NUMBER
-      if (layerId === "tenure-cutblocks" || layerId === "cutblocks" || layerId === "operating-territories") {
+      if (layerId === "tenure-cutblocks" || layerId === "cutblocks") {
         const props = feature.properties as Record<string, unknown>;
         const cn = String(props.CLIENT_NUMBER ?? "");
         props.company_id = COMPANY_MAP[cn] ?? "other";
