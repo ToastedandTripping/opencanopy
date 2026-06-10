@@ -84,16 +84,6 @@ export function pipelineLog(
   }
 }
 
-/**
- * No-op -- retained for API compatibility.
- * Previously reset a cached `_enabled` flag. The cache was removed
- * so isEnabled() checks localStorage on every call (fast, ~0.01ms)
- * and responds to runtime OC_DEBUG changes without requiring a reset.
- */
-export function _resetPipelineLogger(): void {
-  // nothing to reset -- isEnabled() checks live state on each call
-}
-
 // ── Health Report ───────────────────────────────────────────────────
 
 interface HealthRow {
