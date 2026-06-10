@@ -17,6 +17,29 @@ const MUTUALLY_EXCLUSIVE_PAIRS: [string, string][] = [
   ["forest-age", "logging-risk"],
 ];
 
+/**
+ * Apply mutual-exclusivity de-confliction to a set of layer IDs.
+ *
+ * For each exclusive pair where both members are present, the LAST one
+ * in the array wins (i.e. the one with the higher index is kept). This is
+ * deterministic: callers that build arrays left-to-right get "last specified
+ * takes precedence" semantics, which matches the toggleLayer behavior of
+ * always appending the newly-enabled layer at the end.
+ */
+function deconflictExclusivePairs(ids: string[]): string[] {
+  const result = [...ids];
+  for (const [a, b] of MUTUALLY_EXCLUSIVE_PAIRS) {
+    const idxA = result.lastIndexOf(a);
+    const idxB = result.lastIndexOf(b);
+    if (idxA !== -1 && idxB !== -1) {
+      // Both present: drop the one that appears EARLIER (lower index).
+      const dropIdx = idxA < idxB ? idxA : idxB;
+      result.splice(dropIdx, 1);
+    }
+  }
+  return result;
+}
+
 const STORAGE_KEY = "opencanopy-layers-v2";
 
 /** Parse layer IDs from URL hash `layers=` param */
@@ -143,16 +166,9 @@ export function useLayerState(): LayerStateReturn {
       if (prev.includes(id)) {
         return prev.filter((l) => l !== id);
       }
-      // Check mutual-exclusivity: enabling `id` may auto-disable its pair
-      const toDisable = new Set<string>();
-      for (const [a, b] of MUTUALLY_EXCLUSIVE_PAIRS) {
-        if (id === a && prev.includes(b)) toDisable.add(b);
-        if (id === b && prev.includes(a)) toDisable.add(a);
-      }
-      if (toDisable.size > 0) {
-        return [...prev.filter((l) => !toDisable.has(l)), id];
-      }
-      return [...prev, id];
+      // Append the new layer, then de-conflict: if both members of an exclusive
+      // pair are present, the last one (the newly-added id) wins.
+      return deconflictExclusivePairs([...prev, id]);
     });
   }, []);
 
@@ -168,7 +184,10 @@ export function useLayerState(): LayerStateReturn {
 
   const setLayers = useCallback((ids: string[]) => {
     const validIds = new Set(LAYER_REGISTRY.map((l) => l.id));
-    setEnabledLayers(ids.filter((id) => validIds.has(id)));
+    const filtered = ids.filter((id) => validIds.has(id));
+    // Apply the same mutual-exclusivity de-confliction used by toggleLayer so
+    // preset/URL-hydration paths can't silently enable conflicting pairs.
+    setEnabledLayers(deconflictExclusivePairs(filtered));
   }, []);
 
   const activePreset = computeActivePreset(enabledLayers);

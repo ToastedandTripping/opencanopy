@@ -86,7 +86,7 @@ export function StatusToast() {
 
   return (
     <div
-      role="alert"
+      role="status"
       aria-live="polite"
       className="
         absolute bottom-28 left-3 z-40

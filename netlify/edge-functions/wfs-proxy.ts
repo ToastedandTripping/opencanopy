@@ -573,10 +573,13 @@ export default async function handler(
     return new Response(null, { status: 204, headers: corsHeaders() });
   }
 
-  // Rate limit by client IP (best-effort per isolate — see comment above)
+  // Rate limit by client IP (best-effort per isolate — see comment above).
+  // The x-forwarded-for split always yields a string, so `?? "unknown"` on that
+  // expression is dead code. Compute the candidate first, then coerce empty to "unknown".
+  const xffCandidate = (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
   const clientIp =
-    request.headers.get("x-nf-client-connection-ip") ??
-    (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ??
+    request.headers.get("x-nf-client-connection-ip") ||
+    xffCandidate ||
     "unknown";
 
   const { allowed, retryAfter } = checkRateLimit(clientIp);

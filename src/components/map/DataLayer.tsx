@@ -8,9 +8,7 @@ import { fetchLayerData } from "@/lib/data/wfs-client";
 import { useLoadingContext } from "@/contexts/LoadingContext";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
-// pickDefinedPaint is available from @/lib/layers/paint — DataLayer uses inline
-// guards (added before the helper existed). The helper is tested and available
-// for new paint objects; DataLayer's existing guards are equivalent and left as-is.
+import { pickDefinedPaint } from "@/lib/layers/paint";
 import {
   buildYearExpression,
   buildYearFilter,
@@ -118,22 +116,16 @@ function PmtilesLayers({
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-tiles-fill`)) {
-            // Extract only valid fill paint properties (no undefined values)
-            const fillPaint: Record<string, unknown> = {
+            // Bug 2 fix: pass through the registry expression directly
+            // (may be a scalar or a MapLibre interpolation expression array).
+            // pickDefinedPaint strips any undefined-valued keys (invariant #4).
+            const fillPaint = pickDefinedPaint({
               "fill-antialias": false,
               "fill-opacity-transition": { duration: 300 },
-            };
-            // Bug 2 fix: pass through the registry expression directly
-            // (may be a scalar or a MapLibre interpolation expression array)
-            if (layer.style.paint["fill-opacity"] != null) {
-              fillPaint["fill-opacity"] = layer.style.paint["fill-opacity"];
-            }
-            if (layer.style.paint["fill-color"] != null) {
-              fillPaint["fill-color"] = layer.style.paint["fill-color"];
-            }
-            if (layer.style.paint["fill-outline-color"] != null) {
-              fillPaint["fill-outline-color"] = layer.style.paint["fill-outline-color"];
-            }
+              "fill-opacity": layer.style.paint["fill-opacity"],
+              "fill-color": layer.style.paint["fill-color"],
+              "fill-outline-color": layer.style.paint["fill-outline-color"],
+            });
 
             mapInstance.addLayer(
               {
@@ -504,25 +496,16 @@ function WfsLayers({
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-fill`)) {
-            // Cherry-pick valid fill paint properties (no undefined values).
-            // Matches PmtilesLayers guard pattern -- preserves zoom-dependent
-            // opacity expressions without passing through undefined keys.
-            const fillPaint: Record<string, unknown> = {
+            // pickDefinedPaint strips undefined-valued keys (invariant #4),
+            // preserving zoom-dependent opacity expressions from the registry.
+            const fillPaint = pickDefinedPaint({
               "fill-antialias": false,
               "fill-opacity-transition": { duration: 300 },
-            };
-            if (layer.style.paint["fill-opacity"] != null) {
-              fillPaint["fill-opacity"] = layer.style.paint["fill-opacity"];
-            }
-            if (layer.style.paint["fill-color"] != null) {
-              fillPaint["fill-color"] = layer.style.paint["fill-color"];
-            }
-            if (layer.style.paint["fill-outline-color"] != null) {
-              fillPaint["fill-outline-color"] = layer.style.paint["fill-outline-color"];
-            }
-            if (layer.style.paint["fill-pattern"] != null) {
-              fillPaint["fill-pattern"] = layer.style.paint["fill-pattern"];
-            }
+              "fill-opacity": layer.style.paint["fill-opacity"],
+              "fill-color": layer.style.paint["fill-color"],
+              "fill-outline-color": layer.style.paint["fill-outline-color"],
+              "fill-pattern": layer.style.paint["fill-pattern"],
+            });
 
             mapInstance.addLayer(
               {
@@ -562,28 +545,18 @@ function WfsLayers({
           }
         } else if (layer.style.type === "line") {
           if (!mapInstance.getLayer(`layer-${layer.id}-line`)) {
-            // Cherry-pick valid line paint properties (no undefined values)
-            const linePaint: Record<string, unknown> = {
+            // pickDefinedPaint strips undefined-valued keys (invariant #4).
+            const linePaint = pickDefinedPaint({
               "line-opacity": visible
                 ? (layer.style.paint["line-opacity"] as number) ?? 0.8
                 : 0,
               "line-opacity-transition": { duration: 300 },
-            };
-            if (layer.style.paint["line-color"] != null) {
-              linePaint["line-color"] = layer.style.paint["line-color"];
-            }
-            if (layer.style.paint["line-width"] != null) {
-              linePaint["line-width"] = layer.style.paint["line-width"];
-            }
-            if (layer.style.paint["line-dasharray"] != null) {
-              linePaint["line-dasharray"] = layer.style.paint["line-dasharray"];
-            }
-            if (layer.style.paint["line-blur"] != null) {
-              linePaint["line-blur"] = layer.style.paint["line-blur"];
-            }
-            if (layer.style.paint["line-gap-width"] != null) {
-              linePaint["line-gap-width"] = layer.style.paint["line-gap-width"];
-            }
+              "line-color": layer.style.paint["line-color"],
+              "line-width": layer.style.paint["line-width"],
+              "line-dasharray": layer.style.paint["line-dasharray"],
+              "line-blur": layer.style.paint["line-blur"],
+              "line-gap-width": layer.style.paint["line-gap-width"],
+            });
 
             mapInstance.addLayer(
               {
@@ -648,29 +621,19 @@ function WfsLayers({
           }
           // Unclustered individual points
           if (!mapInstance.getLayer(`layer-${layer.id}-circle`)) {
-            // Cherry-pick valid circle paint properties (no undefined values)
-            const circlePaint: Record<string, unknown> = {
+            // pickDefinedPaint strips undefined-valued keys (invariant #4).
+            const circlePaint = pickDefinedPaint({
               "circle-opacity": visible
                 ? (layer.style.paint["circle-opacity"] as number) ?? 0.7
                 : 0,
               "circle-stroke-opacity": visible ? 1 : 0,
               "circle-opacity-transition": { duration: 300 },
-            };
-            if (layer.style.paint["circle-color"] != null) {
-              circlePaint["circle-color"] = layer.style.paint["circle-color"];
-            }
-            if (layer.style.paint["circle-radius"] != null) {
-              circlePaint["circle-radius"] = layer.style.paint["circle-radius"];
-            }
-            if (layer.style.paint["circle-stroke-color"] != null) {
-              circlePaint["circle-stroke-color"] = layer.style.paint["circle-stroke-color"];
-            }
-            if (layer.style.paint["circle-stroke-width"] != null) {
-              circlePaint["circle-stroke-width"] = layer.style.paint["circle-stroke-width"];
-            }
-            if (layer.style.paint["circle-blur"] != null) {
-              circlePaint["circle-blur"] = layer.style.paint["circle-blur"];
-            }
+              "circle-color": layer.style.paint["circle-color"],
+              "circle-radius": layer.style.paint["circle-radius"],
+              "circle-stroke-color": layer.style.paint["circle-stroke-color"],
+              "circle-stroke-width": layer.style.paint["circle-stroke-width"],
+              "circle-blur": layer.style.paint["circle-blur"],
+            });
 
             mapInstance.addLayer(
               {
@@ -972,7 +935,12 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
       const MAX_WFS_AREA = 50000; // km^2
       if (approxAreaKm2 > MAX_WFS_AREA) {
         setData(EMPTY_FC);
-        // B.2: viewport too large → zoom status
+        // B.2: viewport too large → zoom status.
+        // Clear local loading state so it can't get stuck if a prior fetch
+        // was in-flight when the viewport suddenly widened. setLayerLoading is
+        // intentionally skipped here: it only clears "loading" status and
+        // won't overwrite the terminal "zoom" we just set via setLayerStatus.
+        setLoading(false);
         setLayerStatus(layer.id, "zoom");
         return;
       }

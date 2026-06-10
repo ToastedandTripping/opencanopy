@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -51,6 +52,16 @@ const LoadingContext = createContext<LoadingContextValue>({
 
 function useDebounce(delay: number) {
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Clear all pending timers on unmount to prevent setState-after-unmount.
+  useEffect(() => {
+    return () => {
+      for (const id of timers.current.values()) {
+        clearTimeout(id);
+      }
+      timers.current.clear();
+    };
+  }, []);
 
   const debounce = useCallback(
     (key: string, fn: () => void) => {
