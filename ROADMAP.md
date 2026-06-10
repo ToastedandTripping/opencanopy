@@ -1,10 +1,12 @@
 ---
 status: shipped
 current: null
-next: Synthesis layers — fire+age reconciliation as separate layers atop the faithful-data base tileset
+next: "Deploy relay/production-readiness; post-deploy smoke-check WFS-working states (empty/zoom need the live edge fn); then /code-refresh (author in-repo ARCHITECTURE.md + fix the pre-existing WfsLayers hooks-order/StrictMode dev cleanup crash)"
 testing: null
 pinned: false
 shipped:
+  - date: 2026-06-09
+    item: "Production-readiness & shareability push (branch relay/production-readiness, 5 commits, +~1.5k LOC, 462 tests): per-layer error/empty/zoom status states (the centerpiece — replaces silent blank failures), OG/Twitter share card + metadataBase (blank previews fixed), privacy page + footer, WFS-proxy per-IP rate limiting, GitHub Actions CI, next 16.2.7. Live verification caught + fixed false 'BC data unavailable' errors on tile-backed layers during WFS hiccups. TileProgress dead code removed; pickDefinedPaint centralizes invariant #4."
   - date: 2026-04-13
     item: v9 PMTiles deployed (refactored bulk-FGDB pipeline, single-pass tippecanoe, Razor C1+W1-W4+N1 fixes)
   - date: 2026-04-10
@@ -36,3 +38,14 @@ open-source base.
   - Okanagan Lake V3 test point needs adjustment
   - tenure-cutblocks DISTURBANCE_START_DATE property issue
   - Cross-source R1 reclassify as informational (BC VRI data limitation)
+- From the 2026-06-09 production push (for the follow-up /code-refresh):
+  - **WfsLayers** has `if (layer.tileSource) return null` BEFORE its hooks (rules-of-hooks
+    smell). Causes a dev-only StrictMode cleanup crash (`map.getMap()` undefined in the
+    teardown). Pre-existing on main; production unaffected (effects run once). Fix the
+    hooks order + guard the cleanup.
+  - `conservation-priority` (258K fill from z0) left ungated — no degradation measured at
+    z5; revisit with a real perf trace before gating `tileSource.minZoom`.
+  - Empty/zoom/WFS-only-layer rendering verified by unit tests + wiring, NOT live (the
+    `/api/wfs` edge fn doesn't run under `next dev`). Smoke-check on the live deploy.
+  - Vestigial WFS fetch for tile-backed layers (data isn't rendered, fetch still fires) —
+    candidate to skip entirely as an optimization.
