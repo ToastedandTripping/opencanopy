@@ -876,7 +876,7 @@ class TileAudit {
       results.push({
         check: "A8: Preprocessing report",
         status: "PASS",
-        message: "No preprocessing report found — raw data used (run `npm run preprocess` to generate)",
+        message: "No preprocessing report found — raw data used (run `npm run preprocess:v2` to generate)",
       });
       return results;
     }
