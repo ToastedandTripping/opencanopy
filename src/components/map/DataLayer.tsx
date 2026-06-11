@@ -54,6 +54,124 @@ const EMPTY_FC: GeoJSON.FeatureCollection = {
   features: [],
 };
 
+// ── Imperative Raster (Satellite) Layer Manager ─────────────────────────────
+//
+// D1 fix: satellite must render BELOW all data overlay layers.
+// Declarative react-map-gl <Source>/<Layer> appends to the top of the layer
+// stack on mount, making satellite cover all data layers. This imperative
+// component instead inserts the raster layer at the correct z-order anchor.
+//
+// Anchor logic (deterministic regardless of mount order):
+//   1. First basemap layer whose id starts with "layer-" EXCLUDING this
+//      component's own layer id — this places satellite below data overlays.
+//   2. Else: first symbol-type layer in the basemap (firstSymbolId).
+//   3. Else: append at top (fallback for empty styles).
+//
+// draw-* and watershed-* layers do NOT start with "layer-" so they are
+// intentionally topmost — this component leaves them alone.
+//
+// Opacity changes use setPaintProperty in a separate effect to avoid
+// unnecessary teardown/recreate cycles on every visibility toggle.
+
+function SatelliteLayers({
+  layer,
+  visible,
+}: {
+  layer: LayerDefinition;
+  visible: boolean;
+}) {
+  const { current: map } = useMap();
+
+  const sourceId = `source-${layer.id}`;
+  const layerId = `layer-${layer.id}`;
+
+  // Effect 1: Add source and raster layer imperatively, once on mount.
+  useEffect(() => {
+    if (!map || !layer.source.url) return;
+    const mapInstance = map.getMap();
+
+    function addToMap() {
+      // Register source (idempotent)
+      if (!mapInstance.getSource(sourceId)) {
+        mapInstance.addSource(sourceId, {
+          type: "raster",
+          tiles: [layer.source.url as string],
+          tileSize: 256,
+          attribution: layer.source.attribution,
+        });
+        pipelineLog("addSource", layer.id, { sourceId, action: "registered", type: "raster" });
+      }
+
+      if (mapInstance.getLayer(layerId)) return;
+
+      // Determine insertion anchor:
+      // First "layer-*" id that is NOT this layer, else firstSymbolId, else undefined (append).
+      const allLayers = mapInstance.getStyle().layers as maplibregl.LayerSpecification[];
+      const firstOverlayId = allLayers.find(
+        (l) => l.id.startsWith("layer-") && l.id !== layerId
+      )?.id;
+      const firstSymbolId = allLayers.find(
+        (l) => l.type === "symbol"
+      )?.id;
+      const anchor = firstOverlayId ?? firstSymbolId;
+
+      const rasterPaint = pickDefinedPaint({
+        "raster-opacity": visible ? (layer.style.opacity ?? 1) : 0,
+        "raster-opacity-transition": { duration: 300 },
+      });
+
+      mapInstance.addLayer(
+        {
+          id: layerId,
+          type: "raster",
+          source: sourceId,
+          paint: rasterPaint as maplibregl.RasterLayerSpecification["paint"],
+        },
+        anchor,
+      );
+      pipelineLog("addLayer", layerId, { anchor: anchor ?? "append", type: "raster" });
+    }
+
+    // Wait for style to load before adding layers (same pattern as PmtilesLayers)
+    if (mapInstance.isStyleLoaded()) {
+      addToMap();
+    } else {
+      const onLoad = () => addToMap();
+      mapInstance.on("load", onLoad);
+      return () => {
+        mapInstance.off("load", onLoad);
+      };
+    }
+
+    return () => {
+      // Clean up on unmount
+      if (mapInstance.getLayer(layerId)) {
+        mapInstance.removeLayer(layerId);
+      }
+      if (mapInstance.getSource(sourceId)) {
+        mapInstance.removeSource(sourceId);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, layer.id, layer.source.url, layer.source.attribution]);
+
+  // Effect 2: Update opacity reactively on visibility changes.
+  // Separate effect to avoid teardown/recreate on every toggle.
+  useEffect(() => {
+    if (!map) return;
+    const mapInstance = map.getMap();
+    if (!mapInstance.getLayer(layerId)) return;
+    mapInstance.setPaintProperty(
+      layerId,
+      "raster-opacity",
+      visible ? (layer.style.opacity ?? 1) : 0,
+    );
+    pipelineLog("setPaintProperty", layerId, { property: "raster-opacity", visible, opacity: layer.style.opacity ?? 1 });
+  }, [map, layer.id, layer.style.opacity, visible, layerId]);
+
+  return null; // No DOM output — layers managed imperatively
+}
+
 /**
  * Imperative PMTiles layer manager.
  * Adds the vector tile source and layers directly via the MapLibre API
@@ -1030,26 +1148,12 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
     }
   }, [visible, loadData, layer.source.type]);
 
-  // Raster layer (satellite imagery)
+  // Raster layer (satellite imagery) — imperative for correct z-order.
+  // D1 fix: declarative <Source>/<Layer> appended to the top of the layer
+  // stack on mount, making satellite cover all data layers. SatelliteLayers
+  // inserts at the first "layer-*" anchor for deterministic z-order.
   if (layer.source.type === "raster" && layer.source.url) {
-    return (
-      <Source
-        id={`source-${layer.id}`}
-        type="raster"
-        tiles={[layer.source.url]}
-        tileSize={256}
-        attribution={layer.source.attribution}
-      >
-        <Layer
-          id={`layer-${layer.id}`}
-          type="raster"
-          paint={{
-            "raster-opacity": targetOpacity,
-            "raster-opacity-transition": { duration: 300 },
-          }}
-        />
-      </Source>
-    );
+    return <SatelliteLayers layer={layer} visible={visible} />;
   }
 
   // WFS GeoJSON layers (with optional PMTiles underlay + raster overview)
