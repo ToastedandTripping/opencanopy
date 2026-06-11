@@ -231,10 +231,16 @@ its own clearly-labelled derived PMTiles layer in pink/magenta. Precedent for
 a derived set-operation layer: the conservation-gap raster theme. Required
 honesty: label "computed: FTEN × VRI"; exclude blocks with past
 DISTURBANCE_START_DATE (VRI lags harvest — stale-age false positives).
-NOT yet executable — gated on three decisions (Lee):
-1. threshold: old-growth (250+) only, or + mature as a lighter class;
-2. include FOM proposed blocks or FTEN only;
-3. color (pink #ec4899 / magenta #d946ef — Jen specs with colorblind check
-   against the reds, over dark basemap AND satellite).
-Once decided: spec → focused critic pass (new scope beyond the R3 approval)
-→ slot as Wave 2.5 (it rides the same pipeline tooling as Wave 2).
+DECIDED (Lee, 2026-06-11) — executable as Wave 2.5 after its focused critic
+pass (new scope beyond the R3 approval):
+1. threshold: BOTH — permits on old-growth (250+) as the alarm class,
+   permits on mature (80-250) as a muted second class;
+2. sources: FTEN issued permits AND FOM proposals, as visually distinct
+   classes (proposals lighter/dashed; never merged with issued);
+3. color: magenta direction (#d946ef) — Jen specs the final value with
+   colorblind check against the reds, over dark basemap AND satellite.
+Implementation shape: pipeline intersect (GDAL/GEOS, water-subtraction
+precedent) → new PMTiles source-layer with class attribute
+{og-issued, og-proposed, mature-issued, mature-proposed} → registry layer
+labelled "computed: FTEN/FOM × VRI", excluding blocks with past
+DISTURBANCE_START_DATE.
