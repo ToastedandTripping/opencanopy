@@ -1,7 +1,7 @@
 ---
 status: shipped
 current: null
-next: "Deploy relay/production-readiness; post-deploy smoke-check WFS-working states (empty/zoom need the live edge fn); then /code-refresh (author in-repo ARCHITECTURE.md + fix the pre-existing WfsLayers hooks-order/StrictMode dev cleanup crash)"
+next: "Execute .claude/plans/layer-fidelity-2026-06-10.md via /relay (critic-approved, 3 rounds): Wave 1 proxy CQL fix + satellite z-order + WfsLayers fix; Wave 2 per-class raster re-render; Wave 3 design pass (parks/conservancies/species/preset opacity); Wave 4 verification. Then continue Lee's live layer audit (Protection, Accountability, ...)"
 testing: null
 pinned: false
 shipped:
