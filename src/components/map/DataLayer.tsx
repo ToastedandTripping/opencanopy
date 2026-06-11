@@ -592,8 +592,10 @@ function WfsLayers({
 }: WfsLayersProps) {
   const { current: map } = useMap();
 
-  // Tiled layers use PMTiles at all zooms -- no WFS needed
-  if (layer.tileSource) return null;
+  // D10 fix: this component is only mounted when !layer.tileSource (DataLayer
+  // guards the render). The early return that previously lived here violated
+  // rules-of-hooks (it sat above 5 hooks). By gating at the mount site instead,
+  // hooks always run unconditionally whenever this component is mounted.
 
   // 1. Initialization: add source + layers
   useEffect(() => {
@@ -820,8 +822,11 @@ function WfsLayers({
 
     // Unified cleanup: handles both the "load" listener AND layer/source
     // removal regardless of which code path was taken during setup.
+    // D10 fix: guard against undefined mapInstance (StrictMode double-invoke
+    // can run cleanup after the map ref has been torn down in tests).
     return () => {
       cancelled = true;
+      if (!mapInstance) return;
       if (onLoad) {
         mapInstance.off("load", onLoad);
       }
@@ -1026,7 +1031,10 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
 
   // Fetch WFS data when viewport changes
   const loadData = useCallback(async () => {
-    if (!map || !visible || layer.source.type !== "wfs") return;
+    // D10 fix: tile-backed layers use PMTiles at all zooms; the supplemental
+    // WFS render path was dead code (WfsLayers was not mounted for these layers).
+    // Skip the fetch entirely — behavior-neutral by construction.
+    if (!map || !visible || layer.source.type !== "wfs" || hasTileSource) return;
 
     const bounds = map.getBounds();
     if (!bounds) return;
@@ -1085,12 +1093,9 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
     // report their status exclusively via the PMTiles path (handlePmtilesError).
     // The "loading" status is also skipped for tile-backed layers to avoid a
     // brief spinner when tiles are already rendered and the WFS is supplemental.
-    if (!hasTileSource) {
-      setLoading(true);
-      setLayerLoading(layer.id, true);
-    } else {
-      setLoading(true); // local loading flag still drives WfsLayers loading indicator
-    }
+    // Only WFS-only layers reach here (hasTileSource was already guarded above).
+    setLoading(true);
+    setLayerLoading(layer.id, true);
     const fetchStart = performance.now();
     try {
       const fc = await fetchLayerData(layer.id, paddedBbox, zoom, layer.fetchPriority);
@@ -1240,18 +1245,22 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
           />
         )}
 
-        {/* WFS GeoJSON source (high zoom, or full range if no tile source).
-            Managed imperatively via MapLibre API -- always mounted, handles
-            visibility internally. Eliminates react-map-gl "missing source"
-            errors that spam the console with declarative <Source> + <Layer>. */}
-        <WfsLayers
-          layer={layer}
-          visible={visible}
-          filteredData={filteredData}
-          loading={loading}
-          classFilters={classFilters}
-          wfsMinZoom={wfsMinZoom}
-        />
+        {/* WFS GeoJSON source — WFS-only layers only.
+            D10 fix: tile-backed layers use PMTiles at all zooms; mounting
+            WfsLayers for them caused a rules-of-hooks violation (the early
+            return sat above 5 hooks) and fired a dead-code WFS fetch.
+            WfsLayers is only mounted when !hasTileSource; its hooks then
+            always run unconditionally on every mount. */}
+        {!hasTileSource && (
+          <WfsLayers
+            layer={layer}
+            visible={visible}
+            filteredData={filteredData}
+            loading={loading}
+            classFilters={classFilters}
+            wfsMinZoom={wfsMinZoom}
+          />
+        )}
       </>
     );
   }
