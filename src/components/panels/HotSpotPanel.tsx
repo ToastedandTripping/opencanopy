@@ -1,56 +1,13 @@
 "use client";
 
-import { useRef, useCallback } from "react";
 import { HOT_SPOTS, type HotSpot } from "@/data/hotspots";
+import { useDragDismiss } from "@/hooks/useDragDismiss";
 
 // ── Types ───────────────────────────────────────────────────
 
 interface HotSpotPanelProps {
   onSelect: (hotspot: HotSpot) => void;
   onClose: () => void;
-}
-
-// ── Drag-to-dismiss hook ────────────────────────────────────
-
-function useDragDismiss(onClose: () => void) {
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const dragStartY = useRef(0);
-  const currentTranslateY = useRef(0);
-  const isDragging = useRef(false);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    dragStartY.current = touch.clientY;
-    currentTranslateY.current = 0;
-    isDragging.current = true;
-    if (sheetRef.current) sheetRef.current.style.transition = "none";
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current || !sheetRef.current) return;
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - dragStartY.current;
-    if (deltaY > 0) {
-      currentTranslateY.current = deltaY;
-      sheetRef.current.style.transform = `translateY(${deltaY}px)`;
-    }
-  }, []);
-
-  const handleTouchEnd = useCallback(() => {
-    if (!isDragging.current || !sheetRef.current) return;
-    isDragging.current = false;
-    const sheet = sheetRef.current;
-    sheet.style.transition = "transform 300ms ease-out";
-    if (currentTranslateY.current > 100) {
-      sheet.style.transform = "translateY(100%)";
-      setTimeout(onClose, 300);
-    } else {
-      sheet.style.transform = "translateY(0)";
-    }
-    currentTranslateY.current = 0;
-  }, [onClose]);
-
-  return { sheetRef, handleTouchStart, handleTouchMove, handleTouchEnd };
 }
 
 // ── Hot spot card ───────────────────────────────────────────
