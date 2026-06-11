@@ -11,6 +11,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Allow tests to import pure netlify utility modules (no Deno APIs).
+      // Only wfs-bbox-url.ts qualifies — it contains no Deno-specific code.
+      "~netlify": path.resolve(__dirname, "./netlify"),
     },
   },
 });

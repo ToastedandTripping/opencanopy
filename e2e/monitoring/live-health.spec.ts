@@ -12,6 +12,9 @@
  *   3. Map reaches idle state (generous 60s timeout)
  *   4. Forest-age layer returns features at z5
  *   5. Cutblocks layer returns features at z7
+ *   6. fish-streams WFS returns features (D3 deploy gate — cqlFilter layer)
+ *   7. tap-deferrals WFS returns features (D3 deploy gate — cqlFilter layer)
+ *   8. cutblocks supplemental WFS returns features (D3 deploy gate — cqlFilter layer)
  */
 
 import { test, expect, type Page } from '@playwright/test';
@@ -215,5 +218,141 @@ test('tenure-cutblocks vector tiles render features at z11 on production', async
   expect(
     featureCount,
     'tenure-cutblocks should have rendered features at z11'
+  ).toBeGreaterThan(0);
+});
+
+// ── D3 deploy gates: cqlFilter layers must return features ───────────────────
+//
+// These tests are the deploy gate for the D3 proxy CQL fix. Each test:
+//   - Navigates to a viewport that is INSIDE the layer's zoomRange AND
+//     under the 50,000 km² WFS area guard (DataLayer.tsx:930-947).
+//   - Enables the layer and waits for WFS data to arrive.
+//   - Asserts rendered features > 0.
+//
+// Viewport selection rationale:
+//   - fish-streams (z9+): Campbell River area (-125.3, 50.0) at z10 —
+//     dense FWA stream network, high STREAM_ORDER values. Area ~130 km².
+//   - tap-deferrals (z7+): Wells Gray area (-119.9, 51.7) at z9 —
+//     known old-growth concentrations, PROJ_AGE_1 >= 250. Area ~280 km².
+//   - cutblocks (supplemental WFS, tile-backed, z13+): Prince George (-122.7, 53.9)
+//     at z13 — dense tenure cutblocks. Area <50 km². Layer is tile-backed so
+//     this tests the supplemental WFS path; rendered layer ID is the WFS fill.
+//
+// These tests run against production after deploy — they are NOT local CI gates.
+
+test('D3: fish-streams WFS returns features via cqlFilter proxy fix', async ({ page }) => {
+  // fish-streams: zoomRange [9, 18], WFS-only (no tileSource)
+  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
+  await waitForMapIdle(page, 60000);
+
+  // Navigate to Campbell River area at z10 — inside fish-streams zoomRange,
+  // well under the 50,000 km² area guard.
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = (window as any).__opencanopy_map;
+    if (!map) return;
+    map.flyTo({ center: [-125.3, 50.0], zoom: 10, duration: 0 });
+  });
+
+  await waitForMapIdle(page, 60000);
+
+  // Wait for the WFS layer to be added (may take a moment after navigation)
+  await page.waitForTimeout(5000);
+
+  let featureCount = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    featureCount = await queryFeatureCount(page, 'layer-fish-streams-line');
+    if (featureCount > 0) break;
+    if (attempt < 2) await page.waitForTimeout(8000);
+  }
+
+  if (featureCount === -1) {
+    console.warn('D3 fish-streams: Could not access map instance');
+    test.skip();
+    return;
+  }
+
+  expect(
+    featureCount,
+    'fish-streams WFS layer should return features at z10 (D3 proxy CQL fix)'
+  ).toBeGreaterThan(0);
+});
+
+test('D3: tap-deferrals WFS returns features via cqlFilter proxy fix', async ({ page }) => {
+  // tap-deferrals: zoomRange [7, 18], WFS-only
+  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
+  await waitForMapIdle(page, 60000);
+
+  // Navigate to Wells Gray area at z9 — known old-growth, inside zoomRange,
+  // under the area guard.
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = (window as any).__opencanopy_map;
+    if (!map) return;
+    map.flyTo({ center: [-119.9, 51.7], zoom: 9, duration: 0 });
+  });
+
+  await waitForMapIdle(page, 60000);
+  await page.waitForTimeout(5000);
+
+  let featureCount = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    featureCount = await queryFeatureCount(page, 'layer-tap-deferrals-line');
+    if (featureCount > 0) break;
+    if (attempt < 2) await page.waitForTimeout(8000);
+  }
+
+  if (featureCount === -1) {
+    console.warn('D3 tap-deferrals: Could not access map instance');
+    test.skip();
+    return;
+  }
+
+  expect(
+    featureCount,
+    'tap-deferrals WFS layer should return features at z9 in Wells Gray old-growth area (D3 proxy CQL fix)'
+  ).toBeGreaterThan(0);
+});
+
+test('D3: cutblocks supplemental WFS returns features via cqlFilter proxy fix', async ({ page }) => {
+  // cutblocks: tile-backed layer. WFS supplemental path uses cqlFilter on the proxy.
+  // zoomRange [0, 18], but WFS kicks in above tile maxZoom (z12). Test at z13.
+  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
+  await waitForMapIdle(page, 60000);
+
+  // Navigate to Prince George at z13 — dense cutblocks. Area ~12 km².
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = (window as any).__opencanopy_map;
+    if (!map) return;
+    map.flyTo({ center: [-122.7, 53.9], zoom: 13, duration: 0 });
+    // Ensure cutblocks layer is visible
+    if (map.getLayer('layer-cutblocks-fill')) {
+      map.setLayoutProperty('layer-cutblocks-fill', 'visibility', 'visible');
+    }
+  });
+
+  await waitForMapIdle(page, 60000);
+  await page.waitForTimeout(5000);
+
+  let featureCount = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    featureCount = await queryFeatureCount(page, 'layer-cutblocks-fill');
+    if (featureCount > 0) break;
+    if (attempt < 2) await page.waitForTimeout(8000);
+  }
+
+  if (featureCount === -1) {
+    console.warn('D3 cutblocks: Could not access map instance');
+    test.skip();
+    return;
+  }
+
+  expect(
+    featureCount,
+    'cutblocks WFS fill layer should have features at z13 (D3 proxy CQL fix — supplemental WFS path)'
   ).toBeGreaterThan(0);
 });

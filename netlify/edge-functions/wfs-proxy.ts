@@ -562,6 +562,12 @@ function rateLimitResponse(retryAfter: number): Response {
   );
 }
 
+// ── Upstream URL construction ────────────────────────────────────
+// Extracted into wfs-bbox-url.ts for unit testability (pure TS,
+// no Deno APIs — importable by both edge function and vitest).
+import { buildBboxWfsUrl } from "./wfs-bbox-url.ts";
+export { buildBboxWfsUrl };
+
 // ── Main handler ────────────────────────────────────────────────
 
 export default async function handler(
@@ -695,28 +701,7 @@ export default async function handler(
   // Scale feature count by zoom -- fewer features at wide views
   const maxFeatures = zoom <= 6 ? 2000 : zoom <= 8 ? 3000 : zoom <= 10 ? 5000 : 8000;
 
-  const wfsParams = new URLSearchParams({
-    service: "WFS",
-    version: "2.0.0",
-    request: "GetFeature",
-    typeName: config.typeName,
-    outputFormat: "application/json",
-    srsName: "EPSG:4326",
-    bbox: `${Math.round(albersWest)},${Math.round(albersSouth)},${Math.round(albersEast)},${Math.round(albersNorth)},EPSG:3005`,
-    count: String(maxFeatures),
-  });
-
-  // Add optional CQL filter
-  if (config.cqlFilter) {
-    wfsParams.set("CQL_FILTER", config.cqlFilter);
-  }
-
-  // Add property names to reduce payload
-  if (config.propertyNames) {
-    wfsParams.set("propertyName", config.propertyNames.join(","));
-  }
-
-  const wfsUrl = `${config.url}?${wfsParams}`;
+  const wfsUrl = buildBboxWfsUrl(config, albersWest, albersSouth, albersEast, albersNorth, maxFeatures);
 
   try {
     const responseText = await fetchWithRetry(wfsUrl);
