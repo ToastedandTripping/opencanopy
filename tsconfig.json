@@ -18,8 +18,10 @@
         "name": "next"
       }
     ],
+    "allowImportingTsExtensions": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "~netlify/*": ["./netlify/*"]
     }
   },
   "include": [
