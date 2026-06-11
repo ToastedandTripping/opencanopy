@@ -241,8 +241,9 @@ test('tenure-cutblocks vector tiles render features at z11 on production', async
 // These tests run against production after deploy — they are NOT local CI gates.
 
 test('D3: fish-streams WFS returns features via cqlFilter proxy fix', async ({ page }) => {
-  // fish-streams: zoomRange [9, 18], WFS-only (no tileSource)
-  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+  // fish-streams: zoomRange [9, 18], WFS-only (no tileSource), defaultEnabled: false.
+  // Enable via hash param so the layer is active on load — bare URL leaves it off.
+  await page.goto(`${PRODUCTION_URL}#layers=fish-streams`, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
   await waitForMapIdle(page, 60000);
 
@@ -280,8 +281,9 @@ test('D3: fish-streams WFS returns features via cqlFilter proxy fix', async ({ p
 });
 
 test('D3: tap-deferrals WFS returns features via cqlFilter proxy fix', async ({ page }) => {
-  // tap-deferrals: zoomRange [7, 18], WFS-only
-  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+  // tap-deferrals: zoomRange [7, 18], WFS-only, defaultEnabled: false.
+  // Enable via hash param so the layer is active on load — bare URL leaves it off.
+  await page.goto(`${PRODUCTION_URL}#layers=tap-deferrals`, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
   await waitForMapIdle(page, 60000);
 
@@ -316,43 +318,22 @@ test('D3: tap-deferrals WFS returns features via cqlFilter proxy fix', async ({ 
   ).toBeGreaterThan(0);
 });
 
-test('D3: cutblocks supplemental WFS returns features via cqlFilter proxy fix', async ({ page }) => {
-  // cutblocks: tile-backed layer. WFS supplemental path uses cqlFilter on the proxy.
-  // zoomRange [0, 18], but WFS kicks in above tile maxZoom (z12). Test at z13.
-  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
-  await waitForMapIdle(page, 60000);
-
-  // Navigate to Prince George at z13 — dense cutblocks. Area ~12 km².
-  await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const map = (window as any).__opencanopy_map;
-    if (!map) return;
-    map.flyTo({ center: [-122.7, 53.9], zoom: 13, duration: 0 });
-    // Ensure cutblocks layer is visible
-    if (map.getLayer('layer-cutblocks-fill')) {
-      map.setLayoutProperty('layer-cutblocks-fill', 'visibility', 'visible');
-    }
-  });
-
-  await waitForMapIdle(page, 60000);
-  await page.waitForTimeout(5000);
-
-  let featureCount = 0;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    featureCount = await queryFeatureCount(page, 'layer-cutblocks-fill');
-    if (featureCount > 0) break;
-    if (attempt < 2) await page.waitForTimeout(8000);
-  }
-
-  if (featureCount === -1) {
-    console.warn('D3 cutblocks: Could not access map instance');
-    test.skip();
-    return;
-  }
-
+test('D3: cutblocks WFS proxy returns features via cqlFilter fix', async ({ request }) => {
+  // cutblocks is tile-backed: the D10 fix removed WfsLayers for tile-backed
+  // layers so there is no 'layer-cutblocks-fill' GeoJSON layer in the UI.
+  // Test the proxy endpoint directly — that's the correct CI gate for the D3
+  // cqlFilter fix on a tile-backed layer (orchestrator-confirmed approach).
+  //
+  // Small bbox near Prince George (-122.7, 53.9) at z13 — dense cutblocks area.
+  // BC Albers bbox approximation for ~1 km² viewport around that coordinate.
+  const response = await request.get(
+    'https://opencanopy.ca/api/wfs?layer=cutblocks&bbox=-122.75,53.88,-122.65,53.92&zoom=13',
+    { timeout: 30000 }
+  );
+  expect(response.status(), 'WFS proxy must return 200').toBe(200);
+  const body = await response.json();
   expect(
-    featureCount,
-    'cutblocks WFS fill layer should have features at z13 (D3 proxy CQL fix — supplemental WFS path)'
+    body.features?.length,
+    'cutblocks WFS proxy should return features at z13 near Prince George (D3 cqlFilter fix)'
   ).toBeGreaterThan(0);
 });

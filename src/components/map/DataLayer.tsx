@@ -73,6 +73,32 @@ const EMPTY_FC: GeoJSON.FeatureCollection = {
 // Opacity changes use setPaintProperty in a separate effect to avoid
 // unnecessary teardown/recreate cycles on every visibility toggle.
 
+/**
+ * Determine the insertion anchor for the satellite raster layer.
+ *
+ * Anchor logic (deterministic regardless of mount order):
+ *   1. First layer whose id starts with "layer-" EXCLUDING the satellite's own
+ *      layer id — places satellite below all data overlays.
+ *   2. Else: first symbol-type layer (firstSymbolId).
+ *   3. Else: undefined (append at top as fallback for empty styles).
+ *
+ * Exported for unit testing in satellite-zorder.test.ts.
+ * draw-* and watershed-* layers do NOT start with "layer-" so they remain
+ * intentionally topmost and are ignored by this function.
+ */
+export function findSatelliteAnchor(
+  allLayers: { id: string; type: string }[],
+  satelliteLayerId: string,
+): string | undefined {
+  const firstOverlayId = allLayers.find(
+    (l) => l.id.startsWith("layer-") && l.id !== satelliteLayerId
+  )?.id;
+  const firstSymbolId = allLayers.find(
+    (l) => l.type === "symbol"
+  )?.id;
+  return firstOverlayId ?? firstSymbolId;
+}
+
 function SatelliteLayers({
   layer,
   visible,
@@ -84,6 +110,12 @@ function SatelliteLayers({
 
   const sourceId = `source-${layer.id}`;
   const layerId = `layer-${layer.id}`;
+
+  // Keep a ref to `visible` that is always current. This lets addToMap() read
+  // the up-to-date visibility at the time it actually runs (which may be on the
+  // "load" event, after one or more renders have occurred since the effect fired).
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
   // Effect 1: Add source and raster layer imperatively, once on mount.
   useEffect(() => {
@@ -104,19 +136,16 @@ function SatelliteLayers({
 
       if (mapInstance.getLayer(layerId)) return;
 
-      // Determine insertion anchor:
-      // First "layer-*" id that is NOT this layer, else firstSymbolId, else undefined (append).
+      // Determine insertion anchor using the exported helper.
       const allLayers = mapInstance.getStyle().layers as maplibregl.LayerSpecification[];
-      const firstOverlayId = allLayers.find(
-        (l) => l.id.startsWith("layer-") && l.id !== layerId
-      )?.id;
-      const firstSymbolId = allLayers.find(
-        (l) => l.type === "symbol"
-      )?.id;
-      const anchor = firstOverlayId ?? firstSymbolId;
+      const anchor = findSatelliteAnchor(allLayers as { id: string; type: string }[], layerId);
 
+      // Use visibleRef.current so opacity is set from the current prop value
+      // at addLayer time, not from the stale closure captured at effect creation.
+      // This fixes a race where a visibility toggle before style-load would leave
+      // the layer at the wrong opacity until the next setPaintProperty call.
       const rasterPaint = pickDefinedPaint({
-        "raster-opacity": visible ? (layer.style.opacity ?? 1) : 0,
+        "raster-opacity": visibleRef.current ? (layer.style.opacity ?? 1) : 0,
         "raster-opacity-transition": { duration: 300 },
       });
 
@@ -132,19 +161,22 @@ function SatelliteLayers({
       pipelineLog("addLayer", layerId, { anchor: anchor ?? "append", type: "raster" });
     }
 
-    // Wait for style to load before adding layers (same pattern as PmtilesLayers)
+    // Unified cleanup: removes the load listener AND layer/source regardless
+    // of which path was taken. This mirrors WfsLayers' unified cleanup pattern
+    // and prevents a leak on the style-pending path (WARNING-3).
+    let onLoad: (() => void) | null = null;
+
     if (mapInstance.isStyleLoaded()) {
       addToMap();
     } else {
-      const onLoad = () => addToMap();
+      onLoad = () => addToMap();
       mapInstance.on("load", onLoad);
-      return () => {
-        mapInstance.off("load", onLoad);
-      };
     }
 
     return () => {
-      // Clean up on unmount
+      if (onLoad) {
+        mapInstance.off("load", onLoad);
+      }
       if (mapInstance.getLayer(layerId)) {
         mapInstance.removeLayer(layerId);
       }
@@ -822,11 +854,10 @@ function WfsLayers({
 
     // Unified cleanup: handles both the "load" listener AND layer/source
     // removal regardless of which code path was taken during setup.
-    // D10 fix: guard against undefined mapInstance (StrictMode double-invoke
-    // can run cleanup after the map ref has been torn down in tests).
+    // `cancelled` prevents addLayersToMap from running after cleanup fires
+    // (StrictMode double-invoke pattern).
     return () => {
       cancelled = true;
-      if (!mapInstance) return;
       if (onLoad) {
         mapInstance.off("load", onLoad);
       }

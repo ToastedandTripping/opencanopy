@@ -25,26 +25,12 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMockMap } from "../mocks/maplibre";
-
-// ── Test helper: anchor selection logic (mirrors SatelliteLayers) ─────────────
-//
-// This is the same logic as in SatelliteLayers.addToMap(), extracted here so
-// the unit test exercises the identical code path without React component machinery.
-function findSatelliteAnchor(
-  mockMap: ReturnType<typeof createMockMap>,
-  satelliteLayerId: string,
-): string | undefined {
-  const allLayers = mockMap.getStyle().layers as Array<{ id: string; type: string }>;
-  const firstOverlayId = allLayers.find(
-    (l) => l.id.startsWith("layer-") && l.id !== satelliteLayerId
-  )?.id;
-  const firstSymbolId = allLayers.find(
-    (l) => l.type === "symbol"
-  )?.id;
-  return firstOverlayId ?? firstSymbolId;
-}
+import { findSatelliteAnchor } from "@/components/map/DataLayer";
 
 // Simulates adding a raster source + layer using the satellite anchor logic.
+// Uses the real exported findSatelliteAnchor from DataLayer.tsx — same function
+// that SatelliteLayers.addToMap() calls — so reverting the component breaks
+// this test (WARNING-2 CI gate requirement).
 function addSatelliteLayer(
   mockMap: ReturnType<typeof createMockMap>,
   satelliteLayerId: string,
@@ -58,7 +44,8 @@ function addSatelliteLayer(
     });
   }
   if (mockMap.getLayer(satelliteLayerId)) return;
-  const anchor = findSatelliteAnchor(mockMap, satelliteLayerId);
+  const allLayers = mockMap.getStyle().layers;
+  const anchor = findSatelliteAnchor(allLayers, satelliteLayerId);
   mockMap.addLayer(
     {
       id: satelliteLayerId,

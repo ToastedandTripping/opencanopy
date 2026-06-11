@@ -138,15 +138,18 @@ export function createMockMap() {
     // ── Style queries ─────────────────────────────────────────────
     isStyleLoaded: vi.fn(() => styleLoaded),
 
-    getStyle: vi.fn(() => {
+    getStyle: vi.fn((): { layers: { id: string; type: string }[] } => {
       // Dynamic: returns basemap layers plus all imperatively-added layers in
       // their insertion order. This mirrors real MapLibre where getStyle().layers
       // includes both basemap and imperatively-added layers.
       // Basemap symbol layer is always present at the start.
-      const basemapLayers = [{ id: "basemap-label", type: "symbol" }];
-      const dynamicLayers = layerOrder
+      const basemapLayers: { id: string; type: string }[] = [{ id: "basemap-label", type: "symbol" }];
+      const dynamicLayers: { id: string; type: string }[] = layerOrder
         .filter((id) => layers.has(id))
-        .map((id) => ({ id, ...(layers.get(id) ?? {}) }));
+        .map((id) => {
+          const l = layers.get(id) ?? {};
+          return { type: "fill", ...l, id } as { id: string; type: string };
+        });
       return { layers: [...basemapLayers, ...dynamicLayers] };
     }),
 
