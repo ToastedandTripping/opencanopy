@@ -184,7 +184,14 @@ rendered behavior is unaffected (verified live during the 06-09 push).
    (`color-audit` incl. the `distance > 20` assertion at :215, and
    `opacity-audit`) get updated in the same commit as each styling change —
    a red audit on a superseded oracle is the work, not a regression.
-9. **Threats preset**: drop `cutblocks`, update description (D7).
+9. **Threats preset (revised per Lee, 2026-06-11)**: KEEP `cutblocks`, restyle
+   for contrast instead of dropping. Current `#dc2626` red fill collides with
+   forest-age harvested `#ef4444` — that collision, not the data, was the
+   redundancy. New style: amber boundary outlines (no/minimal fill) over the
+   sharp forest-age base; optional GPU expression styling blocks with no
+   `DISTURBANCE_START_DATE` (approved, not yet cut) as dashed — caveat: the
+   known DISTURBANCE_START_DATE data issue (ROADMAP outstanding items).
+   A permit boundary enclosing dark-green fill reads as the conflict by eye.
 10. **Old-growth consistency (D6)**: with Wave 2's palette-correct tiles, the
     isolated old-growth view is dark green automatically; verify the
     raster→vector handoff has no color jump.
@@ -212,5 +219,22 @@ rendered behavior is unaffected (verified live during the 06-09 push).
 - logging-risk ROADMAP scope question (open decision, unchanged).
 
 ## Open items for Lee
-- Wave 2 palette: confirm registry colors are the canonical four.
-- Threats preset: confirm dropping `cutblocks` there (it stays elsewhere).
+- ~~Wave 2 palette~~ — CONFIRMED 2026-06-11: registry colors are canonical.
+- ~~Threats: drop cutblocks~~ — REVERSED 2026-06-11: keep + restyle (Wave 3.9).
+
+## Pending design: derived "old growth at risk" layer (Tier 2, new scope)
+Lee's actual Threats question is *where FTEN/FOM cutblocks disagree with
+forest age* — permits sitting on old forest. The real answer is an offline
+pipeline intersect (FTEN cutblocks, optionally FOM `planned-cutblocks` —
+proxy-supported, never shipped client-side — ∩ VRI old-growth), shipped as
+its own clearly-labelled derived PMTiles layer in pink/magenta. Precedent for
+a derived set-operation layer: the conservation-gap raster theme. Required
+honesty: label "computed: FTEN × VRI"; exclude blocks with past
+DISTURBANCE_START_DATE (VRI lags harvest — stale-age false positives).
+NOT yet executable — gated on three decisions (Lee):
+1. threshold: old-growth (250+) only, or + mature as a lighter class;
+2. include FOM proposed blocks or FTEN only;
+3. color (pink #ec4899 / magenta #d946ef — Jen specs with colorblind check
+   against the reds, over dark basemap AND satellite).
+Once decided: spec → focused critic pass (new scope beyond the R3 approval)
+→ slot as Wave 2.5 (it rides the same pipeline tooling as Wave 2).
