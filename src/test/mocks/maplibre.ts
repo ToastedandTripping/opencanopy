@@ -35,10 +35,17 @@ export interface LayoutCall {
   value: unknown;
 }
 
+// Basemap layer IDs that are pre-seeded in layerOrder to support beforeId
+// insertion, but excluded from _getLayerOrder() (which returns only
+// imperatively-added layers, matching how tests assert on dynamic layer order).
+const BASEMAP_LAYER_IDS = new Set(["basemap-label"]);
+
 export function createMockMap() {
   const sources = new Map<string, Record<string, unknown>>();
   const layers = new Map<string, Record<string, unknown>>();
-  const layerOrder: string[] = [];
+  // Pre-seed with basemap layer IDs so that addLayer(config, "basemap-label")
+  // correctly splices imperatively-added layers before them.
+  const layerOrder: string[] = ["basemap-label"];
   const paintValues = new Map<string, Map<string, unknown>>();
   const filterValues = new Map<string, unknown>();
   const layoutValues = new Map<string, Map<string, unknown>>();
@@ -139,18 +146,20 @@ export function createMockMap() {
     isStyleLoaded: vi.fn(() => styleLoaded),
 
     getStyle: vi.fn((): { layers: { id: string; type: string }[] } => {
-      // Dynamic: returns basemap layers plus all imperatively-added layers in
-      // their insertion order. This mirrors real MapLibre where getStyle().layers
-      // includes both basemap and imperatively-added layers.
-      // Basemap symbol layer is always present at the start.
-      const basemapLayers: { id: string; type: string }[] = [{ id: "basemap-label", type: "symbol" }];
-      const dynamicLayers: { id: string; type: string }[] = layerOrder
-        .filter((id) => layers.has(id))
-        .map((id) => {
+      // Returns all layers in their actual stack order (layerOrder), including
+      // the pre-seeded basemap layers. This mirrors real MapLibre where
+      // getStyle().layers includes both basemap and imperatively-added layers,
+      // in the actual render order.
+      const basemapLayerDefs: Record<string, { id: string; type: string }> = {
+        "basemap-label": { id: "basemap-label", type: "symbol" },
+      };
+      return {
+        layers: layerOrder.map((id) => {
+          if (basemapLayerDefs[id]) return basemapLayerDefs[id];
           const l = layers.get(id) ?? {};
           return { type: "fill", ...l, id } as { id: string; type: string };
-        });
-      return { layers: [...basemapLayers, ...dynamicLayers] };
+        }),
+      };
     }),
 
     // ── Paint / Filter / Layout ───────────────────────────────────
@@ -260,7 +269,8 @@ export function createMockMap() {
 
     _getSources: () => new Map(sources),
     _getLayers: () => new Map(layers),
-    _getLayerOrder: () => [...layerOrder],
+    // Returns only imperatively-added layers (excludes pre-seeded basemap layers).
+    _getLayerOrder: () => layerOrder.filter((id) => !BASEMAP_LAYER_IDS.has(id)),
     _getCalls: () => calls,
     _getPaintValues: () => paintValues,
     _getFilterValues: () => filterValues,
@@ -269,6 +279,7 @@ export function createMockMap() {
       sources.clear();
       layers.clear();
       layerOrder.length = 0;
+      layerOrder.push(...BASEMAP_LAYER_IDS);
       paintValues.clear();
       filterValues.clear();
       layoutValues.clear();

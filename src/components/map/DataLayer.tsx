@@ -90,13 +90,22 @@ export function findSatelliteAnchor(
   allLayers: { id: string; type: string }[],
   satelliteLayerId: string,
 ): string | undefined {
-  const firstOverlayId = allLayers.find(
+  const overlayIdx = allLayers.findIndex(
     (l) => l.id.startsWith("layer-") && l.id !== satelliteLayerId
-  )?.id;
-  const firstSymbolId = allLayers.find(
+  );
+  const symbolIdx = allLayers.findIndex(
     (l) => l.type === "symbol"
-  )?.id;
-  return firstOverlayId ?? firstSymbolId;
+  );
+  // Pick whichever candidate appears earlier in the stack (lower index).
+  // This ensures satellite is anchored below basemap labels even during the
+  // async-source window when declarative raster overviews (layer-*-raster) are
+  // the only layer-* entries and happen to sit above symbol layers.
+  // Fallback chain: if one is missing (-1), use the other; if both missing → undefined.
+  if (overlayIdx === -1 && symbolIdx === -1) return undefined;
+  if (overlayIdx === -1) return allLayers[symbolIdx].id;
+  if (symbolIdx === -1) return allLayers[overlayIdx].id;
+  const earlier = overlayIdx < symbolIdx ? overlayIdx : symbolIdx;
+  return allLayers[earlier].id;
 }
 
 function SatelliteLayers({

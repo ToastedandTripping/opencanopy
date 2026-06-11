@@ -213,6 +213,45 @@ describe("SatelliteLayers anchor logic — D1 z-order fix", () => {
     });
   });
 
+  // ── Async-source window: declarative raster above symbol layer ───────────
+  //
+  // Scenario: PMTiles fills haven't resolved yet (async source header).
+  // The ONLY layer-* entries are the declarative raster overviews appended
+  // top-of-stack by react-map-gl (no beforeId), so they sit ABOVE the symbol
+  // layer.  findSatelliteAnchor must return the symbol layer (earlier in order)
+  // so satellite stays below basemap labels.
+
+  describe("async-source window: declarative raster sits above symbol layer", () => {
+    it("anchor resolves to the symbol layer when layer-* raster is above it", () => {
+      // Stack: [basemap-label (symbol), layer-forest-age-raster (raster)]
+      // The declarative raster was appended without a beforeId → top of stack
+      map.addSource("source-forest-age-raster", {
+        type: "raster",
+        tiles: ["https://example.com/{z}/{x}/{y}.png"],
+        tileSize: 256,
+      });
+      map.addLayer({
+        id: "layer-forest-age-raster",
+        type: "raster",
+        source: "source-forest-age-raster",
+      } as Record<string, unknown>);
+      // The mock appends without beforeId, so layer order is now:
+      //   [0] basemap-label (symbol)
+      //   [1] layer-forest-age-raster (raster, layer-* prefixed, above symbol)
+
+      const allLayers = map.getStyle().layers as { id: string; type: string }[];
+      const symbolIdx = allLayers.findIndex((l) => l.type === "symbol");
+      const rasterIdx = allLayers.findIndex((l) => l.id === "layer-forest-age-raster");
+      // Confirm the raster really is above the symbol in this test stack
+      expect(rasterIdx, "test setup: raster must be above symbol").toBeGreaterThan(symbolIdx);
+
+      const anchor = findSatelliteAnchor(allLayers, "layer-satellite");
+      // Must pick the symbol layer (lower index), not the raster (higher index)
+      expect(anchor, "anchor must resolve to the symbol layer, not the raster above it")
+        .toBe("basemap-label");
+    });
+  });
+
   // ── Re-enable after overlays: anchor persists on repeated calls ───────────
 
   describe("idempotency: adding satellite twice does not crash", () => {
