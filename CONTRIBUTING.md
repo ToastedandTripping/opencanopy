@@ -38,7 +38,7 @@ Each layer is a single configuration object in `src/lib/layers/registry.ts`. To 
 }
 ```
 
-4. Add the layer ID to the edge function's `LAYER_CONFIG` in `edge/wfs-proxy.ts`.
+4. Add the layer ID to the edge function's `LAYER_CONFIG` in `netlify/edge-functions/wfs-proxy.ts`.
 5. Test at multiple zoom levels to verify the data loads and renders.
 
 ## Adding a Hot Spot
