@@ -29,8 +29,8 @@ open-source base.
 
 ## Reference
 
-- Architecture: `state/plans/opencanopy-audit-architecture.md`
-- Audit pipeline: `tools/audit/` (7-audit suite — source-to-tile tracing,
+- Architecture: `ARCHITECTURE.md` (in-repo, authored 2026-06-10)
+- Audit pipeline: `scripts/audit-*.ts` (7-audit suite — source-to-tile tracing,
   geometry precision, spatial validation, adversarial testing, cross-source
   consistency, deep property validation, unified runner)
 - Repo: github.com/ToastedandTripping/opencanopy
