@@ -1,23 +1,36 @@
 #!/usr/bin/env python3
 """
-Rasterize forest-age NDJSON into PNG overview tiles (z4-z10).
+Rasterize forest-age NDJSON into PNG overview tiles (z4-z9).
 
 Generates multiple themed raster overlays:
-  1. forest-age: 4-class coloring (green/light-green/orange/red)
-  2. old-growth: gold old growth on dark background
+  1. forest-age: 4-class coloring (registry palette)
+  2. old-growth / mature / young / harvested: per-class isolation
+     (one class in its canonical palette color, all others transparent)
   3. conservation-gap: red where old growth is unprotected
 
 Each theme produces a directory of PNG tiles in XYZ layout (z/x/y.png)
-that MapLibre can render as raster sources at z4-z10, replacing the
+that MapLibre can render as raster sources at z4-z9, replacing the
 vector tile approach that crashes Chrome at province scale.
 
 Usage:
-  python3 scripts/build-raster-tiles.py [--theme forest-age|old-growth|all]
-  python3 scripts/build-raster-tiles.py --theme all
+  python3 scripts/build-raster-tiles.py [options]
+
+  --theme THEME     One of: forest-age, old-growth, mature, young, harvested,
+                    conservation-gap, all  (default: forest-age)
+  --input PATH      NDJSON input file (default: data/checkpoint/preprocessed/forest-age.ndjson
+                    relative to the repo root)
+  --output-dir DIR  Tile output directory (default: data/raster-tiles relative to repo root)
+  --zoom-start Z    Lowest zoom to generate (default: 4)
+  --zoom-end Z      Highest zoom to generate, inclusive (default: 9)
 
 Dependencies: rasterio, numpy, shapely (pip3 install --user rasterio numpy shapely)
+
+Color authority: src/lib/layers/forest-age-palette.json (canonical).
+This script reads that file at startup so both client and raster tiles
+share the same hex values without a manual sync step.
 """
 
+import argparse
 import json
 import math
 import os
@@ -32,53 +45,94 @@ from rasterio.transform import from_bounds
 from rasterio.features import rasterize
 from shapely.geometry import shape
 
+# ── Repo root & palette ───────────────────────────────────────────
+
+REPO_ROOT = Path(__file__).parent.parent
+
+# Canonical color palette shared with the TypeScript registry.
+# Do not hardcode hex values here; always read from the palette file.
+_PALETTE_PATH = REPO_ROOT / "src" / "lib" / "layers" / "forest-age-palette.json"
+
+def load_palette() -> dict:
+    """Load the canonical forest-age class palette from the shared JSON file."""
+    with open(_PALETTE_PATH) as f:
+        return json.load(f)
+
+def hex_to_rgba(hex_color: str, alpha: int) -> tuple:
+    """Convert a 6-char hex color string to an (R, G, B, alpha) tuple."""
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        raise ValueError(f"Invalid hex color: {hex_color!r}")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), alpha)
+
 # ── Configuration ────────────────────────────────────────────────
 
-NDJSON_PATH = Path(__file__).parent.parent / "data" / "geojson" / "forest-age.ndjson"
-PARKS_PATH = Path(__file__).parent.parent / "data" / "geojson" / "parks.ndjson"
-OGMA_PATH = Path(__file__).parent.parent / "data" / "geojson" / "ogma.ndjson"
-OUTPUT_DIR = Path(__file__).parent.parent / "data" / "raster-tiles"
+# Default paths (overridable via CLI flags)
+_DEFAULT_NDJSON_PATH = REPO_ROOT / "data" / "checkpoint" / "preprocessed" / "forest-age.ndjson"
+_DEFAULT_PARKS_PATH  = REPO_ROOT / "data" / "checkpoint" / "preprocessed" / "parks.ndjson"
+_DEFAULT_OGMA_PATH   = REPO_ROOT / "data" / "checkpoint" / "preprocessed" / "ogma.ndjson"
+_DEFAULT_OUTPUT_DIR  = REPO_ROOT / "data" / "raster-tiles"
 
 # BC extent in WGS84 (approximate, covers all VRI data)
 BC_BOUNDS = (-139.5, 48.0, -114.0, 60.5)  # west, south, east, north
-
-# Color themes: RGBA tuples
-THEMES = {
-    "forest-age": {
-        "old-growth": (21, 128, 61, 200),     # #15803d green
-        "mature": (74, 222, 128, 200),          # #4ade80 light green
-        "young": (249, 115, 22, 200),            # #f97316 orange
-        "harvested": (239, 68, 68, 200),         # #ef4444 red
-        "background": (0, 0, 0, 0),              # transparent
-    },
-    "old-growth": {
-        "old-growth": (234, 179, 8, 230),        # #eab308 gold
-        "mature": (30, 30, 30, 80),              # faint dark
-        "young": (30, 30, 30, 60),               # faint dark
-        "harvested": (30, 30, 30, 60),           # faint dark
-        "background": (0, 0, 0, 0),
-    },
-    "conservation-gap": {
-        # Will be filled dynamically: protected old growth = green, unprotected = red
-        "old-growth-protected": (34, 197, 94, 200),   # #22c55e green
-        "old-growth-unprotected": (239, 68, 68, 230),  # #ef4444 bright red
-        "mature": (0, 0, 0, 0),
-        "young": (0, 0, 0, 0),
-        "harvested": (0, 0, 0, 0),
-        "background": (0, 0, 0, 0),
-    },
-}
 
 # Tile resolution (pixels per tile)
 TILE_SIZE = 512
 
 # Paint order: background classes first, ecologically important last.
-# Old-growth must always win overlaps. Any class not listed here is
+# Old-growth must always win overlaps.  Any class not listed here is
 # painted before the ordered classes (insertion order, as fallback).
 PAINT_ORDER = [
     "harvested", "young", "mature", "old-growth",
     "old-growth-unprotected", "old-growth-protected",
 ]
+
+
+def build_themes(palette: dict) -> dict:
+    """
+    Build the THEMES dictionary from the canonical palette.
+
+    The forest-age default theme and all four per-class isolation themes
+    derive their hex values from ``palette`` so there is one source of truth.
+    The conservation-gap theme uses fixed colors (unrelated to class palette).
+    """
+    # Alpha values used in the default overview theme
+    OVERVIEW_ALPHA = 200
+
+    themes = {
+        "forest-age": {
+            "old-growth": hex_to_rgba(palette["old-growth"], OVERVIEW_ALPHA),
+            "mature":     hex_to_rgba(palette["mature"],     OVERVIEW_ALPHA),
+            "young":      hex_to_rgba(palette["young"],      OVERVIEW_ALPHA),
+            "harvested":  hex_to_rgba(palette["harvested"],  OVERVIEW_ALPHA),
+            "background": (0, 0, 0, 0),
+        },
+        "conservation-gap": {
+            # Protected old growth = green; unprotected = red.
+            # Colors fixed — not derived from the class palette.
+            "old-growth-protected":   (34, 197, 94, 200),   # #22c55e
+            "old-growth-unprotected": (239, 68, 68, 230),   # #ef4444
+            "mature":     (0, 0, 0, 0),
+            "young":      (0, 0, 0, 0),
+            "harvested":  (0, 0, 0, 0),
+            "background": (0, 0, 0, 0),
+        },
+    }
+
+    # Per-class isolation themes: one class painted in its palette color,
+    # all other classes fully transparent.  Theme name == class slug so
+    # the client's {class} URL substitution resolves correctly.
+    for cls in ("old-growth", "mature", "young", "harvested"):
+        isolation: dict = {"background": (0, 0, 0, 0)}
+        for other in ("old-growth", "mature", "young", "harvested"):
+            if other == cls:
+                isolation[other] = hex_to_rgba(palette[cls], OVERVIEW_ALPHA)
+            else:
+                isolation[other] = (0, 0, 0, 0)
+        themes[cls] = isolation
+
+    return themes
+
 
 # ── Tile math ────────────────────────────────────────────────────
 
@@ -128,10 +182,10 @@ def load_features(path: Path, class_field: str = "class") -> list:
     return features
 
 
-def load_protection_polygons() -> list:
+def load_protection_polygons(parks_path: Path, ogma_path: Path) -> list:
     """Load parks + OGMA polygons for conservation gap analysis."""
     polys = []
-    for path in [PARKS_PATH, OGMA_PATH]:
+    for path in [parks_path, ogma_path]:
         if not path.exists() or path.stat().st_size == 0:
             print(f"  Skipping {path.name} (missing or empty)")
             continue
@@ -142,7 +196,7 @@ def load_protection_polygons() -> list:
                     geom = feat.get("geometry")
                     if geom:
                         polys.append(shape(geom))
-                except:
+                except Exception:
                     continue
     print(f"  Loaded {len(polys):,} protection polygons (parks + OGMA)")
     return polys
@@ -187,7 +241,7 @@ def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_
             # Apply color where mask is 1
             for band in range(4):
                 rgba[band][mask == 1] = color[band]
-        except Exception as e:
+        except Exception:
             # Skip tiles that fail (empty geometry, etc.)
             pass
 
@@ -232,10 +286,11 @@ def write_tile_png(rgba: np.ndarray, path: Path):
 
 # ── Main pipeline ────────────────────────────────────────────────
 
-def build_theme(theme_name: str, features: list, zoom_range: range = range(4, 11)):
+def build_theme(theme_name: str, themes: dict, features: list, output_dir: Path,
+                zoom_range: range = range(4, 10)):
     """Build all PNG tiles for a theme across zoom levels."""
-    theme = THEMES[theme_name]
-    theme_dir = OUTPUT_DIR / theme_name
+    theme = themes[theme_name]
+    theme_dir = output_dir / theme_name
 
     print(f"\n=== Building {theme_name} raster tiles (z{zoom_range.start}-z{zoom_range.stop - 1}) ===")
 
@@ -286,29 +341,77 @@ def build_theme(theme_name: str, features: list, zoom_range: range = range(4, 11
 
 
 def main():
-    theme_arg = "forest-age"
-    if "--theme" in sys.argv:
-        idx = sys.argv.index("--theme")
-        if idx + 1 < len(sys.argv):
-            theme_arg = sys.argv[idx + 1]
+    parser = argparse.ArgumentParser(
+        description="Build raster overview tiles for OpenCanopy forest-age layer.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--theme",
+        default="forest-age",
+        help=(
+            "Theme to build: forest-age, old-growth, mature, young, harvested, "
+            "conservation-gap, or all (default: forest-age)"
+        ),
+    )
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=_DEFAULT_NDJSON_PATH,
+        help="Path to the forest-age NDJSON input file (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=_DEFAULT_OUTPUT_DIR,
+        help="Tile output root directory (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--zoom-start",
+        type=int,
+        default=4,
+        help="Lowest zoom level to generate (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--zoom-end",
+        type=int,
+        default=9,
+        help="Highest zoom level to generate, inclusive (default: %(default)s)",
+    )
+
+    args = parser.parse_args()
+
+    zoom_range = range(args.zoom_start, args.zoom_end + 1)
 
     print("=== OpenCanopy Raster Tile Builder ===\n")
+    print(f"  Palette source: {_PALETTE_PATH}")
+    print(f"  Input NDJSON:   {args.input}")
+    print(f"  Output dir:     {args.output_dir}")
+    print(f"  Zoom range:     z{args.zoom_start}-z{args.zoom_end}")
+    print(f"  Theme:          {args.theme}")
+    print()
+
+    # Load canonical palette (shared with TypeScript registry)
+    palette = load_palette()
+    themes = build_themes(palette)
 
     # Load forest-age features
     print("Loading forest-age features...")
-    features = load_features(NDJSON_PATH)
+    features = load_features(args.input)
 
-    if theme_arg == "all":
-        for name in THEMES:
+    if args.theme == "all":
+        for name in themes:
             if name == "conservation-gap":
                 print("\n  (conservation-gap requires spatial intersection -- skipping for now)")
                 continue
-            build_theme(name, features)
+            build_theme(name, themes, features, args.output_dir, zoom_range)
     else:
-        if theme_arg not in THEMES:
-            print(f"Unknown theme: {theme_arg}. Available: {', '.join(THEMES.keys())}")
+        if args.theme not in themes:
+            print(f"Unknown theme: {args.theme!r}. Available: {', '.join(sorted(themes.keys()))}")
             sys.exit(1)
-        build_theme(theme_arg, features)
+        if args.theme == "conservation-gap":
+            print("  (conservation-gap requires spatial intersection -- not yet implemented)")
+            sys.exit(0)
+        build_theme(args.theme, themes, features, args.output_dir, zoom_range)
 
     print("\n=== Done ===")
 

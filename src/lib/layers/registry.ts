@@ -4,7 +4,8 @@ import {
   OTHER_COMPANY_COLOR,
   companyColorExpression,
 } from "@/data/companies";
-import { R2_PUBLIC_BASE, FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
+import { R2_PUBLIC_BASE, FOREST_AGE_RASTER_URL, FOREST_AGE_CLASS_RASTER_URL } from "@/lib/r2-config";
+import FOREST_AGE_PALETTE from "@/lib/layers/forest-age-palette.json";
 
 export const PMTILES_URL = `pmtiles://${R2_PUBLIC_BASE}/opencanopy-v10.pmtiles`;
 export const PMTILES_SOURCE_ID = "opencanopy";
@@ -72,7 +73,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       minZoom: 4,
       maxZoom: 9,
     },
-    rasterOverviewClassUrl: `${R2_PUBLIC_BASE}/raster/{class}/{z}/{x}/{y}.png`,
+    rasterOverviewClassUrl: FOREST_AGE_CLASS_RASTER_URL,
     style: {
       type: "fill",
       paint: {
@@ -83,13 +84,13 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
             "match",
             ["get", "class"],
             "old-growth",
-            "#0d5c2a",
+            FOREST_AGE_PALETTE["old-growth"],
             "mature",
-            "#4ade80",
+            FOREST_AGE_PALETTE["mature"],
             "young",
-            "#f97316",
+            FOREST_AGE_PALETTE["young"],
             "harvested",
-            "#ef4444",
+            FOREST_AGE_PALETTE["harvested"],
             "#6b7280",
           ],
           "#6b7280",
