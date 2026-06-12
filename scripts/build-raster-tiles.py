@@ -21,7 +21,10 @@ Usage:
                     relative to the repo root)
   --output-dir DIR  Tile output directory (default: data/raster-tiles relative to repo root)
   --zoom-start Z    Lowest zoom to generate (default: 4)
-  --zoom-end Z      Highest zoom to generate, inclusive (default: 9)
+  --zoom-end Z      Highest TILE zoom to generate, inclusive (default: 10).
+                    The raster overlay spans DISPLAY zooms 4-9, but 256px
+                    tiles fetch tile zoom = display zoom + 1, so the display
+                    band z9-10 reads z10 TILES — do not stop at z9.
   --dump-themes     Print build_themes(load_palette()) as JSON to stdout and exit.
                     No heavy imports (rasterio/numpy/shapely) are needed for this path.
 
@@ -383,8 +386,12 @@ def main():
     parser.add_argument(
         "--zoom-end",
         type=int,
-        default=9,
-        help="Highest zoom level to generate, inclusive (default: %(default)s)",
+        default=10,
+        # The raster overlay covers DISPLAY zooms 4-9, but the client uses
+        # 256px tiles, which request tile zoom = display zoom + 1 — the
+        # display band z9-10 reads z10 TILES (live-verified 2026-06-12).
+        # Stopping at z9 blanks that band.
+        help="Highest TILE zoom to generate, inclusive (default: %(default)s)",
     )
     parser.add_argument(
         "--dump-themes",
