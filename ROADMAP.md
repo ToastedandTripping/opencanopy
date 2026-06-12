@@ -1,10 +1,12 @@
 ---
 status: in-progress
 current: "Layer-fidelity waves 2-4 + 2.5 (per-class raster re-render in registry palette; Jen design pass: parks/conservancies/species/preset opacity/Threats cutblock restyle; verification net; old-growth-at-risk conflict layer — knobs decided, needs focused critic pass)"
-next: "Deploy Wave 1 + run its deploy-verification items: e2e monitoring gates green (fish-streams/tap-deferrals/cutblocks return features), satellite-under-overlays visual check, MapTiler backdrop-dark style has no layer-* id collisions (needs API key). Then Wave 2."
+next: "Wave 2 relay batch (per-class raster re-render + R2 upload) and the Tier-2 conflict-layer focused critic pass. Wave 4 must also repair 4 pre-existing monitoring tests that fail since the 06-02 default-layer reset (bare-URL navigation expects layers that are no longer defaultEnabled; R2 HEAD check fails from Playwright context but R2 verified healthy via curl)."
 testing: null
 pinned: false
 shipped:
+  - date: 2026-06-12
+    item: "Layer-fidelity Wave 1 DEPLOYED + live-verified: proxy bbox-in-CQL fix (fish-streams/tap-deferrals/cutblocks all return features live; D3 e2e gates green), satellite z-order verified on production (index 26, all 38 overlays above, labels on top), MapTiler backdrop-dark confirmed zero layer-* collisions. Deploy hotfix en route: Netlify edge bundler treats every top-level file in netlify/edge-functions/ as an entry point — helper modules must live in a subdirectory (wfs-bbox-url.ts → lib/). Deploys are CLI/API-driven (npx netlify-cli deploy --prod --no-build after local build; CI is test-only, no auto-deploy on push)."
   - date: 2026-06-11
     item: "Layer-fidelity Wave 1 (branch relay/layer-fidelity-w1, 7 commits, 487 tests): proxy bbox-in-CQL fix (restores fish-streams, tap-deferrals + cutblocks supplemental — GeoServer rejects bbox+cql_filter together), imperative satellite z-order (anchor below first overlay/symbol, toggle-order independent), WfsLayers hooks-order fix + tile-backed fetch skip (StrictMode dev crash gone). Razor FAIL→fixed→PASS-WITH-WARNINGS; behavioral eval PASS on Wave 1 checks. Pre-existing finding logged: LayerPanel button-in-button nesting (Wave 3 ride-along)."
   - date: 2026-06-09
