@@ -22,8 +22,11 @@ Usage:
   --output-dir DIR  Tile output directory (default: data/raster-tiles relative to repo root)
   --zoom-start Z    Lowest zoom to generate (default: 4)
   --zoom-end Z      Highest zoom to generate, inclusive (default: 9)
+  --dump-themes     Print build_themes(load_palette()) as JSON to stdout and exit.
+                    No heavy imports (rasterio/numpy/shapely) are needed for this path.
 
 Dependencies: rasterio, numpy, shapely (pip3 install --user rasterio numpy shapely)
+  (only required for actual tile building; --dump-themes has no heavy dependencies)
 
 Color authority: src/lib/layers/forest-age-palette.json (canonical).
 This script reads that file at startup so both client and raster tiles
@@ -32,18 +35,12 @@ share the same hex values without a manual sync step.
 
 import argparse
 import json
-import math
-import os
 import sys
-import time
 from pathlib import Path
-from collections import defaultdict
 
-import numpy as np
-import rasterio
-from rasterio.transform import from_bounds
-from rasterio.features import rasterize
-from shapely.geometry import shape
+# NOTE: math, os, time, collections.defaultdict, numpy, rasterio, and shapely
+# are imported inside the functions that need them so that --dump-themes can
+# run without requiring any heavy packages to be installed.
 
 # ── Repo root & palette ───────────────────────────────────────────
 
@@ -137,15 +134,18 @@ def build_themes(palette: dict) -> dict:
 # ── Tile math ────────────────────────────────────────────────────
 
 def lng_to_tile_x(lng: float, zoom: int) -> int:
+    import math
     return int((lng + 180) / 360 * (1 << zoom))
 
 def lat_to_tile_y(lat: float, zoom: int) -> int:
+    import math
     lat_rad = math.radians(lat)
     n = 1 << zoom
     return int((1 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2 * n)
 
 def tile_bounds(z: int, x: int, y: int) -> tuple:
     """Return (west, south, east, north) in WGS84 for a tile."""
+    import math
     n = 1 << z
     west = x / n * 360 - 180
     east = (x + 1) / n * 360 - 180
@@ -162,6 +162,7 @@ def load_features(path: Path, class_field: str = "class") -> list:
     bbox is (minx, miny, maxx, maxy) pre-computed from the shapely geometry so
     that features_in_bounds does not need to re-parse geometry on every tile check.
     """
+    from shapely.geometry import shape
     features = []
     count = 0
     with open(path) as f:
@@ -184,6 +185,7 @@ def load_features(path: Path, class_field: str = "class") -> list:
 
 def load_protection_polygons(parks_path: Path, ogma_path: Path) -> list:
     """Load parks + OGMA polygons for conservation gap analysis."""
+    from shapely.geometry import shape
     polys = []
     for path in [parks_path, ogma_path]:
         if not path.exists() or path.stat().st_size == 0:
@@ -204,8 +206,12 @@ def load_protection_polygons(parks_path: Path, ogma_path: Path) -> list:
 
 # ── Rasterization ────────────────────────────────────────────────
 
-def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_SIZE) -> np.ndarray:
+def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_SIZE) -> "np.ndarray":
     """Rasterize features into an RGBA numpy array for a single tile."""
+    import numpy as np
+    from collections import defaultdict
+    from rasterio.transform import from_bounds
+    from rasterio.features import rasterize
     west, south, east, north = bounds
     transform = from_bounds(west, south, east, north, size, size)
 
@@ -268,8 +274,10 @@ def features_in_bounds(features: list, bounds: tuple) -> list:
 
 # ── PNG tile writing ─────────────────────────────────────────────
 
-def write_tile_png(rgba: np.ndarray, path: Path):
+def write_tile_png(rgba: "np.ndarray", path: Path):
     """Write an RGBA numpy array as a PNG file."""
+    import numpy as np
+    import rasterio
     path.parent.mkdir(parents=True, exist_ok=True)
     h, w = rgba.shape[1], rgba.shape[2]
     with rasterio.open(
@@ -289,6 +297,7 @@ def write_tile_png(rgba: np.ndarray, path: Path):
 def build_theme(theme_name: str, themes: dict, features: list, output_dir: Path,
                 zoom_range: range = range(4, 10)):
     """Build all PNG tiles for a theme across zoom levels."""
+    import time
     theme = themes[theme_name]
     theme_dir = output_dir / theme_name
 
@@ -377,8 +386,59 @@ def main():
         default=9,
         help="Highest zoom level to generate, inclusive (default: %(default)s)",
     )
+    parser.add_argument(
+        "--dump-themes",
+        action="store_true",
+        help=(
+            "Print build_themes(load_palette()) as JSON to stdout and exit. "
+            "Does not require rasterio/numpy/shapely."
+        ),
+    )
 
     args = parser.parse_args()
+
+    # ── --dump-themes: lightweight path, no heavy imports ────────────────────
+    # Used by color-audit.test.ts to verify actual RGBA tuples against the palette.
+    if args.dump_themes:
+        palette = load_palette()
+        themes = build_themes(palette)
+        # Convert tuple values to lists for JSON serialisation
+        serialisable = {
+            theme_name: {
+                cls: list(rgba)
+                for cls, rgba in theme.items()
+            }
+            for theme_name, theme in themes.items()
+        }
+        print(json.dumps(serialisable, indent=2))
+        sys.exit(0)
+
+    # ── Early validation (before the expensive data load) ────────────────────
+
+    # N3: Zoom range sanity check
+    if args.zoom_start > args.zoom_end:
+        print(
+            f"Error: --zoom-start {args.zoom_start} is greater than "
+            f"--zoom-end {args.zoom_end}. Nothing to generate.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # N2: Theme validation — resolve before loading 9.8 GB of features
+    palette = load_palette()
+    themes = build_themes(palette)
+
+    if args.theme != "all":
+        if args.theme not in themes:
+            print(
+                f"Error: unknown theme {args.theme!r}. "
+                f"Available: {', '.join(sorted(themes.keys()))}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if args.theme == "conservation-gap":
+            print("  (conservation-gap requires spatial intersection -- not yet implemented)")
+            sys.exit(0)
 
     zoom_range = range(args.zoom_start, args.zoom_end + 1)
 
@@ -389,10 +449,6 @@ def main():
     print(f"  Zoom range:     z{args.zoom_start}-z{args.zoom_end}")
     print(f"  Theme:          {args.theme}")
     print()
-
-    # Load canonical palette (shared with TypeScript registry)
-    palette = load_palette()
-    themes = build_themes(palette)
 
     # Load forest-age features
     print("Loading forest-age features...")
@@ -405,12 +461,6 @@ def main():
                 continue
             build_theme(name, themes, features, args.output_dir, zoom_range)
     else:
-        if args.theme not in themes:
-            print(f"Unknown theme: {args.theme!r}. Available: {', '.join(sorted(themes.keys()))}")
-            sys.exit(1)
-        if args.theme == "conservation-gap":
-            print("  (conservation-gap requires spatial intersection -- not yet implemented)")
-            sys.exit(0)
         build_theme(args.theme, themes, features, args.output_dir, zoom_range)
 
     print("\n=== Done ===")

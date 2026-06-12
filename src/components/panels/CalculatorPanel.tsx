@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { calculateFinancialValue } from "@/lib/carbon";
 import type { SelectionStats, FinancialValue } from "@/lib/carbon";
 import { useDragDismiss } from "@/hooks/useDragDismiss";
+import FOREST_AGE_PALETTE from "@/lib/layers/forest-age-palette.json";
 
 interface CalculatorPanelProps {
   stats: SelectionStats | null;
@@ -287,7 +288,7 @@ function PanelContent({ stats, animatedCO2, onClose, onShare, onExport, message,
       <div className="mb-5">
         <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">Breakdown</h3>
         <div className="space-y-3">
-          <AgeBar label="Old growth (250+ yr)" value={stats.oldGrowthHa} total={stats.totalAreaHa} color="#15803d" />
+          <AgeBar label="Old growth (250+ yr)" value={stats.oldGrowthHa} total={stats.totalAreaHa} color={FOREST_AGE_PALETTE["old-growth"]} />
           <AgeBar label="Mature (80-250 yr)" value={stats.matureHa} total={stats.totalAreaHa} color="#4ade80" />
           <AgeBar label="Young (<80 yr)" value={stats.youngHa} total={stats.totalAreaHa} color="#f97316" />
           <AgeBar label="Harvested" value={stats.harvestedHa} total={stats.totalAreaHa} color="#ef4444" />

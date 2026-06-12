@@ -17,16 +17,19 @@
  *   1. Verifies registry vector colors match palette exactly (distance == 0)
  *   2. Parses build-raster-tiles.py to confirm it imports/reads the palette
  *      file (not hardcoded colors) and has four isolation themes
- *   3. Asserts isolation theme structure: each theme paints exactly one class
- *      and leaves the others transparent
+ *   3. Asserts actual RGBA tuples from build_themes() (via --dump-themes) match
+ *      the palette exactly — per-channel equality, alpha included; isolation
+ *      themes: target class = canonical RGBA at alpha 200, all others = [0,0,0,0]
  *
  * This is NOT a tautology: the registry's fill-color expression is derived
  * independently by TypeScript's module resolution; if someone replaces the
  * palette import with a hardcoded value, tests 1 + 3 will catch the drift.
- * The Python parse (test 2) catches drift on the script side.
+ * The Python dump (test 3) catches drift on the script side by executing the
+ * real build_themes() function rather than parsing string literals.
  */
 
 import { describe, it, expect } from "vitest";
+import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
@@ -89,6 +92,35 @@ type PaletteClass = (typeof PALETTE_CLASSES)[number];
 // Canonical palette loaded from the shared JSON file.
 // build-raster-tiles.py and registry.ts both derive their colors from this.
 const PALETTE = FOREST_AGE_PALETTE as Record<PaletteClass, string>;
+
+// ── Python availability + --dump-themes output ────────────────────────────────
+
+/** True when python3 is available in PATH. Used to skip the dump-themes tests. */
+const python3Available = (() => {
+  try {
+    execSync("python3 --version", { stdio: "pipe" });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+/**
+ * RGBA tuple from --dump-themes output, keyed by theme name then class name.
+ * Shape: { "forest-age": { "old-growth": [13, 92, 42, 200], ... }, "old-growth": {...}, ... }
+ * Loaded once at module level; null if python3 is unavailable.
+ */
+type DumpedThemes = Record<string, Record<string, [number, number, number, number]>>;
+const dumpedThemes: DumpedThemes | null = (() => {
+  if (!python3Available) return null;
+  try {
+    const scriptPath = resolve(__dirname, "../../../scripts/build-raster-tiles.py");
+    const raw = execSync(`python3 ${scriptPath} --dump-themes`, { encoding: "utf8" });
+    return JSON.parse(raw) as DumpedThemes;
+  } catch {
+    return null;
+  }
+})();
 
 // ── Extract vector colors from registry ───────────────────────────────────────
 
@@ -228,7 +260,7 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
   // checks that the script reads _PALETTE_PATH and calls load_palette() —
   // it does NOT assert the JSON equals the JSON (that would be a tautology).
 
-  describe("build-raster-tiles.py cross-language guard (Part 2)", () => {
+  describe("build-raster-tiles.py structural guard (Part 2)", () => {
     const scriptPath = resolve(__dirname, "../../../scripts/build-raster-tiles.py");
     const scriptSource = readFileSync(scriptPath, "utf8");
 
@@ -247,14 +279,7 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
     });
 
     it("script defines four per-class isolation themes via build_themes loop", () => {
-      // The script iterates over all four class slugs to build isolation themes.
-      // Verify the loop covers all classes (not hardcoded individually).
       expect(scriptSource).toContain("def build_themes(palette: dict)");
-      // Each class appears in the isolation theme loop
-      for (const cls of PALETTE_CLASSES) {
-        expect(scriptSource).toContain(cls);
-      }
-      // Loop variable confirms all four are handled (not just one)
       expect(scriptSource).toContain(
         'for cls in ("old-growth", "mature", "young", "harvested")'
       );
@@ -277,19 +302,20 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
     });
   });
 
-  // ── Part 3: Isolation theme structure (checked via build_themes logic) ───────
+  // ── Part 3: Isolation theme structure via --dump-themes (runtime guard) ──────
   //
-  // We cannot run the Python script in Jest/Vitest but we can verify the
-  // structure described in build_themes() by reading its source. We also
-  // verify that the palette JSON values for each class are parseable and
-  // that the isolation logic (one opaque class, all others transparent) is
-  // clearly expressed in the script text.
+  // Executes build-raster-tiles.py --dump-themes (lightweight path; no heavy
+  // imports needed) and asserts the actual RGBA tuples produced by build_themes()
+  // match the palette exactly — per-channel equality, alpha included.
+  //
+  // This supersedes string-containment checks because it catches any runtime
+  // deviation: additive overrides, RGBA-tuple literals, channel swaps inside
+  // hex_to_rgba, etc. String parsing cannot catch those.
+  //
+  // The tests are SKIPPED EXPLICITLY when python3 is not available in PATH.
 
-  describe("per-class isolation theme structure (Part 3)", () => {
-    const scriptPath = resolve(__dirname, "../../../scripts/build-raster-tiles.py");
-    const scriptSource = readFileSync(scriptPath, "utf8");
-
-    it("palette JSON contains all four class hex colors", () => {
+  describe("per-class isolation theme structure via --dump-themes (Part 3)", () => {
+    it("palette JSON contains all four class hex colors (parseable)", () => {
       for (const cls of PALETTE_CLASSES) {
         expect(PALETTE[cls]).toBeDefined();
         expect(typeof PALETTE[cls]).toBe("string");
@@ -297,21 +323,80 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
       }
     });
 
-    it("isolation theme logic: active class gets palette color, others get (0,0,0,0)", () => {
-      // Verify the build_themes() function paints the active class and
-      // leaves all others transparent — check both paths in the script source
-      expect(scriptSource).toContain("hex_to_rgba(palette[cls], OVERVIEW_ALPHA)");
-      expect(scriptSource).toContain("(0, 0, 0, 0)");
-      // The logic: for other != cls → transparent
-      expect(scriptSource).toContain("if other == cls:");
-    });
-
-    it("all four isolation theme names match client {class} URL substitution slugs", () => {
-      // Client replaces {class} with the slug; theme name must == slug
-      for (const cls of PALETTE_CLASSES) {
-        expect(scriptSource).toContain(`for cls in ("old-growth", "mature", "young", "harvested")`);
+    it.skipIf(!python3Available)(
+      "SKIP: python3 not available — skipping --dump-themes runtime checks",
+      () => {
+        // This case is only reached if python3Available is true; the skipIf
+        // guard above prevents execution otherwise. If somehow reached when
+        // unavailable, provide a clear diagnostic.
+        expect(python3Available).toBe(true);
       }
-    });
+    );
+
+    it.skipIf(!python3Available)(
+      "--dump-themes executes without error and returns valid JSON",
+      () => {
+        expect(dumpedThemes).not.toBeNull();
+        expect(typeof dumpedThemes).toBe("object");
+      }
+    );
+
+    // forest-age theme: each class RGBA must match palette exactly at alpha 200
+    for (const cls of PALETTE_CLASSES) {
+      it.skipIf(!python3Available)(
+        `forest-age theme: ${cls} RGBA matches palette at alpha 200`,
+        () => {
+          expect(dumpedThemes).not.toBeNull();
+          const rgba = dumpedThemes!["forest-age"][cls];
+          expect(rgba).toBeDefined();
+          const { r, g, b } = parseHex(PALETTE[cls]);
+          expect(rgba[0], `${cls} R channel`).toBe(r);
+          expect(rgba[1], `${cls} G channel`).toBe(g);
+          expect(rgba[2], `${cls} B channel`).toBe(b);
+          expect(rgba[3], `${cls} alpha`).toBe(200);
+        }
+      );
+    }
+
+    // Isolation themes: target class = palette RGBA at alpha 200;
+    // all other classes + background = [0, 0, 0, 0]
+    for (const cls of PALETTE_CLASSES) {
+      it.skipIf(!python3Available)(
+        `isolation theme "${cls}": target class is canonical RGBA, all others transparent`,
+        () => {
+          expect(dumpedThemes).not.toBeNull();
+          const theme = dumpedThemes![cls];
+          expect(theme).toBeDefined();
+
+          // Target class must match palette exactly at alpha 200
+          const { r, g, b } = parseHex(PALETTE[cls]);
+          expect(theme[cls][0], `${cls} R`).toBe(r);
+          expect(theme[cls][1], `${cls} G`).toBe(g);
+          expect(theme[cls][2], `${cls} B`).toBe(b);
+          expect(theme[cls][3], `${cls} alpha`).toBe(200);
+
+          // All other palette classes must be fully transparent
+          for (const other of PALETTE_CLASSES) {
+            if (other === cls) continue;
+            expect(theme[other], `${other} must be transparent in ${cls} isolation`).toEqual([0, 0, 0, 0]);
+          }
+          // Background must also be transparent
+          expect(theme["background"], "background must be transparent").toEqual([0, 0, 0, 0]);
+        }
+      );
+    }
+
+    // Each palette class must exist as a theme name in the dump (slug-match check).
+    // This replaces the dead loop that previously asserted a fixed string four times.
+    for (const cls of PALETTE_CLASSES) {
+      it.skipIf(!python3Available)(
+        `isolation theme name "${cls}" exists in dump (matches client {class} URL slug)`,
+        () => {
+          expect(dumpedThemes).not.toBeNull();
+          expect(Object.keys(dumpedThemes!)).toContain(cls);
+        }
+      );
+    }
   });
 
   // ── Part 4: palette JSON ↔ old hardcoded values (regression sentinel) ────────
