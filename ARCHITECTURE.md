@@ -120,7 +120,16 @@ shell activates.
 `preprocess.ts` (water subtraction, classing) → `build-tiles.ts`
 (single-pass tippecanoe → PMTiles v10) → `verify.ts`, orchestrated by
 `rebuild.sh`. Raster overviews come from `scripts/build-raster-tiles.py`
-(rasterio; themes must use the registry palette). Output ships to R2.
+(rasterio; all themes derive from `src/lib/layers/forest-age-palette.json`,
+the single color authority shared with the TS registry — `color-audit`
+cross-checks both sides via the script's `--dump-themes` mode). The raster
+build reads the slimmed `forest-age-rasterizable.ndjson` produced by
+`scripts/pipeline/simplify-for-raster.py` (the full-fidelity file is ~63 GB
+as Python objects and exceeds the 32 GB build machine; half-pixel-at-z9
+simplify, no features dropped; raster input ONLY — PMTiles keep full
+fidelity). Output ships to R2 under versioned dirs (`raster/v2/...`):
+upload new dirs, flip the client URL in `r2-config.ts`, keep old dirs one
+verified release.
 
 Quality net: the 7-audit suite (`scripts/audit-*.ts`, `npm run audit:all`)
 traces source→tile fidelity, geometry precision, spatial/temporal/cross-source

@@ -1,10 +1,12 @@
 ---
 status: in-progress
-current: "Layer-fidelity waves 2-4 + 2.5 (per-class raster re-render in registry palette; Jen design pass: parks/conservancies/species/preset opacity/Threats cutblock restyle; verification net; old-growth-at-risk conflict layer — knobs decided, needs focused critic pass)"
-next: "Wave 2 relay batch (per-class raster re-render + R2 upload) and the Tier-2 conflict-layer focused critic pass. Wave 4 must also repair 4 pre-existing monitoring tests that fail since the 06-02 default-layer reset (bare-URL navigation expects layers that are no longer defaultEnabled; R2 HEAD check fails from Playwright context but R2 verified healthy via curl)."
+current: "Layer-fidelity Wave 2 ops tail (tile regeneration from rasterizable derivative + R2 v2 upload + pixel verify + deploy), then waves 3-4 + 2.5 (Jen design pass: parks/conservancies/species/preset opacity/Threats cutblock restyle; verification net; old-growth-at-risk conflict layer — knobs decided, needs focused critic pass)"
+next: "Wave 3 design pass (Jen spec first) and the Tier-2 conflict-layer focused critic pass. Wave 4 must also repair 4 pre-existing monitoring tests that fail since the 06-02 default-layer reset (bare-URL navigation expects layers that are no longer defaultEnabled; R2 HEAD check fails from Playwright context but R2 verified healthy via curl)."
 testing: null
 pinned: false
 shipped:
+  - date: 2026-06-12
+    item: "Layer-fidelity Wave 2 code (branch relay/layer-fidelity-w2, 6 commits, 511 tests): per-class isolation raster themes in registry palette (old-growth #0d5c2a dark green — gold theme deleted), forest-age-palette.json as single color authority for python script + TS registry (+ CalculatorPanel/pdf-generator stragglers), client flipped to raster/v2/ R2 dirs (old dirs kept one release), RASTER_THEME_COLORS override removed, color-audit rewritten with cross-language --dump-themes guard (Razor: PASS-WITH-WARNINGS → all closed → PASS). Plus simplify-for-raster.py prep: full-fidelity NDJSON (9.8GB = ~63GB RSS) exceeds the 32GB build machine; half-pixel-at-z9 simplify feeds the raster build only."
   - date: 2026-06-12
     item: "Layer-fidelity Wave 1 DEPLOYED + live-verified: proxy bbox-in-CQL fix (fish-streams/tap-deferrals/cutblocks all return features live; D3 e2e gates green), satellite z-order verified on production (index 26, all 38 overlays above, labels on top), MapTiler backdrop-dark confirmed zero layer-* collisions. Deploy hotfix en route: Netlify edge bundler treats every top-level file in netlify/edge-functions/ as an entry point — helper modules must live in a subdirectory (wfs-bbox-url.ts → lib/). Deploys are CLI/API-driven (npx netlify-cli deploy --prod --no-build after local build; CI is test-only, no auto-deploy on push)."
   - date: 2026-06-11
