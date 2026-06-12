@@ -182,6 +182,19 @@ describe("WfsLayers D10 fix — rendered-component tests", () => {
         "tile-backed layer must not have a WFS line layer"
       ).toBeUndefined();
     });
+
+    it("does not fire a WFS fetch for a tile-backed layer", async () => {
+      const DataLayer = await importDataLayer();
+      const { fetchLayerData } = await import("@/lib/data/wfs-client");
+      render(
+        React.createElement(React.StrictMode, null,
+          React.createElement(DataLayer, { layer: TILE_BACKED_LAYER, visible: true })
+        )
+      );
+      // The loadData skip (`|| hasTileSource`) is the other half of D10:
+      // tile-backed layers fetch nothing (the data rendered nowhere).
+      expect(fetchLayerData).not.toHaveBeenCalled();
+    });
   });
 
   // ── (ii) WFS-only layer: exactly one set of layers after StrictMode cycle ───
