@@ -1042,8 +1042,6 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
   // WFS kicks in above the tile maxZoom
   const wfsMinZoom = hasTileSource ? tileMaxZoom + 1 : layer.zoomRange[0];
 
-  const targetOpacity = visible ? (layer.style.opacity ?? 0.7) : 0;
-
   // When timeline is active, filter WFS features client-side by year.
   // This avoids refetching during animation -- instant and smooth.
   const filteredData = useMemo(() => {
