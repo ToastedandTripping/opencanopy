@@ -565,7 +565,7 @@ function rateLimitResponse(retryAfter: number): Response {
 // ── Upstream URL construction ────────────────────────────────────
 // Extracted into wfs-bbox-url.ts for unit testability (pure TS,
 // no Deno APIs — importable by both edge function and vitest).
-import { buildBboxWfsUrl } from "./wfs-bbox-url.ts";
+import { buildBboxWfsUrl } from "./lib/wfs-bbox-url.ts";
 
 // ── Main handler ────────────────────────────────────────────────
 

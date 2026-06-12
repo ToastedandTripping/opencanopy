@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { buildBboxWfsUrl } from "~netlify/edge-functions/wfs-bbox-url";
+import { buildBboxWfsUrl } from "~netlify/edge-functions/lib/wfs-bbox-url";
 
 // Representative BC Albers coordinates (Prince George vicinity at z10)
 const W = 1035926;
