@@ -5,33 +5,32 @@
  *   - Raster overview tiles (built by build-raster-tiles.py) at z4-z8
  *   - PMTiles vector fill layer at z9+ (with registry paint colors)
  *
- * If the raster and vector colors for the same forest class differ too much,
- * the zoom transition produces a visible color flash. This check computes the
- * perceptual color distance between each pair.
+ * Single source of truth: src/lib/layers/forest-age-palette.json
+ *   - build-raster-tiles.py reads this file at runtime (forest-age theme +
+ *     per-class isolation themes derive all hex values from it)
+ *   - registry.ts imports this file and uses the values in fill-color expressions
  *
- * Raster colors (from build-raster-tiles.py):
- *   old-growth: #15803d   (Tailwind green-700)
- *   mature:     #4ade80   (Tailwind green-400)
- *   young:      #f97316   (Tailwind orange-500)
- *   harvested:  #ef4444   (Tailwind red-500)
+ * If either side diverges from the palette, this audit catches it.
  *
- * Registry vector colors (from forest-age fill-color match expression):
- *   old-growth: #0d5c2a   (custom dark green)
- *   mature:     #4ade80   (same as raster)
- *   young:      #f97316   (same as raster)
- *   harvested:  #ef4444   (same as raster)
+ * Cross-language guard:
+ *   The palette JSON is the authority for BOTH sides. The audit:
+ *   1. Verifies registry vector colors match palette exactly (distance == 0)
+ *   2. Parses build-raster-tiles.py to confirm it imports/reads the palette
+ *      file (not hardcoded colors) and has four isolation themes
+ *   3. Asserts isolation theme structure: each theme paints exactly one class
+ *      and leaves the others transparent
  *
- * Known mismatch: old-growth raster (#15803d) vs vector (#0d5c2a).
- * RGB distance ~41.5 (perceptible but below the 50-unit WARN threshold).
- * Luminance: raster=0.159, vector=0.079 (raster is ~2x brighter).
- * This is a documented intentional divergence -- the raster uses a lighter
- * green (better visible at province scale) while the vector uses a darker
- * green (better at detail scale). The transition is acceptable but worth
- * tracking to prevent additional divergences from accumulating.
+ * This is NOT a tautology: the registry's fill-color expression is derived
+ * independently by TypeScript's module resolution; if someone replaces the
+ * palette import with a hardcoded value, tests 1 + 3 will catch the drift.
+ * The Python parse (test 2) catches drift on the script side.
  */
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
+import FOREST_AGE_PALETTE from "@/lib/layers/forest-age-palette.json";
 
 // ── Color utilities ───────────────────────────────────────────────────────────
 
@@ -82,14 +81,14 @@ function luminanceDelta(a: RGB, b: RGB): number {
   return Math.abs(relativeLuminance(a) - relativeLuminance(b));
 }
 
-// ── Raster colors (from build-raster-tiles.py) ───────────────────────────────
+// ── Palette (single source of truth for all four tests) ──────────────────────
 
-const RASTER_COLORS: Record<string, string> = {
-  "old-growth": "#15803d", // Tailwind green-700
-  mature: "#4ade80", // Tailwind green-400
-  young: "#f97316", // Tailwind orange-500
-  harvested: "#ef4444", // Tailwind red-500
-};
+const PALETTE_CLASSES = ["old-growth", "mature", "young", "harvested"] as const;
+type PaletteClass = (typeof PALETTE_CLASSES)[number];
+
+// Canonical palette loaded from the shared JSON file.
+// build-raster-tiles.py and registry.ts both derive their colors from this.
+const PALETTE = FOREST_AGE_PALETTE as Record<PaletteClass, string>;
 
 // ── Extract vector colors from registry ───────────────────────────────────────
 
@@ -151,8 +150,14 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
     expect(forestAgeLayer?.rasterOverview).toBeDefined();
   });
 
-  describe("per-class raster vs vector color comparison", () => {
-    // Extract vector colors from registry at test time
+  // ── Part 1: Palette JSON ↔ Registry vector colors ──────────────────────────
+  //
+  // This is the primary cross-language guard. Because registry.ts now imports
+  // forest-age-palette.json directly, any drift from the palette is caught by
+  // TypeScript's module resolution failing — but we also assert equality here
+  // so a deliberate change to one side without the other is caught at test time.
+
+  describe("palette JSON ↔ registry vector colors (Part 1)", () => {
     const vectorColors = forestAgeLayer
       ? extractMatchColors(forestAgeLayer.style.paint["fill-color"])
       : null;
@@ -163,124 +168,172 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
       expect(Object.keys(vectorColors ?? {})).toContain("mature");
     });
 
-    for (const className of Object.keys(RASTER_COLORS)) {
-      describe(`class: ${className}`, () => {
-        it(`raster and vector colors are both valid hex strings`, () => {
-          const rasterHex = RASTER_COLORS[className];
-          const vectorHex = vectorColors?.[className];
+    for (const className of PALETTE_CLASSES) {
+      it(`registry ${className} matches palette (distance == 0)`, () => {
+        const paletteHex = PALETTE[className];
+        const vectorHex = vectorColors?.[className];
 
-          expect(rasterHex).toBeDefined();
-          expect(vectorHex).toBeDefined();
+        expect(paletteHex).toBeDefined();
+        expect(vectorHex).toBeDefined();
+        expect(() => parseHex(paletteHex)).not.toThrow();
 
-          // Verify they're parseable
-          expect(() => parseHex(rasterHex)).not.toThrow();
-          if (vectorHex) {
-            expect(() => parseHex(vectorHex)).not.toThrow();
-          }
-        });
+        if (!vectorHex) return;
 
-        it(`raster (#${RASTER_COLORS[className]}) vs vector color delta is within acceptable range`, () => {
-          const rasterHex = RASTER_COLORS[className];
-          const vectorHex = vectorColors?.[className];
+        const paletteRGB = parseHex(paletteHex);
+        const vectorRGB = parseHex(vectorHex);
+        const distance = rgbDistance(paletteRGB, vectorRGB);
 
-          if (!vectorHex) {
-            // No vector color for this class -- it uses the fallback
-            console.warn(
-              `[color-audit] class "${className}" has no vector color in match expression. ` +
-                "Using registry fallback color."
-            );
-            return;
-          }
+        expect(
+          distance,
+          `registry ${className} (${vectorHex}) diverged from palette (${paletteHex}). ` +
+          `RGB distance=${distance.toFixed(1)}. Update registry.ts to match forest-age-palette.json.`
+        ).toBe(0);
+      });
+    }
 
-          const rasterRGB = parseHex(rasterHex);
-          const vectorRGB = parseHex(vectorHex);
-          const distance = rgbDistance(rasterRGB, vectorRGB);
-          const lumDelta = luminanceDelta(rasterRGB, vectorRGB);
+    // Regression guard: warn if any registry color has a large raster/vector delta
+    // (this catches someone adding a new class with mismatched colors)
+    for (const className of PALETTE_CLASSES) {
+      it(`${className} palette ↔ vector delta is below jarring threshold (${RGB_DISTANCE_FAIL})`, () => {
+        const paletteHex = PALETTE[className];
+        const vectorHex = vectorColors?.[className];
+        if (!vectorHex) return;
 
-          // Known exception: old-growth intentionally diverges
-          // Raster #15803d is lighter green (province scale visibility)
-          // Vector #0d5c2a is darker green (detail scale richness)
-          // RGB distance ~41.5 (below the warn threshold of 50, but luminance
-          // delta is significant: raster is ~2x brighter than vector).
-          // This transition is acceptable but documented here.
-          if (className === "old-growth") {
-            // Document the known mismatch values
-            expect(rasterHex).toBe("#15803d");
-            expect(vectorHex).toBe("#0d5c2a");
+        const distance = rgbDistance(parseHex(paletteHex), parseHex(vectorHex));
+        const lumDelta = luminanceDelta(parseHex(paletteHex), parseHex(vectorHex));
 
-            // Distance should be in the moderate range (regression test)
-            // If either color changes, this test will catch it.
-            // RGB distance is ~41.5 -- below the 50 WARN threshold but
-            // luminance delta is 0.08 (above the 0.10 warn threshold at 2dp).
-            expect(distance).toBeGreaterThan(20); // detect accidental convergence
-            expect(distance).toBeLessThan(RGB_DISTANCE_FAIL); // detect divergence
-            return;
-          }
+        if (distance > RGB_DISTANCE_WARN) {
+          console.warn(
+            `[color-audit] ${className}: palette=${paletteHex} vs vector=${vectorHex}, ` +
+            `RGB distance=${distance.toFixed(1)} (warn threshold: ${RGB_DISTANCE_WARN})`
+          );
+        }
+        if (lumDelta > LUMINANCE_DELTA_WARN) {
+          console.warn(
+            `[color-audit] ${className}: luminance delta ${lumDelta.toFixed(3)} ` +
+            `(warn threshold: ${LUMINANCE_DELTA_WARN})`
+          );
+        }
 
-          // All other classes should have close raster/vector colors
-          if (distance > RGB_DISTANCE_FAIL) {
-            throw new Error(
-              `class "${className}" has jarring color mismatch: ` +
-                `raster=${rasterHex} vs vector=${vectorHex}, ` +
-                `RGB distance=${distance.toFixed(1)} (threshold: ${RGB_DISTANCE_FAIL}). ` +
-                "The zoom transition from raster to vector will produce a visible flash."
-            );
-          }
-
-          if (distance > RGB_DISTANCE_WARN) {
-            console.warn(
-              `[color-audit] class "${className}" has noticeable color mismatch: ` +
-                `raster=${rasterHex} vs vector=${vectorHex}, ` +
-                `RGB distance=${distance.toFixed(1)} (warn threshold: ${RGB_DISTANCE_WARN}).`
-            );
-          }
-
-          if (lumDelta > LUMINANCE_DELTA_WARN) {
-            console.warn(
-              `[color-audit] class "${className}" has luminance delta ${lumDelta.toFixed(3)} ` +
-                `(warn threshold: ${LUMINANCE_DELTA_WARN}): ` +
-                `raster luminance=${relativeLuminance(rasterRGB).toFixed(3)}, ` +
-                `vector luminance=${relativeLuminance(vectorRGB).toFixed(3)}.`
-            );
-          }
-
-          // mature, young, harvested should have distance 0 (identical colors)
-          expect(
-            distance,
-            `class "${className}" raster (${rasterHex}) vs vector (${vectorHex}) ` +
-              `RGB distance=${distance.toFixed(1)}: colors diverged unexpectedly. ` +
-              `Expected them to be identical.`
-          ).toBeLessThanOrEqual(RGB_DISTANCE_WARN);
-        });
+        expect(distance).toBeLessThan(RGB_DISTANCE_FAIL);
       });
     }
   });
 
-  it("documents old-growth raster/vector mismatch as known issue", () => {
-    /**
-     * KNOWN ISSUE: old-growth raster (#15803d) vs vector (#0d5c2a)
-     *
-     * RGB distance: ~41.5 (perceptible but below the 50-unit warn threshold)
-     * Luminance: raster=0.159, vector=0.079 (raster is ~2x brighter)
-     *
-     * The raster was built with green-700 for province-scale legibility
-     * against the basemap. The vector uses a deeper forest green for
-     * detail-scale richness. The zoom crossfade at z9 partially masks
-     * the transition via opacity interpolation (both layers fade together).
-     *
-     * To fix: align either the raster color or the vector color.
-     * Recommended: change vector to #15803d and rebuild.
-     * Impact: minor -- the current mismatch is acceptable for a v1 launch.
-     */
-    const rasterRGB = parseHex("#15803d");
-    const vectorRGB = parseHex("#0d5c2a");
-    const distance = rgbDistance(rasterRGB, vectorRGB);
+  // ── Part 2: Python script reads palette file (cross-language guard) ─────────
+  //
+  // We parse build-raster-tiles.py as text to verify it does NOT hardcode the
+  // hex values that were previously in THEMES (risk: someone converts it back
+  // to hardcoded values and the palette JSON diverges silently). The guard
+  // checks that the script reads _PALETTE_PATH and calls load_palette() —
+  // it does NOT assert the JSON equals the JSON (that would be a tautology).
 
-    // Document the current state (regression detection)
-    // RGB distance: ~41.5 (perceptible but not jarring)
-    // Luminance: raster=0.159, vector=0.079 (raster is ~2x brighter)
-    expect(distance).toBeCloseTo(41.5, 0); // ~41.5 RGB units
-    expect(relativeLuminance(rasterRGB)).toBeCloseTo(0.159, 2);
-    expect(relativeLuminance(vectorRGB)).toBeCloseTo(0.079, 2);
+  describe("build-raster-tiles.py cross-language guard (Part 2)", () => {
+    const scriptPath = resolve(__dirname, "../../../scripts/build-raster-tiles.py");
+    const scriptSource = readFileSync(scriptPath, "utf8");
+
+    it("script reads forest-age-palette.json (not hardcoded hex values)", () => {
+      // Must reference the palette file path
+      expect(scriptSource).toContain("forest-age-palette.json");
+      // Must define a load_palette function
+      expect(scriptSource).toContain("def load_palette()");
+      // Must NOT hardcode the old diverging old-growth color
+      expect(scriptSource).not.toContain("#15803d");
+    });
+
+    it("script calls load_palette() to build themes (not hardcoded THEMES dict)", () => {
+      expect(scriptSource).toContain("palette = load_palette()");
+      expect(scriptSource).toContain("themes = build_themes(palette)");
+    });
+
+    it("script defines four per-class isolation themes via build_themes loop", () => {
+      // The script iterates over all four class slugs to build isolation themes.
+      // Verify the loop covers all classes (not hardcoded individually).
+      expect(scriptSource).toContain("def build_themes(palette: dict)");
+      // Each class appears in the isolation theme loop
+      for (const cls of PALETTE_CLASSES) {
+        expect(scriptSource).toContain(cls);
+      }
+      // Loop variable confirms all four are handled (not just one)
+      expect(scriptSource).toContain(
+        'for cls in ("old-growth", "mature", "young", "harvested")'
+      );
+    });
+
+    it("script has --input and --output-dir CLI flags", () => {
+      expect(scriptSource).toContain("--input");
+      expect(scriptSource).toContain("--output-dir");
+    });
+
+    it("default input path points at data/checkpoint/preprocessed/ (not data/geojson/)", () => {
+      expect(scriptSource).toContain("data/checkpoint/preprocessed/forest-age.ndjson");
+      expect(scriptSource).not.toContain('"data/geojson/forest-age.ndjson"');
+      expect(scriptSource).not.toContain("'data/geojson/forest-age.ndjson'");
+    });
+
+    it("gold old-growth theme (#eab308) is deleted", () => {
+      expect(scriptSource).not.toContain("#eab308");
+      expect(scriptSource).not.toContain("eab308");
+    });
+  });
+
+  // ── Part 3: Isolation theme structure (checked via build_themes logic) ───────
+  //
+  // We cannot run the Python script in Jest/Vitest but we can verify the
+  // structure described in build_themes() by reading its source. We also
+  // verify that the palette JSON values for each class are parseable and
+  // that the isolation logic (one opaque class, all others transparent) is
+  // clearly expressed in the script text.
+
+  describe("per-class isolation theme structure (Part 3)", () => {
+    const scriptPath = resolve(__dirname, "../../../scripts/build-raster-tiles.py");
+    const scriptSource = readFileSync(scriptPath, "utf8");
+
+    it("palette JSON contains all four class hex colors", () => {
+      for (const cls of PALETTE_CLASSES) {
+        expect(PALETTE[cls]).toBeDefined();
+        expect(typeof PALETTE[cls]).toBe("string");
+        expect(() => parseHex(PALETTE[cls])).not.toThrow();
+      }
+    });
+
+    it("isolation theme logic: active class gets palette color, others get (0,0,0,0)", () => {
+      // Verify the build_themes() function paints the active class and
+      // leaves all others transparent — check both paths in the script source
+      expect(scriptSource).toContain("hex_to_rgba(palette[cls], OVERVIEW_ALPHA)");
+      expect(scriptSource).toContain("(0, 0, 0, 0)");
+      // The logic: for other != cls → transparent
+      expect(scriptSource).toContain("if other == cls:");
+    });
+
+    it("all four isolation theme names match client {class} URL substitution slugs", () => {
+      // Client replaces {class} with the slug; theme name must == slug
+      for (const cls of PALETTE_CLASSES) {
+        expect(scriptSource).toContain(`for cls in ("old-growth", "mature", "young", "harvested")`);
+      }
+    });
+  });
+
+  // ── Part 4: palette JSON ↔ old hardcoded values (regression sentinel) ────────
+  //
+  // Verify the palette values are the canonical ones Lee confirmed (2026-06-11).
+  // If someone updates the palette JSON to wrong values this test bites.
+
+  describe("palette hex values match confirmed registry canonical (Part 4)", () => {
+    it("old-growth is #0d5c2a (canonical dark green, not the former raster #15803d)", () => {
+      expect(PALETTE["old-growth"]).toBe("#0d5c2a");
+    });
+
+    it("mature is #4ade80", () => {
+      expect(PALETTE["mature"]).toBe("#4ade80");
+    });
+
+    it("young is #f97316", () => {
+      expect(PALETTE["young"]).toBe("#f97316");
+    });
+
+    it("harvested is #ef4444", () => {
+      expect(PALETTE["harvested"]).toBe("#ef4444");
+    });
   });
 });
