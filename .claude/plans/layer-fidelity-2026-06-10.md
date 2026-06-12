@@ -83,7 +83,7 @@ rendered behavior is unaffected (verified live during the 06-09 push).
 
 ## Execution — four waves, one relay
 
-### Wave 1 — Correctness (code-only, ships first)
+### Wave 1 — Correctness — **SHIPPED 2026-06-11** (relay/layer-fidelity-w1 → main @ bc60da1; Razor PASS-W-W; behavioral PASS; deploy-verification trio tracked in ROADMAP next:)
 1. **Proxy CQL fix** (wfs-proxy.ts bbox path): when `config.cqlFilter` exists,
    emit `CQL_FILTER=BBOX(GEOMETRY,w,s,e,n) AND (filter)` (Albers coords, as
    now; filter parenthesized) and omit the `bbox` param. Keep plain `bbox`

@@ -57,6 +57,9 @@ raster overview │ PMTiles vector    │ PMTiles overzoom
   data arrives via the proxy on `moveend`, filtered client-side for the
   timeline. For tile-backed (dual-source) layers, PMTiles+overzoom are the
   user-visible source at all zooms — WFS adds nothing visible there.
+- **Satellite (raster source)** renders imperatively (`SatelliteLayers`),
+  anchored below the earlier of (first `layer-*` overlay, first symbol layer)
+  via `findSatelliteAnchor` — deterministic regardless of toggle order.
 - **Layer z-order** must be deterministic, never mount-order dependent:
   basemap → satellite → raster overviews → fills → lines/points → symbols.
 
