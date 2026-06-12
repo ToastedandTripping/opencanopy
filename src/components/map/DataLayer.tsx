@@ -41,14 +41,6 @@ const CLASS_LABEL_MAP: Record<string, string> = {
 /** Canonical class slugs for per-class raster tile sources. */
 const CLASS_NAMES = ["old-growth", "mature", "harvested", "young"];
 
-/** Raster theme colors for vector fill-color overrides.
- *  When a single class is filtered and its raster tiles use a distinctive color,
- *  the vector PMTiles fill-color must match to avoid a jarring color jump at
- *  the raster-to-vector zoom transition (e.g. gold old-growth raster -> green vector). */
-const RASTER_THEME_COLORS: Record<string, string> = {
-  "old-growth": "#eab308",  // gold (default vector color is #0d5c2a green)
-};
-
 const EMPTY_FC: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
   features: [],
@@ -546,32 +538,6 @@ function PmtilesLayers({
       pipelineLog("setFilter", layer.id, { type: "pmtiles-class", filter: activeClassFilter ?? "none" });
     }
   }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.filter, layer.style.paint, layer.timelineField, classFilters, yearFilter]);
-
-  // Override fill-color when a single class is filtered to match raster theme.
-  // Prevents jarring color jump at raster->vector zoom transition
-  // (e.g. gold old-growth raster at z10 -> green vector at z11).
-  useEffect(() => {
-    if (!map || !layer.tileSource || layer.style.type !== "fill" || !layer.rasterOverviewClassUrl) return;
-    const mapInstance = map.getMap();
-    const fillId = `layer-${layer.id}-tiles-fill`;
-    if (!mapInstance.getLayer(fillId)) return;
-
-    const activeFilter = classFilters?.[layer.id];
-    if (activeFilter && activeFilter.length === 1) {
-      const cls = CLASS_LABEL_MAP[activeFilter[0]];
-      const themeColor = RASTER_THEME_COLORS[cls];
-      if (themeColor) {
-        mapInstance.setPaintProperty(fillId, "fill-color", themeColor);
-        pipelineLog("setPaintProperty", fillId, { property: "fill-color", value: themeColor, reason: "class-theme-override" });
-        return;
-      }
-    }
-    // Reset to registry default when no single-class filter active
-    if (layer.style.paint["fill-color"] != null) {
-      mapInstance.setPaintProperty(fillId, "fill-color", layer.style.paint["fill-color"]);
-      pipelineLog("setPaintProperty", fillId, { property: "fill-color", value: "registry-default" });
-    }
-  }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.paint, classFilters]);
 
   return null; // No DOM output -- layers managed imperatively
 }
