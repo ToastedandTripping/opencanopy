@@ -1,10 +1,12 @@
 ---
-status: shipped
-current: null
-next: "Execute .claude/plans/layer-fidelity-2026-06-10.md via /relay (critic-approved, 3 rounds): Wave 1 proxy CQL fix + satellite z-order + WfsLayers fix; Wave 2 per-class raster re-render; Wave 3 design pass (parks/conservancies/species/preset opacity); Wave 4 verification. Then continue Lee's live layer audit (Protection, Accountability, ...)"
+status: in-progress
+current: "Layer-fidelity waves 2-4 + 2.5 (per-class raster re-render in registry palette; Jen design pass: parks/conservancies/species/preset opacity/Threats cutblock restyle; verification net; old-growth-at-risk conflict layer — knobs decided, needs focused critic pass)"
+next: "Deploy Wave 1 + run its deploy-verification items: e2e monitoring gates green (fish-streams/tap-deferrals/cutblocks return features), satellite-under-overlays visual check, MapTiler backdrop-dark style has no layer-* id collisions (needs API key). Then Wave 2."
 testing: null
 pinned: false
 shipped:
+  - date: 2026-06-11
+    item: "Layer-fidelity Wave 1 (branch relay/layer-fidelity-w1, 7 commits, 487 tests): proxy bbox-in-CQL fix (restores fish-streams, tap-deferrals + cutblocks supplemental — GeoServer rejects bbox+cql_filter together), imperative satellite z-order (anchor below first overlay/symbol, toggle-order independent), WfsLayers hooks-order fix + tile-backed fetch skip (StrictMode dev crash gone). Razor FAIL→fixed→PASS-WITH-WARNINGS; behavioral eval PASS on Wave 1 checks. Pre-existing finding logged: LayerPanel button-in-button nesting (Wave 3 ride-along)."
   - date: 2026-06-09
     item: "Production-readiness & shareability push (branch relay/production-readiness, 5 commits, +~1.5k LOC, 462 tests): per-layer error/empty/zoom status states (the centerpiece — replaces silent blank failures), OG/Twitter share card + metadataBase (blank previews fixed), privacy page + footer, WFS-proxy per-IP rate limiting, GitHub Actions CI, next 16.2.7. Live verification caught + fixed false 'BC data unavailable' errors on tile-backed layers during WFS hiccups. TileProgress dead code removed; pickDefinedPaint centralizes invariant #4."
   - date: 2026-04-13
