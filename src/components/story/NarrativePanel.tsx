@@ -4,6 +4,7 @@ interface NarrativePanelProps {
   heading: string;
   subheading?: string;
   body?: string;
+  citation?: string;
   active: boolean;
   position: "left" | "center";
   children?: React.ReactNode;
@@ -13,6 +14,7 @@ export function NarrativePanel({
   heading,
   subheading,
   body,
+  citation,
   active,
   position,
   children,
@@ -50,6 +52,11 @@ export function NarrativePanel({
           <p className="mt-3 text-lg text-zinc-300">{subheading}</p>
         )}
         {body && <p className="mt-4 text-base text-zinc-400 leading-relaxed">{body}</p>}
+        {citation && (
+          <p className="mt-4 text-xs text-zinc-500 italic">
+            <cite>{citation}</cite>
+          </p>
+        )}
         {children && <div className="mt-6">{children}</div>}
       </div>
     </div>

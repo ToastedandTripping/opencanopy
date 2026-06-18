@@ -54,6 +54,7 @@ data/tiles/test/
 /public/data/tiles/
 data/raster/*.tif
 data/raster-tiles/
+data/raster-tiles-v2/
 
 # V2 Diagnostic Pipeline — generated artifacts
 e2e/screenshots/baselines/

@@ -3,7 +3,26 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CHAPTERS, type ChapterCamera } from "@/data/chapters";
 import { normalizeAngle, interpolateCamera } from "@/lib/math/interpolation";
+import { yearFromProgress, type ScrubTable } from "@/lib/story/scrub";
+import cutblocksScrub from "@/data/scrub/cutblocks-scrub.json";
+import fireScrub from "@/data/scrub/fire-scrub.json";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
+
+const SCRUB_TABLES: Record<"cutblocks" | "fire", ScrubTable> = {
+  cutblocks: cutblocksScrub as ScrubTable,
+  fire: fireScrub as ScrubTable,
+};
+
+/** A resolved overlay for the current frame: image year + opacity. */
+export interface ResolvedOverlay {
+  source: "cutblocks" | "fire";
+  year: number;
+  opacity: number;
+}
+
+function clamp01(x: number): number {
+  return x < 0 ? 0 : x > 1 ? 1 : x;
+}
 
 /** Check if user prefers reduced motion (cached per session). */
 function prefersReducedMotion(): boolean {
@@ -18,6 +37,7 @@ export function useScrollytelling() {
     CHAPTERS[0].camera
   );
   const [yearFilter, setYearFilter] = useState<number | null>(null);
+  const [overlays, setOverlays] = useState<ResolvedOverlay[]>([]);
   const rafRef = useRef<number | null>(null);
   const bearingRef = useRef(CHAPTERS[0].camera.bearing);
 
@@ -46,17 +66,29 @@ export function useScrollytelling() {
         prog,
       });
 
-      // Timeline scrub: map progress to year
-      if (chapter.timelineScrub) {
-        const year = Math.round(
-          chapter.timelineScrub.start +
-            (chapter.timelineScrub.end - chapter.timelineScrub.start) * prog
-        );
-        pipelineLog("setYearFilter", String(year));
-        setYearFilter(year);
-      } else {
-        setYearFilter(null);
+      // Timeline scrub: map progress to year via the nonlinear cumulative-area
+      // table (sparse early decades compress, modern acceleration stretches).
+      let scrubYear: number | null = null;
+      if (chapter.timelineScrub && chapter.scrubTable) {
+        scrubYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], prog);
+        pipelineLog("setYearFilter", String(scrubYear));
       }
+      setYearFilter(scrubYear);
+
+      // Resolve this frame's overlays (image year + opacity), decoupled from
+      // yearFilter. Scrubbed overlays follow scrubYear; static overlays pin to
+      // staticYear; fadeIn ramps opacity scroll-coupled (baseline beat).
+      const resolved: ResolvedOverlay[] = (chapter.overlays ?? []).map((ov) => {
+        const year =
+          ov.mode === "scrubbed"
+            ? scrubYear ?? ov.staticYear ?? 0
+            : ov.staticYear ?? 0;
+        const opacity = ov.fadeIn
+          ? ov.opacity * clamp01((prog - ov.fadeIn[0]) / (ov.fadeIn[1] - ov.fadeIn[0]))
+          : ov.opacity;
+        return { source: ov.source, year, opacity };
+      });
+      setOverlays(resolved);
 
       bearingRef.current = normalizeAngle(camera.bearing);
       setCurrentCamera(camera);
@@ -157,6 +189,7 @@ export function useScrollytelling() {
     activeChapterIndex,
     currentCamera,
     yearFilter,
+    overlays,
     chapters: CHAPTERS,
   };
 }

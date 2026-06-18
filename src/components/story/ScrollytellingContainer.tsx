@@ -12,6 +12,7 @@ export function ScrollytellingContainer() {
     activeChapterIndex,
     currentCamera,
     yearFilter,
+    overlays,
     chapters,
   } = useScrollytelling();
   const { supports3D } = useDeviceCapability();
@@ -85,6 +86,8 @@ export function ScrollytellingContainer() {
           fog={fogConfig}
           layers={activeChapter?.layers ?? []}
           yearFilter={yearFilter}
+          overlays={overlays}
+          counterLabel={activeChapter?.counterLabel}
           hatchEnabled={hatchEnabled}
           supports3D={supports3D}
         />
@@ -102,8 +105,9 @@ export function ScrollytellingContainer() {
               heading={chapter.heading}
               subheading={chapter.subheading}
               body={chapter.body}
+              citation={chapter.citation}
               active={activeChapterIndex === i}
-              position={chapter.id === "explore" ? "center" : "left"}
+              position={chapter.id === "ending" ? "center" : "left"}
             />
           </div>
         ))}

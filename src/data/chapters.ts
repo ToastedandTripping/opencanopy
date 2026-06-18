@@ -37,126 +37,121 @@ export interface ChapterTimelineScrub {
   end: number;
 }
 
+/** Which pre-rendered image-overlay a chapter shows, and how. */
+export type OverlayImageMode = "scrubbed" | "static";
+
+export interface ChapterOverlay {
+  /** Image source: cutblock red (story-year-overlay) or wildfire amber (story-fire-overlay). */
+  source: "cutblocks" | "fire";
+  /** scrubbed = image follows the scrub year; static = fixed staticYear. */
+  mode: OverlayImageMode;
+  /** Required when mode==="static" (e.g. baseline=range.start, scars=range.end). */
+  staticYear?: number;
+  /** Target raster-opacity 0..0.85. */
+  opacity: number;
+  /** Scroll-coupled fade window [startProg,endProg]; opacity ramps 0→opacity across it. */
+  fadeIn?: [number, number];
+}
+
 export interface Chapter {
   id: string;
   heading: string;
   subheading?: string;
   body?: string;
+  /** Source citation rendered small under the body (e.g. the closing stat). */
+  citation?: string;
   camera: ChapterCamera;
   terrain: ChapterTerrain;
   fog?: ChapterFog;
   layers: ChapterLayer[];
   timelineScrub?: ChapterTimelineScrub;
+  /** Which cumulative-area scrub table maps scroll progress → year (scrub beats only). */
+  scrubTable?: "cutblocks" | "fire";
+  /** Per-chapter image overlays (red cutblocks / amber fire), opacity decoupled from yearFilter. */
+  overlays?: ChapterOverlay[];
+  /** Small label under the year counter (e.g. "wildfires"). */
+  counterLabel?: string;
   /** Degrees per second for slow camera rotation */
   bearingDrift?: number;
   /** Scroll spacer height in vh units */
   scrollHeight: number;
 }
 
+/** The accumulation sequence is flat, top-down, province-scale throughout. */
+const FLAT_BC_CAMERA: ChapterCamera = {
+  center: [-125.5, 54.0],
+  zoom: 5,
+  pitch: 0,
+  bearing: 0,
+};
+
+const NO_TERRAIN: ChapterTerrain = { enabled: false, exaggeration: 0 };
+
 export const CHAPTERS: Chapter[] = [
   {
     id: "overview",
     heading: "See what's left.",
-    camera: {
-      center: [-125.5, 54.0],
-      zoom: 5,
-      pitch: 0,
-      bearing: 0,
-    },
-    terrain: { enabled: false, exaggeration: 0 },
+    camera: FLAT_BC_CAMERA,
+    terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.6 }],
+    scrollHeight: 150,
+  },
+  {
+    // Fade the pre-1950 / undated baseline in BEFORE the year counter starts,
+    // so the viewer registers that much was already gone before the records.
+    id: "baseline",
+    heading: "Before the records began.",
+    body: "Decades of logging predate the public record. Much of what you see in red was already gone by 1950.",
+    camera: FLAT_BC_CAMERA,
+    terrain: NO_TERRAIN,
+    layers: [{ id: "forest-age", opacity: 0.5 }],
+    overlays: [
+      { source: "cutblocks", mode: "static", staticYear: 1950, opacity: 0.85, fadeIn: [0, 0.7] },
+    ],
     scrollHeight: 150,
   },
   {
     id: "logging-timeline",
     heading: "75 years of logging.",
     body: "British Columbia has logged over 5 million hectares of forest since 1950. Each red mark is a cutblock -- an area where every tree was removed.",
-    camera: {
-      center: [-125.5, 54.0],
-      zoom: 5,
-      pitch: 0,
-      bearing: 0,
-    },
-    terrain: { enabled: false, exaggeration: 0 },
-    layers: [
-      { id: "forest-age", opacity: 0.4 },
-      { id: "cutblocks", opacity: 0.8 },
-    ],
+    camera: FLAT_BC_CAMERA,
+    terrain: NO_TERRAIN,
+    layers: [{ id: "forest-age", opacity: 0.4 }],
     timelineScrub: { start: 1950, end: 2025 },
-    scrollHeight: 800,
+    scrubTable: "cutblocks",
+    overlays: [{ source: "cutblocks", mode: "scrubbed", opacity: 0.85 }],
+    scrollHeight: 600,
   },
   {
+    // Amber wildfire accumulates over the persisted red. Flat camera (no tilt).
     id: "fire",
-    heading: "And fire.",
-    camera: {
-      center: [-125.5, 54.0],
-      zoom: 5,
-      pitch: 5,
-      bearing: 10,
-    },
-    terrain: { enabled: false, exaggeration: 0 },
-    layers: [
-      { id: "forest-age", opacity: 0.3 },
-      { id: "cutblocks", opacity: 0.6 },
-      { id: "fire-history", opacity: 0.5 },
+    heading: "And then it burned.",
+    body: "British Columbia has always burned -- but the largest seasons on record are all recent. Since 2017, wildfire has taken more forest than logging did in decades.",
+    camera: FLAT_BC_CAMERA,
+    terrain: NO_TERRAIN,
+    layers: [{ id: "forest-age", opacity: 0.3 }],
+    timelineScrub: { start: 1917, end: 2025 },
+    scrubTable: "fire",
+    counterLabel: "wildfires",
+    overlays: [
+      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0.75 },
+      { source: "fire", mode: "scrubbed", opacity: 0.85 },
     ],
-    scrollHeight: 120,
+    scrollHeight: 300,
   },
   {
-    id: "zoom-in",
-    heading: "Zoom in.",
-    camera: {
-      center: [-124.55, 48.64],
-      zoom: 12.5,
-      pitch: 55,
-      bearing: -30,
-    },
-    terrain: { enabled: true, exaggeration: 1.4 },
-    fog: {
-      enabled: true,
-      color: "#0a0a0c",
-      horizonBlend: 0.08,
-      range: [0.5, 8],
-    },
-    layers: [{ id: "forest-age", opacity: 0.7, classFilter: ["old-growth", "mature"] }],
-    scrollHeight: 180,
-  },
-  {
-    id: "old-growth-hatch",
-    heading: "This is what old growth looks like.",
-    subheading: "And this is what's left.",
-    body: "Old growth forests took centuries to reach this complexity. Once cut, they never return to what they were.",
-    camera: {
-      center: [-124.53, 48.66],
-      zoom: 13,
-      pitch: 55,
-      bearing: -30,
-    },
-    terrain: { enabled: true, exaggeration: 1.4 },
-    fog: {
-      enabled: true,
-      color: "#0a0a0c",
-      horizonBlend: 0.08,
-      range: [0.5, 8],
-    },
-    layers: [{ id: "forest-age", opacity: 0.7, useHatch: true }],
-    bearingDrift: 3,
+    // The scars persist; one closing statistic lands.
+    id: "ending",
+    heading: "Just 35,000 hectares of BC's largest old growth remain.",
+    subheading: "0.3% of the province's forest.",
+    citation: "Price, Holt & Daust, 2020",
+    camera: FLAT_BC_CAMERA,
+    terrain: NO_TERRAIN,
+    layers: [{ id: "forest-age", opacity: 0.25 }],
+    overlays: [
+      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0.6 },
+      { source: "fire", mode: "static", staticYear: 2025, opacity: 0.6 },
+    ],
     scrollHeight: 150,
-  },
-  {
-    id: "explore",
-    heading: "Explore.",
-    camera: {
-      center: [-125.5, 54.0],
-      zoom: 5,
-      pitch: 0,
-      bearing: 0,
-    },
-    terrain: { enabled: false, exaggeration: 0 },
-    layers: [
-      { id: "forest-age", opacity: 0.5 },
-      { id: "parks", opacity: 0.8 },
-    ],
-    scrollHeight: 120,
   },
 ];

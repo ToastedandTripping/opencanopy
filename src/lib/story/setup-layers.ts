@@ -24,10 +24,36 @@ export const OVERLAY_BOUNDS: [number, number, number, number] = [-139.5, 48.0, -
 /** URL pattern for pre-rendered cutblock year overlays (same-origin, deployed via public/). */
 export const YEAR_OVERLAY_URL_PATTERN = "/raster/cutblocks-by-year/{year}.png";
 
+/** URL pattern for pre-rendered wildfire year overlays (same-origin, deployed via public/). */
+export const FIRE_OVERLAY_URL_PATTERN = "/raster/fire-by-year/{year}.png";
+
 /** Static green forest base overlay (sampled from forest-age data). */
 export const FOREST_BASE_URL = "/raster/cutblocks-by-year/forest-base.png";
 
 export const YEAR_OVERLAY_RANGE = { start: 1950, end: 2025 } as const;
+
+/** Full recorded wildfire span (build-year-overlays.py --dataset fire). */
+export const FIRE_OVERLAY_RANGE = { start: 1917, end: 2025 } as const;
+
+/**
+ * Single source of truth mapping a ChapterOverlay `source` to its image
+ * source/layer, URL pattern, and valid year range. Written once here so
+ * useScrollytelling (resolution) and StoryMap (paint) never drift.
+ */
+export const OVERLAY_SOURCES = {
+  cutblocks: {
+    layerId: "story-year-overlay",
+    sourceId: "story-year-overlay",
+    urlPattern: YEAR_OVERLAY_URL_PATTERN,
+    range: YEAR_OVERLAY_RANGE,
+  },
+  fire: {
+    layerId: "story-fire-overlay",
+    sourceId: "story-fire-overlay",
+    urlPattern: FIRE_OVERLAY_URL_PATTERN,
+    range: FIRE_OVERLAY_RANGE,
+  },
+} as const;
 
 /** All story layer IDs created by setupStoryLayers. */
 export const STORY_LAYER_IDS = [
@@ -35,6 +61,7 @@ export const STORY_LAYER_IDS = [
   "story-forest-base",
   "story-forest-age-raster",
   "story-year-overlay",
+  "story-fire-overlay",
   "story-forest-age-fill",
   "story-forest-age-outline",
   "story-cutblocks-fill",
@@ -52,6 +79,7 @@ export const STORY_SOURCE_IDS = [
   "story-forest-base",
   "story-forest-age-raster",
   "story-year-overlay",
+  "story-fire-overlay",
   PMTILES_SOURCE_ID,
 ] as const;
 
@@ -208,7 +236,41 @@ export function setupStoryLayers(
         source: "story-year-overlay",
         paint: {
           "raster-opacity": 0,
-          "raster-opacity-transition": { duration: 200 },
+          // Short transition: the scroll-coupled fade updates per frame, so a
+          // long transition would lag the scroll. ~100ms just antialiases.
+          "raster-opacity-transition": { duration: 100 },
+          "raster-fade-duration": 0,
+        },
+      },
+      firstSymbolId,
+    );
+  }
+
+  // ── Fire overlay image source (wildfire by year, province zoom) ──
+  // Added AFTER the cutblock overlay so amber paints OVER the red scars.
+  if (!map.getSource("story-fire-overlay")) {
+    const [west, south, east, north] = OVERLAY_BOUNDS;
+    map.addSource("story-fire-overlay", {
+      type: "image",
+      url: FIRE_OVERLAY_URL_PATTERN.replace("{year}", String(FIRE_OVERLAY_RANGE.start)),
+      coordinates: [
+        [west, north],
+        [east, north],
+        [east, south],
+        [west, south],
+      ],
+    });
+  }
+
+  if (!map.getLayer("story-fire-overlay")) {
+    map.addLayer(
+      {
+        id: "story-fire-overlay",
+        type: "raster",
+        source: "story-fire-overlay",
+        paint: {
+          "raster-opacity": 0,
+          "raster-opacity-transition": { duration: 100 },
           "raster-fade-duration": 0,
         },
       },

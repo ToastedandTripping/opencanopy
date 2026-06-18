@@ -7,7 +7,12 @@
  */
 
 import { CHAPTERS } from "@/data/chapters";
-import { YEAR_OVERLAY_URL_PATTERN, YEAR_OVERLAY_RANGE } from "@/lib/story/setup-layers";
+import {
+  YEAR_OVERLAY_URL_PATTERN,
+  YEAR_OVERLAY_RANGE,
+  FIRE_OVERLAY_URL_PATTERN,
+  FIRE_OVERLAY_RANGE,
+} from "@/lib/story/setup-layers";
 import { FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
 
 const RASTER_URL_TEMPLATE = FOREST_AGE_RASTER_URL;
@@ -178,4 +183,42 @@ export function prefetchYearOverlays(): void {
   }
 
   loadBatch();
+}
+
+let fireOverlayPrefetchStarted = false;
+const fireOverlayCache: HTMLImageElement[] = [];
+
+/**
+ * Prefetch all per-year wildfire overlay PNGs (1917-2025, ~5MB).
+ * Fire is a later beat than the cutblock timeline, so this starts behind the
+ * cutblock prefetch (a one-shot deferral) to keep the eager landing payload
+ * small while still warming the cache well before the fire beat is reached.
+ * Idempotent: safe to call from both HeroSection and StoryMap.
+ */
+export function prefetchFireOverlays(): void {
+  if (fireOverlayPrefetchStarted || typeof Image === "undefined") return;
+  fireOverlayPrefetchStarted = true;
+
+  const urls: string[] = [];
+  for (let yr = FIRE_OVERLAY_RANGE.start; yr <= FIRE_OVERLAY_RANGE.end; yr++) {
+    urls.push(FIRE_OVERLAY_URL_PATTERN.replace("{year}", String(yr)));
+  }
+
+  let idx = 0;
+  const BATCH = 8;
+
+  function loadBatch() {
+    const end = Math.min(idx + BATCH, urls.length);
+    for (; idx < end; idx++) {
+      const img = new Image();
+      img.src = urls[idx];
+      fireOverlayCache.push(img);
+    }
+    if (idx < urls.length) {
+      setTimeout(loadBatch, 50);
+    }
+  }
+
+  // Defer the first batch so cutblock overlays + tiles get the bandwidth first.
+  setTimeout(loadBatch, 1500);
 }

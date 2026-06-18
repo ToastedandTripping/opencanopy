@@ -7,9 +7,15 @@ import { MAP_STYLES, TERRAIN_SOURCE } from "@/lib/mapConfig";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import type { ChapterCamera, ChapterTerrain, ChapterFog, ChapterLayer } from "@/data/chapters";
 import { createHatchPattern } from "./HatchPattern";
-import { setupStoryLayers, YEAR_OVERLAY_URL_PATTERN, YEAR_OVERLAY_RANGE } from "@/lib/story/setup-layers";
+import { setupStoryLayers, OVERLAY_SOURCES } from "@/lib/story/setup-layers";
 import { applyLayerVisibility, applyTimelineFilter } from "@/lib/story/visibility";
-import { prefetchStoryTiles, prefetchTerrainTiles, prefetchYearOverlays } from "@/lib/story/prefetch";
+import {
+  prefetchStoryTiles,
+  prefetchTerrainTiles,
+  prefetchYearOverlays,
+  prefetchFireOverlays,
+} from "@/lib/story/prefetch";
+import type { ResolvedOverlay } from "@/hooks/useScrollytelling";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
 initPMTiles();
@@ -20,8 +26,14 @@ interface StoryMapProps {
   fog?: ChapterFog;
   layers: ChapterLayer[];
   yearFilter: number | null;
+  overlays: ResolvedOverlay[];
+  counterLabel?: string;
   hatchEnabled: boolean;
   supports3D: boolean;
+}
+
+function clampYear(year: number, start: number, end: number): number {
+  return Math.max(start, Math.min(end, year));
 }
 
 /** Check if user prefers reduced motion. */
@@ -44,6 +56,8 @@ export function StoryMap({
   fog,
   layers,
   yearFilter,
+  overlays,
+  counterLabel,
   hatchEnabled,
   supports3D,
 }: StoryMapProps) {
@@ -52,6 +66,9 @@ export function StoryMap({
   const terrainExaggerationRef = useRef(0);
   const terrainAnimRef = useRef<number | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Last-applied {year,opacity} per overlay source — guards redundant GL calls
+  // (the overlays prop changes identity every scroll frame).
+  const overlayAppliedRef = useRef<Record<string, { year: number; opacity: number }>>({});
 
   // Apply camera on every update
   useEffect(() => {
@@ -174,29 +191,51 @@ export function StoryMap({
     applyTimelineFilter(map, layers, yearFilter);
   }, [yearFilter, layers, mapLoaded]);
 
-  // Swap year overlay image on scroll (province-scale raster cutblocks).
+  // Province-scale image overlays (cutblock red + wildfire amber).
+  // SOLE writer of each overlay's raster-opacity — opacity is driven by the
+  // chapter's `overlays` declaration, fully decoupled from yearFilter. Each
+  // source's image swap + opacity are applied atomically here, guarded by
+  // overlayAppliedRef so the per-frame `overlays` identity churn doesn't fire
+  // redundant GL calls. Sources absent this beat fade to 0.
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map || !mapLoaded) return;
 
-    const overlayLayerId = "story-year-overlay";
-    const overlaySourceId = "story-year-overlay";
-    if (!map.getLayer(overlayLayerId) || !map.getSource(overlaySourceId)) return;
+    const active = new Set<string>();
 
-    if (yearFilter != null) {
-      const clampedYear = Math.max(YEAR_OVERLAY_RANGE.start, Math.min(YEAR_OVERLAY_RANGE.end, yearFilter));
-      const url = YEAR_OVERLAY_URL_PATTERN.replace("{year}", String(clampedYear));
+    for (const ov of overlays) {
+      const cfg = OVERLAY_SOURCES[ov.source];
+      if (!cfg || !map.getLayer(cfg.layerId) || !map.getSource(cfg.sourceId)) continue;
+      active.add(ov.source);
 
-      const src = map.getSource(overlaySourceId);
-      if (src && "updateImage" in src) {
-        (src as { updateImage: (opts: { url: string }) => void }).updateImage({ url });
+      const applied = overlayAppliedRef.current[ov.source] ?? { year: -1, opacity: -1 };
+      const year = clampYear(ov.year, cfg.range.start, cfg.range.end);
+
+      if (year !== applied.year) {
+        const src = map.getSource(cfg.sourceId);
+        if (src && "updateImage" in src) {
+          (src as { updateImage: (opts: { url: string }) => void }).updateImage({
+            url: cfg.urlPattern.replace("{year}", String(year)),
+          });
+        }
       }
-
-      map.setPaintProperty(overlayLayerId, "raster-opacity", 0.85);
-    } else {
-      map.setPaintProperty(overlayLayerId, "raster-opacity", 0);
+      if (ov.opacity !== applied.opacity) {
+        map.setPaintProperty(cfg.layerId, "raster-opacity", ov.opacity);
+      }
+      overlayAppliedRef.current[ov.source] = { year, opacity: ov.opacity };
     }
-  }, [yearFilter, mapLoaded]);
+
+    // Hide overlays not declared by the current beat.
+    for (const source of Object.keys(OVERLAY_SOURCES) as Array<keyof typeof OVERLAY_SOURCES>) {
+      if (active.has(source)) continue;
+      const cfg = OVERLAY_SOURCES[source];
+      const applied = overlayAppliedRef.current[source];
+      if (map.getLayer(cfg.layerId) && (!applied || applied.opacity !== 0)) {
+        map.setPaintProperty(cfg.layerId, "raster-opacity", 0);
+        overlayAppliedRef.current[source] = { year: applied?.year ?? -1, opacity: 0 };
+      }
+    }
+  }, [overlays, mapLoaded]);
 
   // On map load: add sources, layers, terrain, hatch pattern
   const onLoad = useCallback(() => {
@@ -216,9 +255,11 @@ export function StoryMap({
 
     pipelineLog("onLoad", "layers registered");
 
-    // Prefetch raster tiles, terrain tiles, and year overlays
+    // Prefetch raster tiles, terrain tiles, and year overlays. Fire overlays
+    // are larger and belong to a later beat — defer them behind the cutblocks.
     prefetchStoryTiles();
     prefetchYearOverlays();
+    prefetchFireOverlays();
     const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
     if (TERRAIN_SOURCE.enabled && maptilerKey) {
       prefetchTerrainTiles(maptilerKey);
@@ -250,17 +291,28 @@ export function StoryMap({
         <AttributionControl compact position="bottom-right" />
       </Map>
 
-      {/* Year counter overlay for timeline chapters -- bottom-right position */}
+      {/* Year counter overlay for scrub chapters -- bottom-right position */}
       {yearFilter != null && (
         <div
-          className="absolute bottom-6 right-4 md:bottom-8 md:right-8 pointer-events-none"
+          className="absolute bottom-6 right-4 md:bottom-8 md:right-8 pointer-events-none flex flex-col items-end"
           role="status"
           aria-live="polite"
-          aria-label={`Showing data through ${yearFilter}`}
+          aria-label={`Showing ${counterLabel ?? "data"} through ${yearFilter}`}
         >
-          <span className="story-year-counter text-5xl md:text-8xl font-light text-white/30 select-none" aria-hidden="true">
+          <span
+            className="story-year-counter text-4xl md:text-8xl font-light text-white/40 select-none tabular-nums"
+            aria-hidden="true"
+          >
             {yearFilter}
           </span>
+          {counterLabel && (
+            <span
+              className="text-[10px] md:text-xs uppercase tracking-[0.25em] text-white/40 select-none"
+              aria-hidden="true"
+            >
+              {counterLabel}
+            </span>
+          )}
         </div>
       )}
     </div>
