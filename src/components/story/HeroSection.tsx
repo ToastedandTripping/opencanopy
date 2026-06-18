@@ -102,14 +102,14 @@ export function HeroSection() {
             className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            <span className="text-[#ef4444]">5 million</span>{" "}
+            <span className="text-[#ef4444]">8 million</span>{" "}
             <span className="text-white">hectares.</span>
           </p>
           <p className="mt-6 text-lg md:text-xl text-zinc-400">
-            Logged since 1950. An area larger than Switzerland.
+            Logged since 1950. An area larger than Ireland.
           </p>
           <p className="mt-2 text-base text-zinc-500">
-            Clearcut and never recovered.
+            Most of it will never be old growth again.
           </p>
         </div>
       </div>
