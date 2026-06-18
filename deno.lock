@@ -11,27 +11,35 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@playwright/test@^1.58.2",
         "npm:@tailwindcss/postcss@4",
+        "npm:@testing-library/react@^16.3.2",
         "npm:@turf/area@^7.3.4",
         "npm:@turf/bbox-polygon@^7.3.4",
         "npm:@turf/bbox@^7.3.4",
         "npm:@turf/boolean-within@^7.3.4",
+        "npm:@turf/difference@^7.3.4",
         "npm:@turf/helpers@^7.3.4",
         "npm:@turf/intersect@^7.3.4",
         "npm:@types/node@20",
         "npm:@types/react-dom@19",
         "npm:@types/react@19",
-        "npm:eslint-config-next@16.2.0",
+        "npm:@vitest/coverage-v8@^4.1.1",
+        "npm:eslint-config-next@16.2.7",
         "npm:eslint@9",
+        "npm:happy-dom@^20.8.7",
         "npm:maplibre-gl@^5.21.0",
-        "npm:next@16.2.0",
+        "npm:next@16.2.7",
+        "npm:pixelmatch@^7.1.0",
         "npm:pmtiles@^4.4.0",
+        "npm:pngjs@7",
         "npm:react-dom@19.2.4",
         "npm:react-map-gl@^8.1.0",
         "npm:react@19.2.4",
         "npm:scrollama@^3.2.0",
         "npm:tailwindcss@4",
-        "npm:typescript@5"
+        "npm:typescript@5",
+        "npm:vitest@^4.1.1"
       ]
     }
   }
