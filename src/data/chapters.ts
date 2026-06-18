@@ -74,6 +74,14 @@ export interface Chapter {
   scrubStart?: number;
   /** Which cumulative-area scrub table maps scroll progress → year (scrub beats only). */
   scrubTable?: "cutblocks" | "fire";
+  /**
+   * Blend the scrubTable's cumulative-area pacing toward LINEAR, 0..1.
+   * 0 = pure cumulative (early near-empty decades compress to nothing);
+   * 1 = pure linear (every year equal time). A middle value gives the sparse
+   * early decades enough scroll to read while still trimming the long tail.
+   * Ignored when there's no scrubTable.
+   */
+  scrubBlend?: number;
   /** Per-chapter image overlays (red cutblocks / amber fire), opacity decoupled from yearFilter. */
   overlays?: ChapterOverlay[];
   /** Small label under the year counter (e.g. "wildfires"). */
@@ -126,6 +134,10 @@ export const CHAPTERS: Chapter[] = [
     layers: [{ id: "forest-age", opacity: 0.4 }],
     timelineScrub: { start: 1950, end: 2025 },
     scrubTable: "cutblocks",
+    // Pure cumulative compressed 1950-1980 to ~0.1% of scroll (the counter
+    // teleported) and piled the rest on the 2000s. Blend 40% toward linear so
+    // the early decades read and the long tail trims.
+    scrubBlend: 0.4,
     overlays: [{ source: "cutblocks", mode: "scrubbed", opacity: 0.85 }],
     scrollHeight: 600,
   },

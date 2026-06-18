@@ -76,10 +76,13 @@ export function useScrollytelling() {
       let scrubYear: number | null = null;
       if (scrub && prog >= scrubStart) {
         const localProg = scrubStart < 1 ? (prog - scrubStart) / (1 - scrubStart) : 1;
+        const linearYear = scrub.start + (scrub.end - scrub.start) * localProg;
         if (chapter.scrubTable) {
-          scrubYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], localProg);
+          const cumYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], localProg);
+          const blend = chapter.scrubBlend ?? 0;
+          scrubYear = Math.round(blend * linearYear + (1 - blend) * cumYear);
         } else {
-          scrubYear = Math.round(scrub.start + (scrub.end - scrub.start) * localProg);
+          scrubYear = Math.round(linearYear);
         }
         pipelineLog("setYearFilter", String(scrubYear));
       }
