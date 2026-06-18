@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OpenCanopy">
+  <!-- OpenCanopy mark: old-growth rings — a tree's growth-ring cross-section
+       that also reads as a topographic map contour. The pith sits off-centre
+       and the rings crowd to one side (as in real wood / real contours) so the
+       mark never reads as a target. Two rings + a filled pith: five alternating
+       bands, the most that stays crisp at 16px. -->
+  <rect width="512" height="512" rx="114" fill="#0a0a0c"/>
+  <g stroke="#2dd4bf" fill="none">
+    <circle cx="252" cy="258" r="180" stroke-width="40"/>
+    <circle cx="240" cy="246" r="96" stroke-width="40"/>
+  </g>
+  <circle cx="232" cy="238" r="26" fill="#2dd4bf"/>
+</svg>
