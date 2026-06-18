@@ -205,7 +205,7 @@ export function prefetchFireOverlays(): void {
   }
 
   let idx = 0;
-  const BATCH = 8;
+  const BATCH = 12;
 
   function loadBatch() {
     const end = Math.min(idx + BATCH, urls.length);
@@ -215,10 +215,13 @@ export function prefetchFireOverlays(): void {
       fireOverlayCache.push(img);
     }
     if (idx < urls.length) {
-      setTimeout(loadBatch, 50);
+      setTimeout(loadBatch, 30);
     }
   }
 
-  // Defer the first batch so cutblock overlays + tiles get the bandwidth first.
-  setTimeout(loadBatch, 1500);
+  // Short defer so the cutblock overlays + base tiles get first call, then load
+  // promptly — the fire PNGs must be decoded before the user scrubs onto them,
+  // or the swap stutters. The fire beat is far down the scroll, so ~1.5s of
+  // batched loading finishes well before it's reached.
+  setTimeout(loadBatch, 300);
 }

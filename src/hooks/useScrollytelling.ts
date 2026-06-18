@@ -66,11 +66,20 @@ export function useScrollytelling() {
         prog,
       });
 
-      // Timeline scrub: map progress to year via the nonlinear cumulative-area
-      // table (sparse early decades compress, modern acceleration stretches).
+      // Timeline scrub: map progress to year. With a scrubTable, use the
+      // nonlinear cumulative-area curve (sparse early decades compress, modern
+      // acceleration stretches) — right for the many-small-events cutblocks.
+      // Without one, fall back to a steady LINEAR mapping (one year per equal
+      // scroll) — right for fire, whose few huge discrete events make the
+      // nonlinear counter lurch.
       let scrubYear: number | null = null;
-      if (chapter.timelineScrub && chapter.scrubTable) {
-        scrubYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], prog);
+      if (chapter.timelineScrub) {
+        if (chapter.scrubTable) {
+          scrubYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], prog);
+        } else {
+          const { start, end } = chapter.timelineScrub;
+          scrubYear = Math.round(start + (end - start) * prog);
+        }
         pipelineLog("setYearFilter", String(scrubYear));
       }
       setYearFilter(scrubYear);

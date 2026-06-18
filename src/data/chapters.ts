@@ -130,12 +130,18 @@ export const CHAPTERS: Chapter[] = [
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.3 }],
+    // LINEAR scrub (no scrubTable): the counter advances one year per equal
+    // scroll. Fire is a few huge discrete events (1958, 2017, 2023); the
+    // cumulative-area nonlinear pacing made the counter lurch (linger on big
+    // years, skip empty ones). Linear keeps it steady; the recent bloom still
+    // lands hard at the end because those seasons are simply enormous.
     timelineScrub: { start: 1917, end: 2025 },
-    scrubTable: "fire",
     counterLabel: "wildfires",
     overlays: [
       { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0.75 },
-      { source: "fire", mode: "scrubbed", opacity: 0.85 },
+      // Fade the amber in over the first slice so "And then it burned" leads
+      // the orange instead of arriving after it.
+      { source: "fire", mode: "scrubbed", opacity: 0.85, fadeIn: [0, 0.12] },
     ],
     scrollHeight: 300,
   },
