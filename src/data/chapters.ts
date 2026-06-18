@@ -65,6 +65,13 @@ export interface Chapter {
   fog?: ChapterFog;
   layers: ChapterLayer[];
   timelineScrub?: ChapterTimelineScrub;
+  /**
+   * Progress fraction [0,1] at which scrubbing begins. Before it, the beat
+   * HOLDS: no year counter, scrubbed overlays pinned to their start year (and
+   * typically faded out) so the panel text can land before the data moves.
+   * Defaults to 0 (scrub from the top).
+   */
+  scrubStart?: number;
   /** Which cumulative-area scrub table maps scroll progress → year (scrub beats only). */
   scrubTable?: "cutblocks" | "fire";
   /** Per-chapter image overlays (red cutblocks / amber fire), opacity decoupled from yearFilter. */
@@ -135,13 +142,16 @@ export const CHAPTERS: Chapter[] = [
     // cumulative-area nonlinear pacing made the counter lurch (linger on big
     // years, skip empty ones). Linear keeps it steady; the recent bloom still
     // lands hard at the end because those seasons are simply enormous.
+    //
+    // HOLD until 22%: enter on the full red province with "And then it burned."
+    // showing and NO orange + NO counter, so the line lands first. Then the
+    // amber begins (fades in 22-30%, synchronized with the counter starting).
     timelineScrub: { start: 1917, end: 2025 },
+    scrubStart: 0.22,
     counterLabel: "wildfires",
     overlays: [
       { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0.75 },
-      // Fade the amber in over the first slice so "And then it burned" leads
-      // the orange instead of arriving after it.
-      { source: "fire", mode: "scrubbed", opacity: 0.85, fadeIn: [0, 0.12] },
+      { source: "fire", mode: "scrubbed", opacity: 0.85, fadeIn: [0.22, 0.3] },
     ],
     scrollHeight: 300,
   },

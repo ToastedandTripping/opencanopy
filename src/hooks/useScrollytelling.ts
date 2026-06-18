@@ -66,31 +66,32 @@ export function useScrollytelling() {
         prog,
       });
 
-      // Timeline scrub: map progress to year. With a scrubTable, use the
-      // nonlinear cumulative-area curve (sparse early decades compress, modern
-      // acceleration stretches) — right for the many-small-events cutblocks.
-      // Without one, fall back to a steady LINEAR mapping (one year per equal
-      // scroll) — right for fire, whose few huge discrete events make the
-      // nonlinear counter lurch.
+      // Timeline scrub: map progress to year. A scrubStart HOLD delays the
+      // scrub (no counter, overlay pinned to start year) so panel text can land
+      // first. With a scrubTable, use the nonlinear cumulative-area curve (right
+      // for the many-small-events cutblocks); without one, a steady LINEAR
+      // mapping (right for fire, whose few huge events make nonlinear lurch).
+      const scrub = chapter.timelineScrub;
+      const scrubStart = chapter.scrubStart ?? 0;
       let scrubYear: number | null = null;
-      if (chapter.timelineScrub) {
+      if (scrub && prog >= scrubStart) {
+        const localProg = scrubStart < 1 ? (prog - scrubStart) / (1 - scrubStart) : 1;
         if (chapter.scrubTable) {
-          scrubYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], prog);
+          scrubYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], localProg);
         } else {
-          const { start, end } = chapter.timelineScrub;
-          scrubYear = Math.round(start + (end - start) * prog);
+          scrubYear = Math.round(scrub.start + (scrub.end - scrub.start) * localProg);
         }
         pipelineLog("setYearFilter", String(scrubYear));
       }
       setYearFilter(scrubYear);
 
       // Resolve this frame's overlays (image year + opacity), decoupled from
-      // yearFilter. Scrubbed overlays follow scrubYear; static overlays pin to
-      // staticYear; fadeIn ramps opacity scroll-coupled (baseline beat).
+      // yearFilter. Scrubbed overlays follow scrubYear (pinned to start during a
+      // hold); static overlays pin to staticYear; fadeIn ramps opacity.
       const resolved: ResolvedOverlay[] = (chapter.overlays ?? []).map((ov) => {
         const year =
           ov.mode === "scrubbed"
-            ? scrubYear ?? ov.staticYear ?? 0
+            ? scrubYear ?? scrub?.start ?? ov.staticYear ?? 0
             : ov.staticYear ?? 0;
         const opacity = ov.fadeIn
           ? ov.opacity * clamp01((prog - ov.fadeIn[0]) / (ov.fadeIn[1] - ov.fadeIn[0]))
