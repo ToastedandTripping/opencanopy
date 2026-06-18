@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
 """
-Generate per-year cutblock overlay PNGs for scrollytelling.
+Generate per-year overlay PNGs for the scrollytelling story.
 
-Produces one transparent PNG per year (1950-2025) covering the BC extent.
-Each image shows all cutblocks logged by that year, age-graded from
-bright red (fresh) to dark maroon (50+ years old).
+Two datasets share this pipeline (select with --dataset):
+  cutblocks  cumulative logging, age-graded fresh-red -> dark-maroon
+             (1950-2025). Undated cutblocks (36K+ with no
+             DISTURBANCE_START_DATE) are baked into every year as a
+             low-opacity pre-1950 baseline.
+  fire       cumulative wildfire, age-graded fresh-amber -> burnt-umber
+             (1917-2025, the full recorded span). No undated bucket.
+
+Each dataset produces one transparent PNG per year covering the BC
+extent, age-graded by (target_year - feature_year). One PNG is written
+for EVERY year in [start, end] even if its mask is empty, so the story
+scrub never 404s on a sparse year.
 
 Images are rasterized in equirectangular then resampled to Web Mercator
-so they align correctly with MapLibre's projection.
-
-Undated cutblocks (36K+ features with no DISTURBANCE_START_DATE) are
-included in all years as low-opacity pre-1950 baseline logging.
+so they align with MapLibre's projection.
 
 Usage:
-  python3 scripts/build-year-overlays.py
-  python3 scripts/build-year-overlays.py --width 2048
-  python3 scripts/build-year-overlays.py --start 1960 --end 2020
-  python3 scripts/build-year-overlays.py --preview
+  python3 scripts/build-year-overlays.py                      # cutblocks (default)
+  python3 scripts/build-year-overlays.py --dataset fire
+  python3 scripts/build-year-overlays.py --dataset fire --preview
+  python3 scripts/build-year-overlays.py --width 2048 --start 1960 --end 2020
 
 Dependencies: rasterio, numpy, scipy (pip3 install --user rasterio numpy scipy)
 """
@@ -41,44 +47,72 @@ warnings.filterwarnings("ignore", message=".*Dataset has no geotransform.*")
 # ── Configuration ────────────────────────────────────────────────
 
 _PROJECT_ROOT = Path(__file__).parent.parent
-_DATA_CANDIDATES = [
-    _PROJECT_ROOT / "data" / "checkpoint" / "preprocessed" / "tenure-cutblocks.ndjson",
-    Path.home() / "Projects" / "opencanopy" / "data" / "checkpoint" / "preprocessed" / "tenure-cutblocks.ndjson",
-]
-CUTBLOCKS_PATH = next((p for p in _DATA_CANDIDATES if p.exists()), _DATA_CANDIDATES[0])
-OUTPUT_DIR = Path(__file__).parent.parent / "public" / "raster" / "cutblocks-by-year"
+
+
+def _data_path(filename: str) -> Path:
+    candidates = [
+        _PROJECT_ROOT / "data" / "checkpoint" / "preprocessed" / filename,
+        Path.home() / "Projects" / "opencanopy" / "data" / "checkpoint" / "preprocessed" / filename,
+    ]
+    return next((p for p in candidates if p.exists()), candidates[0])
+
+
+# Per-dataset configuration. Each dataset is rasterized cumulatively and
+# age-graded by (target_year - feature_year) through its own AGE_STOPS ramp.
+DATASETS = {
+    "cutblocks": {
+        "filename": "tenure-cutblocks.ndjson",
+        "output_subdir": "cutblocks-by-year",
+        "year_field": "DISTURBANCE_START_DATE",
+        "year_kind": "date",          # take [:4] of an ISO date string
+        "start": 1950,
+        "end": 2025,
+        "age_stops": [
+            (0, (239, 68, 68, 220)),   # #ef4444 bright red
+            (25, (185, 28, 28, 200)),  # #b91c1c darker red
+            (50, (127, 29, 29, 180)),  # #7f1d1d dark maroon
+        ],
+        # Undated cutblocks (no DISTURBANCE_START_DATE) + anything pre-start are
+        # bucketed at the proxy year and painted into every frame as a muted
+        # baseline, so loss that predates the records is visible from 1950.
+        "undated_proxy_year": 1949,
+        "undated_color": (127, 29, 29, 120),  # dark maroon, semi-transparent
+    },
+    "fire": {
+        "filename": "fire-history.ndjson",
+        "output_subdir": "fire-by-year",
+        "year_field": "FIRE_YEAR",
+        "year_kind": "int",           # already a 4-digit year string
+        "start": 1917,                # full recorded span — pre-1985 is 45% of burned area
+        "end": 2025,
+        "age_stops": [
+            (0, (245, 158, 11, 210)),  # #f59e0b fresh amber
+            (25, (217, 119, 6, 180)),  # #d97706 mid amber
+            (50, (146, 64, 14, 140)),  # #92400e burnt umber
+        ],
+        # Fires are all dated; no undated bucket.
+        "undated_proxy_year": None,
+        "undated_color": None,
+    },
+}
 
 BC_BOUNDS = (-139.5, 48.0, -114.0, 60.5)  # west, south, east, north
 
 DEFAULT_WIDTH = 1024
-DEFAULT_START_YEAR = 1950
-DEFAULT_END_YEAR = 2025
-
-UNDATED_PROXY_YEAR = 1949
-
-# Age-grading: age (years) -> RGBA. Matches story timeline visual language.
-AGE_STOPS = [
-    (0, (239, 68, 68, 220)),   # #ef4444 bright red
-    (25, (185, 28, 28, 200)),  # #b91c1c darker red
-    (50, (127, 29, 29, 180)),  # #7f1d1d dark maroon
-]
-
-# Undated cutblocks get a muted red at low opacity
-UNDATED_COLOR = (127, 29, 29, 120)  # dark maroon, semi-transparent
 
 
-def lerp_color(age: int) -> tuple[int, int, int, int]:
-    if age <= AGE_STOPS[0][0]:
-        return AGE_STOPS[0][1]
-    if age >= AGE_STOPS[-1][0]:
-        return AGE_STOPS[-1][1]
-    for i in range(len(AGE_STOPS) - 1):
-        a0, c0 = AGE_STOPS[i]
-        a1, c1 = AGE_STOPS[i + 1]
+def lerp_color(age: int, age_stops: list) -> tuple[int, int, int, int]:
+    if age <= age_stops[0][0]:
+        return age_stops[0][1]
+    if age >= age_stops[-1][0]:
+        return age_stops[-1][1]
+    for i in range(len(age_stops) - 1):
+        a0, c0 = age_stops[i]
+        a1, c1 = age_stops[i + 1]
         if a0 <= age <= a1:
             t = (age - a0) / (a1 - a0)
             return tuple(int(c0[j] + (c1[j] - c0[j]) * t) for j in range(4))
-    return AGE_STOPS[-1][1]
+    return age_stops[-1][1]
 
 
 def mercator_y(lat_deg: float) -> float:
@@ -126,10 +160,16 @@ def resample_to_mercator(rgba: np.ndarray, row_map: np.ndarray) -> np.ndarray:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate per-year cutblock overlays")
+    parser = argparse.ArgumentParser(description="Generate per-year story overlays")
+    parser.add_argument(
+        "--dataset",
+        choices=sorted(DATASETS.keys()),
+        default="cutblocks",
+        help="Which dataset to rasterize (default: cutblocks)",
+    )
     parser.add_argument("--width", type=int, default=DEFAULT_WIDTH)
-    parser.add_argument("--start", type=int, default=DEFAULT_START_YEAR)
-    parser.add_argument("--end", type=int, default=DEFAULT_END_YEAR)
+    parser.add_argument("--start", type=int, default=None, help="Override dataset start year")
+    parser.add_argument("--end", type=int, default=None, help="Override dataset end year")
     parser.add_argument(
         "--preview",
         action="store_true",
@@ -137,65 +177,86 @@ def main():
     )
     args = parser.parse_args()
 
+    cfg = DATASETS[args.dataset]
+    start_year = args.start if args.start is not None else cfg["start"]
+    end_year = args.end if args.end is not None else cfg["end"]
+    year_field = cfg["year_field"]
+    year_kind = cfg["year_kind"]
+    age_stops = cfg["age_stops"]
+    undated_proxy_year = cfg["undated_proxy_year"]
+    undated_color = cfg["undated_color"]
+
+    input_path = _data_path(cfg["filename"])
+    output_dir = _PROJECT_ROOT / "public" / "raster" / cfg["output_subdir"]
+
     west, south, east, north = BC_BOUNDS
     width = args.width
     height = int(width * (north - south) / (east - west))
 
-    target_years = list(range(args.start, args.end + 1))
+    target_years = list(range(start_year, end_year + 1))
     if args.preview:
-        target_years = [1950, 1975, 2000, 2025]
-        target_years = [y for y in target_years if args.start <= y <= args.end]
+        span = end_year - start_year
+        target_years = sorted({start_year, start_year + span // 3, start_year + 2 * span // 3, end_year})
 
-    print("=== OpenCanopy Year Overlay Builder ===")
-    print(f"  Output: {width}x{height} PNGs (Mercator-corrected), {len(target_years)} years")
+    print(f"=== OpenCanopy Year Overlay Builder ({args.dataset}) ===")
+    print(f"  Input:  {input_path}")
+    print(f"  Output: {output_dir}")
+    print(f"  Frames: {width}x{height} PNGs (Mercator-corrected), {len(target_years)} years ({start_year}-{end_year})")
     print(f"  Bounds: {BC_BOUNDS}")
 
-    if not CUTBLOCKS_PATH.exists():
-        print(f"\n  ERROR: {CUTBLOCKS_PATH} not found")
+    if not input_path.exists():
+        print(f"\n  ERROR: {input_path} not found")
         sys.exit(1)
 
+    def parse_year(props: dict):
+        """Return an int year from the dataset's year field, or None if unparseable."""
+        raw = props.get(year_field, "")
+        if raw is None:
+            return None
+        s = str(raw)
+        token = s[:4] if year_kind == "date" else s.strip()
+        return int(token) if token.isdigit() else None
+
     # ── Load features grouped by year ────────────────────────────
-    print("\nLoading cutblock features...")
+    print(f"\nLoading {args.dataset} features...")
     by_year: dict[int, list] = defaultdict(list)
     count = 0
     undated_count = 0
 
-    with open(CUTBLOCKS_PATH) as f:
+    with open(input_path) as f:
         for line in f:
             try:
                 feat = json.loads(line)
-                date_str = feat.get("properties", {}).get("DISTURBANCE_START_DATE", "")
-                yr_str = date_str[:4] if date_str else ""
                 geom = feat.get("geometry")
                 if not geom:
                     continue
+                yr = parse_year(feat.get("properties", {}))
 
-                if not yr_str.isdigit():
-                    by_year[UNDATED_PROXY_YEAR].append(geom)
-                    undated_count += 1
-                    count += 1
-                else:
-                    yr = int(yr_str)
-                    if yr > args.end:
-                        continue
-                    if yr < args.start:
-                        by_year[UNDATED_PROXY_YEAR].append(geom)
+                if yr is None or yr < start_year:
+                    # Undated or pre-start: bucket as baseline if the dataset
+                    # supports it, otherwise drop (fire has no undated bucket).
+                    if undated_proxy_year is not None:
+                        by_year[undated_proxy_year].append(geom)
                         undated_count += 1
-                    else:
-                        by_year[yr].append(geom)
-                    count += 1
+                        count += 1
+                    continue
+                if yr > end_year:
+                    continue
+                by_year[yr].append(geom)
+                count += 1
 
                 if count % 50000 == 0:
                     print(f"  {count:,} features...")
             except Exception:
                 pass
 
-    print(f"  Loaded {count:,} features ({undated_count:,} undated/pre-{args.start})")
-    dated_years = [y for y in sorted(by_year.keys()) if y != UNDATED_PROXY_YEAR]
+    print(f"  Loaded {count:,} features ({undated_count:,} undated/pre-{start_year})")
+    dated_years = [y for y in sorted(by_year.keys()) if y != undated_proxy_year]
     if dated_years:
         print(f"  Dated range: {dated_years[0]}-{dated_years[-1]}")
-    undated_bucket = len(by_year.get(UNDATED_PROXY_YEAR, []))
-    print(f"  Undated bucket ({UNDATED_PROXY_YEAR}): {undated_bucket:,} features")
+    if undated_proxy_year is not None:
+        undated_bucket = len(by_year.get(undated_proxy_year, []))
+        print(f"  Undated bucket ({undated_proxy_year}): {undated_bucket:,} features")
 
     # ── Pre-rasterize each year-group as a binary mask ───────────
     print("\nRasterizing year masks (equirectangular)...")
@@ -216,7 +277,7 @@ def main():
             px = int(mask.sum())
             year_masks[yr] = mask
             if px > 0:
-                label = "undated" if yr == UNDATED_PROXY_YEAR else str(yr)
+                label = "undated" if yr == undated_proxy_year else str(yr)
                 print(f"  {label:>7}: {len(by_year[yr]):>6,} features -> {px:>7,} px")
         except Exception as e:
             print(f"  {yr}: FAILED ({e})")
@@ -229,7 +290,7 @@ def main():
 
     # ── Composite per-year overlay images ────────────────────────
     print(f"\nCompositing {len(target_years)} year images (with Mercator resampling)...")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     start_time = time.time()
     written = 0
@@ -238,17 +299,17 @@ def main():
     for target_year in target_years:
         rgba = np.zeros((4, height, width), dtype=np.uint8)
 
-        # Paint undated cutblocks first (lowest priority, low opacity)
-        if UNDATED_PROXY_YEAR in year_masks:
-            mask = year_masks[UNDATED_PROXY_YEAR]
+        # Paint undated/baseline features first (lowest priority, low opacity)
+        if undated_proxy_year is not None and undated_proxy_year in year_masks:
+            mask = year_masks[undated_proxy_year]
             if mask.max() > 0:
                 where = mask == 1
                 for band in range(4):
-                    rgba[band][where] = UNDATED_COLOR[band]
+                    rgba[band][where] = undated_color[band]
 
-        # Paint dated cutblocks on top, oldest first
+        # Paint dated features on top, oldest first
         for yr in mask_years:
-            if yr == UNDATED_PROXY_YEAR:
+            if yr == undated_proxy_year:
                 continue
             if yr > target_year:
                 break
@@ -256,7 +317,7 @@ def main():
             if mask.max() == 0:
                 continue
             age = target_year - yr
-            color = lerp_color(age)
+            color = lerp_color(age, age_stops)
             where = mask == 1
             for band in range(4):
                 rgba[band][where] = color[band]
@@ -264,7 +325,7 @@ def main():
         # Resample equirectangular -> Mercator
         rgba_merc = resample_to_mercator(rgba, row_map)
 
-        out_path = OUTPUT_DIR / f"{target_year}.png"
+        out_path = output_dir / f"{target_year}.png"
         with rasterio.open(
             str(out_path),
             "w",
@@ -282,12 +343,12 @@ def main():
             print(f"  {written}/{len(target_years)} images ({elapsed:.1f}s)")
 
     elapsed = time.time() - start_time
-    total_bytes = sum(f.stat().st_size for f in OUTPUT_DIR.glob("*.png"))
+    total_bytes = sum(f.stat().st_size for f in output_dir.glob("*.png"))
     avg_kb = total_bytes / max(written, 1) / 1024
 
     print(f"\n  Done: {written} PNGs in {elapsed:.1f}s")
     print(f"  Total: {total_bytes / 1024 / 1024:.1f} MB ({avg_kb:.0f} KB avg)")
-    print(f"  Output: {OUTPUT_DIR}")
+    print(f"  Output: {output_dir}")
 
 
 if __name__ == "__main__":
