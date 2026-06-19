@@ -41,6 +41,15 @@ export function Footer() {
             >
               Contributing
             </a>
+            <a
+              href="https://ko-fi.com/toasted40013"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:text-emerald-300 transition-colors"
+              aria-label="Support OpenCanopy on Ko-fi"
+            >
+              Support
+            </a>
             <Link
               href="/privacy"
               className="hover:text-zinc-300 transition-colors"
