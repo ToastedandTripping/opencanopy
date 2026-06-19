@@ -70,32 +70,25 @@ function CategoryIcon({ path }: { path: string }) {
       strokeWidth={1.5}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="w-4 h-4 shrink-0"
+      className="w-3.5 h-3.5 shrink-0 text-zinc-500"
     >
       <path d={path} />
     </svg>
   );
 }
 
-function LayerToggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: () => void;
-}) {
+/**
+ * Presentational toggle. NOT a button — the parent LayerRow is the single
+ * focusable `role="switch"` control (avoids nested-interactive a11y failure).
+ * aria-hidden so AT announces only the row's switch role, not this visual.
+ */
+function ToggleVisual({ checked }: { checked: boolean }) {
   return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={(e) => {
-        e.stopPropagation();
-        onChange();
-      }}
+    <span
+      aria-hidden="true"
       className={`
-        relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full
+        relative inline-flex h-5 w-9 shrink-0 rounded-full
         transition-colors duration-200 ease-in-out
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20
         ${checked ? "bg-emerald-500/80" : "bg-white/10"}
       `}
     >
@@ -106,7 +99,7 @@ function LayerToggle({
           ${checked ? "translate-x-4 ml-0.5" : "translate-x-0.5"}
         `}
       />
-    </button>
+    </span>
   );
 }
 
@@ -154,23 +147,27 @@ function LayerRow({
 }) {
   return (
     <button
+      role="switch"
+      aria-checked={enabled}
+      aria-label={layer.label}
       onClick={onToggle}
       title={layer.description}
       className={`
         flex items-center gap-3 w-full px-3 py-2 min-h-[44px] rounded-lg text-left
         transition-colors duration-150
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20
         ${enabled ? "bg-white/5" : "hover:bg-white/[0.03]"}
       `}
     >
       <ColorSwatch layer={layer} />
       <span
         className={`flex-1 text-sm truncate ${
-          enabled ? "text-zinc-200" : "text-zinc-500"
+          enabled ? "text-zinc-200" : "text-zinc-400"
         }`}
       >
         {layer.label}
       </span>
-      <LayerToggle checked={enabled} onChange={onToggle} />
+      <ToggleVisual checked={enabled} />
     </button>
   );
 }
@@ -199,14 +196,15 @@ function CategorySection({
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3 py-2 min-h-[44px] text-left hover:bg-white/[0.03] rounded-lg transition-colors"
+        aria-expanded={open}
+        className="flex items-center gap-2 w-full px-3 pt-3 pb-1 text-left transition-colors"
       >
         <CategoryIcon path={config.icon} />
-        <span className="flex-1 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+        <span className="flex-1 text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-400">
           {config.label}
         </span>
         {enabledCount > 0 && (
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+          <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400/90">
             {enabledCount}
           </span>
         )}
@@ -215,7 +213,7 @@ function CategorySection({
           fill="none"
           stroke="currentColor"
           strokeWidth={2}
-          className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-200 ${
+          className={`w-3 h-3 text-zinc-500 transition-transform duration-200 ${
             open ? "rotate-180" : ""
           }`}
         >
@@ -276,11 +274,11 @@ export function LayerPanel({
         </div>
         <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
           {layersByCategory.map(({ config, layers }) => (
-            <CategorySection key={config.id} config={config} layers={layers} enabledLayers={enabledLayers} onToggleLayer={onToggleLayer} defaultOpen={config.id === "forest" || config.id === "protection" || config.id === "disturbance"} />
+            <CategorySection key={config.id} config={config} layers={layers} enabledLayers={enabledLayers} onToggleLayer={onToggleLayer} defaultOpen={true} />
           ))}
         </div>
         <div className="px-4 py-2 border-t border-white/5 shrink-0">
-          <p className="text-[10px] text-zinc-600">{enabledLayers.length} of {LAYER_REGISTRY.length} layers active</p>
+          <p className="text-[10px] text-zinc-400">{enabledLayers.length} of {LAYER_REGISTRY.length} layers active</p>
         </div>
       </div>
 
@@ -297,11 +295,11 @@ export function LayerPanel({
         </div>
         <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
           {layersByCategory.map(({ config, layers }) => (
-            <CategorySection key={config.id} config={config} layers={layers} enabledLayers={enabledLayers} onToggleLayer={onToggleLayer} defaultOpen={config.id === "forest" || config.id === "protection" || config.id === "disturbance"} />
+            <CategorySection key={config.id} config={config} layers={layers} enabledLayers={enabledLayers} onToggleLayer={onToggleLayer} defaultOpen={true} />
           ))}
         </div>
         <div className="px-4 py-2 border-t border-white/5 shrink-0">
-          <p className="text-[10px] text-zinc-600">{enabledLayers.length} of {LAYER_REGISTRY.length} layers active</p>
+          <p className="text-[10px] text-zinc-400">{enabledLayers.length} of {LAYER_REGISTRY.length} layers active</p>
         </div>
       </div>
     </>

@@ -295,6 +295,10 @@ function PmtilesLayers({
             pipelineLog("pmtiles-layer", `layer-${layer.id}-tiles-fill`, { type: "fill", minzoom, maxzoom });
           }
           if (!mapInstance.getLayer(`layer-${layer.id}-tiles-outline`)) {
+            // A registry `style.outline` declares an explicit solid border
+            // (e.g. old-growth's gold edge); otherwise fall back to the faint
+            // default auto-edge. Single generic capability — no per-id casing.
+            const outline = layer.style.outline;
             mapInstance.addLayer(
               {
                 id: `layer-${layer.id}-tiles-outline`,
@@ -306,20 +310,25 @@ function PmtilesLayers({
                 layout: { visibility: visible ? "visible" : "none" },
                 paint: {
                   "line-color":
+                    outline?.color ??
                     (layer.style.paint["fill-outline-color"] as string) ??
                     "rgba(255,255,255,0.2)",
-                  "line-width": [
-                    "interpolate", ["linear"], ["zoom"],
-                    5, 0,
-                    8, 0.3,
-                    10, 0.5,
-                  ],
-                  "line-opacity": [
-                    "interpolate", ["linear"], ["zoom"],
-                    5, 0,
-                    8, 0.2,
-                    10, 0.4,
-                  ],
+                  "line-width": outline
+                    ? outline.width
+                    : [
+                        "interpolate", ["linear"], ["zoom"],
+                        5, 0,
+                        8, 0.3,
+                        10, 0.5,
+                      ],
+                  "line-opacity": outline
+                    ? outline.opacity
+                    : [
+                        "interpolate", ["linear"], ["zoom"],
+                        5, 0,
+                        8, 0.2,
+                        10, 0.4,
+                      ],
                   "line-opacity-transition": { duration: 300 },
                 },
                 ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
@@ -525,19 +534,26 @@ function PmtilesLayers({
       // so any age-graded interpolation expression from the active phase is cleared.
       const restoreOpacity = layer.style.paint["fill-opacity"] ?? layer.style.opacity ?? 0.7;
       mapInstance.setPaintProperty(fillId, "fill-opacity", restoreOpacity);
-      // Restore default outline line-opacity expression
+      // Restore outline line-opacity: an explicit registry outline keeps its
+      // solid value; otherwise the faint default ramp.
       if (mapInstance.getLayer(outlineId)) {
-        mapInstance.setPaintProperty(outlineId, "line-opacity", [
-          "interpolate", ["linear"], ["zoom"],
-          5, 0,
-          8, 0.2,
-          10, 0.4,
-        ]);
+        mapInstance.setPaintProperty(
+          outlineId,
+          "line-opacity",
+          layer.style.outline
+            ? layer.style.outline.opacity
+            : [
+                "interpolate", ["linear"], ["zoom"],
+                5, 0,
+                8, 0.2,
+                10, 0.4,
+              ]
+        );
       }
 
       pipelineLog("setFilter", layer.id, { type: "pmtiles-class", filter: activeClassFilter ?? "none" });
     }
-  }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.filter, layer.style.paint, layer.timelineField, classFilters, yearFilter]);
+  }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.filter, layer.style.paint, layer.style.outline, layer.style.opacity, layer.timelineField, classFilters, yearFilter]);
 
   return null; // No DOM output -- layers managed imperatively
 }

@@ -80,17 +80,6 @@ function getEffectiveOpacity(layer: LayerDefinition, zoom: number): number | nul
   const paint = layer.style.paint;
   const type = layer.style.type;
 
-  // Special case: parks uses semi-transparent fill-color with fill-opacity: 1
-  // The effective visible opacity is the alpha in the rgba string.
-  if (layer.id === "parks") {
-    const fillColor = paint["fill-color"];
-    if (typeof fillColor === "string" && fillColor.startsWith("rgba(")) {
-      // Parse "rgba(255,255,255,0.1)"
-      const match = fillColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
-      if (match) return parseFloat(match[1]);
-    }
-  }
-
   // General case: read the opacity paint property for this layer type
   const opacityKey = `${type}-opacity`;
   const opacityExpr = paint[opacityKey];
@@ -146,10 +135,6 @@ describe("Check 5: Opacity visibility", () => {
       // satellite layer has no meaningful opacity (raster source, fill type is placeholder)
       if (layer.id === "satellite") continue;
 
-      // parks is a documented exception: effective opacity = 0.1 via rgba fill-color alpha.
-      // It is visible via fill-outline-color (white border). Documented in the test below.
-      if (layer.id === "parks") continue;
-
       describe(`layer: ${layer.id}`, () => {
         const [minZoom, maxZoom] = layer.zoomRange;
 
@@ -179,26 +164,23 @@ describe("Check 5: Opacity visibility", () => {
     }
   });
 
-  it("documents parks effective opacity (fill-color alpha, not fill-opacity)", () => {
-    // parks uses rgba fill-color with fill-opacity:1 -- effective = 0.1
-    // This is intentional (subtle park overlay), but documented here so audits
-    // don't blindly flag it. The 0.1 value IS below our 0.15 threshold.
+  it("parks uses a legible fill-opacity ramp + crisp outline (was a 0.1 white wash)", () => {
+    // The old 0.1 rgba wash was invisible over satellite. Parks now uses a real
+    // emerald fill-opacity ramp (>= threshold at every audit zoom) plus a white
+    // outline. It is no longer a special case — the per-layer loop above covers it.
     const parksLayer = LAYER_REGISTRY.find((l) => l.id === "parks");
     expect(parksLayer).toBeDefined();
 
-    const effectiveOpacity = getEffectiveOpacity(parksLayer!, 8);
-    expect(effectiveOpacity).not.toBeNull();
+    for (const zoom of AUDIT_ZOOMS) {
+      const opacity = getEffectiveOpacity(parksLayer!, zoom);
+      expect(opacity).not.toBeNull();
+      expect(
+        opacity!,
+        `parks opacity ${opacity?.toFixed(3)} at z${zoom} should clear ${OPACITY_THRESHOLD}`
+      ).toBeGreaterThanOrEqual(OPACITY_THRESHOLD);
+    }
 
-    // Known value: parks effective opacity = 0.1 (intentionally subtle)
-    expect(effectiveOpacity!).toBeCloseTo(0.1, 3);
-
-    // Document: this is a known intentional exception to the visibility threshold.
-    // Parks are shown via fill-outline-color (white border) not fill-color opacity.
-    // The subtle fill distinguishes park area from surrounding terrain.
     const fillOutline = parksLayer!.style.paint["fill-outline-color"];
-    expect(
-      fillOutline,
-      "parks layer should use fill-outline-color for visibility"
-    ).toBeTruthy();
+    expect(fillOutline, "parks should keep a crisp outline").toBeTruthy();
   });
 });

@@ -49,6 +49,10 @@ export interface LayerStyle {
   opacity?: number;
   /** Default MapLibre filter expression applied to both PMTiles and WFS layers */
   filter?: unknown[];
+  /** Optional explicit outline for fill layers, honored by PmtilesLayers.
+   *  When present it overrides the default faint auto-outline — used for the
+   *  old-growth layer's solid gold border. Omitted = the existing faint edge. */
+  outline?: { color: string; width: number; opacity: number };
 }
 
 /** Legend color swatch entry */

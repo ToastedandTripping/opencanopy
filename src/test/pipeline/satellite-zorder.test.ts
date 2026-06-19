@@ -165,7 +165,7 @@ describe("SatelliteLayers anchor logic — D1 z-order fix", () => {
       const OVERLAYS = [
         "layer-forest-age-tiles-fill",
         "layer-cutblocks-fill",
-        "layer-tap-deferrals-line",
+        "layer-tap-deferrals-tiles-fill",
       ];
 
       // Mount all overlays first

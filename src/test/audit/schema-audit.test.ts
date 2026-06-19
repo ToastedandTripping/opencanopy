@@ -300,8 +300,8 @@ describe("Check 12: Popup property references", () => {
    * MapPopup's PRIORITY_KEYS define what properties the popup renders
    * in priority order. Each key should either:
    *   a) Exist in at least one source layer's schema, OR
-   *   b) Be a WFS-only property (layers without tiles, e.g., tap-deferrals,
-   *      fish-streams) -- these aren't in LAYER_PROPERTY_SCHEMAS since
+   *   b) Be a WFS-only property (layers without tiles, e.g., fish-streams,
+   *      species-at-risk) -- these aren't in LAYER_PROPERTY_SCHEMAS since
    *      they come directly from WFS and aren't tile-built.
    *
    * The popup is generic (renders whatever feature.properties contains),

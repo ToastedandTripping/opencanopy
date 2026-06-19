@@ -162,11 +162,12 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      simulateWfsSuccess("tap-deferrals", false, result.current.setLayerStatus, result.current.setLayerLoading);
+      // fish-streams is genuinely WFS-only (tap-deferrals is now tile-backed).
+      simulateWfsSuccess("fish-streams", false, result.current.setLayerStatus, result.current.setLayerLoading);
       vi.runAllTimers();
     });
 
-    expect(result.current.layerStatuses.get("tap-deferrals")).toBe("ok");
+    expect(result.current.layerStatuses.get("fish-streams")).toBe("ok");
   });
 
   it("tile-backed layer: WFS success → status NOT set (PMTiles path drives status)", () => {
