@@ -189,11 +189,11 @@ function FinancialSection({ financial }: { financial: FinancialValue }) {
           <div className="mt-3 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5">
             <span className="text-sm text-zinc-300 tabular-nums">{fmtCurrency(financial.ecosystemServicesAnnual)}</span>
             <span className="text-xs text-zinc-500">/yr in ecosystem services</span>
-            <p className="text-[10px] text-zinc-600 mt-0.5">Water filtration, habitat, recreation (excl. carbon)</p>
+            <p className="text-[10px] text-zinc-400 mt-0.5">Water filtration, habitat, recreation (excl. carbon)</p>
           </div>
         )}
 
-        <p className="text-[10px] text-zinc-600 mt-2">
+        <p className="text-[10px] text-zinc-400 mt-2">
           Carbon: BC GGIRCA + Verra/Gold Standard. Stumpage: FLNRORD tables.
           Ecosystem services: Costanza et al. 2014 (excl. carbon).
         </p>
@@ -280,7 +280,7 @@ function PanelContent({ stats, animatedCO2, onClose, onShare, onExport, message,
       <div className="text-center mb-5">
         <div className="text-3xl font-bold text-white tabular-nums font-[family-name:var(--font-display)]">{fmt(animatedCO2)}</div>
         <div className="text-sm text-zinc-400 mt-1">tonnes CO<sub>2</sub> stored in this area</div>
-        <div className="text-[10px] text-zinc-600 mt-0.5">{stats.featureCount} forest polygons analyzed</div>
+        <div className="text-[10px] text-zinc-400 mt-0.5">{stats.featureCount} forest polygons analyzed</div>
       </div>
 
       <div className="h-px bg-white/5 mb-5" />

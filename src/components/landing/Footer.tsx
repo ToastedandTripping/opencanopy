@@ -65,11 +65,11 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-6 border-t border-white/5">
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs text-zinc-400">
             Data from BC Government. Not affiliated with or endorsed by the
             Province of British Columbia.
           </p>
-          <p className="mt-2 text-xs text-zinc-600">
+          <p className="mt-2 text-xs text-zinc-400">
             <a
               href="https://github.com/ToastedandTripping/opencanopy/blob/main/LICENSE"
               target="_blank"

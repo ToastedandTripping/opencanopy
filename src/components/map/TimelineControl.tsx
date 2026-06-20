@@ -174,7 +174,7 @@ export function TimelineControl({
             return (
               <span
                 key={year}
-                className="absolute text-[9px] text-zinc-600 -translate-x-1/2 select-none"
+                className="absolute text-[9px] text-zinc-400 -translate-x-1/2 select-none"
                 style={{ left: `${pct}%` }}
               >
                 {year}
@@ -223,10 +223,10 @@ export function TimelineControl({
 
         {/* Range labels */}
         <div className="flex justify-between mt-0.5">
-          <span className="text-[10px] text-zinc-600 select-none">
+          <span className="text-[10px] text-zinc-400 select-none">
             {range[0]}
           </span>
-          <span className="text-[10px] text-zinc-600 select-none">
+          <span className="text-[10px] text-zinc-400 select-none">
             {range[1]}
           </span>
         </div>

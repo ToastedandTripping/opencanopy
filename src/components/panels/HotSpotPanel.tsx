@@ -74,7 +74,7 @@ export function HotSpotPanel({ onSelect, onClose }: HotSpotPanelProps) {
           ))}
         </div>
         <div className="px-4 py-2 border-t border-white/5 shrink-0">
-          <p className="text-[10px] text-zinc-600">{HOT_SPOTS.length} locations</p>
+          <p className="text-[10px] text-zinc-400">{HOT_SPOTS.length} locations</p>
         </div>
       </div>
 
@@ -98,7 +98,7 @@ export function HotSpotPanel({ onSelect, onClose }: HotSpotPanelProps) {
           ))}
         </div>
         <div className="px-4 py-2 border-t border-white/5 shrink-0">
-          <p className="text-[10px] text-zinc-600">{HOT_SPOTS.length} locations</p>
+          <p className="text-[10px] text-zinc-400">{HOT_SPOTS.length} locations</p>
         </div>
       </div>
     </>
