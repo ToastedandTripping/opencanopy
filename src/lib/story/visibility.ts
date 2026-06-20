@@ -47,17 +47,18 @@ export function applyLayerVisibility(
     layers.map((l) => [l.id, l])
   ) as Record<string, ChapterLayer>;
 
-  // Raster overview: visible when forest-age is active
   const forestAgeActive = activeLayers["forest-age"];
+
+  // Forest-age raster overview: DISABLED as the story base (2026-06-20).
+  // The combined forest-age raster is disturbance-dominant (red) at province
+  // scale — correct for the interactive map, but as the story's base it wrongly
+  // implied BC was already logged before 1950. The story's substrate is the
+  // green forest silhouette (story-forest-base) below, with the per-year
+  // cutblock overlays painting the loss on top. The layer stays registered
+  // (the prefetch still warms the interactive map's tiles) but is never shown.
   const rasterLayerId = "story-forest-age-raster";
   if (map.getLayer(rasterLayerId)) {
-    const rasterOpacity = forestAgeActive ? Math.min(forestAgeActive.opacity, 0.85) : 0;
-    pipelineLog("setPaintProperty", rasterLayerId, { property: "raster-opacity", value: rasterOpacity });
-    map.setPaintProperty(
-      rasterLayerId,
-      "raster-opacity",
-      rasterOpacity
-    );
+    map.setPaintProperty(rasterLayerId, "raster-opacity", 0);
   }
 
   // Forest base: green silhouette visible when forest-age is active
