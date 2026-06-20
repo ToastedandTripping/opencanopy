@@ -329,8 +329,13 @@ function PmtilesLayers({
                         8, 0.2,
                         10, 0.4,
                       ],
+                  // Dashed boundary when the registry outline declares one
+                  // (e.g. conservancies). Solid otherwise.
+                  ...(outline?.dasharray
+                    ? { "line-dasharray": outline.dasharray }
+                    : {}),
                   "line-opacity-transition": { duration: 300 },
-                },
+                } as maplibregl.LineLayerSpecification["paint"],
                 ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
               },
               firstSymbolId,

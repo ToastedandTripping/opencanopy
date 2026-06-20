@@ -209,15 +209,26 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       type: "fill",
       paint: {
         "fill-color": "#dc2626",
-        "fill-opacity": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          5, 0.42,
-          8.5, 0.55,
-          12, 0.65,
-        ],
+        // Boundary-dominant (Wave 3.9): the fill is near-zero so a permit edge
+        // enclosing forest-age fill reads as the conflict by eye. De-collides
+        // from forest-age "harvested" #ef4444 — that was a fill-vs-fill clash,
+        // resolved by making cutblocks a boundary, not an area. NOTE: while the
+        // timeline is scrubbed, DataLayer's merged filter+opacity effect
+        // age-grades BOTH this fill (recency = brightness) AND the outline
+        // opacity, so during scrub the layer reads as an age-graded fill rather
+        // than a boundary; the boundary look governs the static/default view.
+        "fill-opacity": 0.04,
         "fill-opacity-transition": { duration: 300 },
+      },
+      outline: {
+        color: "#dc2626",
+        width: [
+          "interpolate", ["linear"], ["zoom"],
+          5, 1,
+          8.5, 1.6,
+          12, 2.2,
+        ],
+        opacity: 0.9,
       },
       opacity: 0.7,
       // Exclude tenure boundaries (>2000 ha) — real cutblocks rarely exceed 1000 ha
@@ -230,7 +241,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     zoomRange: [5, 18],
     defaultEnabled: false,
     interactive: true,
-    legendItems: [{ color: "#dc2626", label: "Cutblock" }],
+    legendItems: [{ color: "#dc2626", label: "Cutblock (boundary)" }],
     fetchPriority: 1,
     timelineField: "DISTURBANCE_START_DATE",
     timelineRange: [1950, 2025],
@@ -448,20 +459,33 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       maxZoom: PMTILES_MAX_ZOOM,
     },
     style: {
-      type: "line",
+      type: "fill",
       paint: {
-        "line-color": "#ffffff",
-        "line-width": [
+        // Cool slate fill (Wave 3.6) — reads as a "designated area" over both the
+        // dark basemap and satellite, staying out of the green (parks/OGMA) and
+        // blue (water) lanes. The dashed white outline (style.outline) keeps the
+        // recognizable conservancy identity.
+        "fill-color": "#cbd5e1",
+        "fill-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          5, 0.05,
+          8.5, 0.07,
+          12, 0.09,
+        ],
+        "fill-opacity-transition": { duration: 300 },
+      },
+      outline: {
+        color: "#ffffff",
+        width: [
           "interpolate", ["linear"], ["zoom"],
           5, 1.2,
           8.5, 1.6,
           12, 2,
         ],
-        "line-dasharray": [6, 4],
-        "line-opacity": 0.75,
-        "line-opacity-transition": { duration: 300 },
+        opacity: 0.8,
+        dasharray: [6, 4],
       },
-      opacity: 0.75,
+      opacity: 0.8,
     },
     zoomRange: [5, 18],
     defaultEnabled: false,
@@ -650,20 +674,22 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
       type: "circle",
       paint: {
         "circle-color": "#f59e0b",
+        // Wave 3.7: larger radius + brighter fill + a pale-amber halo so points
+        // read over busy satellite tiles (audit D5: "invisible even when working").
         "circle-radius": [
           "interpolate",
           ["linear"],
           ["zoom"],
           7,
-          3,
-          10,
           5,
+          10,
+          7,
           14,
-          8,
+          10,
         ],
-        "circle-opacity": 0.7,
-        "circle-stroke-color": "#fbbf24",
-        "circle-stroke-width": 1,
+        "circle-opacity": 0.85,
+        "circle-stroke-color": "#fde68a",
+        "circle-stroke-width": 1.5,
         "circle-opacity-transition": { duration: 300 },
       },
       opacity: 0.8,

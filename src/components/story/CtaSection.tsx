@@ -82,7 +82,7 @@ export function CtaSection() {
             </div>
           </div>
 
-          <p className="mt-10 text-xs text-zinc-600">
+          <p className="mt-10 text-xs text-zinc-400">
             Data from BC Government open data. Not affiliated with or endorsed
             by the Province of British Columbia.
           </p>

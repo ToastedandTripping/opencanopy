@@ -51,8 +51,21 @@ export interface LayerStyle {
   filter?: unknown[];
   /** Optional explicit outline for fill layers, honored by PmtilesLayers.
    *  When present it overrides the default faint auto-outline — used for the
-   *  old-growth layer's solid gold border. Omitted = the existing faint edge. */
-  outline?: { color: string; width: number; opacity: number };
+   *  old-growth layer's solid gold border and the boundary-dominant cutblocks /
+   *  conservancies layers. `width` accepts a scalar or a MapLibre zoom
+   *  interpolation expression (passed through to line-width verbatim). `opacity`
+   *  is the line-opacity and is what opacity-audit credits for outline-dominant
+   *  fill layers. `dasharray` (optional) renders a dashed boundary. Omitted
+   *  outline = the existing faint auto-edge.
+   *  CAVEAT: honored only on the PMTiles render path. WFS-rendered fill layers
+   *  fall back to the default faint edge (style.outline is ignored there), so an
+   *  outline-bearing fill layer must be tile-backed. */
+  outline?: {
+    color: string;
+    width: number | unknown[];
+    opacity: number;
+    dasharray?: number[];
+  };
 }
 
 /** Legend color swatch entry */
