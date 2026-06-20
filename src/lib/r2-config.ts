@@ -10,8 +10,14 @@
 /** Public R2 origin serving PMTiles + pre-rendered raster overviews. */
 export const R2_PUBLIC_BASE = "https://pub-b5568be386ef4e638b4e49af41395600.r2.dev";
 
-/** Pre-rendered forest-age raster overview tiles (z4-z9). */
-export const FOREST_AGE_RASTER_URL = `${R2_PUBLIC_BASE}/raster/v2/forest-age/{z}/{x}/{y}.png`;
+/**
+ * Pre-rendered forest-age raster overview tiles (z4-z9).
+ * v3 (2026-06-20): rebuilt with reversed raster paint order so disturbance wins
+ * mixed low-zoom pixels — the province-scale view now shows the logging footprint
+ * instead of falsely reading as intact green. Per-class isolation tiles below are
+ * single-class, unaffected by paint order, and stay at v2.
+ */
+export const FOREST_AGE_RASTER_URL = `${R2_PUBLIC_BASE}/raster/v3/forest-age/{z}/{x}/{y}.png`;
 
 /**
  * Per-class isolation raster overview tiles (z4-z9).
