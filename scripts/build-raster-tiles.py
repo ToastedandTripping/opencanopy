@@ -79,12 +79,18 @@ BC_BOUNDS = (-139.5, 48.0, -114.0, 60.5)  # west, south, east, north
 # Tile resolution (pixels per tile)
 TILE_SIZE = 512
 
-# Paint order: background classes first, ecologically important last.
-# Old-growth must always win overlaps.  Any class not listed here is
-# painted before the ordered classes (insertion order, as fallback).
+# Paint order: most-intact classes first, disturbance LAST so disturbance
+# wins overlaps. With all_touched=True a low-zoom pixel spans many polygons;
+# the class painted last survives. Painting old-growth/mature last (the old
+# order) made green win every mixed pixel, so the province-scale view falsely
+# read as intact forest and the logging footprint only emerged on zoom-in.
+# Reversed (2026-06-20): harvested/young paint last → any pixel touched by
+# logging reads red at province scale. This intentionally favours showing
+# disturbance *reach* over exact area in mixed pixels — the honest framing for
+# a forest-loss map. Any class not listed here is painted first (loses).
 PAINT_ORDER = [
-    "harvested", "young", "mature", "old-growth",
-    "old-growth-unprotected", "old-growth-protected",
+    "old-growth-protected", "old-growth-unprotected", "old-growth",
+    "mature", "young", "harvested",
 ]
 
 
