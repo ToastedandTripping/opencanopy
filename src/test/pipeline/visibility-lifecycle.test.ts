@@ -40,23 +40,23 @@ describe("visibility lifecycle", () => {
   // ── Basic visibility activation ─────────────────────────────────
 
   describe("forest-age activation at z5", () => {
-    it("sets raster-opacity when forest-age is active", () => {
+    it("keeps the forest-age raster overview hidden (story uses the green base, not the red overview)", () => {
       simulateOnLoad();
 
       const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.6 }];
       applyLayerVisibility(map, layers, false, null);
 
-      // Raster should get opacity capped at 0.85
-      expect(map.getPaintProperty("story-forest-age-raster", "raster-opacity")).toBe(0.6);
+      // The disturbance-dominant forest-age raster is never shown in the story.
+      expect(map.getPaintProperty("story-forest-age-raster", "raster-opacity")).toBe(0);
     });
 
-    it("caps raster opacity at 0.85", () => {
+    it("shows the green forest base (story-forest-base) when forest-age is active", () => {
       simulateOnLoad();
 
-      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 1.0 }];
+      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.6 }];
       applyLayerVisibility(map, layers, false, null);
 
-      expect(map.getPaintProperty("story-forest-age-raster", "raster-opacity")).toBe(0.85);
+      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
     });
 
     it("sets vector fill opacity to match chapter config", () => {
@@ -81,21 +81,21 @@ describe("visibility lifecycle", () => {
   // ── Layer deactivation ──────────────────────────────────────────
 
   describe("layer deactivation", () => {
-    it("sets raster-opacity to 0 when forest-age is not in layers", () => {
+    it("hides the green forest base when forest-age is not in layers", () => {
       simulateOnLoad();
 
-      // First activate
+      // First activate -> green base shows
       applyLayerVisibility(
         map,
         [{ id: "forest-age", opacity: 0.6 }],
         false,
         null
       );
-      expect(map.getPaintProperty("story-forest-age-raster", "raster-opacity")).toBe(0.6);
+      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
 
-      // Then deactivate (empty layers)
+      // Then deactivate (empty layers) -> green base hidden
       applyLayerVisibility(map, [], false, null);
-      expect(map.getPaintProperty("story-forest-age-raster", "raster-opacity")).toBe(0);
+      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0);
     });
 
     it("sets fill-opacity to 0 when layer not in active list", () => {
@@ -325,10 +325,14 @@ describe("visibility lifecycle", () => {
       const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.6 }];
       applyLayerVisibility(map, layers, false, null);
 
-      // Step 4: Verify paint properties were actually set
+      // Step 4: Verify paint properties were actually set. The forest-age
+      // raster overview stays hidden; the green base is the story's substrate.
       expect(
         map.getPaintProperty("story-forest-age-raster", "raster-opacity")
-      ).toBe(0.6);
+      ).toBe(0);
+      expect(
+        map.getPaintProperty("story-forest-base", "raster-opacity")
+      ).toBe(0.7);
       expect(
         map.getPaintProperty("story-forest-age-fill", "fill-opacity")
       ).toBe(0.6);
@@ -378,7 +382,7 @@ describe("visibility lifecycle", () => {
 
       expect(
         map.getPaintProperty("story-forest-age-raster", "raster-opacity")
-      ).toBe(0.6);
+      ).toBe(0); // forest-age overview never shown in the story
       expect(
         map.getPaintProperty("story-cutblocks-fill", "fill-opacity")
       ).toBe(0); // cutblocks not active
@@ -392,10 +396,10 @@ describe("visibility lifecycle", () => {
       applyLayerVisibility(map, ch1Layers, false, 1990);
       applyTimelineFilter(map, ch1Layers, 1990);
 
-      // Forest-age raster: capped at 0.4
+      // Forest-age raster overview stays hidden in the story
       expect(
         map.getPaintProperty("story-forest-age-raster", "raster-opacity")
-      ).toBe(0.4);
+      ).toBe(0);
 
       // Cutblocks fill-opacity: constant during timeline (cumulative visibility)
       const cutblockOpacity = map.getPaintProperty(
@@ -425,10 +429,10 @@ describe("visibility lifecycle", () => {
       applyLayerVisibility(map, ch2Layers, false, null);
       applyTimelineFilter(map, ch2Layers, null);
 
-      // Forest-age raster lowered
+      // Forest-age raster overview stays hidden in the story
       expect(
         map.getPaintProperty("story-forest-age-raster", "raster-opacity")
-      ).toBe(0.3);
+      ).toBe(0);
 
       // Cutblocks: scalar opacity restored (timeline off)
       expect(
@@ -519,10 +523,11 @@ describe("visibility lifecycle", () => {
         null
       );
 
-      // NOW the raster should be visible
+      // NOW the effect has fired and applied paint: the green base is shown
+      // (the forest-age raster overview stays hidden by design).
       expect(
-        map.getPaintProperty("story-forest-age-raster", "raster-opacity")
-      ).toBe(0.6);
+        map.getPaintProperty("story-forest-base", "raster-opacity")
+      ).toBe(0.7);
     });
 
     it.todo("HYPOTHESIS C: mapRef.current null check -- guarded by useEffect wrapper, not testable at this level");
@@ -543,9 +548,11 @@ describe("visibility lifecycle", () => {
       map._setStyleLoaded(true);
       applyLayerVisibility(map, layers, false, null);
 
+      // Paint applied once style is ready: the green base shows (the forest-age
+      // raster overview stays hidden by design).
       expect(
-        map.getPaintProperty("story-forest-age-raster", "raster-opacity")
-      ).toBe(0.6);
+        map.getPaintProperty("story-forest-base", "raster-opacity")
+      ).toBe(0.7);
     });
   });
 });
