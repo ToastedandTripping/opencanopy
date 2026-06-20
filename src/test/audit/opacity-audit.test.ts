@@ -4,8 +4,9 @@
  * For each layer at z5, z7, z9, z12: evaluate the zoom-interpolated opacity
  * expression. Flag opacity below 0.15 at any zoom within the layer's zoomRange.
  *
- * Special handling: parks uses fill-color: "rgba(255,255,255,0.1)" with
- * fill-opacity: 1 -- effective opacity is 0.1.
+ * Special handling: outline-dominant fill layers (faint fill + explicit
+ * style.outline, e.g. cutblocks boundary / conservancies) are credited by their
+ * outline opacity — they are seen via the boundary, not the near-zero fill.
  */
 
 import { describe, it, expect } from "vitest";
@@ -74,7 +75,11 @@ const AUDIT_ZOOMS = [5, 7, 9, 12];
 /**
  * Get the effective opacity for a layer at a given zoom level.
  *
- * Accounts for the parks special case: fill-color rgba alpha * fill-opacity.
+ * For outline-dominant fill layers — a faint fill plus an explicit
+ * `style.outline` (e.g. the cutblocks boundary and conservancies) — the layer
+ * is SEEN via its outline, not its near-zero fill. The effective opacity is the
+ * stronger of the fill and outline opacities, so the visibility check reflects
+ * what the user actually perceives rather than naively reading `fill-opacity`.
  */
 function getEffectiveOpacity(layer: LayerDefinition, zoom: number): number | null {
   const paint = layer.style.paint;
@@ -84,12 +89,21 @@ function getEffectiveOpacity(layer: LayerDefinition, zoom: number): number | nul
   const opacityKey = `${type}-opacity`;
   const opacityExpr = paint[opacityKey];
 
+  let fillSideOpacity: number | null;
   if (opacityExpr === undefined) {
     // Some layers use a static opacity property on the style object
-    return typeof layer.style.opacity === "number" ? layer.style.opacity : null;
+    fillSideOpacity =
+      typeof layer.style.opacity === "number" ? layer.style.opacity : null;
+  } else {
+    fillSideOpacity = evaluateZoomInterpolation(opacityExpr, zoom);
   }
 
-  return evaluateZoomInterpolation(opacityExpr, zoom);
+  // Outline-dominant fill layers are visible through their boundary line.
+  if (type === "fill" && layer.style.outline) {
+    return Math.max(fillSideOpacity ?? 0, layer.style.outline.opacity);
+  }
+
+  return fillSideOpacity;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

@@ -20,11 +20,13 @@ interface MapLegendProps {
 
 function ColorDot({
   item,
-  styleType,
+  layer,
 }: {
   item: LegendItem;
-  styleType: "fill" | "line" | "circle" | "symbol";
+  layer: LayerDefinition;
 }) {
+  const styleType = layer.style.type;
+
   if (styleType === "line") {
     return (
       <span
@@ -39,6 +41,25 @@ function ColorDot({
       <span
         className="w-2 h-2 rounded-full shrink-0"
         style={{ backgroundColor: item.color }}
+      />
+    );
+  }
+
+  // Outline-dominant fill layers (boundary + faint interior, e.g. cutblocks /
+  // conservancies) — bordered/hollow dot so the legend matches the map.
+  if (styleType === "fill" && layer.style.outline) {
+    const o = layer.style.outline;
+    const interior =
+      typeof layer.style.paint["fill-color"] === "string"
+        ? (layer.style.paint["fill-color"] as string)
+        : item.color;
+    return (
+      <span
+        className="w-2.5 h-2.5 rounded-sm shrink-0"
+        style={{
+          backgroundColor: `${interior}33`,
+          border: `1px ${o.dasharray ? "dashed" : "solid"} ${o.color}`,
+        }}
       />
     );
   }
@@ -64,7 +85,7 @@ function CompactDots({ layer }: { layer: LayerDefinition }) {
   return (
     <span className="flex items-center gap-1 shrink-0">
       {visible.map((item, i) => (
-        <ColorDot key={i} item={item} styleType={layer.style.type} />
+        <ColorDot key={i} item={item} layer={layer} />
       ))}
       {overflow > 0 && (
         <span className="text-[9px] text-zinc-500 leading-none">
@@ -107,7 +128,7 @@ function ExpandedItems({
                 isActive ? "" : "opacity-30"
               }`}
             >
-              <ColorDot item={item} styleType={layer.style.type} />
+              <ColorDot item={item} layer={layer} />
               <span className="text-[10px] text-zinc-400 leading-tight">
                 {item.label}
               </span>
@@ -117,7 +138,7 @@ function ExpandedItems({
 
         return (
           <div key={i} className="flex items-center gap-2">
-            <ColorDot item={item} styleType={layer.style.type} />
+            <ColorDot item={item} layer={layer} />
             <span className="text-[10px] text-zinc-400 leading-tight">
               {item.label}
             </span>

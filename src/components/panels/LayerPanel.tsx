@@ -128,6 +128,26 @@ function ColorSwatch({ layer }: { layer: LayerDefinition }) {
     );
   }
 
+  // Outline-dominant fill layers (faint interior + a boundary) — e.g. cutblocks
+  // (solid red boundary) and conservancies (dashed white boundary + slate fill).
+  // Render a bordered/hollow swatch so the panel matches the map.
+  if (layer.style.type === "fill" && layer.style.outline) {
+    const o = layer.style.outline;
+    const interior =
+      typeof layer.style.paint["fill-color"] === "string"
+        ? (layer.style.paint["fill-color"] as string)
+        : firstColor;
+    return (
+      <div
+        className="w-4 h-4 shrink-0 rounded-sm"
+        style={{
+          backgroundColor: `${interior}33`,
+          border: `1.5px ${o.dasharray ? "dashed" : "solid"} ${o.color}`,
+        }}
+      />
+    );
+  }
+
   return (
     <div
       className="w-4 h-4 shrink-0 rounded-sm"
