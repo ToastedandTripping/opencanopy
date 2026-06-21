@@ -40,6 +40,13 @@ export function useScrollytelling() {
   const [overlays, setOverlays] = useState<ResolvedOverlay[]>([]);
   const rafRef = useRef<number | null>(null);
   const bearingRef = useRef(CHAPTERS[0].camera.bearing);
+  // 1a: Coalesce scroll→camera/year updates to one call per animation frame.
+  // pendingRef holds the latest {index, progress} written by onStepProgress
+  // and the camera part of onStepEnter; newest-wins resolves the trailing-event
+  // race (scrollama may fire an outgoing-step onStepProgress after the incoming
+  // onStepEnter — both write here, so the rAF always sees the freshest values).
+  const scrubRafRef = useRef<number | null>(null);
+  const pendingRef = useRef<{ index: number; progress: number } | null>(null);
 
   // Compute camera from chapter index and progress
   const updateCamera = useCallback(
@@ -75,14 +82,24 @@ export function useScrollytelling() {
       const scrubStart = chapter.scrubStart ?? 0;
       let scrubYear: number | null = null;
       if (scrub && prog >= scrubStart) {
-        const localProg = scrubStart < 1 ? (prog - scrubStart) / (1 - scrubStart) : 1;
-        const linearYear = scrub.start + (scrub.end - scrub.start) * localProg;
-        if (chapter.scrubTable) {
-          const cumYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], localProg);
-          const blend = chapter.scrubBlend ?? 0;
-          scrubYear = Math.round(blend * linearYear + (1 - blend) * cumYear);
+        // Under prefers-reduced-motion, every scrub chapter holds through its
+        // scrubStart, then resolves directly to its own scrub.end (snap, no
+        // sweep). The hold gate above (prog >= scrubStart) is preserved
+        // unchanged — so the fire chapter's "hold on red, then wildfire" beat
+        // survives — and only the within-scrub interpolation is short-circuited.
+        // This invariant must be preserved by any future Phase-3 scrub rewrite.
+        if (prefersReducedMotion()) {
+          scrubYear = scrub.end;
         } else {
-          scrubYear = Math.round(linearYear);
+          const localProg = scrubStart < 1 ? (prog - scrubStart) / (1 - scrubStart) : 1;
+          const linearYear = scrub.start + (scrub.end - scrub.start) * localProg;
+          if (chapter.scrubTable) {
+            const cumYear = yearFromProgress(SCRUB_TABLES[chapter.scrubTable], localProg);
+            const blend = chapter.scrubBlend ?? 0;
+            scrubYear = Math.round(blend * linearYear + (1 - blend) * cumYear);
+          } else {
+            scrubYear = Math.round(linearYear);
+          }
         }
         pipelineLog("setYearFilter", String(scrubYear));
       }
@@ -155,6 +172,21 @@ export function useScrollytelling() {
     let destroyed = false;
     let scroller: import("scrollama").ScrollamaInstance | null = null;
 
+    // 1a: Schedule a single rAF to flush the latest pending camera update.
+    // The callback reads from pendingRef (not progressRef) so it always uses
+    // the freshest {index, progress} written by either onStepEnter or
+    // onStepProgress — whichever fired last within this animation frame.
+    function scheduleScrubFrame() {
+      if (scrubRafRef.current !== null) return; // frame already queued
+      scrubRafRef.current = requestAnimationFrame(() => {
+        scrubRafRef.current = null;
+        const pending = pendingRef.current;
+        if (pending && !destroyed) {
+          updateCamera(pending.index, pending.progress);
+        }
+      });
+    }
+
     async function init() {
       const scrollamaFactory = (await import("scrollama")).default;
       if (destroyed) return;
@@ -169,14 +201,23 @@ export function useScrollytelling() {
         .onStepEnter((response) => {
           if (destroyed) return;
           pipelineLog("onStepEnter", `index=${response.index}`);
+          // Chapter identity and progress reset are SYNCHRONOUS — UI panel must
+          // not lag a frame. Only the camera/year/overlay update is coalesced.
           progressRef.current = 0;
           setActiveChapterIndex(response.index);
-          updateCamera(response.index, 0);
+          // Write {index:0} into pendingRef so the rAF carries the enter state
+          // and any trailing outgoing-step onStepProgress will overwrite with
+          // its own (stale) index — but that's also covered by the destroyed
+          // guard and the newest-wins overwrite below.
+          pendingRef.current = { index: response.index, progress: 0 };
+          scheduleScrubFrame();
         })
         .onStepProgress((response) => {
           if (destroyed) return;
           progressRef.current = response.progress;
-          updateCamera(response.index, response.progress);
+          // Overwrite with the latest values — newest wins within a frame.
+          pendingRef.current = { index: response.index, progress: response.progress };
+          scheduleScrubFrame();
         });
     }
 
@@ -184,16 +225,26 @@ export function useScrollytelling() {
 
     return () => {
       destroyed = true;
+      // Cancel any pending scrub frame on teardown so a StrictMode
+      // double-invoke cannot leak a stale frame into the next mount.
+      if (scrubRafRef.current !== null) {
+        cancelAnimationFrame(scrubRafRef.current);
+        scrubRafRef.current = null;
+      }
       scroller?.destroy();
     };
   }, [updateCamera]);
 
-  // Cleanup rAF on unmount
+  // Cleanup rAFs on unmount (bearing-drift + scrub coalescer)
   useEffect(() => {
     return () => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
+      }
+      if (scrubRafRef.current !== null) {
+        cancelAnimationFrame(scrubRafRef.current);
+        scrubRafRef.current = null;
       }
     };
   }, []);
