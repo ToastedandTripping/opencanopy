@@ -109,16 +109,16 @@ describe("Item 1a — rAF-gate: coalesce scroll→camera updates", () => {
   it("multiple rapid onStepProgress calls within one frame produce exactly one updateCamera invocation", async () => {
     const { result } = await setupHook();
 
-    // Spy on the React state setter as a proxy for updateCamera being called.
-    // We measure this by counting yearFilter state changes (updateCamera calls setYearFilter).
     // Use a logging chapter with timelineScrub (logging-timeline, index 2).
     const loggingIdx = CHAPTERS.findIndex((c) => c.id === "logging-timeline");
     expect(loggingIdx).toBeGreaterThan(-1);
 
-    let yearFilterChangeCount = 0;
-    let lastYearFilter: number | null = null;
+    // Spy on rAF BEFORE firing — the coalescing guard (scrubRafRef.current !== null)
+    // must prevent re-scheduling while a frame is already pending, so exactly ONE
+    // rAF is called for the burst of 5 rapid progress ticks.
+    const rafSpy = vi.spyOn(globalThis, "requestAnimationFrame");
 
-    // Fire 5 rapid progress ticks (as would happen in a single animation frame)
+    // Fire 5 rapid progress ticks within a single act (same animation frame burst)
     act(() => {
       fireProgress(loggingIdx, 0.1);
       fireProgress(loggingIdx, 0.2);
@@ -127,10 +127,11 @@ describe("Item 1a — rAF-gate: coalesce scroll→camera updates", () => {
       fireProgress(loggingIdx, 0.5);
     });
 
-    // Before flushing: yearFilter should NOT yet have changed (rAF not fired)
-    // We can't easily count intermediate renders, but we verify only one
-    // updateCamera fires by checking state is stable before flush.
-    const beforeFlush = result.current.yearFilter;
+    // The coalescing guard must have allowed exactly ONE rAF scheduling for the burst.
+    // (rAF is also called internally by setupHook's scrollama init path, so we only
+    // count calls made during the act above — capture the count after the burst.)
+    const rafCallsDuringBurst = rafSpy.mock.calls.length;
+    expect(rafCallsDuringBurst).toBe(1);
 
     // Flush the single pending rAF
     act(() => {
@@ -139,46 +140,10 @@ describe("Item 1a — rAF-gate: coalesce scroll→camera updates", () => {
 
     const afterFlush = result.current.yearFilter;
 
-    // After flush, yearFilter should have changed (updateCamera ran)
-    // And it should reflect progress=0.5 (the LAST progress value), not 0.1
+    // After flush: yearFilter reflects progress=0.5 (the LAST tick), not 0.1.
+    // For logging-timeline at 0.5 (no scrubStart, has scrubTable): year is in range.
     expect(afterFlush).not.toBeNull();
-    // For logging-timeline: prog=0.5 with no scrubStart, linear blend toward cutblocks
-    // The year should be > start (1950) — asserting it moved
     expect(afterFlush).toBeGreaterThan(1950);
-    void beforeFlush;
-    void yearFilterChangeCount;
-    void lastYearFilter;
-  });
-
-  it("settles on the FINAL progress value — settle-correctness (not just call count)", async () => {
-    await setupHook();
-
-    const fireIdx = CHAPTERS.findIndex((c) => c.id === "fire");
-    expect(fireIdx).toBeGreaterThan(-1);
-    const fireChapter = CHAPTERS[fireIdx];
-    expect(fireChapter.timelineScrub).toBeDefined();
-    expect(fireChapter.scrubStart).toBeDefined();
-    // scrubStart is 0.22 for the fire chapter — test with progress past it
-    const scrubStart = fireChapter.scrubStart!;
-
-    // Simulate several rapid ticks at progress values past scrubStart
-    act(() => {
-      fireProgress(fireIdx, scrubStart + 0.01);
-      fireProgress(fireIdx, scrubStart + 0.1);
-      fireProgress(fireIdx, scrubStart + 0.3);
-      fireProgress(fireIdx, scrubStart + 0.5); // FINAL value
-    });
-
-    // Before flush: nothing committed yet
-    // After flush: must reflect the FINAL progress (0.72 into the fire chapter)
-    let finalYear: number | null = null;
-    act(() => {
-      flushRaf();
-    });
-    // Get yearFilter after the flush — import the hook result from renderHook
-    // by re-running from the captured result ref
-    // (We'll get this from a fresh test that keeps the result ref)
-    void finalYear;
   });
 
   it("settle-correctness with result ref: LAST progress wins after rAF flush", async () => {
@@ -208,21 +173,52 @@ describe("Item 1a — rAF-gate: coalesce scroll→camera updates", () => {
     expect(result.current.yearFilter).toBe(expectedYear);
   });
 
-  it("chapter-switch: onStepEnter then a trailing outgoing onStepProgress — no stale-index updateCamera", async () => {
+  it("chapter-switch PURE stale: onStepEnter then only trailing outgoing progress — index/progress pair is consistent", async () => {
     const { result } = await setupHook();
 
-    // Simulate: user scrolls from chapter 2 (logging) to chapter 3 (fire)
-    // scrollama fires: onStepEnter(3) then a late onStepProgress(2, 0.99) from
-    // the OUTGOING step.
+    // Simulate the PURE stale case: user scrolls from logging (ch2) to fire (ch3)
+    // scrollama fires: onStepEnter(fireIdx) then ONLY a trailing stale progress
+    // from the OUTGOING logging chapter (no fresh incoming progress fires).
+    // Newest-wins: the stale outgoing tick overwrites pendingRef, so the frame
+    // resolves with {index:loggingIdx, progress:0.99} — a CONSISTENT pair from
+    // the same payload. This is the documented "self-correcting 1-frame transient."
     const fireIdx = CHAPTERS.findIndex((c) => c.id === "fire");
     const loggingIdx = CHAPTERS.findIndex((c) => c.id === "logging-timeline");
 
     act(() => {
-      // Enter chapter 3 (fire)
       fireEnter(fireIdx);
-      // Trailing progress from outgoing chapter 2 — stale, should be overwritten
+      // Trailing OUTGOING progress — this is the LAST write, so it wins
       fireProgress(loggingIdx, 0.99);
-      // Then a fresh progress from the correct incoming chapter
+      // No fresh incoming progress — pure stale case
+    });
+
+    act(() => {
+      flushRaf();
+    });
+
+    // activeChapterIndex is set SYNCHRONOUSLY by onStepEnter — always fireIdx
+    expect(result.current.activeChapterIndex).toBe(fireIdx);
+
+    // yearFilter reflects updateCamera(loggingIdx, 0.99): logging-timeline scrub at
+    // progress=0.99 → blended year = 2025 (near end of range, blended cutblocks).
+    // This proves onStepProgress used response.index (loggingIdx) not activeChapterIndex
+    // (fireIdx). If it had used activeChapterIndex, yearFilter would be 2024
+    // (fire chapter at 0.99 → localProg=0.987 → 1917+108*0.987 ≈ 2024).
+    expect(result.current.yearFilter).toBe(2025);
+  });
+
+  it("chapter-switch: onStepEnter then trailing outgoing + fresh incoming — resolves to incoming chapter", async () => {
+    const { result } = await setupHook();
+
+    // The normal case: stale outgoing is overwritten by the fresh incoming tick.
+    const fireIdx = CHAPTERS.findIndex((c) => c.id === "fire");
+    const loggingIdx = CHAPTERS.findIndex((c) => c.id === "logging-timeline");
+
+    act(() => {
+      fireEnter(fireIdx);
+      // Trailing stale progress from outgoing chapter
+      fireProgress(loggingIdx, 0.99);
+      // Fresh incoming progress — overwrites the stale, this wins
       fireProgress(fireIdx, 0.05);
     });
 
@@ -230,31 +226,46 @@ describe("Item 1a — rAF-gate: coalesce scroll→camera updates", () => {
       flushRaf();
     });
 
-    // After flush: activeChapterIndex is set SYNCHRONOUSLY by onStepEnter, so it's fireIdx
+    // After flush: activeChapterIndex is set SYNCHRONOUSLY by onStepEnter
     expect(result.current.activeChapterIndex).toBe(fireIdx);
 
-    // yearFilter should reflect fire chapter progress=0.05
+    // yearFilter reflects fire chapter progress=0.05
     // fire scrubStart is 0.22, so prog=0.05 < scrubStart → yearFilter is null (hold)
     expect(result.current.yearFilter).toBeNull();
   });
 
-  it("pending frame is cancelled and ref nulled on teardown", async () => {
+  it("pending scrub frame is cancelled with its exact id on teardown", async () => {
+    // Spy on rAF to capture the id assigned to the pending scrub frame.
+    // vi.useFakeTimers makes rAF return a numeric id; we capture the id for the
+    // scrub frame specifically (the last rAF scheduled during fireProgress).
+    const rafSpy = vi.spyOn(globalThis, "requestAnimationFrame");
     const cancelSpy = vi.spyOn(globalThis, "cancelAnimationFrame");
 
     const { unmount } = await setupHook();
 
+    // Reset call history accumulated during hook init (bearing-drift / init rAFs)
+    rafSpy.mockClear();
+
     const fireIdx = CHAPTERS.findIndex((c) => c.id === "fire");
-    // Queue a pending frame (do NOT flush it)
+    // Queue exactly one pending scrub frame (do NOT flush it)
     act(() => {
       fireProgress(fireIdx, 0.5);
     });
 
-    // Unmount — teardown should cancel the pending frame
+    // The rAF call during fireProgress above is the scrub frame — capture its id
+    expect(rafSpy.mock.calls.length).toBe(1);
+    const scrubFrameId = rafSpy.mock.results[0].value as number;
+    expect(typeof scrubFrameId).toBe("number");
+
+    // Unmount — teardown must cancel specifically the scrub frame
     act(() => {
       unmount();
     });
 
-    expect(cancelSpy).toHaveBeenCalled();
+    // cancelAnimationFrame must have been called with the exact scrub frame id
+    expect(cancelSpy).toHaveBeenCalledWith(scrubFrameId);
+
+    rafSpy.mockRestore();
     cancelSpy.mockRestore();
   });
 });
