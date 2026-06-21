@@ -295,7 +295,13 @@ body {
 
 /* Scrollytelling */
 @media (prefers-reduced-motion: reduce) {
-  .story-step { min-height: auto !important; }
+  /* Do NOT override .story-step min-height here. The steps' inline
+     `${scrollHeight}vh` is the geometry scrollama measures for its
+     progress IntersectionObserver thresholds; collapsing it (e.g.
+     min-height:auto) yields offsetHeight 0 -> non-finite threshold ->
+     scrollama .setup() throws and the whole story collapses. Reduced
+     motion is handled by 1c (year-counter hold-then-snap), NOT by
+     collapsing scroll geometry. */
   .narrative-panel { transition: none !important; transform: none !important; }
 }
 
