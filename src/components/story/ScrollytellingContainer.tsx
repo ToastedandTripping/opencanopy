@@ -91,6 +91,21 @@ export function ScrollytellingContainer() {
           hatchEnabled={hatchEnabled}
           supports3D={supports3D}
         />
+        {/* Top-edge dark veil: absorbs the hero-photo -> map luminance seam.
+            Top color matches the hero photo's full-dark bottom (#0a0a0c) and
+            fades to transparent over 100px, so the join reads as a continuous
+            dark field over any terrain tone (ocean blends already; this closes
+            the step over the lighter grey landmass). pointer-events-none keeps
+            map pan/zoom fully interactive. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0"
+          style={{
+            height: "100px",
+            zIndex: 1,
+            background: "linear-gradient(to bottom, #0a0a0c 0%, transparent 100%)",
+          }}
+        />
       </div>
 
       {/* Scrolling chapter panels */}
