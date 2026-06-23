@@ -1,28 +1,35 @@
 #!/usr/bin/env python3
 """
-Generate per-year overlay PNGs for the scrollytelling story.
+Generate per-year overlay PNGs (and the static forest base) for the scrollytelling story.
 
-Two datasets share this pipeline (select with --dataset):
-  cutblocks  cumulative logging, age-graded fresh-red -> dark-maroon
-             (1950-2025). Undated cutblocks (36K+ with no
-             DISTURBANCE_START_DATE) are baked into every year as a
-             low-opacity pre-1950 baseline.
-  fire       cumulative wildfire, age-graded fresh-amber -> burnt-umber
-             (1917-2025, the full recorded span). No undated bucket.
+Three datasets share this pipeline (select with --dataset):
+  cutblocks    cumulative logging, age-graded fresh-red -> dark-maroon
+               (1950-2025). Undated cutblocks (36K+ with no
+               DISTURBANCE_START_DATE) are baked into every year as a
+               low-opacity pre-1950 baseline.
+  fire         cumulative wildfire, age-graded fresh-amber -> burnt-umber
+               (1917-2025, the full recorded span). No undated bucket.
+  forest-base  single-pass static green substrate from real VRI polygons.
+               Runs an early-branch in main() and returns BEFORE the year
+               loop — the cutblocks/fire code paths are byte-for-byte
+               unchanged. All grid helpers (BC_BOUNDS, build_mercator_row_map,
+               resample_to_mercator) are reused in-place; no extraction needed.
 
-Each dataset produces one transparent PNG per year covering the BC
-extent, age-graded by (target_year - feature_year). One PNG is written
-for EVERY year in [start, end] even if its mask is empty, so the story
-scrub never 404s on a sparse year.
+Per-year datasets produce one transparent PNG per year covering the BC extent,
+age-graded by (target_year - feature_year). One PNG is written for EVERY year
+in [start, end] even if its mask is empty, so the story scrub never 404s on a
+sparse year.
 
-Images are rasterized in equirectangular then resampled to Web Mercator
-so they align with MapLibre's projection.
+Images are rasterized in equirectangular then resampled to Web Mercator so they
+align with MapLibre's projection.
 
 Usage:
-  python3 scripts/build-year-overlays.py                      # cutblocks (default)
+  python3 scripts/build-year-overlays.py                          # cutblocks (default)
   python3 scripts/build-year-overlays.py --dataset fire
   python3 scripts/build-year-overlays.py --dataset fire --preview
   python3 scripts/build-year-overlays.py --width 2048 --start 1960 --end 2020
+  python3 scripts/build-year-overlays.py --dataset forest-base --width 2048
+  python3 scripts/build-year-overlays.py --dataset forest-base --limit 10000  # smoke run
 
 Dependencies: rasterio, numpy, scipy (pip3 install --user rasterio numpy scipy)
 """
@@ -94,6 +101,16 @@ DATASETS = {
         "undated_proxy_year": None,
         "undated_color": None,
     },
+    # forest-base is a single-pass dataset (no year loop). Its entry documents
+    # the input filename and output location; the actual run is handled by
+    # run_forest_base() via the early-branch in main(). year_field is None because
+    # there is no per-feature year; all features are painted one solid green.
+    "forest-base": {
+        "filename": "forest-age-rasterizable.ndjson",
+        "output_subdir": "cutblocks-by-year",
+        "single_output": "forest-base.png",
+        "year_field": None,
+    },
 }
 
 BC_BOUNDS = (-139.5, 48.0, -114.0, 60.5)  # west, south, east, north
@@ -159,6 +176,173 @@ def resample_to_mercator(rgba: np.ndarray, row_map: np.ndarray) -> np.ndarray:
     return out
 
 
+def _parse_hex_color(hex_str: str) -> tuple[int, int, int]:
+    """Parse a '#rrggbb' hex string into an (r, g, b) int tuple."""
+    h = hex_str.lstrip("#")
+    if len(h) != 6:
+        raise ValueError(f"Expected 6-digit hex color, got: {hex_str!r}")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def run_forest_base(args) -> None:
+    """Single-pass rasterizer for the static green forest substrate.
+
+    Reads forest-age-rasterizable.ndjson line-by-line (streaming — never
+    materializes all features into a list) and rasterizes all forest polygons
+    as a binary mask.  The mask is resampled equirect->Mercator via the shared
+    build_mercator_row_map / resample_to_mercator helpers, then written as a
+    paletted (2-color) PNG: index 0 = transparent, index 1 = green.
+
+    The output is written to a .tmp.png sibling first; MARVIN inspects it and
+    then moves it over the committed forest-base.png.  This function never
+    overwrites the committed asset directly.
+
+    all_touched=False (intentional divergence from the year overlays which use
+    all_touched=True): the base wants forest *extent* (center-in-polygon), not
+    disturbance *reach*.  This gives cleaner coastline and lake edges — a forest
+    polygon ringing a small lake will not bleed green over the open water.
+    Nearest-neighbour (order=0) Mercator resampling produces a 1-px jagged
+    coastline; that is expected, not a defect.
+    """
+    cfg = DATASETS["forest-base"]
+    input_path = _data_path(cfg["filename"])
+    output_dir = _PROJECT_ROOT / "public" / "raster" / cfg["output_subdir"]
+    output_dir.mkdir(parents=True, exist_ok=True)
+    target_path = output_dir / cfg["single_output"]
+    tmp_path = output_dir / (cfg["single_output"].replace(".png", ".tmp.png"))
+
+    if not input_path.exists():
+        print(f"\n  ERROR: {input_path} not found")
+        print("  (forest-age-rasterizable.ndjson lives in data/checkpoint/preprocessed/")
+        print("   and is NOT committed to the repo; run on the box holding the data checkpoint.)")
+        sys.exit(1)
+
+    try:
+        r, g, b = _parse_hex_color(args.green)
+    except ValueError as exc:
+        print(f"\n  ERROR: invalid --green value: {exc}")
+        sys.exit(1)
+
+    west, south, east, north = BC_BOUNDS
+    width = args.width
+    # Use the builder's exact int(...) expression — NOT round().
+    # int(2048 * 12.5 / 25.5) = int(1003.92...) = 1003.
+    # round() would yield 1004 — a one-row misregistration vs the year overlays.
+    height = int(width * (north - south) / (east - west))
+
+    print(f"=== OpenCanopy Forest Base Builder ===")
+    print(f"  Input:  {input_path}")
+    print(f"  Output: {tmp_path}  (move to {target_path.name} after inspection)")
+    print(f"  Grid:   {width}x{height} (equirect), Mercator-corrected")
+    print(f"  Bounds: {BC_BOUNDS}")
+    print(f"  Color:  #{r:02x}{g:02x}{b:02x} (index 1); index 0 = transparent")
+    if args.limit:
+        print(f"  Limit:  {args.limit:,} features (smoke run)")
+
+    transform = from_bounds(west, south, east, north, width, height)
+
+    # ── Stream features one at a time into rasterize ──────────────
+    # Never collect into a list — forest-age-rasterizable.ndjson is 2.37 GB /
+    # 6.2M features and json.loads produces a 6.5x object-blowup per the
+    # simplify-for-raster.py docs.  rasterio.features.rasterize accepts any
+    # iterable and consumes it lazily; feeding it a generator keeps peak RSS
+    # bounded to the output array (~2 MB for 2048x1003 uint8) plus transient
+    # per-feature GeoJSON dict overhead.
+
+    null_geom_count = 0
+    feature_count = 0
+
+    def feature_shapes():
+        """Yield (geom_dict, 1) one at a time from the NDJSON stream."""
+        nonlocal null_geom_count, feature_count
+
+        with open(input_path) as f:
+            for line in f:
+                if args.limit and feature_count >= args.limit:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    feat = json.loads(line)
+                except Exception:
+                    # Malformed JSON line — skip without aborting the whole run.
+                    null_geom_count += 1
+                    continue
+
+                geom = feat.get("geometry")
+                if not geom:
+                    null_geom_count += 1
+                    continue
+
+                feature_count += 1
+                if feature_count % 500000 == 0:
+                    print(f"  {feature_count:,} features streamed...")
+
+                yield (geom, 1)
+
+    print("\nRasterizing forest mask (equirectangular, streaming)...")
+    mask = rasterize(
+        feature_shapes(),
+        out_shape=(height, width),
+        transform=transform,
+        fill=0,
+        dtype=np.uint8,
+        all_touched=False,  # forest extent (center-in-polygon), NOT disturbance reach
+    )
+
+    if null_geom_count > 0:
+        print(f"  Skipped {null_geom_count:,} null/malformed geometries")
+    print(f"  Rasterized {feature_count:,} features -> {int(mask.sum()):,} px set")
+
+    # ── Mercator resample ─────────────────────────────────────────
+    print(f"\nBuilding Mercator row map ({height} rows)...")
+    row_map = build_mercator_row_map(height, south, north)
+
+    # resample_to_mercator expects (4, H, W) RGBA; broadcast the 1-band mask.
+    # We'll write the resampled mask as a paletted PNG, so we only need
+    # the alpha-expanded form to feed the shared helper.
+    mask_rgba = np.zeros((4, height, width), dtype=np.uint8)
+    mask_rgba[0] = mask * r    # R
+    mask_rgba[1] = mask * g    # G
+    mask_rgba[2] = mask * b    # B
+    mask_rgba[3] = mask * 255  # A (fully opaque where forest, transparent elsewhere)
+
+    print("Resampling equirectangular -> Mercator (order-0 nearest)...")
+    rgba_merc = resample_to_mercator(mask_rgba, row_map)
+
+    # Collapse back to a 1-band index mask (0 = transparent, 1 = forest).
+    merc_mask = (rgba_merc[3] > 0).astype(np.uint8)  # alpha channel tells us where forest is
+    merc_px = int(merc_mask.sum())
+    print(f"  Mercator mask: {merc_px:,} forest px ({merc_px / (width * height) * 100:.1f}% of frame)")
+
+    # ── Write paletted PNG ────────────────────────────────────────
+    # 2-entry colormap: index 0 = (0,0,0,0) transparent, index 1 = (r,g,b,255) green.
+    # Paletted keeps the file tiny (~50-100 KB vs ~8 MB truecolor-RGBA) and matches
+    # the format of the committed year-overlay frames (which were post-quantized).
+    print(f"\nWriting paletted PNG -> {tmp_path} ...")
+    with rasterio.open(
+        str(tmp_path),
+        "w",
+        driver="PNG",
+        width=width,
+        height=height,
+        count=1,
+        dtype=np.uint8,
+    ) as dst:
+        dst.write(merc_mask, 1)
+        dst.write_colormap(1, {
+            0: (0, 0, 0, 0),      # transparent (non-forest)
+            1: (r, g, b, 255),    # solid green (forest)
+        })
+
+    file_kb = tmp_path.stat().st_size / 1024
+    print(f"  Written: {width}x{height}, {file_kb:.0f} KB")
+    print(f"\n  Inspect: open {tmp_path}")
+    print(f"  Then:    mv {tmp_path} {target_path}")
+    print(f"  (MARVIN will do the mv after visual inspection and full-data run)")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate per-year story overlays")
     parser.add_argument(
@@ -175,7 +359,25 @@ def main():
         action="store_true",
         help="Only generate 4 sample years for quick testing",
     )
+    parser.add_argument(
+        "--green",
+        default="#15803d",
+        help="Forest fill color for --dataset forest-base (default: #15803d)",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Smoke-run: stop after N features (forest-base only)",
+    )
     args = parser.parse_args()
+
+    # ── Early branch: forest-base is a single-pass dataset ───────────────────
+    # Returns before the year loop; cutblocks/fire code paths are unchanged.
+    if args.dataset == "forest-base":
+        run_forest_base(args)
+        return
 
     cfg = DATASETS[args.dataset]
     start_year = args.start if args.start is not None else cfg["start"]
