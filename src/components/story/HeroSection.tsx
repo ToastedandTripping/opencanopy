@@ -95,9 +95,27 @@ export function HeroSection() {
       {/* Beat 2 — What's Being Lost */}
       <div
         ref={setRef(1)}
-        className="hero-beat min-h-[100dvh] flex items-center justify-center px-6"
+        className="hero-beat relative min-h-[100dvh] flex items-center justify-center px-6 overflow-hidden"
       >
-        <div className="max-w-3xl text-center">
+        {/* Decorative fog texture — heavily dimmed so the loss figure stays the
+            focal point; an offset crop of the Beat-3 fog so it reads as the fog
+            emerging rather than a repeat. */}
+        <img
+          src="/images/story/hero-fog.webp"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.16] brightness-[0.8]"
+          style={{ objectPosition: "70% 45%" }}
+          loading="lazy"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(10,10,12,1.0) 0%, rgba(10,10,12,0.66) 32%, rgba(10,10,12,0.66) 68%, rgba(10,10,12,1.0) 100%)",
+          }}
+        />
+        <div className="relative z-10 max-w-3xl text-center">
           <p
             className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight"
             style={{ fontFamily: "var(--font-display)" }}
