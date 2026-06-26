@@ -34,6 +34,35 @@ export function CtaSection() {
             </a>
           </div>
 
+          <div className="mt-16 max-w-xl mx-auto text-left">
+            <h3
+              className="text-sm font-semibold text-zinc-300 tracking-wide uppercase"
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "0.05em" }}
+            >
+              Where the data comes from
+            </h3>
+            <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
+              Every layer on this map is built from BC government open data, published through{" "}
+              <a href="https://catalogue.data.gov.bc.ca/" target="_blank" rel="noopener noreferrer" className="text-zinc-300 hover:text-white underline underline-offset-2 transition-colors">DataBC</a>.
+              Forest age and old growth come from the{" "}
+              <span className="text-zinc-300">Vegetation Resources Inventory (VRI)</span>,
+              the province{'’'}s official forest survey. Cutblock boundaries come from{" "}
+              <span className="text-zinc-300">Forest Tenure (FTEN)</span> records.
+              Fire history is from the{" "}
+              <span className="text-zinc-300">BC Wildfire Service</span>.
+              Parks, conservancy areas, and conservation priority zones are from{" "}
+              <span className="text-zinc-300">TANTALIS</span> and the{" "}
+              <span className="text-zinc-300">Old Growth Strategic Review</span>.
+            </p>
+            <p className="mt-3 text-sm text-zinc-500 leading-relaxed">
+              Nothing is modelled, estimated, or editorially filtered. If the government
+              says a stand is 250 years old, that{'’'}s what the map shows. If it says
+              it was harvested, same. The{" "}
+              <a href="https://github.com/ToastedandTripping/opencanopy" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-zinc-300 underline underline-offset-2 transition-colors">full pipeline</a>{" "}
+              is open source.
+            </p>
+          </div>
+
           <div className="mt-16 flex flex-col items-center gap-3">
             <p className="text-xs text-zinc-500">Support OpenCanopy</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -82,9 +111,8 @@ export function CtaSection() {
             </div>
           </div>
 
-          <p className="mt-10 text-xs text-zinc-400">
-            Data from BC Government open data. Not affiliated with or endorsed
-            by the Province of British Columbia.
+          <p className="mt-10 text-xs text-zinc-500">
+            Not affiliated with or endorsed by the Province of British Columbia.
           </p>
         </div>
       </section>
