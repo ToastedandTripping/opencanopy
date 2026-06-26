@@ -171,7 +171,7 @@ export const CHAPTERS: Chapter[] = [
     // The scars persist; one closing statistic lands.
     id: "ending",
     heading: "35,000 hectares.",
-    subheading: "That's what remains of BC's large old-growth trees. 0.3% of the province's forest.",
+    subheading: "That’s what remains of BC’s large old-growth trees. 0.3% of the province’s forest.",
     citation: "Price, Holt & Daust, 2020",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,

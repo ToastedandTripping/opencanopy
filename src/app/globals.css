@@ -227,11 +227,11 @@ body {
   background: var(--color-accent);
   border: 2px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(45, 212, 191, 0.4);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
   transition: box-shadow 0.2s;
 }
 .timeline-slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 16px rgba(45, 212, 191, 0.6);
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.6);
 }
 .timeline-slider::-moz-range-thumb {
   width: 16px;
@@ -240,7 +240,7 @@ body {
   background: var(--color-accent);
   border: 2px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(45, 212, 191, 0.4);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
 }
 .timeline-slider::-webkit-slider-runnable-track {
   height: 4px;
