@@ -140,6 +140,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
         !containerRef.current.contains(e.target as Node)
       ) {
         setOpen(false);
+        setFocusedIndex(-1);
         // On mobile, also collapse the bar
         if (window.innerWidth < 768) {
           setExpanded(false);
@@ -156,6 +157,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setOpen(false);
+        setFocusedIndex(-1);
         inputRef.current?.blur();
         if (window.innerWidth < 768) {
           setExpanded(false);
@@ -214,6 +216,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
       onLocationSelect(result.center[0], result.center[1], zoom);
       setQuery(result.placeName);
       setOpen(false);
+      setFocusedIndex(-1);
       setExpanded(false);
       inputRef.current?.blur();
     },
@@ -333,7 +336,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
         {/* Results dropdown */}
         {open && results.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 overflow-hidden shadow-2xl z-50">
-            <ul id="search-results" role="listbox">
+            <ul id="search-results" role="listbox" aria-label="Search results">
               {results.map((result, i) => (
                 <li
                   key={result.id}
