@@ -17,6 +17,7 @@ import type { HotSpot } from "@/data/hotspots";
 import { TimelineControl } from "@/components/map/TimelineControl";
 import { MapLegend } from "@/components/map/MapLegend";
 import { StatusToast } from "@/components/ui/StatusToast";
+import { MapErrorBoundary } from "@/components/ui/MapErrorBoundary";
 import { getLayer } from "@/lib/layers";
 import { useLayerState } from "@/hooks/useLayerState";
 import { useMapState } from "@/hooks/useMapState";
@@ -489,6 +490,7 @@ export default function Home() {
 
   return (
     <LoadingProvider>
+    <MapErrorBoundary>
     <main className="relative h-screen w-screen overflow-hidden">
       {/* Full-screen map */}
       <CanopyMap
@@ -781,7 +783,45 @@ export default function Home() {
             : undefined
         }
       />
+      {/* Bug report — bottom-right, persistent */}
+      <a
+        href={`mailto:opencanopymap@gmail.com?subject=${encodeURIComponent("Bug Report — OpenCanopy")}`}
+        onClick={(e) => {
+          e.preventDefault();
+          const map = mapRef.current?.getMap();
+          const center = map?.getCenter();
+          const zoom = map?.getZoom();
+          const body = [
+            "Describe the issue:",
+            "",
+            "---",
+            `Map: ${center ? `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}` : "unknown"} @ z${zoom?.toFixed(1) ?? "?"}`,
+            `Layers: ${enabledLayers.join(", ") || "none"}`,
+            `Preset: ${activePreset || "none"}`,
+            `UA: ${navigator.userAgent}`,
+            `URL: ${window.location.href}`,
+          ].join("\n");
+          window.location.href = `mailto:opencanopymap@gmail.com?subject=${encodeURIComponent("Bug Report — OpenCanopy")}&body=${encodeURIComponent(body)}`;
+        }}
+        className="fixed bottom-3 right-3 z-10 flex items-center justify-center w-11 h-11 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-zinc-200 hover:bg-black/80 transition-colors focus-visible:ring-2 focus-visible:ring-white/30"
+        title="Report a bug"
+        aria-label="Report a bug"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-4 h-4"
+        >
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+          <line x1="4" y1="22" x2="4" y2="15" />
+        </svg>
+      </a>
     </main>
+    </MapErrorBoundary>
     </LoadingProvider>
   );
 }

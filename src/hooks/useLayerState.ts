@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getDefaultLayers } from "@/lib/layers";
 import { LAYER_PRESETS } from "@/lib/layers";
-import { LAYER_REGISTRY } from "@/lib/layers";
+import { LAYER_REGISTRY_AVAILABLE } from "@/lib/layers";
 
 // ── Shared-source mutual-exclusivity guard ───────────────────────────────
 // "logging-risk" and "forest-age" both use PMTiles source-layer "forest-age".
@@ -52,7 +52,7 @@ function parseLayersFromHash(): string[] | null {
     if (!raw) return null;
     const ids = raw.split(",").filter((id) => id.length > 0);
     // Validate against registry
-    const validIds = new Set(LAYER_REGISTRY.map((l) => l.id));
+    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
     const filtered = ids.filter((id) => validIds.has(id));
     return filtered.length > 0 ? filtered : null;
   } catch {
@@ -68,7 +68,7 @@ function readFromStorage(): string[] | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
-    const validIds = new Set(LAYER_REGISTRY.map((l) => l.id));
+    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
     const filtered = parsed.filter(
       (id: unknown) => typeof id === "string" && validIds.has(id)
     );
@@ -183,7 +183,7 @@ export function useLayerState(): LayerStateReturn {
   }, []);
 
   const setLayers = useCallback((ids: string[]) => {
-    const validIds = new Set(LAYER_REGISTRY.map((l) => l.id));
+    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
     const filtered = ids.filter((id) => validIds.has(id));
     // Apply the same mutual-exclusivity de-confliction used by toggleLayer so
     // preset/URL-hydration paths can't silently enable conflicting pairs.

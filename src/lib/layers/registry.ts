@@ -885,22 +885,26 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
   },
 ];
 
+const PUBLIC_LAYER_IDS = new Set([
+  "forest-age",
+  "tap-deferrals",
+  "cutblocks",
+  "parks",
+  "fire-history",
+  "conservation-priority",
+  "satellite",
+]);
+
 /**
  * Runtime-filtered registry.
  *
- * Excludes layers that require missing environment configuration so they
- * degrade gracefully (no silent undefined source.url). Currently:
- *   - "satellite": requires NEXT_PUBLIC_MAPTILER_KEY
- *
- * LayerPanel, presets, and URL hydration all consume this export, so
- * absent-key layers are simply invisible rather than crashing or rendering blank.
- *
- * The raw LAYER_REGISTRY still contains satellite for registry-audit and
- * story tools that need the full set — consume it directly only when you
- * need to enumerate all defined layers regardless of runtime availability.
+ * Gates: (1) layer must be in the public surface set, (2) satellite requires
+ * a MapTiler API key. Layers outside PUBLIC_LAYER_IDS stay in LAYER_REGISTRY
+ * for audit tests but are invisible to the UI, URL hydration, and rendering.
  */
 export const LAYER_REGISTRY_AVAILABLE: LayerDefinition[] = LAYER_REGISTRY.filter(
   (l) => {
+    if (!PUBLIC_LAYER_IDS.has(l.id)) return false;
     if (l.id === "satellite" && !MAPTILER_KEY) return false;
     return true;
   }

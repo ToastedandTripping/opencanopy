@@ -74,9 +74,9 @@ describe("LayerPanel a11y", () => {
     categories.forEach((c) =>
       expect(c.getAttribute("aria-expanded")).toBe("true")
     );
-    // A layer in a category that used to start collapsed (context) is present.
+    // A layer outside the default "forest" category is present.
     expect(
-      container.querySelectorAll('[role="switch"][aria-label="Mining Claims"]')
+      container.querySelectorAll('[role="switch"][aria-label="Conservation Priority Areas"]')
         .length
     ).toBeGreaterThan(0);
   });

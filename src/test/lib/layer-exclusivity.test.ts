@@ -98,47 +98,21 @@ describe("useLayerState — shared-source mutual exclusivity", () => {
   });
 });
 
-describe("useLayerState — setLayers mutual exclusivity", () => {
-  it("setLayers de-conflicts: forest-age and logging-risk cannot both be present", () => {
+describe("useLayerState — setLayers validation and mutual exclusivity", () => {
+  it("setLayers drops layer IDs not in the available registry", () => {
     const { result } = renderHook(() => useLayerState());
 
     act(() => {
       result.current.setLayers(["parks", "forest-age", "logging-risk"]);
     });
 
-    // One of the exclusive pair should have been dropped
-    const hasForestAge = result.current.enabledLayers.includes("forest-age");
-    const hasLoggingRisk = result.current.enabledLayers.includes("logging-risk");
-    expect(hasForestAge && hasLoggingRisk).toBe(false);
-    // parks is unaffected
+    // logging-risk is hidden from the public surface → silently dropped
     expect(result.current.enabledLayers).toContain("parks");
-  });
-
-  it("setLayers keeps last-specified exclusive member (logging-risk wins when listed last)", () => {
-    const { result } = renderHook(() => useLayerState());
-
-    act(() => {
-      result.current.setLayers(["forest-age", "logging-risk"]);
-    });
-
-    // logging-risk is last → it wins
-    expect(result.current.enabledLayers).toContain("logging-risk");
-    expect(result.current.enabledLayers).not.toContain("forest-age");
-  });
-
-  it("setLayers keeps last-specified exclusive member (forest-age wins when listed last)", () => {
-    const { result } = renderHook(() => useLayerState());
-
-    act(() => {
-      result.current.setLayers(["logging-risk", "forest-age"]);
-    });
-
-    // forest-age is last → it wins
     expect(result.current.enabledLayers).toContain("forest-age");
     expect(result.current.enabledLayers).not.toContain("logging-risk");
   });
 
-  it("setLayers with only one exclusive member works normally", () => {
+  it("setLayers with only valid IDs works normally", () => {
     const { result } = renderHook(() => useLayerState());
 
     act(() => {
@@ -147,6 +121,15 @@ describe("useLayerState — setLayers mutual exclusivity", () => {
 
     expect(result.current.enabledLayers).toContain("forest-age");
     expect(result.current.enabledLayers).toContain("parks");
-    expect(result.current.enabledLayers).not.toContain("logging-risk");
+  });
+
+  it("setLayers with entirely invalid IDs results in empty enabled set", () => {
+    const { result } = renderHook(() => useLayerState());
+
+    act(() => {
+      result.current.setLayers(["logging-risk", "fish-streams"]);
+    });
+
+    expect(result.current.enabledLayers).toHaveLength(0);
   });
 });
