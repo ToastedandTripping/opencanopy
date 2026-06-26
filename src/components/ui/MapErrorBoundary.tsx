@@ -42,7 +42,7 @@ export class MapErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0c]">
-          <div className="mx-4 max-w-md w-full p-8 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl text-center">
+          <div role="alert" className="mx-4 max-w-md w-full p-8 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl text-center">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -65,6 +65,7 @@ export class MapErrorBoundary extends React.Component<Props, State> {
             </p>
 
             <button
+              autoFocus
               onClick={() => window.location.reload()}
               className="inline-flex items-center justify-center px-5 py-2.5 min-h-[44px] rounded-lg bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors text-sm font-medium focus-visible:ring-2 focus-visible:ring-white/30"
             >

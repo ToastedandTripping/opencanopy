@@ -285,6 +285,11 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={results.length > 0 && open}
+              aria-controls="search-results"
+              aria-activedescendant={focusedIndex >= 0 ? `search-result-${focusedIndex}` : undefined}
               value={query}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -328,10 +333,11 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
         {/* Results dropdown */}
         {open && results.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 overflow-hidden shadow-2xl z-50">
-            <ul role="listbox">
+            <ul id="search-results" role="listbox">
               {results.map((result, i) => (
                 <li
                   key={result.id}
+                  id={`search-result-${i}`}
                   role="option"
                   aria-selected={focusedIndex === i}
                   onClick={() => handleSelect(result)}
