@@ -105,7 +105,7 @@ const NO_TERRAIN: ChapterTerrain = { enabled: false, exaggeration: 0 };
 export const CHAPTERS: Chapter[] = [
   {
     id: "overview",
-    heading: "See what's left.",
+    heading: "See what’s left.",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.6 }],
@@ -128,7 +128,7 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "logging-timeline",
     heading: "75 years of logging.",
-    body: "British Columbia has logged over 5 million hectares of forest since 1950. Each red mark is a cutblock -- an area where every tree was removed.",
+    body: "British Columbia has logged over 8 million hectares of forest since 1950. Each red mark is a cutblock — an area where every tree was removed.",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.4 }],
@@ -145,7 +145,7 @@ export const CHAPTERS: Chapter[] = [
     // Amber wildfire accumulates over the persisted red. Flat camera (no tilt).
     id: "fire",
     heading: "And then it burned.",
-    body: "British Columbia has always burned -- but the largest seasons on record are all recent. Since 2017, wildfire has taken more forest than logging did in decades.",
+    body: "British Columbia has always burned — but the largest seasons on record are all recent. Since 2017, wildfire has taken more forest than logging did in decades.",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.3 }],
@@ -170,8 +170,8 @@ export const CHAPTERS: Chapter[] = [
   {
     // The scars persist; one closing statistic lands.
     id: "ending",
-    heading: "Just 35,000 hectares of BC's largest old growth remain.",
-    subheading: "0.3% of the province's forest.",
+    heading: "35,000 hectares.",
+    subheading: "That's what remains of BC's large old-growth trees. 0.3% of the province's forest.",
     citation: "Price, Holt & Daust, 2020",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,

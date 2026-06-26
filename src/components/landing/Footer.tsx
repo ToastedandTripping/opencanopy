@@ -42,13 +42,13 @@ export function Footer() {
               Contributing
             </a>
             <a
-              href="https://ko-fi.com/toasted40013"
+              href="https://ko-fi.com/opencanopy"
               target="_blank"
               rel="noopener noreferrer"
               className="text-emerald-400 hover:text-emerald-300 transition-colors"
               aria-label="Support OpenCanopy on Ko-fi"
             >
-              Support
+              Keep it running
             </a>
             <Link
               href="/privacy"
@@ -74,7 +74,7 @@ export function Footer() {
               href="https://github.com/ToastedandTripping/opencanopy/blob/main/LICENSE"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-zinc-400 transition-colors"
+              className="hover:text-zinc-300 transition-colors"
             >
               AGPLv3 License
             </a>

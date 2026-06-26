@@ -73,7 +73,7 @@ export function HeroSection() {
         />
         <div className="relative z-10 max-w-3xl text-center">
           <h1
-            className="text-4xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-[1.1]"
+            className="text-4xl md:text-6xl lg:text-7xl font-semibold text-white tracking-tight leading-[1.1]"
             style={{ fontFamily: "var(--font-display)" }}
           >
             British Columbia is home to the last great temperate rainforests on
@@ -95,7 +95,7 @@ export function HeroSection() {
       {/* Beat 2 — What's Being Lost */}
       <div
         ref={setRef(1)}
-        className="hero-beat relative min-h-[100dvh] flex items-center justify-center px-6 overflow-hidden"
+        className="hero-beat-2 relative min-h-[100dvh] flex items-center justify-center md:items-start md:justify-start px-6 overflow-hidden"
       >
         {/* Decorative fog texture — heavily dimmed so the loss figure stays the
             focal point; an offset crop of the Beat-3 fog so it reads as the fog
@@ -112,18 +112,23 @@ export function HeroSection() {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(180deg, rgba(10,10,12,1.0) 0%, rgba(10,10,12,0.66) 32%, rgba(10,10,12,0.66) 68%, rgba(10,10,12,1.0) 100%)",
+              "linear-gradient(180deg, rgba(10,10,12,1.0) 0%, rgba(10,10,12,0.40) 45%, rgba(10,10,12,0.80) 100%)",
           }}
         />
-        <div className="relative z-10 max-w-3xl text-center">
+        <div className="relative z-10 max-w-3xl text-center md:text-left md:pt-[20vh] md:pl-16">
           <p
-            className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight"
+            className="text-5xl md:text-7xl lg:text-8xl font-black text-[#ef4444]"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em" }}
+          >
+            8 million
+          </p>
+          <p
+            className="text-2xl md:text-3xl lg:text-4xl font-light text-zinc-300 tracking-normal"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            <span className="text-[#ef4444]">8 million</span>{" "}
-            <span className="text-white">hectares.</span>
+            hectares.
           </p>
-          <p className="mt-6 text-lg md:text-xl text-zinc-400">
+          <p className="mt-6 text-lg md:text-xl text-zinc-400" style={{ fontVariantNumeric: "lining-nums" }}>
             Logged since 1950. An area larger than Ireland.
           </p>
           <p className="mt-2 text-base text-zinc-500">
@@ -135,7 +140,7 @@ export function HeroSection() {
       {/* Beat 3 — The Transition */}
       <div
         ref={setRef(2)}
-        className="hero-beat relative min-h-[100dvh] flex items-center justify-center px-6 overflow-hidden"
+        className="hero-beat-3 relative min-h-[100dvh] flex items-end justify-center pb-24 md:pb-32 px-6 overflow-hidden"
       >
         <img
           src="/images/story/hero-fog.webp"
@@ -153,7 +158,7 @@ export function HeroSection() {
         />
         <div className="relative z-10 max-w-2xl text-center">
           <h2
-            className="text-4xl md:text-6xl font-bold text-white tracking-tight"
+            className="text-3xl md:text-5xl font-light text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
             We mapped it.

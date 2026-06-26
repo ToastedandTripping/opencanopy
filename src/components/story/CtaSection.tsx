@@ -8,7 +8,7 @@ export function CtaSection() {
       <section className="relative z-10 bg-[var(--color-surface-0)] py-24 md:py-32">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2
-            className="text-3xl md:text-4xl font-bold text-white tracking-tight"
+            className="text-3xl md:text-4xl font-semibold text-white tracking-normal"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Every dataset on this map is public.
@@ -20,28 +20,28 @@ export function CtaSection() {
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href="/map"
-              className="inline-flex items-center justify-center px-8 py-3 rounded-xl bg-[var(--color-accent)] text-black font-semibold text-sm hover:bg-[var(--color-accent-hover)] transition-colors"
+              className="inline-flex items-center justify-center px-8 py-3 rounded-xl bg-[var(--color-accent)] text-black font-semibold text-sm hover:bg-[var(--color-accent-hover)] hover:-translate-y-px active:translate-y-0 transition-[background-color,transform] duration-150"
             >
-              Explore the Map
+              See It for Yourself
             </a>
             <a
               href="https://github.com/ToastedandTripping/opencanopy"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center px-8 py-3 rounded-xl border border-white/10 text-zinc-300 font-medium text-sm hover:border-white/20 hover:text-white transition-colors"
+              className="text-zinc-500 hover:text-zinc-300 font-medium text-sm transition-colors"
             >
               View on GitHub
             </a>
           </div>
 
-          <div className="mt-8 flex flex-col items-center gap-3">
+          <div className="mt-16 flex flex-col items-center gap-3">
             <p className="text-xs text-zinc-500">Support OpenCanopy</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <a
                 href="https://github.com/sponsors/ToastedandTripping"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg border border-white/10 text-zinc-400 text-xs font-medium hover:border-white/20 hover:text-zinc-200 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2 text-zinc-400 text-xs font-medium hover:text-zinc-200 transition-colors"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -62,7 +62,7 @@ export function CtaSection() {
                 href="https://ko-fi.com/opencanopy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg border border-white/10 text-zinc-400 text-xs font-medium hover:border-white/20 hover:text-zinc-200 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2 text-zinc-400 text-xs font-medium hover:text-zinc-200 transition-colors"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -77,7 +77,7 @@ export function CtaSection() {
                 >
                   <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3" />
                 </svg>
-                Buy me a coffee
+                Keep it running
               </a>
             </div>
           </div>

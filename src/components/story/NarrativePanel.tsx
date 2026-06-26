@@ -35,15 +35,17 @@ export function NarrativePanel({
       aria-hidden={!active}
     >
       <div
-        className={`pointer-events-auto bg-[var(--color-surface-overlay)] backdrop-blur-xl border border-white/10 rounded-2xl p-8 narrative-panel ${cardPositionClasses}`}
+        className={`pointer-events-auto bg-[var(--color-surface-overlay)] backdrop-blur-xl border border-white/[0.12] rounded-2xl p-8 narrative-panel ${cardPositionClasses}`}
         style={{
           opacity: active ? 1 : 0,
           transform: active ? "none" : "translateY(12px)",
-          transition: "opacity 500ms ease, transform 500ms ease",
+          transition: active
+            ? "opacity 500ms cubic-bezier(0.16, 1, 0.3, 1), transform 500ms cubic-bezier(0.16, 1, 0.3, 1)"
+            : "opacity 200ms cubic-bezier(0.4, 0, 1, 1), transform 200ms cubic-bezier(0.4, 0, 1, 1)",
         }}
       >
         <h2
-          className="text-2xl md:text-3xl font-bold text-white tracking-tight"
+          className="text-2xl md:text-3xl font-semibold text-white tracking-normal"
           style={{ fontFamily: "var(--font-display)" }}
         >
           {heading}
