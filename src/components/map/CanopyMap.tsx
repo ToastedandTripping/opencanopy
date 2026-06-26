@@ -63,6 +63,7 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
   const mapRef = useRef<MapRef>(null);
   const [popup, setPopup] = useState<PopupInfo | null>(null);
   const [zoom, setZoom] = useState(INITIAL_VIEW_STATE.zoom);
+  const [cursorPos, setCursorPos] = useState<{ lng: number; lat: number } | null>(null);
 
   useImperativeHandle(ref, () => mapRef.current!);
 
@@ -194,6 +195,8 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
         interactiveLayerIds={interactiveLayerIds}
         cursor={cursor}
         onZoom={(e) => setZoom(e.viewState.zoom)}
+        onMouseMove={(e) => setCursorPos({ lng: e.lngLat.lng, lat: e.lngLat.lat })}
+        onMouseOut={() => setCursorPos(null)}
         canvasContextAttributes={{ preserveDrawingBuffer: true }}
         maxPitch={70}
         minZoom={4}
@@ -236,19 +239,24 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
       <div
         style={{
           position: "absolute",
-          bottom: 36,
+          top: 8,
           right: 8,
           background: "rgba(0,0,0,0.6)",
           color: "rgba(255,255,255,0.7)",
-          padding: "2px 6px",
+          padding: "2px 8px",
           borderRadius: 4,
           fontSize: 11,
           fontFamily: "monospace",
           pointerEvents: "none",
           zIndex: 1,
+          display: "flex",
+          gap: 10,
         }}
       >
-        z{zoom.toFixed(1)}
+        <span>z{zoom.toFixed(1)}</span>
+        {cursorPos && (
+          <span>{cursorPos.lat.toFixed(4)}, {cursorPos.lng.toFixed(4)}</span>
+        )}
       </div>
     </div>
   );

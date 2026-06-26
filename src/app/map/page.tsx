@@ -803,7 +803,7 @@ export default function Home() {
           ].join("\n");
           window.location.href = `mailto:opencanopymap@gmail.com?subject=${encodeURIComponent("Bug Report — OpenCanopy")}&body=${encodeURIComponent(body)}`;
         }}
-        className="fixed bottom-3 right-3 z-10 flex items-center justify-center w-11 h-11 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-zinc-200 hover:bg-black/80 transition-colors focus-visible:ring-2 focus-visible:ring-white/30"
+        className="fixed bottom-14 right-3 z-10 flex items-center justify-center w-11 h-11 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-zinc-200 hover:bg-black/80 transition-colors focus-visible:ring-2 focus-visible:ring-white/30"
         title="Report a bug"
         aria-label="Report a bug"
       >

@@ -279,12 +279,11 @@ export function MapLegend({
   const [expandedLayer, setExpandedLayer] = useState<string | null>(null);
   const { layerStatuses } = useLoadingContext();
 
-  // Resolve enabled IDs to full definitions, filter out satellite and empty legends
   const legendLayers = enabledLayers
     .map((id) => getLayer(id))
     .filter(
       (l): l is LayerDefinition =>
-        l != null && l.id !== "satellite" && l.legendItems.length > 0
+        l != null && l.legendItems.length > 0
     );
 
   // Hidden when layer panel is open or no layers active
