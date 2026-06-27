@@ -49,16 +49,15 @@ export function applyLayerVisibility(
 
   const forestAgeActive = activeLayers["forest-age"];
 
-  // Forest-age raster overview: DISABLED as the story base (2026-06-20).
-  // The combined forest-age raster is disturbance-dominant (red) at province
-  // scale — correct for the interactive map, but as the story's base it wrongly
-  // implied BC was already logged before 1950. The story's substrate is the
-  // green forest silhouette (story-forest-base) below, with the per-year
-  // cutblock overlays painting the loss on top. The layer stays registered
-  // (the prefetch still warms the interactive map's tiles) but is never shown.
+  // Forest-age raster overview: hidden during the timeline chapters so the
+  // green-base + cutblock-overlay narrative works (green start, red accumulates).
+  // REVEALED in the ending chapter to show the full VRI picture -- all harvesting
+  // the government's vegetation survey detected, not just the FTEN permit records
+  // the timeline is built from. The gap between the two IS the story's closing beat.
   const rasterLayerId = "story-forest-age-raster";
   if (map.getLayer(rasterLayerId)) {
-    map.setPaintProperty(rasterLayerId, "raster-opacity", 0);
+    const isEnding = layers.some((l) => l.id === "forest-age" && l.opacity <= 0.25);
+    map.setPaintProperty(rasterLayerId, "raster-opacity", isEnding ? 0.85 : 0);
   }
 
   // Forest base: green silhouette visible when forest-age is active

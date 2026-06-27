@@ -117,13 +117,13 @@ export function HeroSection() {
         />
         <div className="relative z-10 max-w-3xl text-center md:text-left md:pt-[20vh] md:pl-16">
           <p
-            className="text-5xl md:text-7xl lg:text-8xl font-black text-[#ef4444]"
-            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em" }}
+            className="text-5xl md:text-7xl lg:text-8xl font-bold text-[#ef4444] tracking-tight"
+            style={{ fontFamily: "var(--font-display)" }}
           >
             8 million
           </p>
           <p
-            className="text-2xl md:text-3xl lg:text-4xl font-light text-zinc-300 tracking-normal"
+            className="text-2xl md:text-3xl lg:text-4xl font-semibold text-zinc-300 tracking-tight"
             style={{ fontFamily: "var(--font-display)" }}
           >
             hectares.
@@ -158,7 +158,7 @@ export function HeroSection() {
         />
         <div className="relative z-10 max-w-2xl text-center">
           <h2
-            className="text-3xl md:text-5xl font-light text-white"
+            className="text-3xl md:text-5xl font-semibold text-white tracking-tight"
             style={{ fontFamily: "var(--font-display)" }}
           >
             We mapped it.

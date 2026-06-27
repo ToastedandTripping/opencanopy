@@ -172,6 +172,7 @@ export const CHAPTERS: Chapter[] = [
     id: "ending",
     heading: "35,000 hectares.",
     subheading: "That’s what remains of BC’s large old-growth trees. 0.3% of the province’s forest.",
+    body: "What you just watched was only the permit record. The full picture is worse.",
     citation: "Price, Holt & Daust, 2020",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
