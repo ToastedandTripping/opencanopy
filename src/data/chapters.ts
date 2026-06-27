@@ -168,7 +168,9 @@ export const CHAPTERS: Chapter[] = [
     scrollHeight: 300,
   },
   {
-    // The scars persist; one closing statistic lands.
+    // The FTEN/fire overlays fade out; the VRI forest-age raster fades in
+    // (via visibility.ts). The map transitions from "what the permit record
+    // shows" to "what the vegetation survey actually detected."
     id: "ending",
     heading: "35,000 hectares.",
     subheading: "That’s what remains of BC’s large old-growth trees. 0.3% of the province’s forest.",
@@ -178,9 +180,9 @@ export const CHAPTERS: Chapter[] = [
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.25 }],
     overlays: [
-      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0.6 },
-      { source: "fire", mode: "static", staticYear: 2025, opacity: 0.6 },
+      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0 },
+      { source: "fire", mode: "static", staticYear: 2025, opacity: 0 },
     ],
-    scrollHeight: 150,
+    scrollHeight: 300,
   },
 ];
