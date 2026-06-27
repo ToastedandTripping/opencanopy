@@ -49,24 +49,24 @@ export function applyLayerVisibility(
 
   const forestAgeActive = activeLayers["forest-age"];
 
-  // Forest-age raster overview: hidden during the timeline chapters so the
-  // green-base + cutblock-overlay narrative works (green start, red accumulates).
-  // REVEALED in the ending chapter to show the full VRI picture -- all harvesting
-  // the government's vegetation survey detected, not just the FTEN permit records
-  // the timeline is built from. The gap between the two IS the story's closing beat.
+  // Forest-age raster overview: kept at near-zero during the timeline so
+  // MapLibre pre-fetches tiles, then REVEALED in the ending chapter to show
+  // the full VRI picture -- all harvesting the vegetation survey detected,
+  // not just the FTEN permit records the timeline was built from.
   const rasterLayerId = "story-forest-age-raster";
+  const isEnding = layers.some((l) => l.id === "forest-age" && l.opacity <= 0.25);
   if (map.getLayer(rasterLayerId)) {
-    const isEnding = layers.some((l) => l.id === "forest-age" && l.opacity <= 0.25);
-    map.setPaintProperty(rasterLayerId, "raster-opacity", isEnding ? 0.85 : 0);
+    map.setPaintProperty(rasterLayerId, "raster-opacity", isEnding ? 0.85 : 0.01);
   }
 
-  // Forest base: green silhouette visible when forest-age is active
+  // Forest base: green silhouette. Dimmed during end-reveal so VRI red
+  // isn't fighting the green substrate underneath.
   const forestBaseId = "story-forest-base";
   if (map.getLayer(forestBaseId)) {
     map.setPaintProperty(
       forestBaseId,
       "raster-opacity",
-      forestAgeActive ? 0.7 : 0
+      isEnding ? 0.15 : (forestAgeActive ? 0.7 : 0)
     );
   }
 
