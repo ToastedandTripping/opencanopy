@@ -30,6 +30,9 @@ export const FIRE_OVERLAY_URL_PATTERN = "/raster/fire-by-year/{year}.png";
 /** Static green forest base overlay (sampled from forest-age data). */
 export const FOREST_BASE_URL = "/raster/cutblocks-by-year/forest-base.png";
 
+/** Static VRI-logged overlay: everything non-old-growth rendered as red. */
+export const VRI_LOGGED_URL = "/raster/vri-logged/full.png";
+
 export const YEAR_OVERLAY_RANGE = { start: 1950, end: 2025 } as const;
 
 /** Full recorded wildfire span (build-year-overlays.py --dataset fire). */
@@ -53,6 +56,12 @@ export const OVERLAY_SOURCES = {
     urlPattern: FIRE_OVERLAY_URL_PATTERN,
     range: FIRE_OVERLAY_RANGE,
   },
+  "vri-logged": {
+    layerId: "story-vri-logged-overlay",
+    sourceId: "story-vri-logged-overlay",
+    urlPattern: VRI_LOGGED_URL,
+    range: { start: 0, end: 0 } as const,
+  },
 } as const;
 
 /** All story layer IDs created by setupStoryLayers. */
@@ -71,6 +80,7 @@ export const STORY_LAYER_IDS = [
   "story-parks-fill",
   "story-parks-outline",
   "story-harvested-hatch",
+  "story-vri-logged-overlay",
 ] as const;
 
 /** All source IDs registered by setupStoryLayers. */
@@ -80,6 +90,7 @@ export const STORY_SOURCE_IDS = [
   "story-forest-age-raster",
   "story-year-overlay",
   "story-fire-overlay",
+  "story-vri-logged-overlay",
   PMTILES_SOURCE_ID,
 ] as const;
 
@@ -271,6 +282,37 @@ export function setupStoryLayers(
         paint: {
           "raster-opacity": 0,
           "raster-opacity-transition": { duration: 100 },
+          "raster-fade-duration": 0,
+        },
+      },
+      firstSymbolId,
+    );
+  }
+
+  // ── VRI-logged static overlay (end-reveal: full disturbance picture) ──
+  if (!map.getSource("story-vri-logged-overlay")) {
+    const [west, south, east, north] = OVERLAY_BOUNDS;
+    map.addSource("story-vri-logged-overlay", {
+      type: "image",
+      url: VRI_LOGGED_URL,
+      coordinates: [
+        [west, north],
+        [east, north],
+        [east, south],
+        [west, south],
+      ],
+    });
+  }
+
+  if (!map.getLayer("story-vri-logged-overlay")) {
+    map.addLayer(
+      {
+        id: "story-vri-logged-overlay",
+        type: "raster",
+        source: "story-vri-logged-overlay",
+        paint: {
+          "raster-opacity": 0,
+          "raster-opacity-transition": { duration: 600 },
           "raster-fade-duration": 0,
         },
       },

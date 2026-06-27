@@ -49,21 +49,22 @@ export function applyLayerVisibility(
 
   const forestAgeActive = activeLayers["forest-age"];
 
-  // Forest-age raster overview: held at opacity 0 throughout the story.
-  // The story substrate is the green forest-base + per-year cutblock overlays.
-  // A proper VRI-derived overlay pipeline will replace this approach.
+  // Forest-age raster overview: held at opacity 0 (the VRI-logged overlay
+  // replaces this approach for the ending chapter).
   const rasterLayerId = "story-forest-age-raster";
   if (map.getLayer(rasterLayerId)) {
     map.setPaintProperty(rasterLayerId, "raster-opacity", 0);
   }
 
-  // Forest base: green silhouette visible when forest-age is active
+  // Forest base: green silhouette. Dimmed during the ending chapter so the
+  // VRI-logged red overlay dominates and old-growth reads as tiny green flecks.
+  const isEnding = layers.some((l) => l.id === "forest-age" && l.opacity <= 0.25);
   const forestBaseId = "story-forest-base";
   if (map.getLayer(forestBaseId)) {
     map.setPaintProperty(
       forestBaseId,
       "raster-opacity",
-      forestAgeActive ? 0.7 : 0
+      isEnding ? 0.15 : (forestAgeActive ? 0.7 : 0)
     );
   }
 

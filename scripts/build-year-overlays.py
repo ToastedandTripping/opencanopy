@@ -111,6 +111,21 @@ DATASETS = {
         "single_output": "forest-base.png",
         "year_field": None,
     },
+    # vri-logged: single-pass static overlay showing ALL non-old-growth as red.
+    # Used by the ending chapter to reveal the full VRI picture after the FTEN
+    # timeline. Old growth (250+) is transparent; everything else is disturbance.
+    "vri-logged": {
+        "filename": "forest-age-rasterizable.ndjson",
+        "output_subdir": "vri-logged",
+        "single_output": "full.png",
+        "year_field": None,
+        "class_colors": {
+            "harvested": (239, 68, 68, 220),   # #ef4444 bright red
+            "young": (220, 38, 38, 200),        # #dc2626 red
+            "mature": (153, 27, 27, 180),       # #991b1b dark red
+            # old-growth: omitted = transparent
+        },
+    },
 }
 
 BC_BOUNDS = (-139.5, 48.0, -114.0, 60.5)  # west, south, east, north
@@ -343,6 +358,127 @@ def run_forest_base(args) -> None:
     print(f"  (MARVIN will do the mv after visual inspection and full-data run)")
 
 
+def run_vri_logged(args) -> None:
+    """Single-pass rasterizer for VRI-based 'full picture' overlay.
+
+    Renders all non-old-growth forest as red, old growth as transparent.
+    Used by the ending chapter to reveal how much more disturbance VRI
+    detects than the FTEN permit records the timeline was built from.
+
+    Unlike forest-base (all_touched=False for clean coastlines), this uses
+    all_touched=True so disturbance fills completely at province scale —
+    matching the cutblock overlay's aggressive coverage.
+    """
+    cfg = DATASETS["vri-logged"]
+    input_path = _data_path(cfg["filename"])
+    output_dir = _PROJECT_ROOT / "public" / "raster" / cfg["output_subdir"]
+    output_dir.mkdir(parents=True, exist_ok=True)
+    target_path = output_dir / cfg["single_output"]
+
+    if not input_path.exists():
+        print(f"\n  ERROR: {input_path} not found")
+        sys.exit(1)
+
+    class_colors = cfg["class_colors"]
+
+    west, south, east, north = BC_BOUNDS
+    width = args.width
+    height = int(width * (north - south) / (east - west))
+
+    print(f"=== OpenCanopy VRI Logged Overlay Builder ===")
+    print(f"  Input:  {input_path}")
+    print(f"  Output: {target_path}")
+    print(f"  Grid:   {width}x{height} (equirect), Mercator-corrected")
+    print(f"  Classes: {list(class_colors.keys())} -> red; old-growth -> transparent")
+    if args.limit:
+        print(f"  Limit:  {args.limit:,} features (smoke run)")
+
+    transform = from_bounds(west, south, east, north, width, height)
+
+    # Rasterize each class separately with its own color, then composite.
+    rgba = np.zeros((4, height, width), dtype=np.uint8)
+    total_features = 0
+    null_count = 0
+
+    for cls, color in class_colors.items():
+        r, g, b, a = color
+        count = 0
+
+        def class_shapes():
+            nonlocal count, null_count
+            with open(input_path) as f:
+                for line in f:
+                    if args.limit and total_features + count >= args.limit:
+                        break
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        feat = json.loads(line)
+                    except Exception:
+                        null_count += 1
+                        continue
+                    props = feat.get("properties", {})
+                    if props.get("class") != cls:
+                        continue
+                    geom = feat.get("geometry")
+                    if not geom:
+                        null_count += 1
+                        continue
+                    count += 1
+                    if count % 500000 == 0:
+                        print(f"    {cls}: {count:,} features streamed...")
+                    yield (geom, 1)
+
+        print(f"\n  Rasterizing class '{cls}' ({r},{g},{b},{a})...")
+        mask = rasterize(
+            class_shapes(),
+            out_shape=(height, width),
+            transform=transform,
+            fill=0,
+            dtype=np.uint8,
+            all_touched=True,
+        )
+
+        # Composite: paint this class where mask is set (later classes overwrite)
+        px_set = mask > 0
+        rgba[0][px_set] = r
+        rgba[1][px_set] = g
+        rgba[2][px_set] = b
+        rgba[3][px_set] = a
+
+        total_features += count
+        print(f"    {cls}: {count:,} features -> {int(mask.sum()):,} px set")
+
+    if null_count > 0:
+        print(f"\n  Skipped {null_count:,} null/malformed geometries")
+    print(f"\n  Total features: {total_features:,}")
+
+    # Mercator resample
+    print(f"\nBuilding Mercator row map ({height} rows)...")
+    row_map = build_mercator_row_map(height, south, north)
+
+    print("Resampling equirectangular -> Mercator (order-0 nearest)...")
+    rgba_merc = resample_to_mercator(rgba, row_map)
+
+    # Write RGBA PNG
+    print(f"\nWriting RGBA PNG -> {target_path} ...")
+    with rasterio.open(
+        str(target_path),
+        "w",
+        driver="PNG",
+        width=width,
+        height=height,
+        count=4,
+        dtype=np.uint8,
+    ) as dst:
+        for band in range(4):
+            dst.write(rgba_merc[band], band + 1)
+
+    file_kb = target_path.stat().st_size / 1024
+    print(f"  Written: {width}x{height}, {file_kb:.0f} KB")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate per-year story overlays")
     parser.add_argument(
@@ -373,10 +509,12 @@ def main():
     )
     args = parser.parse_args()
 
-    # ── Early branch: forest-base is a single-pass dataset ───────────────────
-    # Returns before the year loop; cutblocks/fire code paths are unchanged.
+    # ── Early branches: single-pass datasets return before the year loop ─────
     if args.dataset == "forest-base":
         run_forest_base(args)
+        return
+    if args.dataset == "vri-logged":
+        run_vri_logged(args)
         return
 
     cfg = DATASETS[args.dataset]

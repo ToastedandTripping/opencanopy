@@ -15,7 +15,7 @@ const SCRUB_TABLES: Record<"cutblocks" | "fire", ScrubTable> = {
 
 /** A resolved overlay for the current frame: image year + opacity. */
 export interface ResolvedOverlay {
-  source: "cutblocks" | "fire";
+  source: "cutblocks" | "fire" | "vri-logged";
   year: number;
   opacity: number;
 }

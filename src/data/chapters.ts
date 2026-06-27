@@ -41,8 +41,8 @@ export interface ChapterTimelineScrub {
 export type OverlayImageMode = "scrubbed" | "static";
 
 export interface ChapterOverlay {
-  /** Image source: cutblock red (story-year-overlay) or wildfire amber (story-fire-overlay). */
-  source: "cutblocks" | "fire";
+  /** Image source: cutblock red, wildfire amber, or VRI full-picture. */
+  source: "cutblocks" | "fire" | "vri-logged";
   /** scrubbed = image follows the scrub year; static = fixed staticYear. */
   mode: OverlayImageMode;
   /** Required when mode==="static" (e.g. baseline=range.start, scars=range.end). */
@@ -168,20 +168,22 @@ export const CHAPTERS: Chapter[] = [
     scrollHeight: 300,
   },
   {
-    // Scars persist from the timeline; closing statistic lands.
-    // TODO: once the VRI-derived overlay pipeline ships, this chapter
-    // transitions from FTEN permit overlays to the full VRI picture.
+    // FTEN/fire overlays fade out; VRI-logged overlay fades in, showing
+    // everything the vegetation survey classified as non-old-growth. The map
+    // goes almost entirely red — the gap between permit records and reality.
     id: "ending",
     heading: "35,000 hectares.",
     subheading: "That’s what remains of BC’s large old-growth trees. 0.3% of the province’s forest.",
+    body: "What you just watched was only the permit record. The full picture is worse.",
     citation: "Price, Holt & Daust, 2020",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.25 }],
     overlays: [
-      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0.6 },
-      { source: "fire", mode: "static", staticYear: 2025, opacity: 0.6 },
+      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0 },
+      { source: "fire", mode: "static", staticYear: 2025, opacity: 0 },
+      { source: "vri-logged", mode: "static", staticYear: 0, opacity: 0.85 },
     ],
-    scrollHeight: 250,
+    scrollHeight: 300,
   },
 ];
