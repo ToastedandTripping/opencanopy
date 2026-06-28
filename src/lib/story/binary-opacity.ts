@@ -21,6 +21,9 @@ export function computeBinaryRevealOpacity(
   if (!revealBinary) return 0;
   if (reducedMotion || !fadeIn) return 0.85;
   const [start, end] = fadeIn;
+  // Degenerate window (start === end): step at the boundary rather than divide
+  // by zero (which would yield NaN and propagate to setPaintProperty).
+  if (end <= start) return prog >= start ? 0.85 : 0;
   const t = (prog - start) / (end - start);
   const clamped = t < 0 ? 0 : t > 1 ? 1 : t;
   return 0.85 * clamped;

@@ -311,9 +311,11 @@ export function setupStoryLayers(
         maxzoom: 9,
         paint: {
           "raster-opacity": 0,
-          // 600ms fade-in on chapter enter: long enough to feel dramatic,
-          // short enough not to obscure the underlying FTEN/fire fade-out.
-          "raster-opacity-transition": { duration: 600 },
+          // Short transition: the scroll-coupled JS fade (computeBinaryRevealOpacity,
+          // ending revealBinaryFadeIn) updates raster-opacity per frame, so a long
+          // transition would lag the scroll. 100ms antialiases tile-load flicker only.
+          // (Matches story-year-overlay / story-fire-overlay.)
+          "raster-opacity-transition": { duration: 100 },
         },
       },
       firstSymbolId,

@@ -29,6 +29,20 @@ describe("computeBinaryRevealOpacity", () => {
     });
   });
 
+  // ── Degenerate fadeIn window (start === end): no divide-by-zero / NaN ───────
+
+  describe("degenerate fadeIn window (start === end)", () => {
+    it("steps to 0.85 at/after the boundary, never NaN", () => {
+      expect(computeBinaryRevealOpacity(true, [0.5, 0.5], 0.5, false)).toBe(0.85);
+      expect(computeBinaryRevealOpacity(true, [0.5, 0.5], 0.7, false)).toBe(0.85);
+    });
+    it("returns 0 before the boundary, never NaN", () => {
+      const v = computeBinaryRevealOpacity(true, [0.5, 0.5], 0.3, false);
+      expect(v).toBe(0);
+      expect(Number.isNaN(v)).toBe(false);
+    });
+  });
+
   // ── ending chapter: revealBinary=true, fadeIn=[0.4, 0.6] ──────────────────
 
   describe("ending chapter: fadeIn=[0.4, 0.6]", () => {
