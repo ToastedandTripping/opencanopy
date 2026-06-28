@@ -14,9 +14,8 @@
  * extent is correct by design — MapLibre stretches both to the viewport independently.
  * An equality assertion would produce a permanently failing or misleading test.
  *
- * GUARD: The committed forest-base.png is the OLD 1024×501 until MARVIN runs
- * the full-data regen with `--dataset forest-base --width 2048`.  Until then
- * this test is expected to fail.  After regen: remove the `it.fails` wrapper.
+ * The committed forest-base.png is the full-data 2048×1003 regen output
+ * (`build-year-overlays.py --dataset forest-base --width 2048`, Phase 1b).
  */
 
 import { describe, it, expect } from "vitest";
@@ -91,10 +90,10 @@ const BASE_PATH = resolve(RASTER_DIR, "forest-base.png");
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("forest-base.png registration invariant", () => {
-  // Expected to fail until MARVIN runs the full-data regen (`--dataset forest-base --width 2048`).
-  // The committed file is the old 1024×501 blob. After regen: remove `it.fails`.
-  it.fails(
-    `[PRE-REGEN] forest-base.png is exactly ${EXPECTED_WIDTH}×${EXPECTED_HEIGHT} after regen`,
+  // Regen landed (Phase 1b): forest-base.png is the full-data 2048×1003 output of
+  // `build-year-overlays.py --dataset forest-base --width 2048`.
+  it(
+    `forest-base.png is exactly ${EXPECTED_WIDTH}×${EXPECTED_HEIGHT}`,
     () => {
       expect(existsSync(BASE_PATH), `forest-base.png not found at ${BASE_PATH}`).toBe(true);
       const { width, height } = readPngDimensions(BASE_PATH);
