@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CHAPTERS, type ChapterCamera } from "@/data/chapters";
-import { normalizeAngle, interpolateCamera } from "@/lib/math/interpolation";
+import { normalizeAngle, interpolateCamera, easeInOut } from "@/lib/math/interpolation";
 import { yearFromProgress, type ScrubTable } from "@/lib/story/scrub";
 import cutblocksScrub from "@/data/scrub/cutblocks-scrub.json";
 import fireScrub from "@/data/scrub/fire-scrub.json";
@@ -56,11 +56,23 @@ export function useScrollytelling() {
 
       const reducedMotion = prefersReducedMotion();
 
-      // Only interpolate toward next chapter in the last 20% of scroll
+      // Intra-chapter dolly: when a chapter declares `cameraTo`, scrub
+      // chapter.camera → chapter.cameraTo across the chapter's own progress,
+      // eased and completing at DOLLY_END so the camera settles before the CTA.
+      // Under prefers-reduced-motion, snap straight to the destination (t=1).
+      // This takes priority over the toward-next interpolation so chapters with
+      // `cameraTo` are not subject to the end-of-chapter camera jump.
+      //
+      // For chapters WITHOUT `cameraTo`: only interpolate toward the next chapter
+      // in the last 20% of scroll (the existing toward-next dolly behavior).
+      const DOLLY_END = 0.8;
       const nextChapter = CHAPTERS[chapterIdx + 1];
       let camera: ChapterCamera;
 
-      if (nextChapter && prog > 0.8) {
+      if (chapter.cameraTo) {
+        const t = reducedMotion ? 1 : easeInOut(clamp01(prog / DOLLY_END));
+        camera = interpolateCamera(chapter.camera, chapter.cameraTo, t);
+      } else if (nextChapter && prog > 0.8) {
         const t = reducedMotion ? 1 : (prog - 0.8) / 0.2;
         camera = interpolateCamera(chapter.camera, nextChapter.camera, t);
       } else {

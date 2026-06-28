@@ -91,6 +91,14 @@ export interface Chapter {
   /** Scroll spacer height in vh units */
   scrollHeight: number;
   /**
+   * When set, useScrollytelling scrubs `camera → cameraTo` across the chapter's
+   * own scroll progress (eased, finishing at DOLLY_END=0.8 so it settles before
+   * the CTA). The toward-next interpolation does NOT apply to chapters with this
+   * field. Set on `remains` so the dolly is spread over the chapter's 800vh rather
+   * than crammed into the last 20% of `ending`.
+   */
+  cameraTo?: ChapterCamera;
+  /**
    * When true, applyLayerVisibility shows the binary end-reveal raster
    * (story-binary-reveal at 0.85) and hides the forest-base (binary carries
    * old-growth color now). Set on the `ending` and `remains` chapters.
@@ -100,7 +108,7 @@ export interface Chapter {
 }
 
 /** The accumulation sequence is flat, top-down, province-scale throughout. */
-const FLAT_BC_CAMERA: ChapterCamera = {
+export const FLAT_BC_CAMERA: ChapterCamera = {
   center: [-125.5, 54.0],
   zoom: 5,
   pitch: 0,
@@ -199,9 +207,9 @@ export const CHAPTERS: Chapter[] = [
     // FTEN/fire overlays fade out; binary raster fades in showing only
     // old-growth (dark green) vs everything else (red). The map goes almost
     // entirely red — 35,000 ha of large old-growth out of 1.1M ha total.
-    // scrollHeight bumped 300→600 to give the dolly-toward-remains time to run:
-    // updateCamera interpolates ending.camera → remains.camera over the last
-    // 20% of this chapter's scroll (~120vh at 600vh total).
+    // Shortened to 300vh so the red reveal and the explanatory panel land
+    // together. The dolly now lives in `remains` as an intra-chapter cameraTo
+    // scrub, not here.
     id: "ending",
     heading: "35,000 hectares.",
     subheading: "That's what remains of BC's large old-growth trees. 0.3% of the province's forest.",
@@ -215,19 +223,22 @@ export const CHAPTERS: Chapter[] = [
       { source: "fire", mode: "static", staticYear: 2025, opacity: 0 },
     ],
     revealBinary: true,
-    scrollHeight: 600,
+    scrollHeight: 300,
   },
   {
-    // Final resting point after the dolly. The camera has arrived at
-    // STORY_END_CAMERA (the old-growth pocket). The panel holds the closing
-    // line; the binary layer stays on (revealBinary). Scrolling past this
-    // chapter reveals the CTA section.
+    // Intra-chapter dolly: starts at province scale (FLAT_BC_CAMERA, same as
+    // `ending`) and eases into the Vancouver Island old-growth pocket
+    // (STORY_END_CAMERA) over the chapter's 800vh. The camera scrub is driven
+    // by `cameraTo` in updateCamera (eased, completing at DOLLY_END=0.8) so it
+    // settles at the pocket well before the user reaches the CTA. The binary
+    // layer stays on (revealBinary). Scrolling past reveals the CTA section.
     id: "remains",
-    heading: "This is what's left.", // George: finalize copy
-    camera: STORY_END_CAMERA,
+    heading: "This is what's left.",
+    camera: FLAT_BC_CAMERA,
+    cameraTo: STORY_END_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.25 }],
     revealBinary: true,
-    scrollHeight: 150,
+    scrollHeight: 800,
   },
 ];

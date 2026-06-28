@@ -13,20 +13,16 @@ export function CtaSection() {
     <>
       <section className="relative z-10 bg-[var(--color-surface-0)] py-24 md:py-32">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          {/* George: finalize heading. Direction: forward-looking, acknowledge the surviving pocket,
-              invite exploration. One clause, no question marks, no em dashes. ~8 words max. */}
           <h2
             className="text-3xl md:text-4xl font-semibold text-white tracking-normal"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Every dataset on this map is public.
+            Now find your own corner of it.
           </h2>
-          {/* George: finalize sub-text. Direction: one line about what the interactive map offers
-              (pan, zoom, polygon-level exploration). Shorter than current. Not a second sentence. */}
           <p
             className="mt-4 text-lg text-[var(--color-text-muted)]"
           >
-            Nobody had assembled them before.
+            Your watershed, your valley, the old growth you&apos;ve driven past. It&apos;s all in here.
           </p>
 
           {/* Primary CTA: "Explore the Map" — label locked per plan (B6 / Lee).

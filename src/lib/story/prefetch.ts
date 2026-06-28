@@ -6,7 +6,7 @@
  * as the user scrolls.
  */
 
-import { CHAPTERS, STORY_END_CAMERA } from "@/data/chapters";
+import { CHAPTERS } from "@/data/chapters";
 import {
   YEAR_OVERLAY_URL_PATTERN,
   YEAR_OVERLAY_RANGE,
@@ -153,19 +153,26 @@ export function prefetchBinaryTiles(): void {
     }
   }
 
-  // Pocket zoom: STORY_END_CAMERA viewport (z7-z8) — the dolly landing spot
-  const [pocketLon, pocketLat] = STORY_END_CAMERA.center;
-  for (const z of [7, 8]) {
-    const tiles = viewportTiles(pocketLon, pocketLat, z, 2);
-    for (const { z: tz, x, y } of tiles) {
-      const key = `b:${tz}/${x}/${y}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      urls.push(
-        BINARY_RASTER_URL.replace("{z}", String(tz))
-          .replace("{x}", String(x))
-          .replace("{y}", String(y))
-      );
+  // For any chapter with a cameraTo dolly, warm the destination viewport at
+  // z6, z7, and z8 so tiles are cached for every step of the zoom path.
+  // z6 covers the mid-dolly intermediate; z7-z8 cover the landing pocket.
+  // The province start (z5/z6 above) already covers the dolly entry.
+  // Idempotent: seen-set deduplicates any overlap with the province block.
+  for (const chapter of CHAPTERS) {
+    if (!chapter.cameraTo) continue;
+    const [lon, lat] = chapter.cameraTo.center;
+    for (const z of [6, 7, 8]) {
+      const tiles = viewportTiles(lon, lat, z, 2);
+      for (const { z: tz, x, y } of tiles) {
+        const key = `b:${tz}/${x}/${y}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        urls.push(
+          BINARY_RASTER_URL.replace("{z}", String(tz))
+            .replace("{x}", String(x))
+            .replace("{y}", String(y))
+        );
+      }
     }
   }
 
