@@ -421,4 +421,90 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
       expect(PALETTE["harvested"]).toBe("#ef4444");
     });
   });
+
+  // ── Part 5: Binary end-reveal theme colors (Jen visual spec guard) ───────────
+  //
+  // The binary theme (#0d5c2a old-growth / #ef4444 everything-else) is eyeball-gate
+  // locked per the Jen visual spec (Phase 1b). These assertions prevent silent drift
+  // if someone edits the binary dict in build-raster-tiles.py. They must match the
+  // exact RGB values in the spec: old-growth luminance 0.095, red luminance 0.244.
+  //
+  // Pixel alpha is 255 (fully opaque); the 0.85 visual opacity is the MapLibre
+  // raster-opacity set in setup-layers.ts — do not assert alpha == 217 here.
+
+  describe("binary theme colors locked to Jen visual spec (Part 5)", () => {
+    // Binary old-growth: #0d5c2a → R=13, G=92, B=42
+    const BINARY_OLD_GROWTH_HEX = "#0d5c2a";
+    // Binary red (everything else): #ef4444 → R=239, G=68, B=68
+    const BINARY_RED_HEX = "#ef4444";
+
+    it("binary old-growth hex matches Jen spec (#0d5c2a)", () => {
+      // SSOT guard: if the spec is updated, update both the test and the script.
+      const { r, g, b } = parseHex(BINARY_OLD_GROWTH_HEX);
+      expect(r).toBe(13);
+      expect(g).toBe(92);
+      expect(b).toBe(42);
+    });
+
+    it("binary red hex matches Jen spec (#ef4444)", () => {
+      const { r, g, b } = parseHex(BINARY_RED_HEX);
+      expect(r).toBe(239);
+      expect(g).toBe(68);
+      expect(b).toBe(68);
+    });
+
+    it.skipIf(!python3Available)(
+      "--dump-themes: binary theme exists",
+      () => {
+        expect(dumpedThemes).not.toBeNull();
+        expect(Object.keys(dumpedThemes!)).toContain("binary");
+      }
+    );
+
+    it.skipIf(!python3Available)(
+      "--dump-themes: binary old-growth is #0d5c2a at alpha 255",
+      () => {
+        expect(dumpedThemes).not.toBeNull();
+        const theme = dumpedThemes!["binary"];
+        expect(theme).toBeDefined();
+        const og = theme["old-growth"];
+        expect(og).toBeDefined();
+        expect(og[0], "R").toBe(13);   // #0d
+        expect(og[1], "G").toBe(92);   // #5c
+        expect(og[2], "B").toBe(42);   // #2a
+        expect(og[3], "alpha").toBe(255);
+      }
+    );
+
+    it.skipIf(!python3Available)(
+      "--dump-themes: binary harvested is #ef4444 at alpha 255",
+      () => {
+        expect(dumpedThemes).not.toBeNull();
+        const theme = dumpedThemes!["binary"];
+        expect(theme).toBeDefined();
+        const harvested = theme["harvested"];
+        expect(harvested).toBeDefined();
+        expect(harvested[0], "R").toBe(239);  // #ef
+        expect(harvested[1], "G").toBe(68);   // #44
+        expect(harvested[2], "B").toBe(68);   // #44
+        expect(harvested[3], "alpha").toBe(255);
+      }
+    );
+
+    it.skipIf(!python3Available)(
+      "--dump-themes: binary mature and young are also #ef4444 at alpha 255",
+      () => {
+        expect(dumpedThemes).not.toBeNull();
+        const theme = dumpedThemes!["binary"];
+        for (const cls of ["mature", "young"] as const) {
+          const rgba = theme[cls];
+          expect(rgba, `${cls} must be defined`).toBeDefined();
+          expect(rgba[0], `${cls} R`).toBe(239);
+          expect(rgba[1], `${cls} G`).toBe(68);
+          expect(rgba[2], `${cls} B`).toBe(68);
+          expect(rgba[3], `${cls} alpha`).toBe(255);
+        }
+      }
+    );
+  });
 });

@@ -6,14 +6,14 @@
  * as the user scrolls.
  */
 
-import { CHAPTERS } from "@/data/chapters";
+import { CHAPTERS, STORY_END_CAMERA } from "@/data/chapters";
 import {
   YEAR_OVERLAY_URL_PATTERN,
   YEAR_OVERLAY_RANGE,
   FIRE_OVERLAY_URL_PATTERN,
   FIRE_OVERLAY_RANGE,
 } from "@/lib/story/setup-layers";
-import { FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
+import { FOREST_AGE_RASTER_URL, BINARY_RASTER_URL } from "@/lib/r2-config";
 
 const RASTER_URL_TEMPLATE = FOREST_AGE_RASTER_URL;
 
@@ -115,6 +115,78 @@ export function prefetchStoryTiles(): void {
   }
 
   loadBatch();
+}
+
+let binaryPrefetchStarted = false;
+
+/**
+ * Prefetch binary end-reveal raster tiles for the ending + remains chapters.
+ *
+ * Warms two viewports:
+ *   1. Province scale (z5-z6) — the ending chapter entry view
+ *   2. Old-growth pocket (z7-z8) — STORY_END_CAMERA, the dolly destination
+ *
+ * Called from StoryMap.onLoad so tiles are in the browser cache well before
+ * the user scrolls into the ending chapter.
+ * Idempotent: safe to call multiple times.
+ */
+export function prefetchBinaryTiles(): void {
+  if (binaryPrefetchStarted || typeof Image === "undefined") return;
+  binaryPrefetchStarted = true;
+
+  const seen = new Set<string>();
+  const urls: string[] = [];
+
+  // Province scale for the ending chapter entry (centered on BC)
+  const [provinceLon, provinceLat] = [-125.5, 54.0];
+  for (const z of [5, 6]) {
+    const tiles = viewportTiles(provinceLon, provinceLat, z, 2);
+    for (const { z: tz, x, y } of tiles) {
+      const key = `b:${tz}/${x}/${y}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      urls.push(
+        BINARY_RASTER_URL.replace("{z}", String(tz))
+          .replace("{x}", String(x))
+          .replace("{y}", String(y))
+      );
+    }
+  }
+
+  // Pocket zoom: STORY_END_CAMERA viewport (z7-z8) — the dolly landing spot
+  const [pocketLon, pocketLat] = STORY_END_CAMERA.center;
+  for (const z of [7, 8]) {
+    const tiles = viewportTiles(pocketLon, pocketLat, z, 2);
+    for (const { z: tz, x, y } of tiles) {
+      const key = `b:${tz}/${x}/${y}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      urls.push(
+        BINARY_RASTER_URL.replace("{z}", String(tz))
+          .replace("{x}", String(x))
+          .replace("{y}", String(y))
+      );
+    }
+  }
+
+  let idx = 0;
+  const BATCH_SIZE = 6;
+
+  function loadBatch() {
+    const end = Math.min(idx + BATCH_SIZE, urls.length);
+    for (; idx < end; idx++) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = urls[idx];
+    }
+    if (idx < urls.length) {
+      setTimeout(loadBatch, 100);
+    }
+  }
+
+  // Defer behind the story + year-overlay prefetch so they get bandwidth first.
+  // The binary reveal is the last beat in the story; a 1s head-start is plenty.
+  setTimeout(loadBatch, 1000);
 }
 
 let terrainPrefetchStarted = false;

@@ -15,8 +15,8 @@ vector tile approach that crashes Chrome at province scale.
 Usage:
   python3 scripts/build-raster-tiles.py [options]
 
-  --theme THEME     One of: forest-age, old-growth, mature, young, harvested,
-                    conservation-gap, all  (default: forest-age)
+  --theme THEME     One of: forest-age, binary, old-growth, mature, young,
+                    harvested, conservation-gap, all  (default: forest-age)
   --input PATH      NDJSON input file (default: data/checkpoint/preprocessed/forest-age.ndjson
                     relative to the repo root)
   --output-dir DIR  Tile output directory (default: data/raster-tiles relative to repo root)
@@ -111,6 +111,22 @@ def build_themes(palette: dict) -> dict:
             "mature":     hex_to_rgba(palette["mature"],     OVERVIEW_ALPHA),
             "young":      hex_to_rgba(palette["young"],      OVERVIEW_ALPHA),
             "harvested":  hex_to_rgba(palette["harvested"],  OVERVIEW_ALPHA),
+            "background": (0, 0, 0, 0),
+        },
+        # Binary end-reveal: old-growth = dark green (#0d5c2a), everything else = red (#ef4444).
+        # Tile pixels are fully opaque (alpha=255); the 0.85 visual opacity is the MapLibre
+        # raster-opacity set in setup-layers.ts — do not bake it into the pixel alpha.
+        # Colors are eyeball-gate locked per the Jen visual spec (Phase 1b):
+        #   old-growth luminance 0.095 / red luminance 0.244 → ~2:1 ratio, max
+        #   deuteranopia separation within a green-vs-red palette at raster patch scale.
+        # Do NOT adjust these values without triggering the Jen Stage 3 gate again.
+        "binary": {
+            "old-growth":           (0x0d, 0x5c, 0x2a, 255),  # #0d5c2a dark green
+            "old-growth-protected": (0x0d, 0x5c, 0x2a, 255),  # #0d5c2a dark green
+            "old-growth-unprotected":(0x0d, 0x5c, 0x2a, 255), # #0d5c2a dark green
+            "mature":               (0xef, 0x44, 0x44, 255),  # #ef4444 red
+            "young":                (0xef, 0x44, 0x44, 255),  # #ef4444 red
+            "harvested":            (0xef, 0x44, 0x44, 255),  # #ef4444 red
             "background": (0, 0, 0, 0),
         },
         "conservation-gap": {
@@ -215,8 +231,15 @@ def load_protection_polygons(parks_path: Path, ogma_path: Path) -> list:
 
 # ── Rasterization ────────────────────────────────────────────────
 
-def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_SIZE) -> "np.ndarray":
-    """Rasterize features into an RGBA numpy array for a single tile."""
+def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_SIZE, all_touched: bool = True) -> "np.ndarray":
+    """Rasterize features into an RGBA numpy array for a single tile.
+
+    all_touched: when True (default), any pixel touched by a polygon edge is filled —
+    shows disturbance *reach* at province scale (honest for a forest-loss map).
+    Pass False for the binary theme (or experimental use) to see center-of-pixel coverage.
+    Controlled via --no-all-touched CLI flag; the decision belongs to the operator
+    running the pipeline, not to this function.
+    """
     import numpy as np
     from collections import defaultdict
     from rasterio.transform import from_bounds
@@ -251,7 +274,7 @@ def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_
                 transform=transform,
                 fill=0,
                 dtype=np.uint8,
-                all_touched=True,
+                all_touched=all_touched,
             )
             # Apply color where mask is 1
             for band in range(4):
@@ -304,7 +327,7 @@ def write_tile_png(rgba: "np.ndarray", path: Path):
 # ── Main pipeline ────────────────────────────────────────────────
 
 def build_theme(theme_name: str, themes: dict, features: list, output_dir: Path,
-                zoom_range: range = range(4, 10)):
+                zoom_range: range = range(4, 10), all_touched: bool = True):
     """Build all PNG tiles for a theme across zoom levels."""
     import time
     theme = themes[theme_name]
@@ -339,7 +362,7 @@ def build_theme(theme_name: str, themes: dict, features: list, output_dir: Path,
                     continue
 
                 # Rasterize
-                rgba = rasterize_tile(tile_features, theme, bounds)
+                rgba = rasterize_tile(tile_features, theme, bounds, all_touched=all_touched)
 
                 # Skip empty tiles (all transparent)
                 if rgba[3].max() == 0:
@@ -367,8 +390,22 @@ def main():
         "--theme",
         default="forest-age",
         help=(
-            "Theme to build: forest-age, old-growth, mature, young, harvested, "
+            "Theme to build: forest-age, binary, old-growth, mature, young, harvested, "
             "conservation-gap, or all (default: forest-age)"
+        ),
+    )
+    parser.add_argument(
+        "--no-all-touched",
+        dest="all_touched",
+        action="store_false",
+        default=True,
+        help=(
+            "Disable rasterio all_touched=True for this run. Default is all_touched=True "
+            "(any pixel touched by a polygon edge is filled — shows disturbance reach). "
+            "Useful for eyeball-gate comparison: run once with and once without to judge "
+            "whether edge-touched pixels misrepresent the forest/harvested boundary. "
+            "The binary theme requires a deliberate operator decision — use this flag "
+            "for that per-run gate."
         ),
     )
     parser.add_argument(
@@ -461,6 +498,7 @@ def main():
     print(f"  Output dir:     {args.output_dir}")
     print(f"  Zoom range:     z{args.zoom_start}-z{args.zoom_end}")
     print(f"  Theme:          {args.theme}")
+    print(f"  all_touched:    {args.all_touched}  (use --no-all-touched to toggle)")
     print()
 
     # Load forest-age features
@@ -472,9 +510,9 @@ def main():
             if name == "conservation-gap":
                 print("\n  (conservation-gap requires spatial intersection -- skipping for now)")
                 continue
-            build_theme(name, themes, features, args.output_dir, zoom_range)
+            build_theme(name, themes, features, args.output_dir, zoom_range, all_touched=args.all_touched)
     else:
-        build_theme(args.theme, themes, features, args.output_dir, zoom_range)
+        build_theme(args.theme, themes, features, args.output_dir, zoom_range, all_touched=args.all_touched)
 
     print("\n=== Done ===")
 

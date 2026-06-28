@@ -41,8 +41,8 @@ export interface ChapterTimelineScrub {
 export type OverlayImageMode = "scrubbed" | "static";
 
 export interface ChapterOverlay {
-  /** Image source: cutblock red, wildfire amber, or VRI full-picture. */
-  source: "cutblocks" | "fire" | "vri-logged";
+  /** Image source: cutblock red or wildfire amber. */
+  source: "cutblocks" | "fire";
   /** scrubbed = image follows the scrub year; static = fixed staticYear. */
   mode: OverlayImageMode;
   /** Required when mode==="static" (e.g. baseline=range.start, scars=range.end). */
@@ -90,6 +90,13 @@ export interface Chapter {
   bearingDrift?: number;
   /** Scroll spacer height in vh units */
   scrollHeight: number;
+  /**
+   * When true, applyLayerVisibility shows the binary end-reveal raster
+   * (story-binary-reveal at 0.85) and hides the forest-base (binary carries
+   * old-growth color now). Set on the `ending` and `remains` chapters.
+   * Replaces the former fragile isEnding opacity-sniff heuristic.
+   */
+  revealBinary?: boolean;
 }
 
 /** The accumulation sequence is flat, top-down, province-scale throughout. */
@@ -102,10 +109,30 @@ const FLAT_BC_CAMERA: ChapterCamera = {
 
 const NO_TERRAIN: ChapterTerrain = { enabled: false, exaggeration: 0 };
 
+/**
+ * Final camera for the story's "remains" chapter — the old-growth pocket
+ * that the ending dolly zooms into.
+ *
+ * TBD: center and zoom are PLACEHOLDERS. Finalized by eyeball after the binary
+ * raster tiles are built and uploaded to R2. The orchestrator adjusts this
+ * constant before deploying; everything else (CTA hash, prefetch, remains
+ * chapter camera) derives from here automatically as the SSOT.
+ *
+ * When updating: set center = [lng, lat] of the most legible surviving
+ * old-growth pocket at z8.5 on the binary tiles (green island surrounded by red).
+ */
+export const STORY_END_CAMERA: ChapterCamera = {
+  // TBD: finalized by eyeball after binary tiles are built
+  center: [-125.7, 51.3],
+  zoom: 8.5,
+  pitch: 0,
+  bearing: 0,
+};
+
 export const CHAPTERS: Chapter[] = [
   {
     id: "overview",
-    heading: "See what’s left.",
+    heading: "See what's left.",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.6 }],
@@ -168,12 +195,15 @@ export const CHAPTERS: Chapter[] = [
     scrollHeight: 300,
   },
   {
-    // FTEN/fire overlays fade out; VRI-logged overlay fades in, showing
-    // everything the vegetation survey classified as non-old-growth. The map
-    // goes almost entirely red — the gap between permit records and reality.
+    // FTEN/fire overlays fade out; binary raster fades in showing only
+    // old-growth (dark green) vs everything else (red). The map goes almost
+    // entirely red — 35,000 ha of large old-growth out of 1.1M ha total.
+    // scrollHeight bumped 300→600 to give the dolly-toward-remains time to run:
+    // updateCamera interpolates ending.camera → remains.camera over the last
+    // 20% of this chapter's scroll (~120vh at 600vh total).
     id: "ending",
     heading: "35,000 hectares.",
-    subheading: "That’s what remains of BC’s large old-growth trees. 0.3% of the province’s forest.",
+    subheading: "That's what remains of BC's large old-growth trees. 0.3% of the province's forest.",
     body: "What you just watched was only the permit record. The full picture is worse.",
     citation: "Price, Holt & Daust, 2020",
     camera: FLAT_BC_CAMERA,
@@ -182,8 +212,21 @@ export const CHAPTERS: Chapter[] = [
     overlays: [
       { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0 },
       { source: "fire", mode: "static", staticYear: 2025, opacity: 0 },
-      { source: "vri-logged", mode: "static", staticYear: 0, opacity: 0.85 },
     ],
-    scrollHeight: 300,
+    revealBinary: true,
+    scrollHeight: 600,
+  },
+  {
+    // Final resting point after the dolly. The camera has arrived at
+    // STORY_END_CAMERA (the old-growth pocket). The panel holds the closing
+    // line; the binary layer stays on (revealBinary). Scrolling past this
+    // chapter reveals the CTA section.
+    id: "remains",
+    heading: "This is what's left.", // George: finalize copy
+    camera: STORY_END_CAMERA,
+    terrain: NO_TERRAIN,
+    layers: [{ id: "forest-age", opacity: 0.25 }],
+    revealBinary: true,
+    scrollHeight: 150,
   },
 ];

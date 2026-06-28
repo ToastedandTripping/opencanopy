@@ -189,7 +189,7 @@ describe("visibility lifecycle", () => {
         "fill-color"
       );
       expect(Array.isArray(color)).toBe(true);
-      expect(color[0]).toBe("interpolate");
+      expect((color as unknown[])[0]).toBe("interpolate");
     });
 
     it("timeline effect sets year filter on cutblocks", () => {
@@ -471,6 +471,65 @@ describe("visibility lifecycle", () => {
       expect(
         map.getPaintProperty("story-fire-history-fill", "fill-opacity")
       ).toBe(0);
+    });
+  });
+
+  // ── Binary end-reveal (ending + remains chapters) ──────────────
+
+  describe("revealBinary flag: ending and remains chapters", () => {
+    it("revealBinary=true shows story-binary-reveal at 0.85", () => {
+      simulateOnLoad();
+
+      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.7 }];
+      applyLayerVisibility(map, layers, false, null, /* revealBinary */ true);
+
+      expect(map.getPaintProperty("story-binary-reveal", "raster-opacity")).toBe(0.85);
+    });
+
+    it("revealBinary=true hides story-forest-base (green base)", () => {
+      simulateOnLoad();
+
+      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.7 }];
+      applyLayerVisibility(map, layers, false, null, /* revealBinary */ true);
+
+      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0);
+    });
+
+    it("revealBinary=true keeps story-forest-age-raster at 0", () => {
+      simulateOnLoad();
+
+      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.7 }];
+      applyLayerVisibility(map, layers, false, null, /* revealBinary */ true);
+
+      expect(map.getPaintProperty("story-forest-age-raster", "raster-opacity")).toBe(0);
+    });
+
+    it("revealBinary=false (default) hides story-binary-reveal", () => {
+      simulateOnLoad();
+
+      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.7 }];
+      applyLayerVisibility(map, layers, false, null, /* revealBinary */ false);
+
+      expect(map.getPaintProperty("story-binary-reveal", "raster-opacity")).toBe(0);
+    });
+
+    it("revealBinary=false restores story-forest-base when forest-age is active", () => {
+      simulateOnLoad();
+
+      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.7 }];
+      applyLayerVisibility(map, layers, false, null, /* revealBinary */ false);
+
+      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
+    });
+
+    it("revealBinary=undefined (omitted) behaves like false", () => {
+      simulateOnLoad();
+
+      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.7 }];
+      applyLayerVisibility(map, layers, false, null);
+
+      expect(map.getPaintProperty("story-binary-reveal", "raster-opacity")).toBe(0);
+      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
     });
   });
 

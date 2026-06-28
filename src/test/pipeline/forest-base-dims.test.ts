@@ -1,25 +1,22 @@
 /**
  * Registration-invariant dimension test for forest-base.png.
  *
- * Asserts that the committed forest-base.png is exactly 2048×1003 AND that
- * its dimensions match a reference year-overlay frame (1950.png), so the
- * static base and the per-year cutblock overlays share the same pixel grid
- * and will align correctly on the map.
- *
- * Both assertions are derived from ONE source of truth — the formula:
+ * Asserts that the committed forest-base.png is exactly 2048×1003.
+ * The assertion derives from ONE source of truth — the formula:
  *   width  = TARGET_WIDTH               (2048)
  *   height = int(width * (north - south) / (east - west))   (1003)
- * matching build-year-overlays.py:231 exactly.  This prevents the "both sides
- * drift the same way" failure mode — if the formula changes, update TARGET_WIDTH
- * here and the test will catch any stale output on the next regen.
+ * matching build-year-overlays.py:231 exactly.  This prevents formula drift —
+ * if TARGET_WIDTH changes, update it here and the test will catch any stale output.
+ *
+ * NOTE: the former "forest-base and 1950.png share the same pixel grid" test was
+ * DROPPED (Phase 1b). The year overlays (cutblocks, fire) stay at 1024×501 permanently;
+ * forest-base will be 2048×1003 after regen. Different resolutions over the same BC
+ * extent is correct by design — MapLibre stretches both to the viewport independently.
+ * An equality assertion would produce a permanently failing or misleading test.
  *
  * GUARD: The committed forest-base.png is the OLD 1024×501 until MARVIN runs
  * the full-data regen with `--dataset forest-base --width 2048`.  Until then
- * these tests are expected to fail.  They are marked with `it.fails` so the
- * suite stays green pre-regen and immediately goes red once the PNG is replaced
- * with the correct dimensions.
- *
- * After regen: remove the `it.fails` wrappers and confirm both tests pass.
+ * this test is expected to fail.  After regen: remove the `it.fails` wrapper.
  */
 
 import { describe, it, expect } from "vitest";
@@ -90,14 +87,12 @@ function readPngDimensions(filePath: string): { width: number; height: number } 
 
 const RASTER_DIR = resolve(__dirname, "../../../public/raster/cutblocks-by-year");
 const BASE_PATH = resolve(RASTER_DIR, "forest-base.png");
-const REF_OVERLAY_PATH = resolve(RASTER_DIR, "1950.png");
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("forest-base.png registration invariant", () => {
-  // Both tests are expected to fail until MARVIN runs the full-data regen.
-  // The committed file is the old 1024×501 blob.  After regen, remove it.fails.
-
+  // Expected to fail until MARVIN runs the full-data regen (`--dataset forest-base --width 2048`).
+  // The committed file is the old 1024×501 blob. After regen: remove `it.fails`.
   it.fails(
     `[PRE-REGEN] forest-base.png is exactly ${EXPECTED_WIDTH}×${EXPECTED_HEIGHT} after regen`,
     () => {
@@ -108,35 +103,8 @@ describe("forest-base.png registration invariant", () => {
     }
   );
 
-  it.fails(
-    "[PRE-REGEN] forest-base.png and 1950.png share the same pixel grid after regen",
-    () => {
-      // Both files must exist
-      expect(existsSync(BASE_PATH), `forest-base.png not found at ${BASE_PATH}`).toBe(true);
-      expect(
-        existsSync(REF_OVERLAY_PATH),
-        `reference overlay 1950.png not found at ${REF_OVERLAY_PATH}`
-      ).toBe(true);
-
-      // Derive the expected dims from ONE place so they cannot drift independently.
-      // If this expression ever changes in the script, update TARGET_WIDTH above.
-      const baseDims = readPngDimensions(BASE_PATH);
-      const refDims = readPngDimensions(REF_OVERLAY_PATH);
-
-      // The base must match the expected target dims explicitly (not just equal
-      // the overlay — if both happen to be the old 1024×501, that would pass
-      // while misregistered).
-      expect(baseDims.width).toBe(EXPECTED_WIDTH);
-      expect(baseDims.height).toBe(EXPECTED_HEIGHT);
-
-      // The reference overlay must ALSO match.  If the overlays were rebuilt at
-      // a different width than TARGET_WIDTH, this will fail loudly.
-      expect(refDims.width).toBe(EXPECTED_WIDTH);
-      expect(refDims.height).toBe(EXPECTED_HEIGHT);
-
-      // Belt-and-suspenders: both match each other.
-      expect(baseDims.width).toBe(refDims.width);
-      expect(baseDims.height).toBe(refDims.height);
-    }
-  );
+  // NOTE: The former "forest-base and 1950.png share the same pixel grid" test was dropped.
+  // Year overlays stay at 1024×501 permanently; forest-base will be 2048×1003 after regen.
+  // Different resolutions over the same BC extent is correct by design.
+  // See module docblock for full rationale.
 });

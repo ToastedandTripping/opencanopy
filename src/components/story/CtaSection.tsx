@@ -1,38 +1,52 @@
 "use client";
 
+import { STORY_END_CAMERA } from "@/data/chapters";
+import { buildMapHash } from "@/lib/story/map-hash";
 import { Footer } from "@/components/landing/Footer";
 
 export function CtaSection() {
+  // Build the continuity hash: opens /map at the old-growth pocket with forest-age on.
+  // STORY_END_CAMERA is the eyeball-gated destination; buildMapHash matches useMapState.parseHash format.
+  const mapHref = `/map#${buildMapHash(STORY_END_CAMERA)}`;
+
   return (
     <>
       <section className="relative z-10 bg-[var(--color-surface-0)] py-24 md:py-32">
         <div className="max-w-3xl mx-auto px-6 text-center">
+          {/* George: finalize heading. Direction: forward-looking, acknowledge the surviving pocket,
+              invite exploration. One clause, no question marks, no em dashes. ~8 words max. */}
           <h2
             className="text-3xl md:text-4xl font-semibold text-white tracking-normal"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Every dataset on this map is public.
           </h2>
-          <p className="mt-4 text-lg text-zinc-400">
+          {/* George: finalize sub-text. Direction: one line about what the interactive map offers
+              (pan, zoom, polygon-level exploration). Shorter than current. Not a second sentence. */}
+          <p
+            className="mt-4 text-lg text-[var(--color-text-muted)]"
+          >
             Nobody had assembled them before.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          {/* Primary CTA: "Explore the Map" — label locked per plan (B6 / Lee).
+              GitHub link removed from button row; it appears inline in the provenance paragraph. */}
+          <div className="mt-10 flex items-center justify-center">
             <a
-              href="/map"
-              className="inline-flex items-center justify-center px-8 py-3 rounded-xl bg-[var(--color-accent)] text-black font-semibold text-sm hover:bg-[var(--color-accent-hover)] hover:-translate-y-px active:translate-y-0 transition-[background-color,transform] duration-150"
+              href={mapHref}
+              className="inline-flex items-center justify-center px-8 py-3 md:px-10 md:py-3.5 rounded-xl md:rounded-[14px] bg-[#34d399] text-black font-semibold text-sm md:text-[15px] hover:bg-[#6ee7b7] active:translate-y-0 md:hover:-translate-y-px transition-[background-color] md:transition-[background-color,transform] duration-150 ease-in-out"
             >
-              See It for Yourself
-            </a>
-            <a
-              href="https://github.com/ToastedandTripping/opencanopy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-500 hover:text-zinc-300 font-medium text-sm transition-colors"
-            >
-              View on GitHub
+              Explore the Map
             </a>
           </div>
+
+          {/* Divider: 1px rule between CTA group and provenance block.
+              Color: var(--color-surface-2) = #1a1a1f. Jen gates at Stage 3 whether
+              the rule is needed or the 48px gap alone reads as sufficient separation. */}
+          <hr
+            className="mt-12 w-full border-0 border-t"
+            style={{ borderColor: "var(--color-surface-2)" }}
+          />
 
           <div className="mt-16 max-w-xl mx-auto text-left">
             <h3
@@ -46,7 +60,7 @@ export function CtaSection() {
               <a href="https://catalogue.data.gov.bc.ca/" target="_blank" rel="noopener noreferrer" className="text-zinc-300 hover:text-white underline underline-offset-2 transition-colors">DataBC</a>.
               Forest age and old growth come from the{" "}
               <span className="text-zinc-300">Vegetation Resources Inventory (VRI)</span>,
-              the province{'’'}s official forest survey. Cutblock boundaries come from{" "}
+              the province&apos;s official forest survey. Cutblock boundaries come from{" "}
               <span className="text-zinc-300">Forest Tenure (FTEN)</span> records.
               Fire history is from the{" "}
               <span className="text-zinc-300">BC Wildfire Service</span>.
@@ -56,7 +70,7 @@ export function CtaSection() {
             </p>
             <p className="mt-3 text-sm text-zinc-500 leading-relaxed">
               Nothing is modelled, estimated, or editorially filtered. If the government
-              says a stand is 250 years old, that{'’'}s what the map shows. If it says
+              says a stand is 250 years old, that&apos;s what the map shows. If it says
               it was harvested, same. The{" "}
               <a href="https://github.com/ToastedandTripping/opencanopy" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-zinc-300 underline underline-offset-2 transition-colors">full pipeline</a>{" "}
               is open source.
