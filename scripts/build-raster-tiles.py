@@ -289,15 +289,30 @@ def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_
     return rgba
 
 
-def features_in_bounds(features: list, bounds: tuple) -> list:
+def features_in_bounds(features: list, bounds: tuple,
+                       tree=None, tree_items: list = None) -> list:
     """Filter features whose bounding box intersects the tile bounds (with buffer).
 
     Expects features as (geom, cls, bbox) 3-tuples from load_features.
     Returns (geom, cls) 2-tuples so rasterize_tile is unaffected.
+
+    When tree and tree_items are provided (built via _build_spatial_index), uses an
+    STRtree for O(log n + k) lookup.  STRtree.query(box) does an envelope-intersection
+    prefilter which is exactly the bbox overlap test below, so the two paths return
+    identical feature sets (order may differ; rasterize_tile groups by class so
+    intra-class order is irrelevant).
     """
     west, south, east, north = bounds
     buffer = max(east - west, north - south) * 0.3
     bwest, bsouth, beast, bnorth = west - buffer, south - buffer, east + buffer, north + buffer
+
+    if tree is not None and tree_items is not None:
+        from shapely.geometry import box as _box
+        query_box = _box(bwest, bsouth, beast, bnorth)
+        indices = tree.query(query_box)
+        return [tree_items[i] for i in indices]
+
+    # Linear fallback: used when no index is available (verify-index comparison path)
     result = []
     for geom, cls, bbox in features:
         minx, miny, maxx, maxy = bbox
@@ -305,6 +320,126 @@ def features_in_bounds(features: list, bounds: tuple) -> list:
         if maxx >= bwest and minx <= beast and maxy >= bsouth and miny <= bnorth:
             result.append((geom, cls))
     return result
+
+
+def _build_spatial_index(features: list):
+    """Build a shapely STRtree from pre-computed feature bboxes.
+
+    Call ONCE per process (not per tile or per theme) after load_features().
+
+    Returns (tree, items) where:
+      tree  -- STRtree whose i-th entry is box(minx,miny,maxx,maxy) for features[i]
+      items -- parallel list of (geom, cls) 2-tuples, same indexing as tree
+
+    Query: tree.query(box(*buffered_bounds)) returns numpy int indices; map them
+    through items to get the (geom, cls) pairs for that tile.
+    """
+    from shapely.geometry import box as _box
+    from shapely.strtree import STRtree
+
+    index_geoms = []
+    index_items = []
+    for geom, cls, (minx, miny, maxx, maxy) in features:
+        index_geoms.append(_box(minx, miny, maxx, maxy))
+        index_items.append((geom, cls))
+    tree = STRtree(index_geoms)
+    return tree, index_items
+
+
+def _verify_spatial_index() -> bool:
+    """Equivalence test: STRtree lookup must return the same feature set as the linear scan.
+
+    Runs on a synthetic set of 30 features with known bboxes and 8 tile bounds,
+    including edge cases (empty result, full-extent, buffer-boundary straddle).
+    Prints one PASS/FAIL line per test case.  Returns True if all cases match.
+
+    Shapely is required but rasterio/numpy are NOT (this path is safe to run
+    without the full tile-build environment).
+    """
+    import math
+
+    def _make_feature(minx, miny, maxx, maxy, cls):
+        # Geometry dict is opaque to this test; only the object identity matters.
+        geom = {"type": "Polygon", "coordinates": [
+            [[minx, miny], [maxx, miny], [maxx, maxy], [minx, maxy], [minx, miny]]
+        ]}
+        bbox = (minx, miny, maxx, maxy)
+        return (geom, cls, bbox)
+
+    # Synthetic BC-like features spread across [-140,-114] x [48,61]
+    synthetic = [
+        _make_feature(-125.0, 49.0, -124.0, 50.0, "old-growth"),
+        _make_feature(-124.5, 49.5, -123.5, 50.5, "mature"),
+        _make_feature(-123.0, 48.5, -122.0, 49.5, "young"),
+        _make_feature(-130.0, 52.0, -129.0, 53.0, "harvested"),
+        _make_feature(-120.0, 55.0, -119.0, 56.0, "old-growth"),
+        _make_feature(-128.0, 50.0, -126.0, 52.0, "mature"),
+        _make_feature(-135.0, 48.0, -134.0, 49.0, "young"),
+        _make_feature(-127.0, 54.0, -126.0, 55.0, "harvested"),
+        _make_feature(-122.0, 51.0, -121.0, 52.0, "old-growth"),
+        _make_feature(-138.0, 57.0, -137.0, 58.0, "mature"),
+        _make_feature(-116.0, 49.5, -115.0, 50.5, "young"),
+        _make_feature(-133.0, 60.0, -132.0, 61.0, "old-growth"),
+        _make_feature(-119.0, 53.0, -118.0, 54.0, "harvested"),
+        _make_feature(-126.5, 48.2, -125.5, 49.2, "mature"),
+        _make_feature(-121.5, 58.0, -120.5, 59.0, "young"),
+        _make_feature(-139.0, 49.5, -138.0, 50.5, "old-growth"),
+        _make_feature(-132.0, 53.5, -131.0, 54.5, "mature"),
+        _make_feature(-114.5, 56.0, -114.0, 57.0, "harvested"),
+        _make_feature(-129.5, 59.0, -128.5, 60.0, "young"),
+        _make_feature(-117.0, 51.0, -116.0, 52.0, "old-growth"),
+        # Tiny features (challenge for buffer arithmetic)
+        _make_feature(-125.001, 49.999, -125.000, 50.000, "harvested"),
+        _make_feature(-124.001, 50.499, -124.000, 50.500, "young"),
+        # Features that touch the BC edge
+        _make_feature(-139.4, 48.1, -139.0, 48.5, "mature"),
+        _make_feature(-114.1, 60.3, -114.0, 60.5, "old-growth"),
+        # Large spanning features
+        _make_feature(-135.0, 50.0, -115.0, 55.0, "mature"),
+        _make_feature(-138.0, 48.5, -130.0, 53.0, "harvested"),
+        _make_feature(-125.0, 57.0, -118.0, 60.5, "young"),
+        _make_feature(-122.0, 48.0, -114.5, 51.0, "old-growth"),
+        # Point-like (minx==maxx not physically valid but tests degenerate bbox)
+        _make_feature(-124.0, 50.0, -124.0, 50.0, "mature"),
+        _make_feature(-120.5, 54.5, -120.0, 55.0, "harvested"),
+    ]
+
+    tree, tree_items = _build_spatial_index(synthetic)
+
+    # Build a reverse map: id(geom) -> index in synthetic (for debug output)
+    geom_id_to_idx = {id(geom): i for i, (geom, cls, _) in enumerate(synthetic)}
+
+    test_bounds = [
+        # (label, (west, south, east, north))
+        ("overlapping cluster",  (-126.0, 49.0, -123.0, 51.0)),
+        ("northwest quadrant",   (-131.0, 51.0, -125.0, 53.5)),
+        ("single feature",       (-120.5, 54.8, -119.5, 56.2)),
+        ("global BC extent",     (-140.0, 47.0, -113.0, 62.0)),
+        ("empty (ocean)",        (-90.0,  40.0, -89.0,  41.0)),
+        ("tiny tile",            (-124.5, 49.8, -124.2, 50.1)),
+        ("buffer edge straddle", (-125.5, 48.8, -124.8, 49.3)),
+        ("spanning features",    (-130.0, 52.0, -120.0, 54.0)),
+    ]
+
+    all_pass = True
+    for label, bounds in test_bounds:
+        linear  = features_in_bounds(synthetic, bounds)
+        indexed = features_in_bounds(synthetic, bounds, tree=tree, tree_items=tree_items)
+
+        # Compare by geom object identity (same Python objects in both paths)
+        linear_ids  = frozenset(id(geom) for geom, _cls in linear)
+        indexed_ids = frozenset(id(geom) for geom, _cls in indexed)
+
+        if linear_ids == indexed_ids:
+            print(f"  PASS  {label!r}: {len(linear_ids)} features")
+        else:
+            only_linear  = [geom_id_to_idx[i] for i in linear_ids  - indexed_ids]
+            only_indexed = [geom_id_to_idx[i] for i in indexed_ids - linear_ids]
+            print(f"  FAIL  {label!r}: linear={len(linear_ids)} indexed={len(indexed_ids)} "
+                  f"only-in-linear={only_linear} only-in-index={only_indexed}")
+            all_pass = False
+
+    return all_pass
 
 
 # ── PNG tile writing ─────────────────────────────────────────────
@@ -330,8 +465,14 @@ def write_tile_png(rgba: "np.ndarray", path: Path):
 # ── Main pipeline ────────────────────────────────────────────────
 
 def build_theme(theme_name: str, themes: dict, features: list, output_dir: Path,
-                zoom_range: range = range(4, 10), all_touched: bool = True):
-    """Build all PNG tiles for a theme across zoom levels."""
+                zoom_range: range = range(4, 10), all_touched: bool = True,
+                tree=None, tree_items: list = None):
+    """Build all PNG tiles for a theme across zoom levels.
+
+    tree and tree_items are the STRtree index built via _build_spatial_index().
+    When provided, per-tile feature lookup is O(log n + k) instead of O(n).
+    Both are optional — omit to use the linear fallback (useful for testing).
+    """
     import time
     theme = themes[theme_name]
     theme_dir = output_dir / theme_name
@@ -359,8 +500,8 @@ def build_theme(theme_name: str, themes: dict, features: list, output_dir: Path,
             for y in range(y_min, y_max + 1):
                 bounds = tile_bounds(z, x, y)
 
-                # Filter features for this tile
-                tile_features = features_in_bounds(features, bounds)
+                # Filter features for this tile (O(log n + k) with index, O(n) fallback)
+                tile_features = features_in_bounds(features, bounds, tree=tree, tree_items=tree_items)
                 if not tile_features:
                     continue
 
@@ -447,6 +588,16 @@ def main():
             "Does not require rasterio/numpy/shapely."
         ),
     )
+    parser.add_argument(
+        "--verify-index",
+        action="store_true",
+        help=(
+            "Run a synthetic equivalence test: verifies that the STRtree spatial "
+            "index returns the same feature set as the linear scan for all test "
+            "cases. Exits 0 (PASS) or 1 (FAIL). Requires shapely but not rasterio "
+            "or numpy, and does not load the real NDJSON data."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -465,6 +616,17 @@ def main():
         }
         print(json.dumps(serialisable, indent=2))
         sys.exit(0)
+
+    # ── --verify-index: STRtree equivalence test, shapely only ───────────────
+    if args.verify_index:
+        print("=== Spatial Index Equivalence Test ===\n")
+        ok = _verify_spatial_index()
+        if ok:
+            print("\nPASS -- STRtree index is equivalent to linear scan")
+            sys.exit(0)
+        else:
+            print("\nFAIL -- mismatch detected (see above)")
+            sys.exit(1)
 
     # ── Early validation (before the expensive data load) ────────────────────
 
@@ -508,14 +670,23 @@ def main():
     print("Loading forest-age features...")
     features = load_features(args.input)
 
+    # Build spatial index ONCE — shared across all themes and all tiles.
+    # For --theme all this avoids rebuilding per-theme; for a single theme it
+    # avoids rebuilding per-tile.  Build time is O(n log n); query is O(log n + k).
+    print("Building spatial index...")
+    tree, tree_items = _build_spatial_index(features)
+    print(f"  Index ready ({len(tree_items):,} features)")
+
     if args.theme == "all":
         for name in themes:
             if name == "conservation-gap":
                 print("\n  (conservation-gap requires spatial intersection -- skipping for now)")
                 continue
-            build_theme(name, themes, features, args.output_dir, zoom_range, all_touched=args.all_touched)
+            build_theme(name, themes, features, args.output_dir, zoom_range,
+                        all_touched=args.all_touched, tree=tree, tree_items=tree_items)
     else:
-        build_theme(args.theme, themes, features, args.output_dir, zoom_range, all_touched=args.all_touched)
+        build_theme(args.theme, themes, features, args.output_dir, zoom_range,
+                    all_touched=args.all_touched, tree=tree, tree_items=tree_items)
 
     print("\n=== Done ===")
 
