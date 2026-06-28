@@ -99,12 +99,19 @@ export interface Chapter {
    */
   cameraTo?: ChapterCamera;
   /**
-   * When true, applyLayerVisibility shows the binary end-reveal raster
-   * (story-binary-reveal at 0.85) and hides the forest-base (binary carries
-   * old-growth color now). Set on the `ending` and `remains` chapters.
-   * Replaces the former fragile isEnding opacity-sniff heuristic.
+   * When true, activates the binary end-reveal raster (ending + remains chapters).
+   * Hides the forest-base (binary carries old-growth color now). The raster's
+   * opacity is managed per-frame by useScrollytelling + the StoryMap binary effect
+   * — NOT by applyLayerVisibility.
    */
   revealBinary?: boolean;
+  /**
+   * Scroll-progress window [startProg, endProg] over which story-binary-reveal
+   * fades from 0 → 0.85. When omitted but revealBinary=true, binary is at 0.85
+   * immediately on chapter enter (e.g. `remains` carries the fully-revealed state
+   * forward). Works like overlay `fadeIn`.
+   */
+  revealBinaryFadeIn?: [number, number];
 }
 
 /** The accumulation sequence is flat, top-down, province-scale throughout. */
@@ -218,11 +225,16 @@ export const CHAPTERS: Chapter[] = [
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.25 }],
+    // cutblocks stays at 0.75 through the whole chapter so "the permit record"
+    // red is on screen while the panel text lands; fire fades out immediately.
+    // Binary fades in at 40-60% (after text has had 40% of the 300vh to settle),
+    // layering the fuller red over the permit-record base.
     overlays: [
-      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0 },
+      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0.75 },
       { source: "fire", mode: "static", staticYear: 2025, opacity: 0 },
     ],
     revealBinary: true,
+    revealBinaryFadeIn: [0.4, 0.6],
     scrollHeight: 300,
   },
   {

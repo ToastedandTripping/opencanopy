@@ -74,14 +74,11 @@ export function applyLayerVisibility(
     );
   }
 
-  // Binary end-reveal raster: old-growth = #0d5c2a, everything else = #ef4444.
-  // Shown only on the ending and remains chapters (revealBinary flag).
-  // The 600ms raster-opacity-transition defined on this layer provides a
-  // smooth fade-in on chapter enter.
-  const binaryId = "story-binary-reveal";
-  if (map.getLayer(binaryId)) {
-    map.setPaintProperty(binaryId, "raster-opacity", revealBinary ? 0.85 : 0);
-  }
+  // story-binary-reveal raster-opacity is managed exclusively by the per-frame
+  // binary effect in StoryMap (binaryRevealOpacity prop). applyLayerVisibility
+  // does NOT write it. Removing this path eliminates the double-write that caused
+  // the immediate fade-in on chapter-enter (race between chapter-enter 0.85 here
+  // and the scroll-coupled ramp in the per-frame effect).
 
   for (const layerId of layerIds) {
     const storyLayer = activeLayers[layerId];

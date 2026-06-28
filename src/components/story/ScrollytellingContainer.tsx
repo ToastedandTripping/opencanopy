@@ -13,6 +13,7 @@ export function ScrollytellingContainer() {
     currentCamera,
     yearFilter,
     overlays,
+    binaryRevealOpacity,
     chapters,
   } = useScrollytelling();
   const { supports3D } = useDeviceCapability();
@@ -91,6 +92,7 @@ export function ScrollytellingContainer() {
           hatchEnabled={hatchEnabled}
           supports3D={supports3D}
           revealBinary={activeChapter?.revealBinary}
+          binaryRevealOpacity={binaryRevealOpacity}
         />
         {/* Top-edge dark veil: absorbs the hero-photo -> map luminance seam.
             Top color matches the hero photo's full-dark bottom (#0a0a0c) and

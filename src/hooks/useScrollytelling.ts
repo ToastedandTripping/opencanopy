@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CHAPTERS, type ChapterCamera } from "@/data/chapters";
+import { computeBinaryRevealOpacity } from "@/lib/story/binary-opacity";
 import { normalizeAngle, interpolateCamera, easeInOut } from "@/lib/math/interpolation";
 import { yearFromProgress, type ScrubTable } from "@/lib/story/scrub";
 import cutblocksScrub from "@/data/scrub/cutblocks-scrub.json";
@@ -38,6 +39,7 @@ export function useScrollytelling() {
   );
   const [yearFilter, setYearFilter] = useState<number | null>(null);
   const [overlays, setOverlays] = useState<ResolvedOverlay[]>([]);
+  const [binaryRevealOpacity, setBinaryRevealOpacity] = useState(0);
   const rafRef = useRef<number | null>(null);
   const bearingRef = useRef(CHAPTERS[0].camera.bearing);
   // 1a: Coalesce scroll→camera/year updates to one call per animation frame.
@@ -131,6 +133,18 @@ export function useScrollytelling() {
         return { source: ov.source, year, opacity };
       });
       setOverlays(resolved);
+
+      // Per-frame binary reveal opacity. chapters with revealBinaryFadeIn get a
+      // scroll-coupled ramp; chapters with revealBinary but no fadeIn (e.g.
+      // `remains`) jump straight to 0.85. Under prefers-reduced-motion, always
+      // snap to 0.85 immediately so the reveal is not lost, just not animated.
+      const binaryOpacity = computeBinaryRevealOpacity(
+        chapter.revealBinary,
+        chapter.revealBinaryFadeIn,
+        prog,
+        reducedMotion,
+      );
+      setBinaryRevealOpacity(binaryOpacity);
 
       bearingRef.current = normalizeAngle(camera.bearing);
       setCurrentCamera(camera);
@@ -266,6 +280,7 @@ export function useScrollytelling() {
     currentCamera,
     yearFilter,
     overlays,
+    binaryRevealOpacity,
     chapters: CHAPTERS,
   };
 }
