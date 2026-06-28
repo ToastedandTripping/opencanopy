@@ -113,18 +113,19 @@ const NO_TERRAIN: ChapterTerrain = { enabled: false, exaggeration: 0 };
  * Final camera for the story's "remains" chapter — the old-growth pocket
  * that the ending dolly zooms into.
  *
- * TBD: center and zoom are PLACEHOLDERS. Finalized by eyeball after the binary
- * raster tiles are built and uploaded to R2. The orchestrator adjusts this
- * constant before deploying; everything else (CTA hash, prefetch, remains
- * chapter camera) derives from here automatically as the SSOT.
+ * Finalized by eyeball (Phase 1b) against the built binary tiles: Vancouver
+ * Island's west coast (Clayoquot Sound / Strathcona), where old-growth survivors
+ * read as green amid a field of red clearcuts. Iconic, recognizable, and the
+ * starkest "what's left" of the candidate pockets. Deuteranopia-checked (the
+ * green/red luminance gap widens to ~4.5:1 under simulation). Everything else
+ * (CTA hash, prefetch, remains chapter camera) derives from here as the SSOT.
  *
- * When updating: set center = [lng, lat] of the most legible surviving
- * old-growth pocket at z8.5 on the binary tiles (green island surrounded by red).
+ * z8 (not 8.5) so the dolly endpoint lands on crisp z9 binary tiles — the
+ * binary raster source is maxzoom 9, and 256px tiles fetch tile-zoom = display+1.
  */
 export const STORY_END_CAMERA: ChapterCamera = {
-  // TBD: finalized by eyeball after binary tiles are built
-  center: [-125.7, 51.3],
-  zoom: 8.5,
+  center: [-125.86, 49.38],
+  zoom: 8,
   pitch: 0,
   bearing: 0,
 };
