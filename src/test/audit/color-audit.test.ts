@@ -438,19 +438,18 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
     // Binary red (everything else): #ef4444 → R=239, G=68, B=68
     const BINARY_RED_HEX = "#ef4444";
 
-    it("binary old-growth hex matches Jen spec (#0d5c2a)", () => {
-      // SSOT guard: if the spec is updated, update both the test and the script.
-      const { r, g, b } = parseHex(BINARY_OLD_GROWTH_HEX);
-      expect(r).toBe(13);
-      expect(g).toBe(92);
-      expect(b).toBe(42);
+    it("palette old-growth is #0d5c2a (binary theme derives old-growth from this)", () => {
+      // SSOT guard: the binary theme calls hex_to_rgba(palette["old-growth"], 255).
+      // If forest-age-palette.json is edited to the wrong value, this test fails
+      // and surfaces that the eyeball-gate colors have changed.
+      expect(PALETTE["old-growth"]).toBe(BINARY_OLD_GROWTH_HEX);
     });
 
-    it("binary red hex matches Jen spec (#ef4444)", () => {
-      const { r, g, b } = parseHex(BINARY_RED_HEX);
-      expect(r).toBe(239);
-      expect(g).toBe(68);
-      expect(b).toBe(68);
+    it("palette harvested is #ef4444 (binary theme derives mature/young/harvested from this)", () => {
+      // SSOT guard: the binary theme calls hex_to_rgba(palette["harvested"], 255)
+      // for all non-old-growth classes. If the palette's harvested color changes,
+      // the binary tiles change — catching that drift is the purpose of this test.
+      expect(PALETTE["harvested"]).toBe(BINARY_RED_HEX);
     });
 
     it.skipIf(!python3Available)(

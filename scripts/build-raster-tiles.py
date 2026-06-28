@@ -113,20 +113,23 @@ def build_themes(palette: dict) -> dict:
             "harvested":  hex_to_rgba(palette["harvested"],  OVERVIEW_ALPHA),
             "background": (0, 0, 0, 0),
         },
-        # Binary end-reveal: old-growth = dark green (#0d5c2a), everything else = red (#ef4444).
-        # Tile pixels are fully opaque (alpha=255); the 0.85 visual opacity is the MapLibre
-        # raster-opacity set in setup-layers.ts — do not bake it into the pixel alpha.
-        # Colors are eyeball-gate locked per the Jen visual spec (Phase 1b):
+        # Binary end-reveal: old-growth = palette["old-growth"], everything else = palette["harvested"].
+        # Colors are derived from forest-age-palette.json (SSOT) — if the palette changes,
+        # binary follows automatically. Tile pixels are fully opaque (alpha=255); the 0.85
+        # visual opacity is the MapLibre raster-opacity set in setup-layers.ts — do not bake
+        # it into the pixel alpha.
+        # Eyeball-gate locked per the Jen visual spec (Phase 1b):
         #   old-growth luminance 0.095 / red luminance 0.244 → ~2:1 ratio, max
         #   deuteranopia separation within a green-vs-red palette at raster patch scale.
-        # Do NOT adjust these values without triggering the Jen Stage 3 gate again.
+        # Do NOT adjust palette["old-growth"] or palette["harvested"] without triggering
+        # the Jen Stage 3 gate again.
         "binary": {
-            "old-growth":           (0x0d, 0x5c, 0x2a, 255),  # #0d5c2a dark green
-            "old-growth-protected": (0x0d, 0x5c, 0x2a, 255),  # #0d5c2a dark green
-            "old-growth-unprotected":(0x0d, 0x5c, 0x2a, 255), # #0d5c2a dark green
-            "mature":               (0xef, 0x44, 0x44, 255),  # #ef4444 red
-            "young":                (0xef, 0x44, 0x44, 255),  # #ef4444 red
-            "harvested":            (0xef, 0x44, 0x44, 255),  # #ef4444 red
+            "old-growth":            hex_to_rgba(palette["old-growth"], 255),
+            "old-growth-protected":  hex_to_rgba(palette["old-growth"], 255),
+            "old-growth-unprotected": hex_to_rgba(palette["old-growth"], 255),
+            "mature":                hex_to_rgba(palette["harvested"],  255),
+            "young":                 hex_to_rgba(palette["harvested"],  255),
+            "harvested":             hex_to_rgba(palette["harvested"],  255),
             "background": (0, 0, 0, 0),
         },
         "conservation-gap": {
@@ -236,7 +239,7 @@ def rasterize_tile(features: list, theme: dict, bounds: tuple, size: int = TILE_
 
     all_touched: when True (default), any pixel touched by a polygon edge is filled —
     shows disturbance *reach* at province scale (honest for a forest-loss map).
-    Pass False for the binary theme (or experimental use) to see center-of-pixel coverage.
+    Pass False for center-of-pixel coverage; default True matches the v3 forest-age behavior.
     Controlled via --no-all-touched CLI flag; the decision belongs to the operator
     running the pipeline, not to this function.
     """
