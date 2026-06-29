@@ -41,8 +41,8 @@ export interface ChapterTimelineScrub {
 export type OverlayImageMode = "scrubbed" | "static";
 
 export interface ChapterOverlay {
-  /** Image source: cutblock red, wildfire amber, or VRI full-picture. */
-  source: "cutblocks" | "fire" | "vri-logged";
+  /** Image source: cutblock red or wildfire amber. */
+  source: "cutblocks" | "fire";
   /** scrubbed = image follows the scrub year; static = fixed staticYear. */
   mode: OverlayImageMode;
   /** Required when mode==="static" (e.g. baseline=range.start, scars=range.end). */
@@ -90,10 +90,32 @@ export interface Chapter {
   bearingDrift?: number;
   /** Scroll spacer height in vh units */
   scrollHeight: number;
+  /**
+   * When set, useScrollytelling scrubs `camera → cameraTo` across the chapter's
+   * own scroll progress (eased, finishing at DOLLY_END=0.8 so it settles before
+   * the CTA). The toward-next interpolation does NOT apply to chapters with this
+   * field. Set on `remains` so the dolly is spread over the chapter's 800vh rather
+   * than crammed into the last 20% of `ending`.
+   */
+  cameraTo?: ChapterCamera;
+  /**
+   * When true, activates the binary end-reveal raster (ending + remains chapters).
+   * Hides the forest-base (binary carries old-growth color now). The raster's
+   * opacity is managed per-frame by useScrollytelling + the StoryMap binary effect
+   * — NOT by applyLayerVisibility.
+   */
+  revealBinary?: boolean;
+  /**
+   * Scroll-progress window [startProg, endProg] over which story-binary-reveal
+   * fades from 0 → 0.85. When omitted but revealBinary=true, binary is at 0.85
+   * immediately on chapter enter (e.g. `remains` carries the fully-revealed state
+   * forward). Works like overlay `fadeIn`.
+   */
+  revealBinaryFadeIn?: [number, number];
 }
 
 /** The accumulation sequence is flat, top-down, province-scale throughout. */
-const FLAT_BC_CAMERA: ChapterCamera = {
+export const FLAT_BC_CAMERA: ChapterCamera = {
   center: [-125.5, 54.0],
   zoom: 5,
   pitch: 0,
@@ -102,10 +124,31 @@ const FLAT_BC_CAMERA: ChapterCamera = {
 
 const NO_TERRAIN: ChapterTerrain = { enabled: false, exaggeration: 0 };
 
+/**
+ * Final camera for the story's "remains" chapter — the old-growth pocket
+ * that the ending dolly zooms into.
+ *
+ * Finalized by eyeball (Phase 1b) against the built binary tiles: Vancouver
+ * Island's west coast (Clayoquot Sound / Strathcona), where old-growth survivors
+ * read as green amid a field of red clearcuts. Iconic, recognizable, and the
+ * starkest "what's left" of the candidate pockets. Deuteranopia-checked (the
+ * green/red luminance gap widens to ~4.5:1 under simulation). Everything else
+ * (CTA hash, prefetch, remains chapter camera) derives from here as the SSOT.
+ *
+ * z8 (not 8.5) so the dolly endpoint lands on crisp z9 binary tiles — the
+ * binary raster source is maxzoom 9, and 256px tiles fetch tile-zoom = display+1.
+ */
+export const STORY_END_CAMERA: ChapterCamera = {
+  center: [-125.86, 49.38],
+  zoom: 8,
+  pitch: 0,
+  bearing: 0,
+};
+
 export const CHAPTERS: Chapter[] = [
   {
     id: "overview",
-    heading: "See what’s left.",
+    heading: "See what's left.",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.6 }],
@@ -168,22 +211,46 @@ export const CHAPTERS: Chapter[] = [
     scrollHeight: 300,
   },
   {
-    // FTEN/fire overlays fade out; VRI-logged overlay fades in, showing
-    // everything the vegetation survey classified as non-old-growth. The map
-    // goes almost entirely red — the gap between permit records and reality.
+    // FTEN/fire overlays fade out; binary raster fades in showing only
+    // old-growth (dark green) vs everything else (red). The map goes almost
+    // entirely red — 35,000 ha of large old-growth out of 1.1M ha total.
+    // Shortened to 300vh so the red reveal and the explanatory panel land
+    // together. The dolly now lives in `remains` as an intra-chapter cameraTo
+    // scrub, not here.
     id: "ending",
     heading: "35,000 hectares.",
-    subheading: "That’s what remains of BC’s large old-growth trees. 0.3% of the province’s forest.",
+    subheading: "That's what remains of BC's large old-growth trees. 0.3% of the province's forest.",
     body: "What you just watched was only the permit record. The full picture is worse.",
     citation: "Price, Holt & Daust, 2020",
     camera: FLAT_BC_CAMERA,
     terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.25 }],
+    // cutblocks stays at 0.75 through the whole chapter so "the permit record"
+    // red is on screen while the panel text lands; fire fades out immediately.
+    // Binary fades in at 40-60% (after text has had 40% of the 300vh to settle),
+    // layering the fuller red over the permit-record base.
     overlays: [
-      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0 },
+      { source: "cutblocks", mode: "static", staticYear: 2025, opacity: 0.75 },
       { source: "fire", mode: "static", staticYear: 2025, opacity: 0 },
-      { source: "vri-logged", mode: "static", staticYear: 0, opacity: 0.85 },
     ],
+    revealBinary: true,
+    revealBinaryFadeIn: [0.4, 0.6],
     scrollHeight: 300,
+  },
+  {
+    // Intra-chapter dolly: starts at province scale (FLAT_BC_CAMERA, same as
+    // `ending`) and eases into the Vancouver Island old-growth pocket
+    // (STORY_END_CAMERA) over the chapter's 800vh. The camera scrub is driven
+    // by `cameraTo` in updateCamera (eased, completing at DOLLY_END=0.8) so it
+    // settles at the pocket well before the user reaches the CTA. The binary
+    // layer stays on (revealBinary). Scrolling past reveals the CTA section.
+    id: "remains",
+    heading: "This is what's left.",
+    camera: FLAT_BC_CAMERA,
+    cameraTo: STORY_END_CAMERA,
+    terrain: NO_TERRAIN,
+    layers: [{ id: "forest-age", opacity: 0.25 }],
+    revealBinary: true,
+    scrollHeight: 800,
   },
 ];

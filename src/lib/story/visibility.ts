@@ -29,16 +29,21 @@ export interface VisibilityMap {
  * vector fills/outlines, hatch, and class filters for all layers
  * EXCEPT cutblocks opacity when timeline is active (that is managed
  * by applyTimelineFilter exclusively).
+ *
+ * @param revealBinary - When true (ending + remains chapters), shows the binary
+ *   end-reveal raster at 0.85 and hides the forest-base. Uses an explicit
+ *   chapter flag rather than sniffing layer opacity to avoid fragile heuristics.
  */
 export function applyLayerVisibility(
   map: VisibilityMap,
   layers: ChapterLayer[],
   hatchEnabled: boolean,
   yearFilter: number | null,
+  revealBinary?: boolean,
 ): void {
   if (!map.isStyleLoaded()) {
     pipelineLog("visibility-effect", "style not loaded, deferring to idle");
-    map.once("idle", () => applyLayerVisibility(map, layers, hatchEnabled, yearFilter));
+    map.once("idle", () => applyLayerVisibility(map, layers, hatchEnabled, yearFilter, revealBinary));
     return;
   }
 
@@ -49,24 +54,31 @@ export function applyLayerVisibility(
 
   const forestAgeActive = activeLayers["forest-age"];
 
-  // Forest-age raster overview: held at opacity 0 (the VRI-logged overlay
-  // replaces this approach for the ending chapter).
+  // Forest-age raster overview: held at opacity 0 throughout the story.
+  // The green forest-base carries the substrate; the binary raster carries
+  // the end-reveal. The raster overview is only used by the /map interactive.
   const rasterLayerId = "story-forest-age-raster";
   if (map.getLayer(rasterLayerId)) {
     map.setPaintProperty(rasterLayerId, "raster-opacity", 0);
   }
 
-  // Forest base: green silhouette. Dimmed during the ending chapter so the
-  // VRI-logged red overlay dominates and old-growth reads as tiny green flecks.
-  const isEnding = layers.some((l) => l.id === "forest-age" && l.opacity <= 0.25);
+  // Forest base: green silhouette. Hidden during binary reveal (the binary
+  // raster carries old-growth at its correct color; keeping forest-base on
+  // would paint green everywhere and obscure the red/green contrast).
   const forestBaseId = "story-forest-base";
   if (map.getLayer(forestBaseId)) {
     map.setPaintProperty(
       forestBaseId,
       "raster-opacity",
-      isEnding ? 0.15 : (forestAgeActive ? 0.7 : 0)
+      revealBinary ? 0 : (forestAgeActive ? 0.7 : 0)
     );
   }
+
+  // story-binary-reveal raster-opacity is managed exclusively by the per-frame
+  // binary effect in StoryMap (binaryRevealOpacity prop). applyLayerVisibility
+  // does NOT write it. Removing this path eliminates the double-write that caused
+  // the immediate fade-in on chapter-enter (race between chapter-enter 0.85 here
+  // and the scroll-coupled ramp in the per-frame effect).
 
   for (const layerId of layerIds) {
     const storyLayer = activeLayers[layerId];

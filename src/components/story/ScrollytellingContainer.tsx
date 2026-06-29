@@ -13,6 +13,7 @@ export function ScrollytellingContainer() {
     currentCamera,
     yearFilter,
     overlays,
+    binaryRevealOpacity,
     chapters,
   } = useScrollytelling();
   const { supports3D } = useDeviceCapability();
@@ -90,6 +91,8 @@ export function ScrollytellingContainer() {
           counterLabel={activeChapter?.counterLabel}
           hatchEnabled={hatchEnabled}
           supports3D={supports3D}
+          revealBinary={activeChapter?.revealBinary}
+          binaryRevealOpacity={binaryRevealOpacity}
         />
         {/* Top-edge dark veil: absorbs the hero-photo -> map luminance seam.
             Top color matches the hero photo's full-dark bottom (#0a0a0c) and
@@ -122,7 +125,8 @@ export function ScrollytellingContainer() {
               body={chapter.body}
               citation={chapter.citation}
               active={activeChapterIndex === i}
-              position={chapter.id === "ending" ? "center" : "left"}
+              position={chapter.id === "ending" || chapter.id === "remains" ? "center" : "left"}
+              headingWeight={chapter.id === "remains" ? "normal" : "semibold"}
             />
           </div>
         ))}

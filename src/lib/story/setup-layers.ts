@@ -10,7 +10,7 @@
 
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
-import { FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
+import { FOREST_AGE_RASTER_URL, BINARY_RASTER_URL } from "@/lib/r2-config";
 
 /** Raster overview tiles for forest-age at province zoom (z4-z8).
  *  Re-exported from the shared r2-config so the story map and the interactive
@@ -30,9 +30,6 @@ export const FIRE_OVERLAY_URL_PATTERN = "/raster/fire-by-year/{year}.png";
 /** Static green forest base overlay (sampled from forest-age data). */
 export const FOREST_BASE_URL = "/raster/cutblocks-by-year/forest-base.png";
 
-/** Static VRI-logged overlay: everything non-old-growth rendered as red. */
-export const VRI_LOGGED_URL = "/raster/vri-logged/full.png";
-
 export const YEAR_OVERLAY_RANGE = { start: 1950, end: 2025 } as const;
 
 /** Full recorded wildfire span (build-year-overlays.py --dataset fire). */
@@ -42,6 +39,12 @@ export const FIRE_OVERLAY_RANGE = { start: 1917, end: 2025 } as const;
  * Single source of truth mapping a ChapterOverlay `source` to its image
  * source/layer, URL pattern, and valid year range. Written once here so
  * useScrollytelling (resolution) and StoryMap (paint) never drift.
+ *
+ * NOTE: The binary end-reveal layer (story-binary-reveal) is a tiled raster
+ * source, NOT an image source. It cannot use updateImage() — that API only
+ * exists on image sources. Binary opacity is therefore controlled via
+ * visibility.ts (applyLayerVisibility, revealBinary flag), NOT through this
+ * OVERLAY_SOURCES table. This is intentional, not an oversight.
  */
 export const OVERLAY_SOURCES = {
   cutblocks: {
@@ -56,12 +59,6 @@ export const OVERLAY_SOURCES = {
     urlPattern: FIRE_OVERLAY_URL_PATTERN,
     range: FIRE_OVERLAY_RANGE,
   },
-  "vri-logged": {
-    layerId: "story-vri-logged-overlay",
-    sourceId: "story-vri-logged-overlay",
-    urlPattern: VRI_LOGGED_URL,
-    range: { start: 0, end: 0 } as const,
-  },
 } as const;
 
 /** All story layer IDs created by setupStoryLayers. */
@@ -71,6 +68,7 @@ export const STORY_LAYER_IDS = [
   "story-forest-age-raster",
   "story-year-overlay",
   "story-fire-overlay",
+  "story-binary-reveal",
   "story-forest-age-fill",
   "story-forest-age-outline",
   "story-cutblocks-fill",
@@ -80,7 +78,6 @@ export const STORY_LAYER_IDS = [
   "story-parks-fill",
   "story-parks-outline",
   "story-harvested-hatch",
-  "story-vri-logged-overlay",
 ] as const;
 
 /** All source IDs registered by setupStoryLayers. */
@@ -90,7 +87,7 @@ export const STORY_SOURCE_IDS = [
   "story-forest-age-raster",
   "story-year-overlay",
   "story-fire-overlay",
-  "story-vri-logged-overlay",
+  "story-binary-reveal",
   PMTILES_SOURCE_ID,
 ] as const;
 
@@ -289,31 +286,36 @@ export function setupStoryLayers(
     );
   }
 
-  // ── VRI-logged static overlay (end-reveal: full disturbance picture) ──
-  if (!map.getSource("story-vri-logged-overlay")) {
-    const [west, south, east, north] = OVERLAY_BOUNDS;
-    map.addSource("story-vri-logged-overlay", {
-      type: "image",
-      url: VRI_LOGGED_URL,
-      coordinates: [
-        [west, north],
-        [east, north],
-        [east, south],
-        [west, south],
-      ],
+  // ── Binary end-reveal raster source (z4-z9) ─────────────────────
+  // Old-growth = #0d5c2a (dark green); mature/young/harvested = #ef4444 (red).
+  // Mirrors story-forest-age-raster exactly (same zoom range, tile size).
+  // Opacity is controlled by applyLayerVisibility via the revealBinary flag —
+  // NOT via OVERLAY_SOURCES, because tiled raster sources have no updateImage().
+  // Built by: python3 scripts/build-raster-tiles.py --theme binary
+  if (!map.getSource("story-binary-reveal")) {
+    map.addSource("story-binary-reveal", {
+      type: "raster",
+      tiles: [BINARY_RASTER_URL],
+      tileSize: 256,
+      minzoom: 4,
+      maxzoom: 9,
     });
   }
 
-  if (!map.getLayer("story-vri-logged-overlay")) {
+  if (!map.getLayer("story-binary-reveal")) {
     map.addLayer(
       {
-        id: "story-vri-logged-overlay",
+        id: "story-binary-reveal",
         type: "raster",
-        source: "story-vri-logged-overlay",
+        source: "story-binary-reveal",
+        maxzoom: 9,
         paint: {
           "raster-opacity": 0,
-          "raster-opacity-transition": { duration: 600 },
-          "raster-fade-duration": 0,
+          // Short transition: the scroll-coupled JS fade (computeBinaryRevealOpacity,
+          // ending revealBinaryFadeIn) updates raster-opacity per frame, so a long
+          // transition would lag the scroll. 100ms antialiases tile-load flicker only.
+          // (Matches story-year-overlay / story-fire-overlay.)
+          "raster-opacity-transition": { duration: 100 },
         },
       },
       firstSymbolId,

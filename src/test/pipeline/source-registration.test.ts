@@ -73,8 +73,9 @@ describe("source + layer registration", () => {
   it("creates exactly 15 layers (plus terrain-controlled hillshade)", () => {
     setupStoryLayers(map, { terrain: terrainConfig, hatchPattern: null });
     const addLayerCalls = map._getCalls().addLayer;
-    // 15 story layers: hillshade, forest-base, raster, year-overlay, fire-overlay,
-    // vri-logged-overlay, fills/outlines, hatch
+    // 15 story layers: hillshade, forest-base, binary-reveal, raster, year-overlay,
+    // fire-overlay, fills/outlines, hatch
+    // (vri-logged-overlay removed Phase 1b; binary-reveal added Phase 1b — net zero)
     expect(addLayerCalls.length).toBe(15);
   });
 

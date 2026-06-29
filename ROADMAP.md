@@ -1,10 +1,12 @@
 ---
 status: in-progress
-current: "Jun 25-27 session shipped: public surface narrowed (18→7 layers), error boundary + bug report, production audit #2 (63/100, up from 52, both a11y FAILs fixed), creative dept audit + design polish (Fraunces font, emerald accent, copy fixes incl 8M hectares correction, composition shifts), data provenance section, coordinate readout, VRI-logged overlay pipeline (built but needs upgrade). Phase 1b is NEXT — plan, critic, and probe all ready at .claude/plans/jazzy-booping-sunrise.md. Extended scope: also build binary raster tiles (old-growth=green, everything else=red) for the ending chapter reveal, uploaded to R2 as a proper tile source."
-next: "Phase-1b: (1) rebuild forest-base from real VRI polygons with clean coastline/lake edges (all_touched=False, 2048x1003); (2) build binary raster tiles z4-z9 (old-growth=green, everything else=red) via build-raster-tiles.py with simplified palette; (3) upload to R2; (4) wire binary tiles as MapLibre tile source for ending chapter reveal (replaces the current vri-logged PNG overlay). Plan+critic+probe ready. Handoff: state/opencanopy-handoff-2026-06-27.md. Then: Phase-3 scrub architecture DECISION (year-raster+WebGL ~8-10d vs frames ~2-3d), Phase 4 gold old-growth, Phase 5 z10+ rectangle tile rebuild. Deferred: camera movement in scroll story, place names in copy, production audit WARNs (CSP, monitoring, rollback docs)."
+current: "Jun 28 session shipped Phase 1b + Exploration Bridge (LIVE on opencanopy.ca): forest-base regenerated from real VRI (2048x1003, clean coast/lakes, replaces the dilated blob); binary end-reveal tiles z4-9 (old-growth #0d5c2a / everything else #ef4444) on R2 raster/v3/binary/ replacing the vri-logged PNG; STRtree spatial index added to build-raster-tiles.py (3-4hr build -> ~27min); ending dolly into a 'remains' chapter zooming to a Vancouver Island/Clayoquot old-growth pocket (deuteranopia-checked); text-first reveal (binary holds then fades after the panel lands); CTA reworked to 'Now find your own corner of it.' + 'Explore the Map' hand-off that opens /map at the exact pocket (forest-age on). Relay phase1b-exploration-bridge, Razor PASS. KNOWN ISSUE (deferred): the ending dolly is NOT smooth on live — drops tiles + laggy on the z5->z8 binary zoom."
+next: "TOP: smooth the ending dolly (it drops binary tiles + lags on the z5->z8 zoom — see KNOWN ISSUES below). Then: Phase-3 scrub architecture DECISION (year-raster+WebGL ~8-10d vs frames ~2-3d), Phase 4 gold old-growth, Phase 5 z10+ rectangle tile rebuild. Deferred: place names in copy, production audit WARNs (CSP, monitoring, rollback docs, window.__opencanopy_map prod-leak guard), the forest-age/binary empty-tile 404 console noise (tile-bounds/manifest so MapLibre doesn't request skipped empty tiles)."
 testing: null
 pinned: false
 shipped:
+  - date: 2026-06-28
+    item: "Phase 1b + Exploration Bridge DEPLOYED to opencanopy.ca (relay phase1b-exploration-bridge, plan .claude/plans/curried-frolicking-reddy.md, critic-gated, Razor PASS). (1) forest-base.png regenerated from 6.2M real VRI polygons via build-year-overlays.py --dataset forest-base --width 2048 (2048x1003 paletted, all_touched=False -> crisp coastline + lakes-as-holes, 30.2% coverage; replaces the hand-drawn 1024x501 blob; live-eyeballed). (2) binary end-reveal: new 'binary' theme in build-raster-tiles.py (old-growth=palette old-growth #0d5c2a, mature/young/harvested=palette harvested #ef4444, palette-derived SSOT), z4-9 tiles (805) on R2 raster/v3/binary/ via rclone; replaces the vri-logged single-PNG overlay (vri-logged fully removed: source/layer/asset/build-year-overlays dataset). story-binary-reveal raster source mirrors story-forest-age-raster. (3) build-raster-tiles.py STRtree spatial index (features_in_bounds O(features*tiles) -> O(log n); 3-4hr -> ~27min; --verify-index equivalence 8/8). (4) ending dolly: dedicated 'remains' chapter (camera FLAT_BC -> cameraTo STORY_END_CAMERA = Vancouver Island/Clayoquot pocket z8, deuteranopia-checked green/red 4.47:1 under sim), eased cubic intra-chapter scrub (DOLLY_END 0.8), 800vh; ending tightened 600->300vh. (5) text-first: binary opacity moved to a per-frame single-writer (computeBinaryRevealOpacity, ending revealBinaryFadeIn [0.4,0.6]) so the panel text lands before the red; cutblocks 0.75 holds permit-red during the hold; 100ms transition (Razor ship-blocker fix: 600ms lagged the per-frame fade). (6) CTA 'fuller rework' (Jen spec + George copy): 'Now find your own corner of it.' / 'Your watershed, your valley, the old growth you've driven past. It's all in here.' + 'Explore the Map' continuity hash (/map#lat&lng&z&layers=forest-age opens at the exact pocket, verified live). 606 tests. KNOWN ISSUE deferred -> see below."
   - date: 2026-06-27
     item: "Public readiness pass: narrowed public surface (18→7 layers + satellite, presets 11→4), React error boundary for WebGL crashes, bug report button (mailto with map state), production audit #2 (63/100, up from 52, 2 a11y FAILs fixed via relay — error boundary role=alert + SearchBar ARIA combobox + stale focusedIndex fix). Creative dept audit (Jen/Beatrice/George/Saul) + design polish relay: Fraunces variable serif font, typography cohesion, copy fixes (8M hectares corrected from 5M, em dashes, curly apostrophes, ending heading shortened), emerald accent (#34d399), Beat 2 left-aligned asymmetry, Beat 3 bottom-anchor, animation differentiation, CTA cleanup ('See It for Yourself', 'Keep it running', GitHub demoted). Data provenance section (VRI, FTEN, Wildfire Service, TANTALIS, OGSR named with DataBC link). Map UI: coordinate readout (top-right), satellite in MapLegend, Beat 3 gradient fade. VRI-logged overlay pipeline (build-year-overlays.py --dataset vri-logged, 5.6M features) — functional but needs upgrade to proper raster tiles (Phase 1b)."
   - date: 2026-06-22
@@ -58,6 +60,27 @@ public conservation reference. Architecture decision in March: base tileset
 is government-truthful only; synthesis layers (fire-age reconciliation,
 disturbance models) live as separate layers and are not part of the
 open-source base.
+
+## Known issues (deferred, prioritized)
+
+- **Ending dolly is not smooth (TOP next-session item).** The scroll-coupled
+  zoom into the Vancouver Island pocket (z5→z8 on the binary raster tiles, in the
+  `remains` chapter) **drops tiles and lags** on the live site — confirmed by Lee
+  2026-06-28. The 2026-06-28 smoothing pass (800vh spread, cubic ease, DOLLY_END
+  0.8, path-prefetch of `cameraTo` viewports, 100ms transition) **reduced but did
+  not fix** it. Likely remaining causes to investigate: (a) per-frame `map.jumpTo`
+  on a 3-zoom-level change still forces MapLibre to churn tile levels faster than
+  the binary raster (R2) can serve; (b) prefetch may not cover every intermediate
+  zoom/tile along the dolly path; (c) 256px binary tiles over-zoomed near z8 thrash.
+  Fix ideas for next time: prefetch ALL z5–9 tiles in the pocket corridor before
+  the dolly starts (not just endpoints); consider easing the zoom depth back
+  (z8→~z7) to cut tile load; or reconsider the mechanism (e.g. a pre-rendered
+  zoom or a coarser-but-complete tile set). Code: `useScrollytelling.updateCamera`
+  (cameraTo scrub), `prefetch.ts` `prefetchBinaryTiles`, `chapters.ts` `remains`.
+- **Empty-tile 404 console noise.** Both `raster/v3/forest-age` (pre-existing) and
+  the new `raster/v3/binary` raster sources request empty/ocean tiles the build
+  skips → 404s (MapLibre renders nothing = correct, but it's console noise). A
+  tile bounds/manifest so MapLibre never requests skipped tiles would clean it.
 
 ## Reference
 

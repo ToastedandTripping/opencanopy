@@ -14,6 +14,7 @@ import {
   prefetchTerrainTiles,
   prefetchYearOverlays,
   prefetchFireOverlays,
+  prefetchBinaryTiles,
 } from "@/lib/story/prefetch";
 import type { ResolvedOverlay } from "@/hooks/useScrollytelling";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
@@ -30,6 +31,14 @@ interface StoryMapProps {
   counterLabel?: string;
   hatchEnabled: boolean;
   supports3D: boolean;
+  /** When true, shows the binary end-reveal raster (ending + remains chapters). */
+  revealBinary?: boolean;
+  /**
+   * Per-frame opacity for story-binary-reveal [0, 0.85].
+   * This effect is the SOLE writer of that layer's raster-opacity.
+   * applyLayerVisibility does not touch it.
+   */
+  binaryRevealOpacity: number;
 }
 
 function clampYear(year: number, start: number, end: number): number {
@@ -60,6 +69,8 @@ export function StoryMap({
   counterLabel,
   hatchEnabled,
   supports3D,
+  revealBinary,
+  binaryRevealOpacity,
 }: StoryMapProps) {
   const mapRef = useRef<MapRef>(null);
   const hatchAddedRef = useRef(false);
@@ -69,6 +80,9 @@ export function StoryMap({
   // Last-applied {year,opacity} per overlay source — guards redundant GL calls
   // (the overlays prop changes identity every scroll frame).
   const overlayAppliedRef = useRef<Record<string, { year: number; opacity: number }>>({});
+  // Last-applied binary reveal opacity — guards redundant GL calls on the
+  // per-frame binary effect (sole writer of story-binary-reveal raster-opacity).
+  const binaryAppliedRef = useRef<number>(-1);
 
   // Apply camera on every update
   useEffect(() => {
@@ -180,8 +194,8 @@ export function StoryMap({
       yearFilter,
       mapLoaded,
     });
-    applyLayerVisibility(map, layers, hatchEnabled, yearFilter);
-  }, [layers, hatchEnabled, mapLoaded]); // yearFilter excluded — timeline effect handles cutblocks
+    applyLayerVisibility(map, layers, hatchEnabled, yearFilter, revealBinary);
+  }, [layers, hatchEnabled, mapLoaded, revealBinary]); // yearFilter excluded — timeline effect handles cutblocks
 
   // Apply timeline year filter + age-grading to cutblocks tiles.
   useEffect(() => {
@@ -237,6 +251,26 @@ export function StoryMap({
     }
   }, [overlays, mapLoaded]);
 
+  // Per-frame binary end-reveal opacity.
+  // SOLE writer of story-binary-reveal raster-opacity. applyLayerVisibility
+  // does not touch this layer. The opacity is driven by binaryRevealOpacity
+  // (scroll-coupled in `ending`, immediate 0.85 in `remains`, 0 elsewhere).
+  // Guards redundant GL calls with binaryAppliedRef so per-frame identity
+  // churn doesn't fire unnecessary setPaintProperty calls.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapLoaded) return;
+    if (!map.isStyleLoaded()) return;
+
+    const binaryLayerId = "story-binary-reveal";
+    if (!map.getLayer(binaryLayerId)) return;
+
+    if (binaryRevealOpacity !== binaryAppliedRef.current) {
+      map.setPaintProperty(binaryLayerId, "raster-opacity", binaryRevealOpacity);
+      binaryAppliedRef.current = binaryRevealOpacity;
+    }
+  }, [binaryRevealOpacity, mapLoaded]);
+
   // On map load: add sources, layers, terrain, hatch pattern
   const onLoad = useCallback(() => {
     const map = mapRef.current?.getMap();
@@ -257,9 +291,12 @@ export function StoryMap({
 
     // Prefetch raster tiles, terrain tiles, and year overlays. Fire overlays
     // are larger and belong to a later beat — defer them behind the cutblocks.
+    // Binary tiles are deferred 1s behind the others (called from onLoad so they
+    // start warming well before the ending chapter is reached).
     prefetchStoryTiles();
     prefetchYearOverlays();
     prefetchFireOverlays();
+    prefetchBinaryTiles();
     const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
     if (TERRAIN_SOURCE.enabled && maptilerKey) {
       prefetchTerrainTiles(maptilerKey);
