@@ -111,8 +111,11 @@ export function HeroSection() {
         <div
           className="absolute inset-0"
           style={{
+            // Sealed to full dark at the bottom (last 20%) so the hero→story-map
+            // seam stays clean now that Beat 2 is the final hero panel before the
+            // sticky map (Beat 3 moved to the CTA). Fog still reads through the middle.
             background:
-              "linear-gradient(180deg, rgba(10,10,12,1.0) 0%, rgba(10,10,12,0.40) 45%, rgba(10,10,12,0.80) 100%)",
+              "linear-gradient(180deg, rgba(10,10,12,1.0) 0%, rgba(10,10,12,0.40) 45%, rgba(10,10,12,0.70) 80%, rgba(10,10,12,1.0) 100%)",
           }}
         />
         <div className="relative z-10 max-w-3xl text-center md:text-left md:pt-[20vh] md:pl-16">
@@ -133,38 +136,6 @@ export function HeroSection() {
           </p>
           <p className="mt-2 text-base text-zinc-500">
             Most of it will never be old growth again.
-          </p>
-        </div>
-      </div>
-
-      {/* Beat 3 — The Transition */}
-      <div
-        ref={setRef(2)}
-        className="hero-beat-3 relative min-h-[100dvh] flex items-end justify-center pb-24 md:pb-32 px-6 overflow-hidden"
-      >
-        <img
-          src="/images/story/hero-fog.webp"
-          alt="A forested mountainside in fog"
-          className="absolute inset-0 w-full h-full object-cover brightness-50"
-          style={{ objectPosition: "35% 50%" }}
-          loading="lazy"
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(10,10,12,1.0) 0%, rgba(10,10,12,0.7) 20%, rgba(10,10,12,0.3) 45%, rgba(10,10,12,1.0) 100%)",
-          }}
-        />
-        <div className="relative z-10 max-w-2xl text-center">
-          <h2
-            className="text-3xl md:text-5xl font-semibold text-white tracking-tight"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            We mapped it.
-          </h2>
-          <p className="mt-6 text-lg text-zinc-400">
-            Every cutblock. Every old-growth stand. Every fire.
           </p>
         </div>
       </div>

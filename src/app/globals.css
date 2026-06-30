@@ -285,12 +285,6 @@ body {
 }
 .hero-beat-2.hero-visible { opacity: 1; transform: scale(1); }
 
-.hero-beat-3 {
-  opacity: 0;
-  transition: opacity 800ms ease-out;
-}
-.hero-beat-3.hero-visible { opacity: 1; }
-
 @keyframes hero-pulse {
   0%, 100% { opacity: 0.3; transform: scaleY(1); }
   50% { opacity: 0.7; transform: scaleY(1.2); }
@@ -304,7 +298,6 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .hero-beat { opacity: 1; transform: none; transition: none; }
   .hero-beat-2 { opacity: 1; transform: none; transition: none; }
-  .hero-beat-3 { opacity: 1; transition: none; }
   .hero-pulse-line { animation: none; opacity: 0.4; }
 }
 

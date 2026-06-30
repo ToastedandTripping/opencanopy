@@ -13,8 +13,18 @@ export function CtaSection() {
     <>
       <section className="relative z-10 bg-[var(--color-surface-0)] py-24 md:py-32">
         <div className="max-w-3xl mx-auto px-6 text-center">
+          {/* Lead-in (moved here from hero Beat 3): the "we mapped everything"
+              claim now sits beside the ACTUAL explorable map as the segue into the
+              CTA. Previously it preceded the non-interactive scroll story and
+              implied that scripted map was the thing to explore. */}
+          <p
+            className="text-base md:text-lg text-zinc-400"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <span className="font-semibold text-white">We mapped it.</span> Every cutblock, every old-growth stand, every fire.
+          </p>
           <h2
-            className="text-3xl md:text-4xl font-semibold text-white tracking-normal"
+            className="mt-5 text-3xl md:text-4xl font-semibold text-white tracking-normal"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Now find your own corner of it.
