@@ -1,17 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Literata, Public_Sans } from "next/font/google";
 import Script from "next/script";
 import { R2_PUBLIC_BASE } from "@/lib/r2-config";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const literata = Literata({
   variable: "--font-display",
   subsets: ["latin"],
   display: "fallback",
-  axes: ["opsz", "WONK"],
+  axes: ["opsz"],
 });
 
-const inter = Inter({
+const publicSans = Public_Sans({
   variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
@@ -58,7 +58,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${inter.variable} h-full antialiased dark`}
+      className={`${literata.variable} ${publicSans.variable} h-full antialiased dark`}
     >
       <head>
         <link
