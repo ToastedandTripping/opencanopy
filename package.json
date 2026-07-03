@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "probe:scrub": "playwright test --config=playwright.probe.config.ts",
     "test:coverage": "vitest run --coverage",
     "audit:rendering": "vitest run --reporter=verbose src/test/audit/",
     "audit:tiles": "npx tsx scripts/audit-tiles.ts",
