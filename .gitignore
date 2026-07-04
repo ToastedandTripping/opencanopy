@@ -66,7 +66,8 @@ data/reports/
 scripts/lib/pmtiles-point-reader.mjs
 
 # Generated/cache artifacts (kept out of git, not deleted)
+/probe-results/
 .wrangler/
 /data/checkpoint/
-scripts/__pycache__/
+__pycache__/
 /test-results/
