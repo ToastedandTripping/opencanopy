@@ -20,26 +20,6 @@ export function ScrollytellingContainer() {
 
   const activeChapter = chapters[activeChapterIndex];
 
-  // Derive terrain config, respecting device capability
-  const terrainConfig = useMemo(() => {
-    if (!supports3D || !activeChapter?.terrain.enabled) {
-      return { enabled: false, exaggeration: 0 };
-    }
-    return activeChapter.terrain;
-  }, [supports3D, activeChapter]);
-
-  // Derive fog config, respecting device capability
-  const fogConfig = useMemo(() => {
-    if (!supports3D) return undefined;
-    return activeChapter?.fog;
-  }, [supports3D, activeChapter]);
-
-  // Determine if any active layer has hatch enabled
-  const hatchEnabled = useMemo(
-    () => activeChapter?.layers.some((l) => l.useHatch) ?? false,
-    [activeChapter]
-  );
-
   // Derive camera, forcing pitch to 0 on low-end devices
   const effectiveCamera = useMemo(() => {
     if (supports3D) return currentCamera;
@@ -83,13 +63,10 @@ export function ScrollytellingContainer() {
       >
         <StoryMap
           camera={effectiveCamera}
-          terrain={terrainConfig}
-          fog={fogConfig}
           layers={activeChapter?.layers ?? []}
           yearFilter={yearFilter}
           overlays={overlays}
           counterLabel={activeChapter?.counterLabel}
-          hatchEnabled={hatchEnabled}
           supports3D={supports3D}
           revealBinary={activeChapter?.revealBinary}
           binaryRevealOpacity={binaryRevealOpacity}
