@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CHAPTERS, type ChapterCamera } from "@/data/chapters";
 import { computeBinaryRevealOpacity } from "@/lib/story/binary-opacity";
-import { normalizeAngle, interpolateCamera, easeInOut } from "@/lib/math/interpolation";
+import { interpolateCamera, easeInOut } from "@/lib/math/interpolation";
 import { yearFromProgress, type ScrubTable } from "@/lib/story/scrub";
 import cutblocksScrub from "@/data/scrub/cutblocks-scrub.json";
 import fireScrub from "@/data/scrub/fire-scrub.json";
@@ -25,10 +25,55 @@ function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 
-/** Check if user prefers reduced motion (cached per session). */
+/**
+ * Check if user prefers reduced motion.
+ *
+ * Caches the MediaQueryList so repeated per-rAF-frame calls don't re-invoke
+ * `window.matchMedia` (a real query against the browser's media-feature
+ * evaluator, not a cheap property read). The cache is keyed on the current
+ * `window.matchMedia` function reference rather than fixed at module-load
+ * time: in production that reference never changes across a page's
+ * lifetime, so the query still runs exactly once per session (the intent of
+ * the original "cached per session" comment); in tests that swap
+ * `window.matchMedia` for a new mock per-suite, the identity check detects
+ * the swap and re-queries, so mocked reduced-motion states are still honored.
+ */
+let cachedMql: MediaQueryList | null = null;
+let cachedMatchMediaFn: typeof window.matchMedia | null = null;
+
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (cachedMql === null || cachedMatchMediaFn !== window.matchMedia) {
+    cachedMatchMediaFn = window.matchMedia;
+    cachedMql = window.matchMedia("(prefers-reduced-motion: reduce)");
+  }
+  return cachedMql.matches;
+}
+
+/** Field-compare two cameras -- avoids treating a same-value re-render as a change. */
+function camerasEqual(a: ChapterCamera, b: ChapterCamera): boolean {
+  return (
+    a.center[0] === b.center[0] &&
+    a.center[1] === b.center[1] &&
+    a.zoom === b.zoom &&
+    a.pitch === b.pitch &&
+    a.bearing === b.bearing
+  );
+}
+
+/** Content-compare two resolved-overlay arrays -- `overlays` is reallocated every frame. */
+function overlaysEqual(a: ResolvedOverlay[], b: ResolvedOverlay[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (
+      a[i].source !== b[i].source ||
+      a[i].year !== b[i].year ||
+      a[i].opacity !== b[i].opacity
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function useScrollytelling() {
@@ -40,8 +85,6 @@ export function useScrollytelling() {
   const [yearFilter, setYearFilter] = useState<number | null>(null);
   const [overlays, setOverlays] = useState<ResolvedOverlay[]>([]);
   const [binaryRevealOpacity, setBinaryRevealOpacity] = useState(0);
-  const rafRef = useRef<number | null>(null);
-  const bearingRef = useRef(CHAPTERS[0].camera.bearing);
   // 1a: Coalesce scroll→camera/year updates to one call per animation frame.
   // pendingRef holds the latest {index, progress} written by onStepProgress
   // and the camera part of onStepEnter; newest-wins resolves the trailing-event
@@ -117,7 +160,9 @@ export function useScrollytelling() {
         }
         pipelineLog("setYearFilter", String(scrubYear));
       }
-      setYearFilter(scrubYear);
+      // Value-equality guard: an idle/no-op frame (same resolved year as last
+      // frame) returns the previous state reference so React bails the render.
+      setYearFilter((prev) => (prev === scrubYear ? prev : scrubYear));
 
       // Resolve this frame's overlays (image year + opacity), decoupled from
       // yearFilter. Scrubbed overlays follow scrubYear (pinned to start during a
@@ -132,7 +177,10 @@ export function useScrollytelling() {
           : ov.opacity;
         return { source: ov.source, year, opacity };
       });
-      setOverlays(resolved);
+      // Value-equality guard: `resolved` is a fresh array/object every frame,
+      // so compare by content -- an unchanged overlay set keeps the previous
+      // array reference instead of forcing a re-render.
+      setOverlays((prev) => (overlaysEqual(prev, resolved) ? prev : resolved));
 
       // Per-frame binary reveal opacity. chapters with revealBinaryFadeIn get a
       // scroll-coupled ramp; chapters with revealBinary but no fadeIn (e.g.
@@ -144,54 +192,17 @@ export function useScrollytelling() {
         prog,
         reducedMotion,
       );
-      setBinaryRevealOpacity(binaryOpacity);
+      // Value-equality guard: scalar compare, no-op frame keeps prev reference.
+      setBinaryRevealOpacity((prev) => (prev === binaryOpacity ? prev : binaryOpacity));
 
-      bearingRef.current = normalizeAngle(camera.bearing);
-      setCurrentCamera(camera);
+      // Value-equality guard: field-compare against the previous camera so an
+      // idle frame (e.g. mid-chapter, no cameraTo/toward-next interpolation
+      // active -- the common case for most of a chapter's scroll range) does
+      // not allocate/adopt a new camera object and force a re-render.
+      setCurrentCamera((prev) => (camerasEqual(prev, camera) ? prev : camera));
     },
     []
   );
-
-  // Bearing drift rAF loop
-  useEffect(() => {
-    const chapter = CHAPTERS[activeChapterIndex];
-
-    // Skip bearing drift entirely if reduced motion or no drift configured
-    if (!chapter?.bearingDrift || prefersReducedMotion()) {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      return;
-    }
-
-    const degreesPerSecond = chapter.bearingDrift;
-    let lastTime = performance.now();
-
-    const tick = (now: number) => {
-      const dt = (now - lastTime) / 1000;
-      lastTime = now;
-      bearingRef.current = normalizeAngle(
-        bearingRef.current + degreesPerSecond * dt
-      );
-
-      setCurrentCamera((prev) => ({
-        ...prev,
-        bearing: bearingRef.current,
-      }));
-
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, [activeChapterIndex]);
 
   // Set up scrollama
   useEffect(() => {
@@ -260,20 +271,6 @@ export function useScrollytelling() {
       scroller?.destroy();
     };
   }, [updateCamera]);
-
-  // Cleanup rAFs on unmount (bearing-drift + scrub coalescer)
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      if (scrubRafRef.current !== null) {
-        cancelAnimationFrame(scrubRafRef.current);
-        scrubRafRef.current = null;
-      }
-    };
-  }, []);
 
   return {
     activeChapterIndex,

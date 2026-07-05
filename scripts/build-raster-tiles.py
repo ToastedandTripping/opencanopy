@@ -45,6 +45,15 @@ from pathlib import Path
 # are imported inside the functions that need them so that --dump-themes can
 # run without requiring any heavy packages to be installed.
 
+# Version tag for the "binary" theme's tile-presence manifest (see
+# generate-tile-manifest.py + src/lib/story/tile-manifest.ts). Must match the
+# "v<N>" segment of BINARY_RASTER_URL in src/lib/r2-config.ts and the R2
+# upload path (r2:opencanopy-tiles/raster/v3/binary/) -- bump all three
+# together when the binary tileset is rebuilt under a new version. This is a
+# manually-kept-in-sync cross-language constant (Python build script <->
+# TypeScript client), same pattern already used for the R2 upload path.
+BINARY_MANIFEST_VERSION = "v3"
+
 # ── Repo root & palette ───────────────────────────────────────────
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -481,6 +490,7 @@ def build_theme(theme_name: str, themes: dict, features: list, output_dir: Path,
 
     total_tiles = 0
     total_written = 0
+    written_tiles: list = []  # "z/x/y" keys, only populated for theme_name == "binary"
     start = time.time()
 
     for z in zoom_range:
@@ -516,13 +526,47 @@ def build_theme(theme_name: str, themes: dict, features: list, output_dir: Path,
                 tile_path = theme_dir / str(z) / str(x) / f"{y}.png"
                 write_tile_png(rgba, tile_path)
                 z_written += 1
+                if theme_name == "binary":
+                    written_tiles.append(f"{z}/{x}/{y}")
 
         total_written += z_written
         elapsed = time.time() - start
         print(f"    Written: {z_written} tiles ({elapsed:.0f}s elapsed)")
 
     print(f"\n  Total: {total_written} tiles written for {theme_name}")
+
+    # Emit the tile-presence manifest for the story's fail-open 404-quieting
+    # wrapper (src/lib/story/tile-manifest.ts). Only "binary" is consumed by
+    # the story map; other themes have no manifest consumer. This keeps
+    # FUTURE binary rebuilds shipping a fresh manifest automatically, without
+    # requiring the separate rclone-based generate-tile-manifest.py step
+    # (that script remains useful for generating a manifest against tiles
+    # already on R2, without rebuilding).
+    if theme_name == "binary" and written_tiles:
+        _write_tile_manifest(written_tiles)
+
     return total_written
+
+
+def _write_tile_manifest(written_tiles: list, output_path: Path = None):
+    """Write the binary raster's tile-presence manifest (see BINARY_MANIFEST_VERSION)."""
+    import datetime
+
+    if output_path is None:
+        output_path = REPO_ROOT / "public" / "raster" / "binary-tile-manifest.json"
+
+    manifest = {
+        "version": BINARY_MANIFEST_VERSION,
+        "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "tiles": sorted(written_tiles),
+    }
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+        f.write("\n")
+
+    print(f"\n  Wrote tile-presence manifest: {output_path} ({len(written_tiles)} tiles)")
 
 
 def main():

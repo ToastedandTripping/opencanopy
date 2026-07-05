@@ -427,3 +427,148 @@ describe("Item 1c — non-reduced path: existing scrub behavior preserved", () =
     expect(result.current.yearFilter).toBeLessThanOrEqual(scrub.end);
   });
 });
+
+// ─── Perf floor: idle-frame value-equality guards ──────────────────────────
+//
+// updateCamera used to call setCurrentCamera/setYearFilter/setOverlays/
+// setBinaryRevealOpacity unconditionally every rAF frame, forcing a full
+// container re-render even when nothing actually changed (e.g. most of a
+// chapter's scroll range, where the camera is a constant spread of
+// chapter.camera and overlays saturate at their fadeIn bounds). Each setter
+// now compares the freshly computed value against the previous state and
+// returns the previous reference when they're equal, so React bails the
+// re-render (a setState call that returns a value === the current state is a
+// documented React no-op: no re-render is scheduled).
+//
+// The render-count test below is the direct proof of that claim: it counts
+// actual renderHook re-renders across a repeated identical frame. The
+// reference-identity tests that follow show WHICH piece of state stayed
+// stable and why (camera/overlays are reference types reallocated every
+// frame, so `toBe` there proves the guard kept the old object rather than
+// adopting a fresh-but-equal one). yearFilter/binaryRevealOpacity are
+// primitives -- `toBe` on them proves the VALUE is correct and stable, not
+// specifically that a render was skipped (a primitive equality holds either
+// way), so those are basic correctness checks, not the perf proof.
+
+describe("Perf floor: idle-frame render guard", () => {
+  beforeEach(() => {
+    capturedEnter = null;
+    capturedProgress = null;
+    vi.useFakeTimers();
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: false,
+      media: "",
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }) as unknown as typeof window.matchMedia;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("a repeated identical {index, progress} frame does not trigger a re-render", async () => {
+    let renderCount = 0;
+    const { result } = renderHook(() => {
+      renderCount++;
+      return useScrollytelling();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // `overview` (index 0) is the initial chapter -- no onStepEnter needed.
+    const idx = CHAPTERS.findIndex((c) => c.id === "overview");
+
+    act(() => { fireProgress(idx, 0.1); });
+    act(() => { flushRaf(); });
+    const countAfterFirstFrame = renderCount;
+
+    // Same chapter, same progress -- a genuinely idle frame. Before the
+    // value-equality guards, this unconditionally called 4 setStates with
+    // freshly allocated objects, forcing a re-render every time.
+    act(() => { fireProgress(idx, 0.1); });
+    act(() => { flushRaf(); });
+
+    expect(
+      renderCount,
+      "repeating the exact same {index, progress} should not re-render the hook consumer"
+    ).toBe(countAfterFirstFrame);
+    // Sanity: the hook is actually alive and returning state (not stubbed out).
+    expect(result.current.activeChapterIndex).toBe(idx);
+  });
+
+  it("a genuinely different progress DOES trigger a re-render (guard is not over-eager)", async () => {
+    let renderCount = 0;
+    renderHook(() => {
+      renderCount++;
+      return useScrollytelling();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const idx = CHAPTERS.findIndex((c) => c.id === "logging-timeline");
+
+    act(() => { fireProgress(idx, 0.1); });
+    act(() => { flushRaf(); });
+    const countAfterFirstFrame = renderCount;
+
+    act(() => { fireProgress(idx, 0.9); });
+    act(() => { flushRaf(); });
+
+    expect(renderCount).toBeGreaterThan(countAfterFirstFrame);
+  });
+
+  it("repeating the exact same {index, progress} keeps the same camera/overlays object references", async () => {
+    const { result } = await setupHook();
+    // `baseline` has a static overlay with fadeIn, forest-age layer only, no
+    // cameraTo/toward-next dolly at prog=0.5 — the common "idle mid-chapter"
+    // shape most of a chapter's scroll range actually looks like.
+    const idx = CHAPTERS.findIndex((c) => c.id === "baseline");
+
+    act(() => { fireProgress(idx, 0.5); });
+    act(() => { flushRaf(); });
+
+    const camera1 = result.current.currentCamera;
+    const overlays1 = result.current.overlays;
+    const year1 = result.current.yearFilter;
+    const binary1 = result.current.binaryRevealOpacity;
+
+    // Fire the identical {index, progress} again — a genuinely idle frame.
+    act(() => { fireProgress(idx, 0.5); });
+    act(() => { flushRaf(); });
+
+    // Reference types: proves the guard kept the OLD object rather than
+    // adopting a freshly allocated-but-equal one.
+    expect(result.current.currentCamera).toBe(camera1);
+    expect(result.current.overlays).toBe(overlays1);
+    // Primitives: correctness (stable, correct value) rather than proof of
+    // the render-skip itself -- see the render-count test above for that.
+    expect(result.current.yearFilter).toBe(year1);
+    expect(result.current.binaryRevealOpacity).toBe(binary1);
+  });
+
+  it("repeated identical progress within a chapter's flat camera range keeps the SAME camera object across many frames", async () => {
+    const { result } = await setupHook();
+    // `overview` never triggers the toward-next dolly at these progress
+    // values (all <= 0.8) and has no cameraTo -- camera is a constant spread
+    // of chapter.camera on every frame, the textbook idle case.
+    const idx = CHAPTERS.findIndex((c) => c.id === "overview");
+
+    act(() => { fireProgress(idx, 0.1); });
+    act(() => { flushRaf(); });
+    const cameraAfterFirst = result.current.currentCamera;
+
+    for (const prog of [0.2, 0.3, 0.4, 0.5]) {
+      act(() => { fireProgress(idx, prog); });
+      act(() => { flushRaf(); });
+      expect(result.current.currentCamera).toBe(cameraAfterFirst);
+    }
+  });
+});

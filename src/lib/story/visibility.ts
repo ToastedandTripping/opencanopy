@@ -2,8 +2,15 @@
  * Story layer visibility logic.
  *
  * Extracted from StoryMap useEffect for testability.
- * These functions are the imperative paint/filter operations that
- * control which layers are visible and at what opacity.
+ * These functions are the imperative paint operations that control which
+ * layers are visible and at what opacity.
+ *
+ * Phase 1 (2026-07): shrunk to forest-base management only. The vector
+ * cutblocks/fire-history/parks/forest-age fill+outline layers this used to
+ * drive (plus the class-filter logic and applyTimelineFilter, its sibling
+ * export) were deleted from setup-layers.ts -- they were minzoom:9 detail
+ * layers the story never zoomed past z8 to reach. applyTimelineFilter died
+ * with them (its only consumer was story-cutblocks-fill/outline).
  */
 
 import type { ChapterLayer } from "@/data/chapters";
@@ -13,54 +20,38 @@ import { pipelineLog } from "@/lib/debug/pipeline-logger";
  * Map interface sufficient for visibility operations.
  * Compatible with both real MapLibre and the test mock.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface VisibilityMap {
   getLayer(id: string): unknown;
   isStyleLoaded(): boolean | void;
   once(event: string, callback: () => void): void;
-  setPaintProperty(layerId: string, prop: string, value: any): void;  // eslint-disable-line @typescript-eslint/no-explicit-any
-  setFilter(layerId: string, filter: any): void;                      // eslint-disable-line @typescript-eslint/no-explicit-any
+  setPaintProperty(layerId: string, prop: string, value: unknown): void;
 }
 
 /**
  * Apply layer visibility and opacity for the current chapter.
  *
- * This is the "general visibility" effect -- controls raster overview,
- * vector fills/outlines, hatch, and class filters for all layers
- * EXCEPT cutblocks opacity when timeline is active (that is managed
- * by applyTimelineFilter exclusively).
+ * Only manages story-forest-base (the green substrate). The forest-age
+ * raster overview, vector detail layers, and hatch pattern this used to
+ * also drive were removed in Phase 1 (dead in the story: pinned to 0,
+ * never zoomed to, or gated on a flag no chapter ever set).
  *
- * @param revealBinary - When true (ending + remains chapters), shows the binary
- *   end-reveal raster at 0.85 and hides the forest-base. Uses an explicit
- *   chapter flag rather than sniffing layer opacity to avoid fragile heuristics.
+ * @param revealBinary - When true (ending + remains chapters), the binary
+ *   end-reveal raster is showing and the forest-base is hidden so it doesn't
+ *   obscure the red/green contrast. Uses an explicit chapter flag rather than
+ *   sniffing layer opacity to avoid fragile heuristics.
  */
 export function applyLayerVisibility(
   map: VisibilityMap,
   layers: ChapterLayer[],
-  hatchEnabled: boolean,
-  yearFilter: number | null,
   revealBinary?: boolean,
 ): void {
   if (!map.isStyleLoaded()) {
     pipelineLog("visibility-effect", "style not loaded, deferring to idle");
-    map.once("idle", () => applyLayerVisibility(map, layers, hatchEnabled, yearFilter, revealBinary));
+    map.once("idle", () => applyLayerVisibility(map, layers, revealBinary));
     return;
   }
 
-  const layerIds = ["forest-age", "cutblocks", "fire-history", "parks"];
-  const activeLayers = Object.fromEntries(
-    layers.map((l) => [l.id, l])
-  ) as Record<string, ChapterLayer>;
-
-  const forestAgeActive = activeLayers["forest-age"];
-
-  // Forest-age raster overview: held at opacity 0 throughout the story.
-  // The green forest-base carries the substrate; the binary raster carries
-  // the end-reveal. The raster overview is only used by the /map interactive.
-  const rasterLayerId = "story-forest-age-raster";
-  if (map.getLayer(rasterLayerId)) {
-    map.setPaintProperty(rasterLayerId, "raster-opacity", 0);
-  }
+  const forestAgeActive = layers.some((l) => l.id === "forest-age");
 
   // Forest base: green silhouette. Hidden during binary reveal (the binary
   // raster carries old-growth at its correct color; keeping forest-base on
@@ -79,132 +70,4 @@ export function applyLayerVisibility(
   // does NOT write it. Removing this path eliminates the double-write that caused
   // the immediate fade-in on chapter-enter (race between chapter-enter 0.85 here
   // and the scroll-coupled ramp in the per-frame effect).
-
-  for (const layerId of layerIds) {
-    const storyLayer = activeLayers[layerId];
-    const opacity = storyLayer?.opacity ?? 0;
-
-    const fillId = `story-${layerId}-fill`;
-    const outlineId = `story-${layerId}-outline`;
-
-    // Build class filter
-    let classFilterExpr: unknown = null;
-    if (storyLayer?.classFilter && storyLayer.classFilter.length > 0) {
-      classFilterExpr = [
-        "any",
-        ...storyLayer.classFilter.map((cls) => [
-          "==",
-          ["get", "class"],
-          cls,
-        ]),
-      ];
-    }
-
-    const isCutblocks = layerId === "cutblocks";
-
-    if (map.getLayer(fillId)) {
-      const isTimelineControlled = isCutblocks && yearFilter != null;
-      if (!isTimelineControlled) {
-        map.setPaintProperty(fillId, "fill-opacity", opacity);
-      }
-      if (!isCutblocks) {
-        map.setFilter(fillId, classFilterExpr);
-      }
-    }
-    if (map.getLayer(outlineId)) {
-      map.setPaintProperty(
-        outlineId,
-        "line-opacity",
-        opacity > 0 ? 0.4 : 0
-      );
-      if (!isCutblocks) {
-        map.setFilter(outlineId, classFilterExpr);
-      }
-    }
-  }
-
-  // Hatch layer
-  const hatchFillId = "story-harvested-hatch";
-  if (map.getLayer(hatchFillId)) {
-    map.setPaintProperty(
-      hatchFillId,
-      "fill-opacity",
-      hatchEnabled ? 0.6 : 0
-    );
-  }
-}
-
-/**
- * Apply timeline year filter and age-grading to cutblocks.
- *
- * This is the SINGLE AUTHORITY for cutblock filters. Composes
- * classFilter + yearFilter into one expression.
- */
-export function applyTimelineFilter(
-  map: VisibilityMap,
-  layers: ChapterLayer[],
-  yearFilter: number | null,
-): void {
-  if (!map.isStyleLoaded()) {
-    pipelineLog("timeline-effect", "style not loaded, deferring to idle");
-    map.once("idle", () => applyTimelineFilter(map, layers, yearFilter));
-    return;
-  }
-
-  const fillId = "story-cutblocks-fill";
-  const outlineId = "story-cutblocks-outline";
-  if (!map.getLayer(fillId)) return;
-
-  const cutblocksLayer = layers.find((l) => l.id === "cutblocks");
-  let classFilterExpr: unknown = null;
-  if (
-    cutblocksLayer?.classFilter &&
-    cutblocksLayer.classFilter.length > 0
-  ) {
-    classFilterExpr = [
-      "any",
-      ...cutblocksLayer.classFilter.map((cls) => [
-        "==",
-        ["get", "class"],
-        cls,
-      ]),
-    ];
-  }
-
-  const yearExpr = [
-    "to-number",
-    ["slice", ["get", "DISTURBANCE_START_DATE"], 0, 4],
-  ];
-
-  if (yearFilter != null) {
-    const yearFilterExpr = ["<=", yearExpr, yearFilter];
-    const composedFilter = classFilterExpr
-      ? ["all", classFilterExpr, yearFilterExpr]
-      : yearFilterExpr;
-
-    map.setFilter(fillId, composedFilter);
-    if (map.getLayer(outlineId)) map.setFilter(outlineId, composedFilter);
-
-    map.setPaintProperty(fillId, "fill-opacity", 0.7);
-
-    map.setPaintProperty(fillId, "fill-color", [
-      "interpolate",
-      ["linear"],
-      ["-", yearFilter, yearExpr],
-      0,
-      "#ef4444",
-      25,
-      "#b91c1c",
-      50,
-      "#7f1d1d",
-    ]);
-  } else {
-    map.setFilter(fillId, classFilterExpr);
-    if (map.getLayer(outlineId))
-      map.setFilter(outlineId, classFilterExpr);
-
-    const scalarOpacity = cutblocksLayer?.opacity ?? 0;
-    map.setPaintProperty(fillId, "fill-opacity", scalarOpacity);
-    map.setPaintProperty(fillId, "fill-color", "#dc2626");
-  }
 }

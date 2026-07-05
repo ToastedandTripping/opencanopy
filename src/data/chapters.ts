@@ -1,8 +1,8 @@
 /**
  * Scrollytelling chapter definitions.
  *
- * Each chapter drives a camera keyframe, layer configuration,
- * terrain/fog settings, and narrative text for the story map.
+ * Each chapter drives a camera keyframe, layer configuration, and
+ * narrative text for the story map.
  */
 
 export interface ChapterCamera {
@@ -12,24 +12,9 @@ export interface ChapterCamera {
   bearing: number;
 }
 
-export interface ChapterTerrain {
-  enabled: boolean;
-  exaggeration: number;
-}
-
-export interface ChapterFog {
-  enabled: boolean;
-  color: string;
-  horizonBlend: number;
-  range: [number, number];
-}
-
 export interface ChapterLayer {
   id: string;
   opacity: number;
-  useHatch?: boolean;
-  /** Filter to specific feature classes (e.g. ["old-growth", "mature"]) */
-  classFilter?: string[];
 }
 
 export interface ChapterTimelineScrub {
@@ -61,8 +46,6 @@ export interface Chapter {
   /** Source citation rendered small under the body (e.g. the closing stat). */
   citation?: string;
   camera: ChapterCamera;
-  terrain: ChapterTerrain;
-  fog?: ChapterFog;
   layers: ChapterLayer[];
   timelineScrub?: ChapterTimelineScrub;
   /**
@@ -86,8 +69,6 @@ export interface Chapter {
   overlays?: ChapterOverlay[];
   /** Small label under the year counter (e.g. "wildfires"). */
   counterLabel?: string;
-  /** Degrees per second for slow camera rotation */
-  bearingDrift?: number;
   /** Scroll spacer height in vh units */
   scrollHeight: number;
   /**
@@ -122,8 +103,6 @@ export const FLAT_BC_CAMERA: ChapterCamera = {
   bearing: 0,
 };
 
-const NO_TERRAIN: ChapterTerrain = { enabled: false, exaggeration: 0 };
-
 /**
  * Final camera for the story's "remains" chapter — the old-growth pocket
  * that the ending dolly zooms into.
@@ -150,7 +129,6 @@ export const CHAPTERS: Chapter[] = [
     id: "overview",
     heading: "See what's left.",
     camera: FLAT_BC_CAMERA,
-    terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.6 }],
     scrollHeight: 150,
   },
@@ -161,7 +139,6 @@ export const CHAPTERS: Chapter[] = [
     heading: "Before the records began.",
     body: "Decades of logging predate the public record. Much of what you see in red was already gone by 1950.",
     camera: FLAT_BC_CAMERA,
-    terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.5 }],
     overlays: [
       { source: "cutblocks", mode: "static", staticYear: 1950, opacity: 0.85, fadeIn: [0, 0.7] },
@@ -173,7 +150,6 @@ export const CHAPTERS: Chapter[] = [
     heading: "75 years of logging.",
     body: "British Columbia has logged over 8 million hectares of forest since 1950. Each red mark is a cutblock — an area where every tree was removed.",
     camera: FLAT_BC_CAMERA,
-    terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.4 }],
     timelineScrub: { start: 1950, end: 2025 },
     scrubTable: "cutblocks",
@@ -190,7 +166,6 @@ export const CHAPTERS: Chapter[] = [
     heading: "And then it burned.",
     body: "British Columbia has always burned — but the largest seasons on record are all recent. Since 2017, wildfire has taken more forest than logging did in decades.",
     camera: FLAT_BC_CAMERA,
-    terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.3 }],
     // LINEAR scrub (no scrubTable): the counter advances one year per equal
     // scroll. Fire is a few huge discrete events (1958, 2017, 2023); the
@@ -223,7 +198,6 @@ export const CHAPTERS: Chapter[] = [
     body: "What you just watched was only the permit record. The full picture is worse.",
     citation: "Price, Holt & Daust, 2020",
     camera: FLAT_BC_CAMERA,
-    terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.25 }],
     // cutblocks stays at 0.75 through the whole chapter so "the permit record"
     // red is on screen while the panel text lands; fire fades out immediately.
@@ -248,7 +222,6 @@ export const CHAPTERS: Chapter[] = [
     heading: "This is what's left.",
     camera: FLAT_BC_CAMERA,
     cameraTo: STORY_END_CAMERA,
-    terrain: NO_TERRAIN,
     layers: [{ id: "forest-age", opacity: 0.25 }],
     revealBinary: true,
     scrollHeight: 800,

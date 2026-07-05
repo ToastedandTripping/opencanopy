@@ -13,9 +13,7 @@ import {
   FIRE_OVERLAY_URL_PATTERN,
   FIRE_OVERLAY_RANGE,
 } from "@/lib/story/setup-layers";
-import { FOREST_AGE_RASTER_URL, BINARY_RASTER_URL } from "@/lib/r2-config";
-
-const RASTER_URL_TEMPLATE = FOREST_AGE_RASTER_URL;
+import { BINARY_RASTER_URL } from "@/lib/r2-config";
 
 function lon2tile(lon: number, zoom: number): number {
   return Math.floor(((lon + 180) / 360) * (1 << zoom));
@@ -57,64 +55,6 @@ function viewportTiles(
     }
   }
   return tiles;
-}
-
-let storyPrefetchStarted = false;
-
-/**
- * Prefetch raster overview tiles for all chapter viewports.
- * Uses Image() elements so tiles land in the browser HTTP cache.
- * MapLibre will reuse them when it requests the same URLs.
- * Idempotent: safe to call from both HeroSection and StoryMap.
- */
-export function prefetchStoryTiles(): void {
-  if (storyPrefetchStarted || typeof Image === "undefined") return;
-  storyPrefetchStarted = true;
-
-  const seen = new Set<string>();
-  const urls: string[] = [];
-
-  for (const chapter of CHAPTERS) {
-    const [lon, lat] = chapter.camera.center;
-    const zoom = chapter.camera.zoom;
-
-    const zoomFloor = Math.floor(zoom);
-    const zoomLevels =
-      zoomFloor >= 4 && zoomFloor <= 8
-        ? [zoomFloor, Math.min(zoomFloor + 1, 9)]
-        : [zoomFloor];
-
-    for (const z of zoomLevels) {
-      const tiles = viewportTiles(lon, lat, z);
-      for (const { z: tz, x, y } of tiles) {
-        const key = `${tz}/${x}/${y}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        urls.push(
-          RASTER_URL_TEMPLATE.replace("{z}", String(tz))
-            .replace("{x}", String(x))
-            .replace("{y}", String(y))
-        );
-      }
-    }
-  }
-
-  let idx = 0;
-  const BATCH_SIZE = 6;
-
-  function loadBatch() {
-    const end = Math.min(idx + BATCH_SIZE, urls.length);
-    for (; idx < end; idx++) {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = urls[idx];
-    }
-    if (idx < urls.length) {
-      setTimeout(loadBatch, 100);
-    }
-  }
-
-  loadBatch();
 }
 
 let binaryPrefetchStarted = false;
@@ -191,39 +131,9 @@ export function prefetchBinaryTiles(): void {
     }
   }
 
-  // Defer behind the story + year-overlay prefetch so they get bandwidth first.
+  // Defer behind the year-overlay prefetch so it gets bandwidth first.
   // The binary reveal is the last beat in the story; a 1s head-start is plenty.
   setTimeout(loadBatch, 1000);
-}
-
-let terrainPrefetchStarted = false;
-
-/**
- * Prefetch terrain DEM tiles for chapters that use 3D terrain.
- * Extends the existing Fairy Creek prefetch to cover all terrain chapters.
- * Idempotent: safe to call from both HeroSection and StoryMap.
- */
-export function prefetchTerrainTiles(maptilerKey: string): void {
-  if (terrainPrefetchStarted || typeof Image === "undefined" || !maptilerKey) return;
-  terrainPrefetchStarted = true;
-
-  const seen = new Set<string>();
-
-  for (const chapter of CHAPTERS) {
-    if (!chapter.terrain.enabled) continue;
-    const [lon, lat] = chapter.camera.center;
-    const z = Math.min(Math.floor(chapter.camera.zoom), 12);
-    const tiles = viewportTiles(lon, lat, z, 1);
-
-    for (const { z: tz, x, y } of tiles) {
-      const key = `${tz}/${x}/${y}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = `https://api.maptiler.com/tiles/terrain-rgb-v2/${tz}/${x}/${y}.webp?key=${maptilerKey}`;
-    }
-  }
 }
 
 let yearOverlayPrefetchStarted = false;

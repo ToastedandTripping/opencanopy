@@ -1,45 +1,39 @@
 /**
  * Part B — Check 9: Story Page ↔ Registry Consistency
  *
- * The scrollytelling story page uses its own layer setup (setup-layers.ts)
- * with hardcoded source-layer names, URLs, and layer IDs. These must stay in
- * sync with the main layer registry or the story will silently render wrong data.
+ * Phase 1 (2026-07): the story's PMTiles vector detail layers (forest-age,
+ * cutblocks, fire-history, parks fills+outlines + the harvested hatch) were
+ * deleted from setup-layers.ts -- they were minzoom:9 layers the story never
+ * zoomed past z8 to reach, so they never rendered. The forest-age raster
+ * overview (story-forest-age-raster, pinned to opacity 0 forever) went too.
+ * This retired most of what this file used to check (source-layer name
+ * sync, raster URL sync) -- those checks are now moot because there is
+ * nothing left in setup-layers.ts to drift out of sync.
  *
- * Verifies:
- *   - Every source-layer name in setup-layers.ts exists in the known PMTiles layer list
- *   - Layer IDs referenced in chapters.ts exist in the registry
- *   - Source-layer names in setup-layers.ts match the registry's tileSource.sourceLayer
- *   - The raster overview URL in setup-layers.ts matches the registry's rasterOverview.urlTemplate
+ * Correction (2026-07): story-hillshade/terrain-rgb were ALSO deleted in that
+ * same pass, but that was a mis-classification -- unlike the PMTiles/hatch/
+ * forest-age-raster items above, hillshade is gated on TERRAIN_SOURCE.enabled
+ * (mapConfig.ts) and production HAS a MapTiler key configured, so it DOES
+ * render live (a static relief-shading layer under the forest overlay). It's
+ * been restored in setup-layers.ts, still gated on key presence. The PMTiles/
+ * hatch/forest-age-raster entries are genuinely dead and stay deleted.
+ *
+ * What's left, updated to prove the new reality rather than just deleting
+ * the old assertions:
+ *   - setup-layers.ts registers NO PMTiles vector source-layer references
+ *     at all (a regression guard against re-introducing the dead layers)
+ *   - Chapter layer IDs (still just "forest-age") exist in the registry
+ *   - STORY_LAYER_IDS / STORY_SOURCE_IDS are exported, non-empty, still do NOT
+ *     include the permanently-deleted PMTiles/forest-age-raster entries, and
+ *     DO include story-hillshade/terrain-rgb when a MapTiler key is configured
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
-import {
-  STORY_LAYER_IDS,
-  STORY_SOURCE_IDS,
-  RASTER_OVERVIEW_URL,
-} from "@/lib/story/setup-layers";
-import { FOREST_AGE_RASTER_URL } from "@/lib/r2-config";
+import { STORY_LAYER_IDS, STORY_SOURCE_IDS } from "@/lib/story/setup-layers";
 import { CHAPTERS } from "@/data/chapters";
-
-// ── Known PMTiles source layers (mirrors KNOWN_SOURCE_LAYERS in registry-audit) ─
-
-const KNOWN_SOURCE_LAYERS = new Set([
-  "forest-age",
-  "tenure-cutblocks",
-  "fire-history",
-  "parks",
-  "conservancies",
-  "ogma",
-  "wildlife-habitat-areas",
-  "ungulate-winter-range",
-  "community-watersheds",
-  "mining-claims",
-  "forestry-roads",
-  "conservation-priority",
-]);
 
 // ── Read setup-layers.ts source to extract hardcoded values ───────────────────
 //
@@ -67,8 +61,6 @@ function extractSourceLayerNames(source: string): string[] {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("Check 9: Story page ↔ Registry consistency", () => {
-  const sourceLayerNames = extractSourceLayerNames(setupLayersSource);
-
   it("STORY_LAYER_IDS is exported and non-empty", () => {
     expect(STORY_LAYER_IDS).toBeDefined();
     expect(STORY_LAYER_IDS.length).toBeGreaterThan(0);
@@ -79,77 +71,90 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
     expect(STORY_SOURCE_IDS.length).toBeGreaterThan(0);
   });
 
-  describe("source-layer names in setup-layers.ts exist in PMTiles", () => {
-    it("all hardcoded source-layer values reference known PMTiles source layers", () => {
+  describe("Phase 1: the story's PMTiles vector detail layers stay deleted", () => {
+    it("setup-layers.ts registers no source-layer references (all vector detail layers removed)", () => {
+      const sourceLayerNames = extractSourceLayerNames(setupLayersSource);
       expect(
-        sourceLayerNames.length,
-        "Could not extract any source-layer names from setup-layers.ts. " +
-          'Has the format changed from `"source-layer": "name"`?'
-      ).toBeGreaterThan(0);
+        sourceLayerNames,
+        "setup-layers.ts should register zero PMTiles vector layers -- if this " +
+          "fails, a source-layer reference was re-added. The story renders " +
+          "top-down at z4-z9 and never reaches the minzoom:9 vector detail " +
+          "layers that used to live here; re-adding them reintroduces dead code."
+      ).toHaveLength(0);
+    });
 
-      const unknown: string[] = [];
-      for (const name of sourceLayerNames) {
-        if (!KNOWN_SOURCE_LAYERS.has(name)) {
-          unknown.push(name);
-        }
+    it("STORY_LAYER_IDS / STORY_SOURCE_IDS do not include the permanently-deleted PMTiles/hatch/forest-age-raster entries", () => {
+      const layerIds: string[] = [...STORY_LAYER_IDS];
+      const sourceIds: string[] = [...STORY_SOURCE_IDS];
+
+      // story-hillshade/terrain-rgb are deliberately NOT in this list -- they
+      // were mis-classified as dead and have been restored (gated on
+      // TERRAIN_SOURCE.enabled). See the "terrain hillshade" describe block
+      // below for the key-gated restoration checks.
+      const deletedLayerIds = [
+        "story-forest-age-raster",
+        "story-harvested-hatch",
+        "story-forest-age-fill",
+        "story-forest-age-outline",
+        "story-cutblocks-fill",
+        "story-cutblocks-outline",
+        "story-fire-history-fill",
+        "story-fire-history-outline",
+        "story-parks-fill",
+        "story-parks-outline",
+      ];
+      for (const id of deletedLayerIds) {
+        expect(layerIds).not.toContain(id);
       }
 
-      if (unknown.length > 0) {
-        throw new Error(
-          `setup-layers.ts references unknown source layers:\n${unknown.join("\n")}\n` +
-            `Known: ${[...KNOWN_SOURCE_LAYERS].join(", ")}`
-        );
+      const deletedSourceIds = ["story-forest-age-raster", "opencanopy"];
+      for (const id of deletedSourceIds) {
+        expect(sourceIds).not.toContain(id);
       }
+    });
 
-      expect(unknown).toHaveLength(0);
+    it("STORY_LAYER_IDS === STORY_SOURCE_IDS for the same-ID overlay layers (each owns exactly one 1:1 source)", () => {
+      // Phase 1 removed everything that broke the 1:1 same-ID layer<->source
+      // mapping (PMTiles was one source shared by many vector layers;
+      // forest-age-raster had no matching entry on the other list). What's
+      // left -- forest-base, year-overlay, fire-overlay, binary-reveal -- is
+      // 1:1 by the same ID.
+      //
+      // story-hillshade/terrain-rgb (restored 2026-07, gated on MapTiler key)
+      // are the one deliberate exception: the DEM source is conventionally
+      // named "terrain-rgb", not "story-hillshade", so they're excluded from
+      // this same-ID check (and covered separately below).
+      const sameIdLayerIds = [...STORY_LAYER_IDS].filter((id) => id !== "story-hillshade");
+      const sameIdSourceIds = [...STORY_SOURCE_IDS].filter((id) => id !== "terrain-rgb");
+      expect(sameIdLayerIds.sort()).toEqual(sameIdSourceIds.sort());
     });
   });
 
-  describe("story source-layers match registry tileSource.sourceLayer", () => {
-    // Known story layer ID -> expected registry layer ID mapping
-    // (story uses different layer IDs than registry, but same underlying source)
-    const STORY_TO_REGISTRY: Record<string, string> = {
-      "story-forest-age-fill": "forest-age",
-      "story-forest-age-outline": "forest-age",
-      "story-cutblocks-fill": "cutblocks",
-      "story-cutblocks-outline": "cutblocks",
-      "story-fire-history-fill": "fire-history",
-      "story-fire-history-outline": "fire-history",
-      "story-parks-fill": "parks",
-      "story-parks-outline": "parks",
-      "story-harvested-hatch": "forest-age",
-    };
+  describe("terrain hillshade (Phase 1 correction: restored, gated on MapTiler key presence)", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
 
-    for (const [storyLayerId, registryLayerId] of Object.entries(
-      STORY_TO_REGISTRY
-    )) {
-      it(`story layer "${storyLayerId}" uses same source layer as registry "${registryLayerId}"`, () => {
-        // Check that the registry layer ID exists
-        const registryLayer = LAYER_REGISTRY.find(
-          (l) => l.id === registryLayerId
-        );
-        expect(
-          registryLayer,
-          `Registry layer "${registryLayerId}" (referenced by story layer "${storyLayerId}") not found`
-        ).toBeDefined();
+    it("STORY_LAYER_IDS includes story-hillshade and STORY_SOURCE_IDS includes terrain-rgb when a MapTiler key is configured", async () => {
+      vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "test-key");
+      vi.resetModules();
+      const { STORY_LAYER_IDS: freshLayerIds, STORY_SOURCE_IDS: freshSourceIds } = await import(
+        "@/lib/story/setup-layers"
+      );
+      expect(freshLayerIds).toContain("story-hillshade");
+      expect(freshSourceIds).toContain("terrain-rgb");
+    });
 
-        if (!registryLayer?.tileSource) {
-          // This story layer may use a WFS-only registry layer -- acceptable
-          // (the story may be using a different data source)
-          return;
-        }
-
-        const registrySourceLayer = registryLayer.tileSource.sourceLayer;
-
-        // Verify this source layer name appears in setup-layers.ts
-        expect(
-          sourceLayerNames,
-          `Registry layer "${registryLayerId}" uses source layer "${registrySourceLayer}", ` +
-            `but that name is not found in setup-layers.ts. ` +
-            `The story and registry are out of sync.`
-        ).toContain(registrySourceLayer);
-      });
-    }
+    it("STORY_LAYER_IDS / STORY_SOURCE_IDS omit story-hillshade/terrain-rgb when no MapTiler key is configured", async () => {
+      vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "");
+      vi.resetModules();
+      const { STORY_LAYER_IDS: freshLayerIds, STORY_SOURCE_IDS: freshSourceIds } = await import(
+        "@/lib/story/setup-layers"
+      );
+      expect(freshLayerIds).not.toContain("story-hillshade");
+      expect(freshSourceIds).not.toContain("terrain-rgb");
+    });
   });
 
   describe("chapter layer IDs reference known registry layers", () => {
@@ -185,42 +190,5 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
       const chaptersWithLayers = CHAPTERS.filter((c) => c.layers.length > 0);
       expect(chaptersWithLayers.length).toBeGreaterThanOrEqual(2);
     });
-  });
-
-  describe("raster overview URL matches registry", () => {
-    // The story map and the interactive registry both import FOREST_AGE_RASTER_URL
-    // from @/lib/r2-config (single source of truth). These checks assert that
-    // single source actually flows to both consumers at runtime, so the story
-    // never renders different raster tiles than the main map.
-    it("setup-layers.ts RASTER_OVERVIEW_URL is exported and non-empty", () => {
-      expect(RASTER_OVERVIEW_URL).toBeTruthy();
-      expect(RASTER_OVERVIEW_URL).toContain("{z}");
-    });
-
-    it("setup-layers RASTER_OVERVIEW_URL === shared FOREST_AGE_RASTER_URL", () => {
-      expect(
-        RASTER_OVERVIEW_URL,
-        "setup-layers.ts no longer uses the shared r2-config constant."
-      ).toBe(FOREST_AGE_RASTER_URL);
-    });
-
-    it("forest-age registry rasterOverview === shared FOREST_AGE_RASTER_URL", () => {
-      const forestAge = LAYER_REGISTRY.find((l) => l.id === "forest-age");
-      expect(forestAge, "forest-age layer not found in registry").toBeDefined();
-      expect(
-        forestAge?.rasterOverview?.urlTemplate,
-        `registry rasterOverview.urlTemplate ` +
-          `"${forestAge?.rasterOverview?.urlTemplate}" does not match the shared ` +
-          `FOREST_AGE_RASTER_URL "${FOREST_AGE_RASTER_URL}". ` +
-          "The story will render different raster tiles than the main map."
-      ).toBe(FOREST_AGE_RASTER_URL);
-    });
-  });
-
-  it("STORY_SOURCE_IDS includes expected sources", () => {
-    // Document what sources the story registers
-    const sourceIds = [...STORY_SOURCE_IDS];
-    expect(sourceIds).toContain("opencanopy");
-    expect(sourceIds).toContain("story-forest-age-raster");
   });
 });
