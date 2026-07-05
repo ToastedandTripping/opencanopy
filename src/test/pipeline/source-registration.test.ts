@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createMockMap } from "../mocks/maplibre";
 import {
   setupStoryLayers,
@@ -55,7 +55,14 @@ describe("source + layer registration", () => {
     expect(map.getSource("opencanopy")).toBeUndefined();
   });
 
-  it("does NOT register terrain-rgb or story-hillshade (Phase 1: dead, never activated by any chapter)", () => {
+  // Phase 1 correction (2026-07): story-hillshade/terrain-rgb are NOT dead --
+  // Phase 1 mis-classified them. They're gated on TERRAIN_SOURCE.enabled
+  // (mapConfig.ts), and production HAS a MapTiler key configured, so they DO
+  // render live. This sandbox/test env has no NEXT_PUBLIC_MAPTILER_KEY, so
+  // the static (unmocked) import above reflects the "no key" branch here --
+  // see the "terrain hillshade" describe block below for both branches,
+  // exercised directly via env stubbing + a fresh module import.
+  it("does NOT register terrain-rgb or story-hillshade when no MapTiler key is configured (this test env)", () => {
     setupStoryLayers(map);
     expect(map.getSource("terrain-rgb")).toBeUndefined();
     expect(map.getLayer("story-hillshade")).toBeUndefined();
@@ -63,7 +70,7 @@ describe("source + layer registration", () => {
 
   // ── Layer creation ──────────────────────────────────────────────
 
-  it("creates exactly the 4 STORY_LAYER_IDS, nothing more", () => {
+  it("creates exactly the 4 STORY_LAYER_IDS, nothing more (no MapTiler key in this test env)", () => {
     setupStoryLayers(map);
 
     for (const layerId of STORY_LAYER_IDS) {
@@ -142,10 +149,86 @@ describe("source + layer registration", () => {
     }
   });
 
-  it("STORY_SOURCE_IDS no longer includes the PMTiles or forest-age-raster sources", () => {
+  it("STORY_SOURCE_IDS no longer includes the PMTiles or forest-age-raster sources (permanently deleted, not key-gated)", () => {
     const sourceIds = [...STORY_SOURCE_IDS];
     expect(sourceIds).not.toContain("opencanopy");
     expect(sourceIds).not.toContain("story-forest-age-raster");
-    expect(sourceIds).not.toContain("terrain-rgb");
+  });
+});
+
+// ── Terrain hillshade (Phase 1 correction: restored, gated on MapTiler key) ──
+//
+// story-hillshade/terrain-rgb are gated on TERRAIN_SOURCE.enabled, which is
+// itself derived from process.env.NEXT_PUBLIC_MAPTILER_KEY at module load
+// (mapConfig.ts). Both STORY_LAYER_IDS/STORY_SOURCE_IDS and the runtime
+// addSource/addLayer calls read that same module-scope constant, so we stub
+// the env var and re-import the module fresh (vi.resetModules) to exercise
+// both branches -- this test env itself has no key configured (see the
+// describe block above), so this is the only way to prove the "key present"
+// path (the one that's actually live in production) still works.
+describe("terrain hillshade (gated on MapTiler key presence)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("registers terrain-rgb (raster-dem) + story-hillshade when NEXT_PUBLIC_MAPTILER_KEY is set", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "test-key");
+    vi.resetModules();
+    const { createMockMap: freshCreateMockMap } = await import("../mocks/maplibre");
+    const {
+      setupStoryLayers: freshSetupStoryLayers,
+      STORY_LAYER_IDS: freshLayerIds,
+      STORY_SOURCE_IDS: freshSourceIds,
+    } = await import("@/lib/story/setup-layers");
+
+    const freshMap = freshCreateMockMap();
+    freshSetupStoryLayers(freshMap);
+
+    expect(freshLayerIds).toContain("story-hillshade");
+    expect(freshSourceIds).toContain("terrain-rgb");
+
+    const sourceCall = freshMap._getCalls().addSource.find((c) => c.id === "terrain-rgb");
+    expect(sourceCall).toBeDefined();
+    expect(sourceCall!.config.type).toBe("raster-dem");
+    expect(sourceCall!.config.tileSize).toBe(256);
+    expect(sourceCall!.config.url).toContain("terrain-rgb-v2");
+
+    const layerCall = freshMap._getCalls().addLayer.find(
+      (c) => c.config.id === "story-hillshade"
+    );
+    expect(layerCall).toBeDefined();
+    expect(layerCall!.config.type).toBe("hillshade");
+    expect(layerCall!.config.source).toBe("terrain-rgb");
+    expect(layerCall!.config.paint).toEqual({
+      "hillshade-illumination-direction": 315,
+      "hillshade-shadow-color": "#000000",
+      "hillshade-highlight-color": "#1a1a2e",
+      "hillshade-exaggeration": 0.3,
+      "hillshade-illumination-anchor": "viewport",
+    });
+
+    // Registered first -- bottom of the story's z-order, exactly as before
+    // the Phase 1 cleanup mis-removed it.
+    expect(freshMap._getCalls().addLayer[0].config.id).toBe("story-hillshade");
+  });
+
+  it("skips terrain-rgb + story-hillshade when no MapTiler key is configured", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "");
+    vi.resetModules();
+    const { createMockMap: freshCreateMockMap } = await import("../mocks/maplibre");
+    const {
+      setupStoryLayers: freshSetupStoryLayers,
+      STORY_LAYER_IDS: freshLayerIds,
+      STORY_SOURCE_IDS: freshSourceIds,
+    } = await import("@/lib/story/setup-layers");
+
+    const freshMap = freshCreateMockMap();
+    freshSetupStoryLayers(freshMap);
+
+    expect(freshLayerIds).not.toContain("story-hillshade");
+    expect(freshSourceIds).not.toContain("terrain-rgb");
+    expect(freshMap.getSource("terrain-rgb")).toBeUndefined();
+    expect(freshMap.getLayer("story-hillshade")).toBeUndefined();
   });
 });

@@ -10,6 +10,7 @@
 
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { BINARY_TILE_URL } from "@/lib/story/tile-manifest";
+import { TERRAIN_SOURCE } from "@/lib/mapConfig";
 
 /** Overlay image bounds: [west, south, east, north] matching build-year-overlays.py BC_BOUNDS */
 export const OVERLAY_BOUNDS: [number, number, number, number] = [-139.5, 48.0, -114.0, 60.5];
@@ -57,26 +58,43 @@ export const OVERLAY_SOURCES = {
 /**
  * All story layer IDs created by setupStoryLayers.
  *
- * Phase 1 (2026-07): removed story-hillshade, story-forest-age-raster (pinned
- * to opacity 0 forever -- only /map's interactive registry uses forest-age),
+ * Phase 1 (2026-07): removed story-forest-age-raster (pinned to opacity 0
+ * forever -- only /map's interactive registry uses forest-age),
  * story-harvested-hatch, and the 8 PMTiles vector detail layers (minzoom 9 --
  * the story never zooms past z8, so they never rendered). The story's PMTiles
  * source registration went with them (no remaining consumer in this file).
+ *
+ * Correction (2026-07): story-hillshade was ALSO deleted in that same pass,
+ * but that was a mis-classification. Unlike the items above, it's gated on
+ * TERRAIN_SOURCE.enabled (see mapConfig.ts) -- and production HAS a MapTiler
+ * key configured, so it DOES render live (a static relief-shading layer under
+ * the forest overlay). Restored here, still gated on key presence, so
+ * STORY_LAYER_IDS/STORY_SOURCE_IDS only list it when a key is configured.
+ * The terrain ANIMATION plumbing that used to sit on top of this (per-chapter
+ * TerrainConfig, the `terrain` prop threaded through
+ * ScrollytellingContainer -> StoryMap, NO_TERRAIN) stays deleted -- no
+ * chapter ever animated terrain. Only the static source+layer come back.
  */
-export const STORY_LAYER_IDS = [
-  "story-forest-base",
-  "story-year-overlay",
-  "story-fire-overlay",
-  "story-binary-reveal",
-] as const;
+export const STORY_LAYER_IDS: readonly string[] = TERRAIN_SOURCE.enabled
+  ? [
+      "story-hillshade",
+      "story-forest-base",
+      "story-year-overlay",
+      "story-fire-overlay",
+      "story-binary-reveal",
+    ]
+  : ["story-forest-base", "story-year-overlay", "story-fire-overlay", "story-binary-reveal"];
 
 /** All source IDs registered by setupStoryLayers. */
-export const STORY_SOURCE_IDS = [
-  "story-forest-base",
-  "story-year-overlay",
-  "story-fire-overlay",
-  "story-binary-reveal",
-] as const;
+export const STORY_SOURCE_IDS: readonly string[] = TERRAIN_SOURCE.enabled
+  ? [
+      "terrain-rgb",
+      "story-forest-base",
+      "story-year-overlay",
+      "story-fire-overlay",
+      "story-binary-reveal",
+    ]
+  : ["story-forest-base", "story-year-overlay", "story-fire-overlay", "story-binary-reveal"];
 
 export interface MapLike {
   getSource(id: string): unknown;
@@ -100,7 +118,46 @@ export function setupStoryLayers(map: MapLike): void {
     (l) => l.type === "symbol"
   )?.id;
 
-  pipelineLog("onLoad", "registering sources", { firstSymbolId });
+  pipelineLog("onLoad", "registering sources", {
+    firstSymbolId,
+    terrainEnabled: TERRAIN_SOURCE.enabled,
+  });
+
+  // ── Terrain DEM + static hillshade relief (gated on MapTiler key) ──
+  // Restored 2026-07: Phase 1 cleanup mis-classified this as dead. Unlike the
+  // vector/hatch/forest-age-raster layers removed in the same pass, this one
+  // is gated on TERRAIN_SOURCE.enabled (mapConfig.ts) and production HAS a
+  // MapTiler key configured, so it renders live -- a static relief-shading
+  // layer under the forest overlay. Only the static source+layer are
+  // restored; the per-chapter terrain ANIMATION plumbing that used to sit on
+  // top of this (TerrainConfig, the `terrain` prop threaded through
+  // ScrollytellingContainer -> StoryMap, NO_TERRAIN) stays deleted -- no
+  // chapter ever animated terrain.
+  if (TERRAIN_SOURCE.enabled && !map.getSource("terrain-rgb")) {
+    map.addSource("terrain-rgb", {
+      type: "raster-dem",
+      url: TERRAIN_SOURCE.url,
+      tileSize: TERRAIN_SOURCE.tileSize,
+    });
+  }
+
+  if (TERRAIN_SOURCE.enabled && !map.getLayer("story-hillshade")) {
+    map.addLayer(
+      {
+        id: "story-hillshade",
+        type: "hillshade",
+        source: "terrain-rgb",
+        paint: {
+          "hillshade-illumination-direction": 315,
+          "hillshade-shadow-color": "#000000",
+          "hillshade-highlight-color": "#1a1a2e",
+          "hillshade-exaggeration": 0.3,
+          "hillshade-illumination-anchor": "viewport",
+        },
+      },
+      firstSymbolId,
+    );
+  }
 
   // ── Forest base image overlay (green silhouette of BC forests) ──
   if (!map.getSource("story-forest-base")) {

@@ -10,16 +10,25 @@
  * sync, raster URL sync) -- those checks are now moot because there is
  * nothing left in setup-layers.ts to drift out of sync.
  *
+ * Correction (2026-07): story-hillshade/terrain-rgb were ALSO deleted in that
+ * same pass, but that was a mis-classification -- unlike the PMTiles/hatch/
+ * forest-age-raster items above, hillshade is gated on TERRAIN_SOURCE.enabled
+ * (mapConfig.ts) and production HAS a MapTiler key configured, so it DOES
+ * render live (a static relief-shading layer under the forest overlay). It's
+ * been restored in setup-layers.ts, still gated on key presence. The PMTiles/
+ * hatch/forest-age-raster entries are genuinely dead and stay deleted.
+ *
  * What's left, updated to prove the new reality rather than just deleting
  * the old assertions:
  *   - setup-layers.ts registers NO PMTiles vector source-layer references
  *     at all (a regression guard against re-introducing the dead layers)
  *   - Chapter layer IDs (still just "forest-age") exist in the registry
- *   - STORY_LAYER_IDS / STORY_SOURCE_IDS are exported, non-empty, and do NOT
- *     include the deleted PMTiles/terrain/forest-age-raster entries
+ *   - STORY_LAYER_IDS / STORY_SOURCE_IDS are exported, non-empty, still do NOT
+ *     include the permanently-deleted PMTiles/forest-age-raster entries, and
+ *     DO include story-hillshade/terrain-rgb when a MapTiler key is configured
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
@@ -74,12 +83,15 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
       ).toHaveLength(0);
     });
 
-    it("STORY_LAYER_IDS / STORY_SOURCE_IDS do not include the deleted PMTiles, terrain, or forest-age-raster entries", () => {
+    it("STORY_LAYER_IDS / STORY_SOURCE_IDS do not include the permanently-deleted PMTiles/hatch/forest-age-raster entries", () => {
       const layerIds: string[] = [...STORY_LAYER_IDS];
       const sourceIds: string[] = [...STORY_SOURCE_IDS];
 
+      // story-hillshade/terrain-rgb are deliberately NOT in this list -- they
+      // were mis-classified as dead and have been restored (gated on
+      // TERRAIN_SOURCE.enabled). See the "terrain hillshade" describe block
+      // below for the key-gated restoration checks.
       const deletedLayerIds = [
-        "story-hillshade",
         "story-forest-age-raster",
         "story-harvested-hatch",
         "story-forest-age-fill",
@@ -95,18 +107,53 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
         expect(layerIds).not.toContain(id);
       }
 
-      const deletedSourceIds = ["terrain-rgb", "story-forest-age-raster", "opencanopy"];
+      const deletedSourceIds = ["story-forest-age-raster", "opencanopy"];
       for (const id of deletedSourceIds) {
         expect(sourceIds).not.toContain(id);
       }
     });
 
-    it("STORY_LAYER_IDS === STORY_SOURCE_IDS (each remaining story layer owns exactly one 1:1 source)", () => {
-      // Phase 1 removed everything that broke the 1:1 layer<->source mapping
-      // (PMTiles was one source shared by many vector layers; forest-age-raster
-      // and hillshade had no matching entry on the other list). What's left --
-      // forest-base, year-overlay, fire-overlay, binary-reveal -- is 1:1.
-      expect([...STORY_LAYER_IDS].sort()).toEqual([...STORY_SOURCE_IDS].sort());
+    it("STORY_LAYER_IDS === STORY_SOURCE_IDS for the same-ID overlay layers (each owns exactly one 1:1 source)", () => {
+      // Phase 1 removed everything that broke the 1:1 same-ID layer<->source
+      // mapping (PMTiles was one source shared by many vector layers;
+      // forest-age-raster had no matching entry on the other list). What's
+      // left -- forest-base, year-overlay, fire-overlay, binary-reveal -- is
+      // 1:1 by the same ID.
+      //
+      // story-hillshade/terrain-rgb (restored 2026-07, gated on MapTiler key)
+      // are the one deliberate exception: the DEM source is conventionally
+      // named "terrain-rgb", not "story-hillshade", so they're excluded from
+      // this same-ID check (and covered separately below).
+      const sameIdLayerIds = [...STORY_LAYER_IDS].filter((id) => id !== "story-hillshade");
+      const sameIdSourceIds = [...STORY_SOURCE_IDS].filter((id) => id !== "terrain-rgb");
+      expect(sameIdLayerIds.sort()).toEqual(sameIdSourceIds.sort());
+    });
+  });
+
+  describe("terrain hillshade (Phase 1 correction: restored, gated on MapTiler key presence)", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
+    it("STORY_LAYER_IDS includes story-hillshade and STORY_SOURCE_IDS includes terrain-rgb when a MapTiler key is configured", async () => {
+      vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "test-key");
+      vi.resetModules();
+      const { STORY_LAYER_IDS: freshLayerIds, STORY_SOURCE_IDS: freshSourceIds } = await import(
+        "@/lib/story/setup-layers"
+      );
+      expect(freshLayerIds).toContain("story-hillshade");
+      expect(freshSourceIds).toContain("terrain-rgb");
+    });
+
+    it("STORY_LAYER_IDS / STORY_SOURCE_IDS omit story-hillshade/terrain-rgb when no MapTiler key is configured", async () => {
+      vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "");
+      vi.resetModules();
+      const { STORY_LAYER_IDS: freshLayerIds, STORY_SOURCE_IDS: freshSourceIds } = await import(
+        "@/lib/story/setup-layers"
+      );
+      expect(freshLayerIds).not.toContain("story-hillshade");
+      expect(freshSourceIds).not.toContain("terrain-rgb");
     });
   });
 
