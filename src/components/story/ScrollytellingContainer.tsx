@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useScrollytelling } from "@/hooks/useScrollytelling";
 import { useDeviceCapability } from "@/hooks/useDeviceCapability";
 import { StoryMap } from "./StoryMap";
+import { DollyVideo } from "./DollyVideo";
 import { NarrativePanel } from "./NarrativePanel";
+import { prefetchDollyVideo } from "@/lib/story/prefetch";
+import { pickDollyTier } from "@/lib/story/dolly-config";
 
 export function ScrollytellingContainer() {
   const {
@@ -16,9 +19,19 @@ export function ScrollytellingContainer() {
     binaryRevealOpacity,
     chapters,
   } = useScrollytelling();
-  const { supports3D } = useDeviceCapability();
+  const { supports3D, isMobile } = useDeviceCapability();
+  const dollyTier = pickDollyTier(isMobile);
 
   const activeChapter = chapters[activeChapterIndex];
+
+  // Warm the dolly video one chapter ahead of `remains` -- as soon as `ending`
+  // becomes active, kick the poster fetches + a hidden preload="auto" <video>
+  // so the clip is cache-warm by the time DollyVideo's own <video> mounts.
+  useEffect(() => {
+    if (activeChapter?.id === "ending") {
+      prefetchDollyVideo(dollyTier);
+    }
+  }, [activeChapter?.id, dollyTier]);
 
   // Derive camera, forcing pitch to 0 on low-end devices
   const effectiveCamera = useMemo(() => {
@@ -71,6 +84,12 @@ export function ScrollytellingContainer() {
           revealBinary={activeChapter?.revealBinary}
           binaryRevealOpacity={binaryRevealOpacity}
         />
+        {/* DollyVideo: pre-rendered play-on-scroll clip for the `remains`
+            chapter. Absolutely-positioned over the live map (which holds flat
+            at province scale for the whole chapter); fades in on activation
+            and plays once. Degrades to a final-frame still, then to the live
+            map, if the video/poster assets are unavailable -- see DollyVideo.tsx. */}
+        <DollyVideo tier={dollyTier} active={activeChapter?.id === "remains"} />
         {/* Top-edge dark veil: absorbs the hero-photo -> map luminance seam.
             Top color matches the hero photo's full-dark bottom (#0a0a0c) and
             fades to transparent over 100px, so the join reads as a continuous

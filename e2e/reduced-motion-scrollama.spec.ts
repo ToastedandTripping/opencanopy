@@ -144,4 +144,29 @@ test.describe('scrollama under prefers-reduced-motion: reduce', () => {
       `Under reduced-motion the year counter should show <= 2 distinct values (end-state snap), got: ${uniqueValues.join(', ')}`
     ).toBeLessThanOrEqual(2);
   });
+
+  test('5 — remains chapter (DollyVideo) shows a still under reduced motion, never mounts a <video>', async ({ page }) => {
+    // Phase 2 invariant: reduced-motion -> final-frame still, no playback.
+    // DollyVideo structurally never renders a <video> element under reduced
+    // motion (it short-circuits straight to the poster <img>), so `video.play`
+    // is provably never called -- there is no video element to call it on.
+    // This assertion is CI-safe for the same reason as tests 1-4: it checks
+    // DOM structure, not whether the R2-hosted clip/poster actually loads
+    // (network-independent, no MapTiler key needed).
+    const errors = await loadStoryWithReducedMotion(page);
+
+    const crashErrors = errors.filter((msg) =>
+      /IntersectionObserver|threshold|non-finite|finite/i.test(msg)
+    );
+    expect(crashErrors, `unexpected crash: ${crashErrors.join('; ')}`).toHaveLength(0);
+
+    // Scroll to the bottom -- `remains` is the last chapter (mirrors test 4).
+    await page.evaluate(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+    });
+    await page.waitForTimeout(1500);
+
+    const videoCount = await page.evaluate(() => document.querySelectorAll('video').length);
+    expect(videoCount, 'no <video> element should exist anywhere under reduced motion').toBe(0);
+  });
 });

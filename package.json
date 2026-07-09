@@ -40,7 +40,8 @@
     "transform": "npx tsx scripts/pipeline/transform.ts",
     "preprocess:v2": "NODE_OPTIONS='--max-old-space-size=8192' npx tsx scripts/pipeline/preprocess.ts",
     "build-tiles:v2": "npx tsx scripts/pipeline/build-tiles.ts",
-    "verify": "npx tsx scripts/pipeline/verify.ts"
+    "verify": "npx tsx scripts/pipeline/verify.ts",
+    "render:dolly": "playwright test --config=playwright.render.config.ts"
   },
   "dependencies": {
     "@turf/area": "^7.3.4",
@@ -71,6 +72,7 @@
     "happy-dom": "^20.8.7",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
+    "sharp": "^0.33.5",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.1"
