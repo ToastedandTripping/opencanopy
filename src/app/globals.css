@@ -145,10 +145,13 @@ body {
   margin-bottom: 4px !important;
 }
 
-/* Hide scrollbar on horizontal chip bars */
+/* Hide scrollbar on horizontal chip bars + enable iOS momentum scroll
+   (mobile layout fix: preset chip row + MapLegend both need a smooth
+   touch-drag to reach content past the viewport edge). */
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;

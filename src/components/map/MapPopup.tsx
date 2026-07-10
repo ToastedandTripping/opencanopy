@@ -10,8 +10,8 @@ interface MapPopupProps {
   onClose: () => void;
 }
 
-/** Format a VRI property name into something human-readable */
-function formatPropertyName(key: string): string {
+/** Format a VRI property name into something human-readable. Exported for unit testing. */
+export function formatPropertyName(key: string): string {
   const labels: Record<string, string> = {
     company_id: "Company",
     PROJ_AGE_1: "Stand Age",
@@ -25,6 +25,17 @@ function formatPropertyName(key: string): string {
     PLANNED_GROSS_BLOCK_AREA: "Planned Block Area (ha)",
     FEATURE_ID: "Feature ID",
     class: "Classification",
+    // D-fix: these lowercase keys come from the simplified PMTiles property
+    // schema (forest-age: class/age/species -- scripts/pipeline/transform.ts;
+    // parks/conservancies: name/designation -- scripts/lib/extractors.ts).
+    // Without an explicit label they fell through to the generic
+    // key.replace(/_/g, " ").toLowerCase() fallback below, which is already
+    // lowercase for these keys -- a no-op that left them inconsistent with
+    // every other (capitalized) label in this popup.
+    age: "Age",
+    species: "Species",
+    name: "Name",
+    designation: "Designation",
     PROTECTED_LANDS_NAME: "Park Name",
     PARK_CLASS: "Park Class",
     CONSERVANCY_AREA_NAME: "Conservancy",

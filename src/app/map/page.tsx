@@ -639,8 +639,16 @@ export default function Home() {
           />
         )}
 
-        {/* Preset chips bar */}
-        <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 overflow-x-auto scrollbar-none">
+        {/* Preset chips bar. On mobile this row (4 presets + divider + Select
+            + Timeline toggle) is wider than the viewport at 375px, so it
+            scrolls horizontally (overflow-x-auto + momentum scroll, see
+            .scrollbar-none in globals.css). `pr-14` (56px = the fixed
+            bug-report button's 44px width + its 12px right offset) reserves
+            trailing scroll room so the last chip never ends up scrolled
+            into the button's footprint -- md:pr-2 restores the symmetric
+            padding on desktop, where the centered/max-width layout never
+            reaches the bug button in the first place. */}
+        <div className="flex items-center gap-1.5 pl-2 pr-14 md:pr-2 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 overflow-x-auto scrollbar-none">
           <PresetChips
             activePreset={activePreset}
             onPresetSelect={handlePresetSelect}
