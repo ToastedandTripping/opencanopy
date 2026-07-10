@@ -71,8 +71,9 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    // Expose map instance for e2e testing (Playwright screenshot regression)
-    if (typeof window !== "undefined") {
+    // Expose map instance for e2e testing (Playwright screenshot regression).
+    // Dev-only (D-fix): never ship a live map handle to the production window scope.
+    if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
       (window as unknown as Record<string, unknown>).__opencanopy_map = map;
     }
 
@@ -89,8 +90,10 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
     pipelineLog("map-load", "CanopyMap ready");
   }, []);
 
-  // Expose map instance on window for e2e testing (Playwright screenshot regression)
+  // Expose map instance on window for e2e testing (Playwright screenshot regression).
+  // Dev-only (D-fix): this previously shipped ungated to production window scope.
   useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
     const map = mapRef.current?.getMap();
     if (typeof window !== "undefined" && map) {
       (window as unknown as Record<string, unknown>).__opencanopy_map = map;

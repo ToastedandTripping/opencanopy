@@ -100,6 +100,24 @@ export function findSatelliteAnchor(
   return allLayers[earlier].id;
 }
 
+/**
+ * Find the first symbol-type (basemap label) layer in a style's layer list.
+ *
+ * D-fix (mobile/legibility audit, ~2026-07): the declarative raster-overview
+ * <Layer> in DataLayer had no `beforeId`, so react-map-gl appended it to the
+ * TOP of the style stack on mount — painting overview tiles over city/place
+ * labels at z4-z9. The imperative vector paths (PmtilesLayers, WfsLayers)
+ * already insert below `firstSymbolId`; this is the same computation,
+ * extracted so the declarative raster <Layer> can pass it as `beforeId` too.
+ *
+ * Exported for unit testing.
+ */
+export function getFirstSymbolId(
+  layers: { id: string; type: string }[],
+): string | undefined {
+  return layers.find((l) => l.type === "symbol")?.id;
+}
+
 function SatelliteLayers({
   layer,
   visible,
@@ -1019,6 +1037,36 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
   const [loading, setLoading] = useState(false);
   const { setLayerLoading, setLayerStatus, clearLayerStatus } = useLoadingContext();
 
+  // D-fix: beforeId for the declarative raster-overview <Layer>(s) below, so
+  // they render just under basemap labels instead of appending to the top of
+  // the stack (which painted overview tiles over city/place names at z4-z9).
+  // Kept in React state (not computed inline at render) because — unlike the
+  // imperative PmtilesLayers/WfsLayers paths, which compute firstSymbolId once
+  // at addLayer() time — this is a *declarative* <Layer>, so beforeId must stay
+  // reactive as the style loads/changes. react-map-gl's Layer component diffs
+  // beforeId and calls map.moveLayer() on change; it does NOT remove/re-add the
+  // layer, so this cannot cause the raster to vanish or flash (confirmed against
+  // node_modules/@vis.gl/react-maplibre/dist/components/layer.js updateLayer()).
+  const [rasterBeforeId, setRasterBeforeId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!map) return;
+    const mapInstance = map.getMap();
+
+    function updateRasterBeforeId() {
+      if (!mapInstance.isStyleLoaded()) return;
+      setRasterBeforeId(
+        getFirstSymbolId(mapInstance.getStyle().layers as maplibregl.LayerSpecification[])
+      );
+    }
+
+    updateRasterBeforeId();
+    mapInstance.on("styledata", updateRasterBeforeId);
+    return () => {
+      mapInstance.off("styledata", updateRasterBeforeId);
+    };
+  }, [map]);
+
   // PMTiles error callback — called from initSource timeout and addLayersToMap catch
   const handlePmtilesError = useCallback((layerId: string) => {
     setLayerStatus(layerId, "error");
@@ -1205,7 +1253,12 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
         {/* Raster overview tiles -- pre-rendered PNGs, zero geometry parsing.
             5 sources for forest-age: 1 default (all-class) + 4 per-class.
             Only one set has non-zero opacity at a time. Pre-mounted to avoid
-            unmount/remount flash -- MapLibre lazy-loads inactive raster tiles. */}
+            unmount/remount flash -- MapLibre lazy-loads inactive raster tiles.
+            All 5 <Layer>s carry `beforeId={rasterBeforeId}` (D-fix, z-order
+            legibility) so they sit below basemap labels instead of appending
+            to the top of the stack. This is a prop diff, not a mount/unmount --
+            react-map-gl's Layer calls map.moveLayer() when beforeId changes, so
+            it does not disturb the pre-mount-to-avoid-flash strategy above. */}
         {hasRasterOverview && layer.rasterOverview && (
           <>
             {/* Default all-class raster (always mounted) */}
@@ -1221,6 +1274,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
               <Layer
                 id={`layer-${layer.id}-raster`}
                 type="raster"
+                beforeId={rasterBeforeId}
                 maxzoom={layer.rasterOverview.maxZoom + 1}
                 paint={{
                   "raster-opacity": visible && showDefault ? 0.85 : 0,
@@ -1245,6 +1299,7 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
                 <Layer
                   id={`layer-${layer.id}-raster-${cls}`}
                   type="raster"
+                  beforeId={rasterBeforeId}
                   maxzoom={layer.rasterOverview!.maxZoom + 1}
                   paint={{
                     "raster-opacity": visible && !showDefault && activeClasses?.includes(cls) ? 0.85 : 0,
