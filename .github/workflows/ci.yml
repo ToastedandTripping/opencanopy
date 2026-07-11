@@ -30,12 +30,12 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Non-blocking checks — these have pre-existing issues that must not
-      # permanently red the pipeline. Fix them incrementally.
+      # P1c: both gates confirmed green locally before this flip (24 tooling
+      # lint errors resolved via eslint.config.mjs scoped override, 3 hooks
+      # errors resolved via lazy-init/scoped-disable, 2 fixable audit
+      # moderates cleared via `npm audit fix`). No more silently-red gates.
       - name: Audit (high severity)
         run: npm audit --audit-level=high
-        continue-on-error: true
 
       - name: Lint
         run: npm run lint
-        continue-on-error: true

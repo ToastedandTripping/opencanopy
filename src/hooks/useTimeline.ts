@@ -69,7 +69,13 @@ export function useTimeline(activeTimelineLayers?: LayerDefinition[]) {
 
   // Clamp currentYear when range changes (e.g. a layer is toggled off that
   // extended the range, or a new layer with a different range is enabled).
+  // P1c: kept as a setState-in-effect deliberately, not refactored. This is
+  // a legitimate synchronize-with-a-derived-value effect (range is derived,
+  // not stored — see the useMemo above and its "useState freeze" comment),
+  // and this hook has prior stale-closure bug history (Razor W1/W2) that a
+  // structural rewrite risks reintroducing.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentYear((prev) => {
       if (prev < range[0]) return range[0];
       if (prev > range[1]) return range[1];
