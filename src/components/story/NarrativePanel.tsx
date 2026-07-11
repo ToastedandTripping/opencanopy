@@ -63,7 +63,6 @@ export function NarrativePanel({
   return (
     <div
       className={`pointer-events-none absolute inset-0 z-10 ${positionClasses}`}
-      aria-hidden={!active}
     >
       <div
         className={`pointer-events-auto bg-[var(--color-surface-overlay)] backdrop-blur-xl border border-white/[0.12] rounded-2xl p-8 narrative-panel ${cardPositionClasses}`}
