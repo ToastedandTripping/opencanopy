@@ -1,5 +1,5 @@
 import type { SelectionStats, FinancialValue } from "@/lib/carbon";
-import { presentCo2Tonnes, presentDollars } from "@/lib/carbon";
+import { calculateEquivalences, presentCo2Tonnes, presentDollars } from "@/lib/carbon";
 import { getLayer } from "@/lib/layers";
 import FOREST_AGE_PALETTE from "@/lib/layers/forest-age-palette.json";
 
@@ -50,6 +50,11 @@ function pct(value: number, total: number): string {
 function buildReportHtml(options: ReportOptions): string {
   const { mapImageDataUrl, stats, financial, enabledLayers, watershedName, timestamp } = options;
   const co2 = presentCo2Tonnes(stats.totalCo2eTonnes);
+  // Derived from co2.rounded, NOT stats.equivalences (which is computed off
+  // the raw, un-rounded tonnage) -- keeps the exported car/home/flight
+  // counts self-consistent with the rounded headline tonnage shown above
+  // them (critic X4). Mirrors CalculatorPanel.tsx (panel + Share).
+  const equiv = calculateEquivalences(co2.rounded);
 
   const ageClasses = [
     { label: "Old growth (250+ yr)", ha: stats.oldGrowthHa, color: FOREST_AGE_PALETTE["old-growth"] },
@@ -148,6 +153,18 @@ function buildReportHtml(options: ReportOptions): string {
     )
     .join("");
 
+  // ── Area label ─────────────────────────────────────────────────────
+  //
+  // Unlike CalculatorPanel (which has a separate areaHa prop that, on the
+  // watershed path, is the watershed's own official AREA_HA), ReportOptions
+  // only carries `stats` -- so the figure printed below is ALWAYS
+  // stats.totalAreaHa, the summed/clipped forest-polygon area from
+  // calculateSelectionStats, even on the watershed path (see handleExport
+  // in map/page.tsx: `stats: displayStats`, never watershed.areaHa). A bare
+  // "hectares" label there would imply the official (unclipped) watershed
+  // area, which the PDF never actually receives or prints.
+  const areaLabel = "hectares (forested area analyzed)";
+
   // ── Layer list ─────────────────────────────────────────────────────
 
   const layerListHtml =
@@ -221,7 +238,7 @@ function buildReportHtml(options: ReportOptions): string {
   </h2>
   ${watershedName ? `<div style="font-size:16px;font-weight:600;color:#222;margin-bottom:2px;">${escapeHtml(watershedName)}</div>` : ""}
   <div style="font-size:20px;font-weight:600;color:#222;">
-    ${fmt(stats.totalAreaHa, 1)} <span style="font-size:14px;font-weight:400;color:#888;">${watershedName ? "hectares" : "hectares (forested area analyzed)"}</span>
+    ${fmt(stats.totalAreaHa, 1)} <span style="font-size:14px;font-weight:400;color:#888;">${areaLabel}</span>
   </div>
 </div>
 
@@ -245,15 +262,15 @@ function buildReportHtml(options: ReportOptions): string {
   <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#0d9488;margin:0 0 12px 0;">That Is Equivalent To</h3>
   <div style="display:flex;gap:16px;flex-wrap:wrap;">
     <div style="flex:1;min-width:140px;padding:12px 16px;border-radius:8px;background:#f8f8f8;border:1px solid #eee;">
-      <div style="font-size:20px;font-weight:700;color:#222;font-variant-numeric:tabular-nums;">${fmt(Math.round(stats.equivalences.cars))}</div>
+      <div style="font-size:20px;font-weight:700;color:#222;font-variant-numeric:tabular-nums;">${fmt(Math.round(equiv.cars))}</div>
       <div style="font-size:11px;color:#888;">cars driven for a year</div>
     </div>
     <div style="flex:1;min-width:140px;padding:12px 16px;border-radius:8px;background:#f8f8f8;border:1px solid #eee;">
-      <div style="font-size:20px;font-weight:700;color:#222;font-variant-numeric:tabular-nums;">${fmt(Math.round(stats.equivalences.homes))}</div>
+      <div style="font-size:20px;font-weight:700;color:#222;font-variant-numeric:tabular-nums;">${fmt(Math.round(equiv.homes))}</div>
       <div style="font-size:11px;color:#888;">Canadian homes heated for a year</div>
     </div>
     <div style="flex:1;min-width:140px;padding:12px 16px;border-radius:8px;background:#f8f8f8;border:1px solid #eee;">
-      <div style="font-size:20px;font-weight:700;color:#222;font-variant-numeric:tabular-nums;">${fmt(Math.round(stats.equivalences.flights))}</div>
+      <div style="font-size:20px;font-weight:700;color:#222;font-variant-numeric:tabular-nums;">${fmt(Math.round(equiv.flights))}</div>
       <div style="font-size:11px;color:#888;">YVR-YYZ round trips</div>
     </div>
   </div>
