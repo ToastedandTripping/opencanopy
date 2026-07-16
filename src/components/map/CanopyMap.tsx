@@ -22,6 +22,7 @@ import { LAYER_REGISTRY_AVAILABLE, getLayer } from "@/lib/layers";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import { DataLayer } from "./DataLayer";
 import { MapPopup } from "./MapPopup";
+import { MapReadout } from "./MapReadout";
 // TileProgress removed: it referenced per-layer sources `source-${id}-tiles`
 // but all PMTiles share one source (PMTILES_SOURCE_ID = "opencanopy"), so it
 // rendered null for every tiled layer and never fired. PMTiles errors are now
@@ -62,8 +63,6 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
 ) {
   const mapRef = useRef<MapRef>(null);
   const [popup, setPopup] = useState<PopupInfo | null>(null);
-  const [zoom, setZoom] = useState(INITIAL_VIEW_STATE.zoom);
-  const [cursorPos, setCursorPos] = useState<{ lng: number; lat: number } | null>(null);
 
   useImperativeHandle(ref, () => mapRef.current!);
 
@@ -197,9 +196,6 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
         onClick={onClick}
         interactiveLayerIds={interactiveLayerIds}
         cursor={cursor}
-        onZoom={(e) => setZoom(e.viewState.zoom)}
-        onMouseMove={(e) => setCursorPos({ lng: e.lngLat.lng, lat: e.lngLat.lat })}
-        onMouseOut={() => setCursorPos(null)}
         canvasContextAttributes={{ preserveDrawingBuffer: true }}
         maxPitch={70}
         minZoom={4}
@@ -236,31 +232,15 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
           />
         )}
 
+        {/* z/coord readout — owns its own zoom/cursor state so mouse-move
+            re-renders stay scoped to this tiny overlay instead of cascading
+            through DataLayer (P1a fix). Child of <Map> for useMap() context,
+            same pattern as DrawTool/WatershedOverlay below. */}
+        <MapReadout />
+
         {/* Child components (DrawTool, etc.) that need useMap() context */}
         {children}
       </Map>
-      <div
-        style={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          background: "rgba(0,0,0,0.6)",
-          color: "rgba(255,255,255,0.7)",
-          padding: "2px 8px",
-          borderRadius: 4,
-          fontSize: 11,
-          fontFamily: "monospace",
-          pointerEvents: "none",
-          zIndex: 1,
-          display: "flex",
-          gap: 10,
-        }}
-      >
-        <span>z{zoom.toFixed(1)}</span>
-        {cursorPos && (
-          <span>{cursorPos.lat.toFixed(4)}, {cursorPos.lng.toFixed(4)}</span>
-        )}
-      </div>
     </div>
   );
 });

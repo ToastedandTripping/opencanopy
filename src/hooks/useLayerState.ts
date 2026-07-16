@@ -147,6 +147,14 @@ export function useLayerState(): LayerStateReturn {
 
     const fromUrlOrStorage = parseLayersFromHash() ?? readFromStorage();
     if (fromUrlOrStorage) {
+      // P1c: intentionally NOT converted to a lazy useState initializer.
+      // enabledLayers drives LayerPanel's SSR-rendered aria-checked state; a
+      // lazy initializer reading URL/localStorage would compute a different
+      // value on the client's first render than what the server prerendered,
+      // causing a hydration mismatch on /map for shared-link/returning
+      // visitors. This post-mount effect + initialized.current guard is the
+      // correct pattern here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEnabledLayers(fromUrlOrStorage);
     }
   }, []);

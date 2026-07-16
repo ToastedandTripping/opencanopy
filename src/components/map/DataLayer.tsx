@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, memo } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
 import maplibregl, { GeoJSONSource, type FilterSpecification } from "maplibre-gl";
 import type { LayerDefinition, BBox } from "@/types/layers";
@@ -1031,7 +1031,44 @@ function RasterMountLogger({ layerId }: { layerId: string }) {
  * For raster sources: uses MapLibre raster source directly.
  * Includes opacity transitions and loading states.
  */
-export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLayerProps) {
+
+/** Shallow array-by-value equality, order-sensitive (class filter arrays are ordered lists). */
+function classFilterArraysEqual(a: string[] | undefined, b: string[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Custom React.memo comparator for DataLayer (P1a fix).
+ *
+ * CanopyMap's <Map> re-rendered on every zoom tick and mouse-move (Change 2's
+ * MapReadout fix addresses the source of that), which re-rendered all 18-19
+ * <DataLayer> instances even though DataLayer/PmtilesLayers/WfsLayers only
+ * ever read a scoped slice of props: layer.id, visible, yearFilter, and
+ * classFilters?.[layer.id] (see :1245, :509, :989). DataLayer's internal
+ * state/effects are keyed off map/layer.id/visible/yearFilter, so skipping a
+ * re-render when none of that scoped slice changed is safe by construction.
+ *
+ * classFilters is compared BY VALUE for this layer's slice specifically
+ * (not by object reference) because the parent's classFilters state is a new
+ * object on every unrelated change — comparing the whole object by reference
+ * would defeat the memo for every layer whenever ANY layer's filter changed.
+ */
+function dataLayerPropsAreEqual(prev: DataLayerProps, next: DataLayerProps): boolean {
+  return (
+    prev.layer.id === next.layer.id &&
+    prev.visible === next.visible &&
+    prev.yearFilter === next.yearFilter &&
+    classFilterArraysEqual(prev.classFilters?.[prev.layer.id], next.classFilters?.[next.layer.id])
+  );
+}
+
+const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFilters }: DataLayerProps) {
   const { current: map } = useMap();
   const [data, setData] = useState<GeoJSON.FeatureCollection>(EMPTY_FC);
   const [loading, setLoading] = useState(false);
@@ -1346,4 +1383,6 @@ export function DataLayer({ layer, visible, yearFilter, classFilters }: DataLaye
   }
 
   return null;
-}
+}, dataLayerPropsAreEqual);
+
+export { DataLayer };
