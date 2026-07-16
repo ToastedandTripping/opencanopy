@@ -191,12 +191,26 @@ export function calculateSelectionStats(
   }
 
   // Equivalence conversions
-  stats.equivalences.cars = stats.totalCo2eTonnes / EQUIVALENCES.carsPerYear;
-  stats.equivalences.homes = stats.totalCo2eTonnes / EQUIVALENCES.homesPerYear;
-  stats.equivalences.flights =
-    stats.totalCo2eTonnes / EQUIVALENCES.flightsYvrYyz;
+  stats.equivalences = calculateEquivalences(stats.totalCo2eTonnes);
 
   return stats;
+}
+
+/**
+ * Cars/homes/flights equivalence conversions for a given CO2e tonnage.
+ * Exported separately from calculateSelectionStats (which calls it against
+ * the raw, un-rounded total) so a consumer can also re-derive equivalences
+ * from a DIFFERENT tonnage -- specifically, the rounded headline figure
+ * (presentCo2Tonnes(...).rounded) -- and get a self-consistent set of
+ * numbers. Without this, "1,230,000 tonnes" could sit beside a car count
+ * that only back-computes to 1,234,582 tonnes (critic X4).
+ */
+export function calculateEquivalences(co2eTonnes: number): SelectionStats["equivalences"] {
+  return {
+    cars: co2eTonnes / EQUIVALENCES.carsPerYear,
+    homes: co2eTonnes / EQUIVALENCES.homesPerYear,
+    flights: co2eTonnes / EQUIVALENCES.flightsYvrYyz,
+  };
 }
 
 // ── Financial value calculation ────────────────────────────────────────

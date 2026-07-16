@@ -221,7 +221,7 @@ function buildReportHtml(options: ReportOptions): string {
   </h2>
   ${watershedName ? `<div style="font-size:16px;font-weight:600;color:#222;margin-bottom:2px;">${escapeHtml(watershedName)}</div>` : ""}
   <div style="font-size:20px;font-weight:600;color:#222;">
-    ${fmt(stats.totalAreaHa, 1)} <span style="font-size:14px;font-weight:400;color:#888;">hectares</span>
+    ${fmt(stats.totalAreaHa, 1)} <span style="font-size:14px;font-weight:400;color:#888;">${watershedName ? "hectares" : "hectares (forested area analyzed)"}</span>
   </div>
 </div>
 

@@ -172,6 +172,35 @@ describe("CalculatorPanel status gating (X4)", () => {
     expect(text).not.toMatch(/±/);
   });
 
+  // Regression guard for Razor's equivalences-from-rounded NOTE: the Share
+  // text's car count must be derived from co2.rounded (1,230,000), not
+  // FULL_PRECISION_STATS.equivalences.cars (267,805 -- computed off the raw
+  // 1,234,567.89 total). Before the fix, this test's "not.toContain" would
+  // fail: the raw-derived 267,805 figure would appear right next to the
+  // rounded 1,230,000 tonnage.
+  it("Share text's car count is derived from the rounded tonnage, not the raw stats.equivalences (self-consistency, critic X4)", async () => {
+    const writeText = stubClipboard();
+    const { container } = render(
+      <CalculatorPanel
+        calcStatus="ok"
+        stats={FULL_PRECISION_STATS}
+        areaHa={FULL_PRECISION_STATS.totalAreaHa}
+        visible
+        onClose={vi.fn()}
+      />
+    );
+    const { share } = getButtons(container);
+    fireEvent.click(share!);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const text = writeText.mock.calls[0][0] as string;
+    const carsFromRounded = Math.round(1_230_000 / 4.61).toLocaleString("en-CA");
+    const carsFromRawFixture = FULL_PRECISION_STATS.equivalences.cars.toLocaleString("en-CA");
+    expect(text).toContain(carsFromRounded);
+    expect(text).not.toContain(carsFromRawFixture);
+  });
+
   it("Export callback is never invoked while not ok, even if the button is clicked programmatically", () => {
     const onExport = vi.fn();
     const { container } = render(
@@ -236,5 +265,26 @@ describe("CalculatorPanel status gating (X4)", () => {
     );
     expect(container.textContent).toContain("may be as low as 984,000 tonnes");
     expect(container.textContent).not.toContain("1,234,567");
+  });
+
+  // Regression guard for Razor's equivalences-from-rounded NOTE, second
+  // wiring point: the "That is equivalent to" section (a separate render
+  // path from the Share handler) must also derive its car count from the
+  // rounded tonnage, not FULL_PRECISION_STATS.equivalences.cars (267,805,
+  // computed off the raw 1,234,567.89 total).
+  it("the 'That is equivalent to' car count is derived from the rounded tonnage, not the raw stats.equivalences", () => {
+    const { container } = render(
+      <CalculatorPanel
+        calcStatus="ok"
+        stats={FULL_PRECISION_STATS}
+        areaHa={FULL_PRECISION_STATS.totalAreaHa}
+        visible
+        onClose={vi.fn()}
+      />
+    );
+    const carsFromRounded = Math.round(1_230_000 / 4.61).toLocaleString("en-CA");
+    const carsFromRawFixture = FULL_PRECISION_STATS.equivalences.cars.toLocaleString("en-CA");
+    expect(container.textContent).toContain(carsFromRounded);
+    expect(container.textContent).not.toContain(carsFromRawFixture);
   });
 });

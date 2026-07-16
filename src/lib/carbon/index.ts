@@ -1,6 +1,7 @@
 export {
   calculateFeatureCarbon,
   calculateSelectionStats,
+  calculateEquivalences,
   calculateFinancialValue,
   roundToSigFigs,
   presentCo2Tonnes,

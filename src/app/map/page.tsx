@@ -32,7 +32,8 @@ import type { SelectionStats } from "@/lib/carbon";
 import {
   fetchForestAgeForSelection,
   bboxAreaKm2,
-  CALC_AREA_GUARD_KM2,
+  isSelectionTooLarge,
+  createSeqGuard,
   ForestCarbonFetchError,
   hasSchemaDrift,
 } from "@/lib/data/forest-carbon-client";
@@ -79,13 +80,13 @@ export default function Home() {
   const [calcErrorInfo, setCalcErrorInfo] = useState<CalcErrorInfo | null>(null);
   const [calcCaveats, setCalcCaveats] = useState<CalcCaveats | null>(null);
 
-  // Shared AbortController + sequence token across BOTH entry points (draw +
-  // watershed): a new selection aborts the prior in-flight fetch/clip, and
-  // every async resolution checks the token before calling setState so a
-  // slow stale response can never overwrite a newer result (X5). Also covers
-  // React StrictMode's double-effect-invocation in dev.
-  const calcAbortRef = useRef<AbortController | null>(null);
-  const calcSeqRef = useRef(0);
+  // Shared sequence-token guard across BOTH entry points (draw + watershed):
+  // a new selection aborts the prior in-flight fetch/clip, and every async
+  // resolution checks the token before calling setState so a slow stale
+  // response can never overwrite a newer result (X5). Also covers React
+  // StrictMode's double-effect-invocation in dev. See createSeqGuard
+  // (forest-carbon-client.ts) for the extracted, unit-tested primitive.
+  const calcGuardRef = useRef(createSeqGuard());
   // Last draw selection's polygon+bbox, for the error state's "try again"
   // button -- re-runs the same calc without requiring the user to redraw.
   const lastDrawCalcRef = useRef<{ polygon: GeoJSON.Feature<GeoJSON.Polygon>; bbox: BBox } | null>(
@@ -93,9 +94,7 @@ export default function Home() {
   );
 
   const resetCalc = useCallback(() => {
-    calcAbortRef.current?.abort();
-    calcAbortRef.current = null;
-    calcSeqRef.current += 1;
+    calcGuardRef.current.reset();
     setSelectionStats(null);
     setCalcStatus(null);
     setCalcErrorInfo(null);
@@ -104,10 +103,7 @@ export default function Home() {
 
   const runCalculation = useCallback(
     (polygon: GeoJSON.Feature<GeoJSON.Polygon>, bboxCoords: BBox) => {
-      calcAbortRef.current?.abort();
-      const controller = new AbortController();
-      calcAbortRef.current = controller;
-      const seq = ++calcSeqRef.current;
+      const { signal, token } = calcGuardRef.current.start();
 
       setCalcErrorInfo(null);
       setCalcCaveats(null);
@@ -116,11 +112,10 @@ export default function Home() {
       // forest-carbon-client.ts for the full measurement table). This is the
       // real defense against feature-cap truncation in v1: it keeps
       // draw-select out of the regime where the cap is even reachable.
-      const areaKm2 = bboxAreaKm2(bboxCoords);
-      if (areaKm2 > CALC_AREA_GUARD_KM2) {
+      if (isSelectionTooLarge(bboxCoords)) {
         setSelectionStats(null);
         setCalcStatus("too-large");
-        logCalc({ status: "too-large", areaKm2: Math.round(areaKm2) });
+        logCalc({ status: "too-large", areaKm2: Math.round(bboxAreaKm2(bboxCoords)) });
         return;
       }
 
@@ -131,9 +126,9 @@ export default function Home() {
       (async () => {
         try {
           const { features, maybeTruncated } = await fetchForestAgeForSelection(bboxCoords, {
-            signal: controller.signal,
+            signal,
           });
-          if (seq !== calcSeqRef.current) return; // superseded by a newer selection
+          if (!calcGuardRef.current.isCurrent(token)) return; // superseded by a newer selection
 
           if (features.length === 0) {
             setSelectionStats(null);
@@ -160,9 +155,9 @@ export default function Home() {
           const { features: clipped, skipped, total } = await clipFeaturesToSelection(
             features,
             polygon,
-            { signal: controller.signal }
+            { signal }
           );
-          if (seq !== calcSeqRef.current) return; // superseded mid-clip
+          if (!calcGuardRef.current.isCurrent(token)) return; // superseded mid-clip
 
           const stats = calculateSelectionStats(clipped);
           setSelectionStats(stats);
@@ -179,7 +174,7 @@ export default function Home() {
             ms: Math.round(nowMs() - t0),
           });
         } catch (err) {
-          if (seq !== calcSeqRef.current) return; // superseded -- stale error, don't surface
+          if (!calcGuardRef.current.isCurrent(token)) return; // superseded -- stale error, don't surface
           const isAbort =
             (err instanceof DOMException && err.name === "AbortError") ||
             (err as { name?: string } | null)?.name === "AbortError";
@@ -406,9 +401,7 @@ export default function Home() {
   // watershed-scale carbon.
   useEffect(() => {
     if (watershedSelection.mode === "selected" && watershedSelection.watershed) {
-      calcAbortRef.current?.abort();
-      calcAbortRef.current = null;
-      calcSeqRef.current += 1;
+      calcGuardRef.current.reset();
       setSelectionStats(null);
       setCalcErrorInfo(null);
       setCalcCaveats(null);

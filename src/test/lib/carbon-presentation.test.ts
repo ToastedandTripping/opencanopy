@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { roundToSigFigs, presentCo2Tonnes, presentDollars } from "@/lib/carbon/calculator";
+import {
+  roundToSigFigs,
+  presentCo2Tonnes,
+  presentDollars,
+  calculateEquivalences,
+} from "@/lib/carbon/calculator";
 
 describe("roundToSigFigs", () => {
   it("rounds a large number to 3 significant figures", () => {
@@ -64,5 +69,40 @@ describe("presentDollars", () => {
     const rounded = presentDollars(9876543.21);
     expect(rounded).not.toBe(9876543.21);
     expect(rounded).toBe(9900000);
+  });
+});
+
+describe("calculateEquivalences", () => {
+  it("derives cars/homes/flights from whatever tonnage it's given", () => {
+    const equiv = calculateEquivalences(4610); // exactly 1000 cars-worth (4.61 t/car)
+    expect(equiv.cars).toBeCloseTo(1000, 5);
+    expect(equiv.homes).toBeGreaterThan(0);
+    expect(equiv.flights).toBeGreaterThan(0);
+  });
+
+  it("returns all-zero equivalences for a real zero tonnage", () => {
+    const equiv = calculateEquivalences(0);
+    expect(equiv).toEqual({ cars: 0, homes: 0, flights: 0 });
+  });
+
+  // Regression guard for Razor's equivalences-from-rounded NOTE: calling
+  // calculateEquivalences with the ROUNDED headline figure (rather than the
+  // raw total) must yield a car count that's actually consistent with the
+  // number shown next to it -- e.g. a displayed "1,230,000 tonnes" must sit
+  // beside a car count that itself divides back out to ~1,230,000, not the
+  // raw 1,234,567.89 the tonnage was rounded FROM.
+  it("equivalences derived from the rounded headline are self-consistent with that headline (not the raw pre-rounding total)", () => {
+    const raw = 1_234_567.89;
+    const rounded = presentCo2Tonnes(raw).rounded; // 1,230,000
+    const equivFromRounded = calculateEquivalences(rounded);
+    const equivFromRaw = calculateEquivalences(raw);
+
+    // Back-computing the rounded-derived car count reproduces the rounded
+    // headline, not the raw one.
+    expect(Math.round(equivFromRounded.cars * 4.61)).toBe(rounded);
+    // The raw-derived figure is measurably different -- this is exactly the
+    // drift the fix eliminates ("1,230,000 tonnes" next to a car count that
+    // back-computes to 1,234,582+).
+    expect(equivFromRaw.cars).not.toBeCloseTo(equivFromRounded.cars, 0);
   });
 });

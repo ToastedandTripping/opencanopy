@@ -104,8 +104,8 @@ const KNOWN_AGE_CLASSES = new Set(["old-growth", "mature", "young", "harvested",
  * calculator: tile features carry age/species under different property
  * names entirely).
  *
- * Deliberately keyed on `class`, NOT `PROJ_AGE_1`: the proxy's own
- * classifyVRIFeature (wfs-proxy.ts) classifies "harvested" from
+ * Deliberately keyed on `class`, NOT `PROJ_AGE_1`, as the PRIMARY check: the
+ * proxy's own classifyVRIFeature (wfs-proxy.ts) classifies "harvested" from
  * HARVEST_DATE alone, so a selection that's genuinely 100%
  * harvested/clear-cut can legitimately have NO feature with a numeric
  * PROJ_AGE_1 -- that's real data (a true near-zero carbon result), not
@@ -114,12 +114,30 @@ const KNOWN_AGE_CLASSES = new Set(["old-growth", "mature", "young", "harvested",
  * so its total absence across a whole batch is the reliable drift signal.
  * An empty `features` array is NOT schema drift (that's the no-data case,
  * handled separately) -- returns false.
+ *
+ * SECOND-ORDER check: `class` alone can survive a *partial* future drift --
+ * e.g. if PROJ_AGE_1 itself gets renamed upstream while the proxy keeps
+ * unconditionally stamping some `class` value on every feature. To catch
+ * that, also require at least one feature carry the raw signal the
+ * classifier actually reads: a numeric PROJ_AGE_1 or a HARVEST_DATE. This
+ * still can't false-positive on a legit all-harvested selection (those
+ * features always carry HARVEST_DATE), so it only fires when age data is
+ * missing from the ENTIRE batch even though `class` looks fine.
  */
 export function hasSchemaDrift(
   features: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[]
 ): boolean {
   if (features.length === 0) return false;
-  return features.every((f) => !KNOWN_AGE_CLASSES.has(f.properties?.class as string));
+
+  const noRecognizedClass = features.every(
+    (f) => !KNOWN_AGE_CLASSES.has(f.properties?.class as string)
+  );
+  if (noRecognizedClass) return true;
+
+  const noAgeSignal = features.every(
+    (f) => typeof f.properties?.PROJ_AGE_1 !== "number" && f.properties?.HARVEST_DATE == null
+  );
+  return noAgeSignal;
 }
 
 /** Bounding-box area in km^2 -- used for the pre-fetch guard. Draw selections
@@ -127,6 +145,65 @@ export function hasSchemaDrift(
  *  selection's true area for that entry point. */
 export function bboxAreaKm2(bbox: BBox): number {
   return area(bboxPolygon(bbox)) / 1_000_000;
+}
+
+/**
+ * Pure pre-fetch guard predicate -- true when `bbox` exceeds
+ * CALC_AREA_GUARD_KM2 and must be refused before any network request goes
+ * out. Extracted out of page.tsx's runCalculation (which used to inline
+ * `bboxAreaKm2(bbox) > CALC_AREA_GUARD_KM2` directly) so the "guard refuses
+ * without ever calling fetch" invariant is unit-testable without rendering
+ * the full map page (no MapLibre/react-map-gl test harness exists for it).
+ * page.tsx's draw-select entry point checks this BEFORE calling
+ * fetchForestAgeForSelection at all -- it is the single source of truth for
+ * that decision.
+ */
+export function isSelectionTooLarge(bbox: BBox): boolean {
+  return bboxAreaKm2(bbox) > CALC_AREA_GUARD_KM2;
+}
+
+/**
+ * Sequence-token guard against out-of-order async resolution ("stale
+ * response" races): `start()` aborts whatever was previously in-flight and
+ * returns a fresh `{ signal, token }` pair; `isCurrent(token)` reports
+ * whether that token is still the most recently issued one. This is what
+ * keeps a slow, superseded fetch/clip from overwriting a newer selection's
+ * result -- ranked the #1 risk in the calc redesign plan
+ * (jazzy-gathering-codd). Extracted out of page.tsx's own
+ * `calcAbortRef`/`calcSeqRef` bookkeeping (same semantics, single object)
+ * so the race is unit-testable without rendering the full map page.
+ */
+export interface SeqGuard {
+  /** Aborts whatever was previously in-flight and returns a fresh
+   *  `{ signal, token }` pair for the operation about to start. */
+  start(): { signal: AbortSignal; token: number };
+  /** True if `token` is still the most recently issued one -- i.e. this
+   *  operation has not been superseded by a newer `start()` call. */
+  isCurrent(token: number): boolean;
+  /** Aborts in-flight work and bumps the token with no replacement
+   *  starting (a hard reset, e.g. the selection was cleared). */
+  reset(): void;
+}
+
+export function createSeqGuard(): SeqGuard {
+  let seq = 0;
+  let controller: AbortController | null = null;
+  return {
+    start() {
+      controller?.abort();
+      controller = new AbortController();
+      seq += 1;
+      return { signal: controller.signal, token: seq };
+    },
+    isCurrent(token: number) {
+      return token === seq;
+    },
+    reset() {
+      controller?.abort();
+      controller = null;
+      seq += 1;
+    },
+  };
 }
 
 /**
@@ -163,57 +240,84 @@ export async function fetchForestAgeForSelection(
   const onCallerAbort = () => timeoutController.abort();
   signal.addEventListener("abort", onCallerAbort);
 
-  let res: Response;
+  // The timer + caller-abort listener must stay alive through the FULL
+  // fetch-and-read, not just until response headers arrive: FETCH_TIMEOUT_MS
+  // was calibrated against observed full-transfer latency (see the const's
+  // comment above), so tearing this down right after `fetch()` resolves
+  // leaves the multi-MB `res.json()` body download+parse completely
+  // unbounded -- a stalled body stream would hang "Calculating..." forever
+  // with no error, and a caller abort landing mid-body would surface as a
+  // generic http error instead of a real abort. Single cleanup in the
+  // `finally` below, after the body has actually been read.
   try {
-    res = await fetch(`/api/wfs?${params}`, { signal: timeoutController.signal });
-  } catch (err) {
-    if (signal.aborted) {
-      // Caller (a new selection) superseded this fetch -- not a failure.
-      throw err;
+    let res: Response;
+    try {
+      res = await fetch(`/api/wfs?${params}`, { signal: timeoutController.signal });
+    } catch (err) {
+      if (signal.aborted) {
+        // Caller (a new selection) superseded this fetch -- not a failure.
+        throw err;
+      }
+      // Distinguish "our own timer fired" from "fetch failed for some other
+      // reason" (DNS failure, connection refused, offline, etc.) -- these
+      // are NOT the same class of error and get different UI copy
+      // downstream.
+      if (timedOut) {
+        throw new ForestCarbonFetchError("timeout", "Request timed out");
+      }
+      throw new ForestCarbonFetchError("network", "Network error");
     }
-    // Distinguish "our own timer fired" from "fetch failed for some other
-    // reason" (DNS failure, connection refused, offline, etc.) -- these are
-    // NOT the same class of error and get different UI copy downstream.
-    if (timedOut) {
-      throw new ForestCarbonFetchError("timeout", "Request timed out");
+
+    if (res.status === 429) {
+      const retryAfterHeader = res.headers.get("Retry-After");
+      const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
+      throw new ForestCarbonFetchError(
+        "rate-limit",
+        "Rate limited",
+        Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : undefined
+      );
     }
-    throw new ForestCarbonFetchError("network", "Network error");
+    if (!res.ok) {
+      throw new ForestCarbonFetchError("http", `HTTP ${res.status}`);
+    }
+
+    let data: GeoJSON.FeatureCollection;
+    try {
+      data = (await res.json()) as GeoJSON.FeatureCollection;
+    } catch (err) {
+      // The timer/caller-abort listener are still live here (cleanup is
+      // deferred to the outer `finally`), so a stalled body stream aborted
+      // mid-read rejects `res.json()` and lands in this catch -- it must be
+      // reclassified as an abort/timeout, not a generic parse failure, or
+      // it surfaces as ForestCarbonFetchError("http") with only the
+      // upstream seq-token guard masking it.
+      if (signal.aborted) {
+        // Caller (a new selection) superseded this fetch mid-body-read --
+        // same treatment as the headers-phase case above: rethrow
+        // untouched, not a ForestCarbonFetchError.
+        throw err;
+      }
+      if (timedOut) {
+        throw new ForestCarbonFetchError("timeout", "Request timed out");
+      }
+      throw new ForestCarbonFetchError("http", "Invalid response from data source");
+    }
+
+    const rawFeatures = data.features ?? [];
+    // Defensive: only Polygon/MultiPolygon flow into the clip step (probe-
+    // confirmed the forest-age WFS layer is always one of these two, but a
+    // malformed upstream response shouldn't crash downstream turf calls).
+    const features = rawFeatures.filter(
+      (f): f is GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> =>
+        f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon"
+    );
+
+    return {
+      features,
+      maybeTruncated: features.length >= CAP - CAP_MARGIN,
+    };
   } finally {
     clearTimeout(timeoutId);
     signal.removeEventListener("abort", onCallerAbort);
   }
-
-  if (res.status === 429) {
-    const retryAfterHeader = res.headers.get("Retry-After");
-    const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
-    throw new ForestCarbonFetchError(
-      "rate-limit",
-      "Rate limited",
-      Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : undefined
-    );
-  }
-  if (!res.ok) {
-    throw new ForestCarbonFetchError("http", `HTTP ${res.status}`);
-  }
-
-  let data: GeoJSON.FeatureCollection;
-  try {
-    data = (await res.json()) as GeoJSON.FeatureCollection;
-  } catch {
-    throw new ForestCarbonFetchError("http", "Invalid response from data source");
-  }
-
-  const rawFeatures = data.features ?? [];
-  // Defensive: only Polygon/MultiPolygon flow into the clip step (probe-
-  // confirmed the forest-age WFS layer is always one of these two, but a
-  // malformed upstream response shouldn't crash downstream turf calls).
-  const features = rawFeatures.filter(
-    (f): f is GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> =>
-      f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon"
-  );
-
-  return {
-    features,
-    maybeTruncated: features.length >= CAP - CAP_MARGIN,
-  };
 }

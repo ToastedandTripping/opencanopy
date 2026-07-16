@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { calculateFinancialValue, presentCo2Tonnes, presentDollars } from "@/lib/carbon";
+import {
+  calculateEquivalences,
+  calculateFinancialValue,
+  presentCo2Tonnes,
+  presentDollars,
+} from "@/lib/carbon";
 import type { SelectionStats, FinancialValue } from "@/lib/carbon";
 import { useDragDismiss } from "@/hooks/useDragDismiss";
 import FOREST_AGE_PALETTE from "@/lib/layers/forest-age-palette.json";
@@ -342,9 +347,13 @@ export function CalculatorPanel({
 
   const handleShare = useCallback(async () => {
     if (!isOk || !stats || !co2) return; // status-gated (X4): never share a loading/no-data/error/too-large state
+    // Derived from co2.rounded, NOT stats.equivalences (which is computed
+    // off the raw, un-rounded tonnage) -- keeps the shared car count
+    // self-consistent with the rounded tonnage headline above it.
+    const equiv = calculateEquivalences(co2.rounded);
     const lines = [
       `This ${fmt(areaHa ?? stats.totalAreaHa, 0)} hectare forested area of BC stores approximately ${fmt(co2.rounded)} tonnes of CO2 (may be up to ~20% lower).`,
-      `That's equivalent to ${fmt(Math.round(stats.equivalences.cars))} cars driven for a year.`,
+      `That's equivalent to ${fmt(Math.round(equiv.cars))} cars driven for a year.`,
     ];
     if (caveats?.truncated) {
       lines.push("Note: this is a large selection -- the estimate may undercount.");
@@ -446,6 +455,11 @@ function PanelContent({
     () => (calcStatus === "ok" && stats ? calculateFinancialValue(stats) : null),
     [calcStatus, stats]
   );
+  // Derived from co2.rounded, NOT stats.equivalences (which is computed off
+  // the raw, un-rounded tonnage) -- keeps the displayed car/home/flight
+  // counts self-consistent with the rounded headline tonnage shown above
+  // them (critic X4).
+  const equiv = useMemo(() => (co2 ? calculateEquivalences(co2.rounded) : null), [co2]);
 
   if (calcStatus === null) return null;
 
@@ -553,9 +567,9 @@ function PanelContent({
           <div className="mb-5">
             <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">That is equivalent to</h3>
             <div className="space-y-2.5">
-              <EquivRow icon={<CarIcon />} value={stats.equivalences.cars} unit="cars driven for a year" />
-              <EquivRow icon={<HomeIcon />} value={stats.equivalences.homes} unit="Canadian homes for a year" />
-              <EquivRow icon={<PlaneIcon />} value={stats.equivalences.flights} unit="YVR-YYZ round trips" />
+              <EquivRow icon={<CarIcon />} value={equiv?.cars ?? 0} unit="cars driven for a year" />
+              <EquivRow icon={<HomeIcon />} value={equiv?.homes ?? 0} unit="Canadian homes for a year" />
+              <EquivRow icon={<PlaneIcon />} value={equiv?.flights ?? 0} unit="YVR-YYZ round trips" />
             </div>
           </div>
 
