@@ -117,7 +117,7 @@ describe("MapLegend class-filter buttons (D2)", () => {
     expect(onToggleClassFilter).toHaveBeenCalledWith("forest-age", "Unknown");
   });
 
-  it("carries the sibling focus-visible ring pattern used elsewhere in this file", () => {
+  it("carries the sibling focus-visible ring pattern used elsewhere in this file, at the site-wide ring-white/30 strength (1.4.11 non-text contrast; ring-white/20 was under the 3:1 bar over bg-black/70)", () => {
     const { container } = renderLegend({ "forest-age": ["Old growth"] });
     expandLayer(container);
 
@@ -125,6 +125,21 @@ describe("MapLegend class-filter buttons (D2)", () => {
       b.textContent?.includes("Old growth")
     );
     expect(oldGrowthBtn?.className).toMatch(/focus-visible:ring-2/);
-    expect(oldGrowthBtn?.className).toMatch(/focus-visible:ring-white\/20/);
+    expect(oldGrowthBtn?.className).toMatch(/focus-visible:ring-white\/30/);
+    expect(oldGrowthBtn?.className).not.toMatch(/focus-visible:ring-white\/20/);
+  });
+
+  it("the expand/collapse toggle and dismiss buttons also carry ring-white/30 (same 1.4.11 fix, other two sites in this file)", () => {
+    const { container } = renderLegend();
+
+    const expandToggle = Array.from(container.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Forest Age")
+    );
+    const dismissBtn = container.querySelector('button[aria-label="Remove Forest Age"]');
+
+    expect(expandToggle?.className).toMatch(/focus-visible:ring-white\/30/);
+    expect(expandToggle?.className).not.toMatch(/focus-visible:ring-white\/20/);
+    expect(dismissBtn?.className).toMatch(/focus-visible:ring-white\/30/);
+    expect(dismissBtn?.className).not.toMatch(/focus-visible:ring-white\/20/);
   });
 });

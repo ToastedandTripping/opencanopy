@@ -710,7 +710,6 @@ export default function Home() {
           `}
           title="Discover hot spots"
           aria-label="Discover hot spots"
-          aria-pressed={hotSpotPanelOpen}
           aria-expanded={hotSpotPanelOpen}
         >
           <svg

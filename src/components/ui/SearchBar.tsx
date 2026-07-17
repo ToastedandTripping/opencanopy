@@ -379,7 +379,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
               type="text"
               role="combobox"
               aria-autocomplete="list"
-              aria-expanded={searchStatus !== "idle" && open}
+              aria-expanded={open && searchStatus === "ok"}
               aria-controls="search-results"
               aria-activedescendant={focusedIndex >= 0 ? `search-result-${focusedIndex}` : undefined}
               value={query}

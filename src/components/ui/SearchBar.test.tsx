@@ -368,4 +368,50 @@ describe("SearchBar accessibility (D1)", () => {
       node = node.parentElement;
     }
   });
+
+  it('aria-expanded is only true for the "ok" outcome -- "error" and "empty" leave the dropdown open but render no #search-results listbox, so aria-controls would otherwise dangle', async () => {
+    // "error" outcome, keyless environment: open=true, but the popup shows
+    // static text, not the listbox aria-controls points at.
+    const { SearchBar } = await import("./SearchBar");
+    const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
+    const input = getInput(container);
+
+    await search(input, "vancouver");
+    expect(container.textContent).toMatch(/Search failed — try again/);
+    expect(container.querySelector("#search-results")).toBeNull();
+    expect(input.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it('aria-expanded is false for the "empty" outcome (same dangling-reference guard, keyed environment)', async () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "test-key");
+    vi.resetModules();
+    mockFetchOnce({ json: async () => ({ features: [] }) });
+    const { SearchBar } = await import("./SearchBar");
+    const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
+    const input = getInput(container);
+
+    await search(input, "nowhere-in-particular");
+    expect(container.textContent).toMatch(/No matches in BC/);
+    expect(container.querySelector("#search-results")).toBeNull();
+    expect(input.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it('aria-expanded is true for the "ok" outcome, where #search-results actually renders (aria-controls resolves to a real node)', async () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "test-key");
+    vi.resetModules();
+    mockFetchOnce({
+      json: async () => ({
+        features: [
+          { id: "1", text: "Vancouver", place_type: ["place"], center: [-123.1, 49.28] },
+        ],
+      }),
+    });
+    const { SearchBar } = await import("./SearchBar");
+    const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
+    const input = getInput(container);
+
+    await search(input, "vancouver");
+    expect(container.querySelector("#search-results")).toBeTruthy();
+    expect(input.getAttribute("aria-expanded")).toBe("true");
+  });
 });
