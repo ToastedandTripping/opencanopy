@@ -543,7 +543,7 @@ function PanelContent({
           <div className="text-center mb-5">
             <div className="text-3xl font-bold text-white tabular-nums font-[family-name:var(--font-display)]">{fmt(animatedCO2)}</div>
             <div className="text-sm text-zinc-400 mt-1">tonnes CO<sub>2</sub> stored in this area</div>
-            <div className="text-[10px] text-zinc-500 mt-1">may be as low as {fmt(co2.bandLow)} tonnes</div>
+            <div className="text-xs text-zinc-400 mt-1">may be as low as {fmt(co2.bandLow)} tonnes</div>
             <div className="text-[10px] text-zinc-400 mt-0.5">{stats.featureCount} forest polygons analyzed</div>
           </div>
 
