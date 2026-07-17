@@ -63,19 +63,24 @@ export default function Home() {
   const [hotSpotPanelOpen, setHotSpotPanelOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Mutual exclusion between the two panels (Razor W1): both LayerPanel and
-  // HotSpotPanel render a `role="dialog" aria-modal="true"` mobile sheet
-  // simultaneously with their desktop `role="region"` variant, switched by a
-  // CSS breakpoint, not JS -- so page.tsx has no cheap way to know whether
-  // either open panel is currently showing its modal (mobile) or non-modal
-  // (desktop) face. Opening one panel closing the other, unconditionally,
-  // is the least-disruptive fix that guarantees two modal Tab traps can
-  // never both be armed at once, regardless of viewport. Same pattern
-  // already used below for draw/watershed mode mutual exclusion.
+  // Mutual exclusion between the two panels (Razor W1), scoped to mobile
+  // only (Jen, P2 design review): below the md breakpoint both LayerPanel
+  // and HotSpotPanel render a `role="dialog" aria-modal="true"` sheet, so
+  // opening one while the other's sheet is still mounted would arm two
+  // modal Tab traps at once. useDialogA11y's `defaultPrevented` guard
+  // (useDialogA11y.ts) already makes that duel structurally impossible
+  // regardless of this check, but closing the sibling here also avoids the
+  // visual stack-up of two full-screen sheets. At >=768px both panels
+  // render their `role="region"` (non-modal, opposite-edge, non-overlapping)
+  // desktop variant, where closing the sibling has no a11y benefit and
+  // removes a real "keep both open" workflow -- so it's skipped there.
+  // window.innerWidth check (not a resize listener) mirrors the same
+  // pattern SearchBar already uses; the narrow edge case of two panels open
+  // on desktop then resized below md is accepted, not engineered around.
   const toggleLayerPanel = useCallback(() => {
     setLayerPanelOpen((prev) => {
       const next = !prev;
-      if (next) setHotSpotPanelOpen(false);
+      if (next && window.innerWidth < 768) setHotSpotPanelOpen(false);
       return next;
     });
   }, []);
@@ -83,7 +88,7 @@ export default function Home() {
   const toggleHotSpotPanel = useCallback(() => {
     setHotSpotPanelOpen((prev) => {
       const next = !prev;
-      if (next) setLayerPanelOpen(false);
+      if (next && window.innerWidth < 768) setLayerPanelOpen(false);
       return next;
     });
   }, []);
