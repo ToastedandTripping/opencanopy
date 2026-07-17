@@ -125,6 +125,56 @@ describe("matchesAltShortcut (B2: Alt+S / Alt+W)", () => {
   it("does not cross-match the other letter", () => {
     expect(matchesAltShortcut(keyEvent({ key: "s", altKey: true }), "w")).toBe(false);
   });
+
+  // Razor W2: macOS remaps `key` under Option (Alt) to a special character
+  // -- Option+S yields key:"ß", Option+W yields key:"∑" -- so a `key`-only
+  // check never fired there even though aria-keyshortcuts="Alt+S" advertised
+  // it. `code` is layout-independent (physical key position) and DOES carry
+  // through: "KeyS"/"KeyW" regardless of what `key` resolves to.
+  describe("macOS Option+letter (B2/W2: matches via layout-independent `code`)", () => {
+    it("fires on the real macOS Option+S event shape -- code:\"KeyS\", key:\"ß\"", () => {
+      expect(
+        matchesAltShortcut(keyEvent({ altKey: true, code: "KeyS", key: "ß" }), "s")
+      ).toBe(true);
+    });
+
+    it("fires on the real macOS Option+W event shape -- code:\"KeyW\", key:\"∑\"", () => {
+      expect(
+        matchesAltShortcut(keyEvent({ altKey: true, code: "KeyW", key: "∑" }), "w")
+      ).toBe(true);
+    });
+
+    it("does not fire on bare \"ß\"/\"∑\" without Alt held -- code alone is not enough", () => {
+      expect(matchesAltShortcut(keyEvent({ altKey: false, code: "KeyS", key: "ß" }), "s")).toBe(
+        false
+      );
+    });
+
+    it("does not cross-match the other letter's code", () => {
+      expect(
+        matchesAltShortcut(keyEvent({ altKey: true, code: "KeyS", key: "ß" }), "w")
+      ).toBe(false);
+    });
+
+    it("still no-ops when focus is on a button, even with the macOS code shape (B1 wide guard still applies)", () => {
+      const btn = document.createElement("button");
+      expect(
+        matchesAltShortcut(
+          keyEvent({ altKey: true, code: "KeyS", key: "ß", target: btn }),
+          "s"
+        )
+      ).toBe(false);
+    });
+
+    it("still bails on Ctrl/Cmd even with the matching macOS code", () => {
+      expect(
+        matchesAltShortcut(
+          keyEvent({ altKey: true, ctrlKey: true, code: "KeyS", key: "ß" }),
+          "s"
+        )
+      ).toBe(false);
+    });
+  });
 });
 
 describe("isTimelineTransportKey (Space/arrow guard)", () => {

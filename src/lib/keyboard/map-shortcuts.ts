@@ -68,9 +68,12 @@ export function isTextEntryTarget(target: EventTarget | null): boolean {
 
 /** The subset of KeyboardEvent this module reads -- kept structural so
  *  tests can pass a plain object instead of constructing a real
- *  KeyboardEvent. */
+ *  KeyboardEvent. `code` is optional in the shape (a real KeyboardEvent
+ *  always carries one) so pre-existing test fixtures that only set `key`
+ *  keep working unchanged. */
 export interface ShortcutKeyEvent {
   key: string;
+  code?: string;
   altKey: boolean;
   ctrlKey: boolean;
   metaKey: boolean;
@@ -84,10 +87,22 @@ export interface ShortcutKeyEvent {
  * (so OS/browser shortcuts are never hijacked -- e.g. Ctrl+Alt+S bails)
  * and focus isn't on an interactive control (B1's wide guard). Bare `s`/`w`
  * (no Alt) always return false here -- they no longer do anything.
+ *
+ * Matches on EITHER the layout-independent `event.code` (`"KeyS"`/`"KeyW"`)
+ * OR `event.key` -- `code` is what actually fires on macOS, where
+ * Option+S/Option+W remap `key` to `"ß"`/`"∑"` (dead-key/special-character
+ * layout behavior) so a `key`-only check never matched there even though
+ * `aria-keyshortcuts="Alt+S"` advertised it. The `key` check stays as a
+ * second path so pre-existing fixtures that only set `key` (no `code`,
+ * simulating Windows/Linux where Alt doesn't remap the letter) keep
+ * matching -- `code` on a real KeyboardEvent is present, but a plain test
+ * object omitting it just falls through to the `key` comparison.
  */
 export function matchesAltShortcut(event: ShortcutKeyEvent, letter: "s" | "w"): boolean {
   if (!event.altKey || event.ctrlKey || event.metaKey) return false;
-  if (event.key.toLowerCase() !== letter) return false;
+  const matchesCode = event.code === `Key${letter.toUpperCase()}`;
+  const matchesKey = event.key.toLowerCase() === letter;
+  if (!matchesCode && !matchesKey) return false;
   return !isEditableOrControl(event.target);
 }
 
