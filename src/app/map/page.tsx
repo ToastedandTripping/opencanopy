@@ -873,7 +873,7 @@ export default function Home() {
           <button
             onClick={handleSelectVisibleArea}
             title="Select the visible map area for carbon calculation"
-            aria-label="Select visible map area"
+            aria-label="Select visible area"
             className="flex items-center gap-1.5 px-2.5 py-2 min-h-[44px] rounded-lg shrink-0 text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200"
           >
             <svg
