@@ -43,11 +43,15 @@ export const metadata: Metadata = {
 };
 
 // Viewport is exported separately per Next 16 API.
-// maximumScale: 1 is intentional — prevents iOS auto-zoom on a full-screen map.
+// E (P2 a11y relay, WCAG 1.4.4/1.4.10): maximumScale: 1 previously applied
+// app-wide, blocking pinch-zoom on the text landing page and privacy
+// page -- content someone with low vision genuinely needs to zoom. It's
+// still intentional for the full-screen MAP experience (prevents iOS
+// auto-zoom disrupting pan/gesture handling there), so it's re-specified
+// in src/app/map/layout.tsx, scoped to the map route segment only.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
