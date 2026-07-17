@@ -26,8 +26,11 @@ const EMPTY_FC: GeoJSON.FeatureCollection = {
   features: [],
 };
 
-/** Build a GeoJSON polygon from two corner points (lng/lat) */
-function bboxPolygon(
+/** Build a GeoJSON polygon from two corner points (lng/lat). Exported for
+ *  the "Select visible area" keyboard entry point (page.tsx, B3) -- reuses
+ *  the exact same geometry construction a manual draw uses, so the two
+ *  entry points can never diverge. */
+export function bboxPolygon(
   lng1: number,
   lat1: number,
   lng2: number,
@@ -53,6 +56,36 @@ function bboxPolygon(
         ],
       ],
     },
+  };
+}
+
+/** Minimal structural shape of maplibregl.LngLatBounds -- kept structural
+ *  (not imported from maplibre-gl) so callers and tests don't need a real
+ *  MapLibre instance to exercise this. */
+export interface BoundsLike {
+  getWest(): number;
+  getSouth(): number;
+  getEast(): number;
+  getNorth(): number;
+}
+
+/**
+ * Converts a map viewport's bounds into a SelectionBBox using the same
+ * bboxPolygon() the interactive draw tool itself uses, so the "Select
+ * visible area" button (page.tsx, B3 -- WCAG 2.1.1 keyboard path for the
+ * carbon calculator) produces byte-identical geometry to an equivalent
+ * manual draw over the same corners. Zero downstream change: the result
+ * feeds the same handleSelectionChange -> runCalculation spine a manual
+ * draw does, including the pre-fetch isSelectionTooLarge guard.
+ */
+export function boundsToSelectionBBox(bounds: BoundsLike): SelectionBBox {
+  const west = bounds.getWest();
+  const south = bounds.getSouth();
+  const east = bounds.getEast();
+  const north = bounds.getNorth();
+  return {
+    bbox: [west, south, east, north],
+    polygon: bboxPolygon(west, south, east, north),
   };
 }
 
