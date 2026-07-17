@@ -22,28 +22,58 @@ const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
 /** BC bounding box for geocoding constraint */
 const BC_BBOX = "-139.06,48.22,-114.03,60.00";
 
-async function geocode(query: string): Promise<SearchResult[]> {
+/**
+ * Discriminated geocode outcome (D1, honest failure states). Previously
+ * `geocode()` returned `[]` for an HTTP failure, a genuinely empty result,
+ * AND a thrown error alike -- three different situations collapsed into
+ * one silent blank dropdown. Contained to this module-private caller
+ * (SearchBar is the only consumer); the exhaustive switch in the render
+ * below is tsc-enforced against this union.
+ */
+type GeocodeOutcome =
+  | { status: "ok"; results: SearchResult[] }
+  | { status: "empty" }
+  | { status: "error" };
+
+async function geocode(query: string): Promise<GeocodeOutcome> {
   if (!MAPTILER_KEY) {
-    return parseCoordinates(query);
+    // Keyless branch: no live geocoding available at all. parseCoordinates
+    // is a pure local fallback -- a valid "lat,lng" query still resolves
+    // ("ok"), but anything else genuinely can't be searched without a key.
+    // That's "error" (the feature is unavailable), NOT "empty" (which
+    // implies a real search ran and found nothing).
+    const coordResults = parseCoordinates(query);
+    return coordResults.length > 0
+      ? { status: "ok", results: coordResults }
+      : { status: "error" };
   }
 
   try {
     const encoded = encodeURIComponent(query.trim());
     const url = `https://api.maptiler.com/geocoding/${encoded}.json?key=${MAPTILER_KEY}&country=CA&bbox=${BC_BBOX}&limit=5`;
     const res = await fetch(url);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      // SECURITY: the request URL embeds MAPTILER_KEY. Error copy stays
+      // STATIC -- never interpolate this URL or a raw error/response body
+      // into the DOM or logs.
+      return { status: "error" };
+    }
 
     const data = await res.json();
-    if (!data.features || data.features.length === 0) return [];
+    if (!data.features || data.features.length === 0) {
+      return { status: "empty" };
+    }
 
-    return data.features.slice(0, 5).map((f: GeocodingFeature) => ({
+    const results = data.features.slice(0, 5).map((f: GeocodingFeature) => ({
       id: f.id ?? f.properties?.osm_id ?? String(Math.random()),
       placeName: f.text ?? f.place_name ?? "Unknown",
       region: buildRegion(f),
       center: f.center as [number, number],
     }));
+    return { status: "ok", results };
   } catch {
-    return [];
+    // SECURITY: same static-copy rule -- do not surface the caught error.
+    return { status: "error" };
   }
 }
 
@@ -123,6 +153,10 @@ function parseCoordinates(input: string): SearchResult[] {
 export function SearchBar({ onLocationSelect }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  // "idle" = no search attempted yet (or query cleared/too short). "ok" /
+  // "empty" / "error" mirror GeocodeOutcome and drive which of the three
+  // dropdown states renders (D1).
+  const [searchStatus, setSearchStatus] = useState<"idle" | "ok" | "empty" | "error">("idle");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -172,14 +206,19 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
   const handleSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
       setResults([]);
+      setSearchStatus("idle");
       setOpen(false);
       return;
     }
 
     setLoading(true);
-    const searchResults = await geocode(q);
-    setResults(searchResults);
-    setOpen(searchResults.length > 0);
+    const outcome = await geocode(q);
+    setSearchStatus(outcome.status);
+    // Dropdown opens for EVERY resolved outcome, not just "ok" -- the
+    // empty/error states need to actually be shown (D1), not just
+    // silently drop the query on the floor.
+    setResults(outcome.status === "ok" ? outcome.results : []);
+    setOpen(true);
     setFocusedIndex(-1);
     setLoading(false);
   }, []);
@@ -290,16 +329,17 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
               type="text"
               role="combobox"
               aria-autocomplete="list"
-              aria-expanded={results.length > 0 && open}
+              aria-expanded={searchStatus !== "idle" && open}
               aria-controls="search-results"
               aria-activedescendant={focusedIndex >= 0 ? `search-result-${focusedIndex}` : undefined}
               value={query}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => {
-                if (results.length > 0) setOpen(true);
+                if (searchStatus !== "idle") setOpen(true);
               }}
               placeholder={MAPTILER_KEY ? "Search location..." : "Enter lat,lng..."}
+              aria-label="Search for a location"
               className="flex-1 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-500 outline-none min-w-0"
               autoComplete="off"
               autoCorrect="off"
@@ -313,6 +353,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
                 onClick={() => {
                   setQuery("");
                   setResults([]);
+                  setSearchStatus("idle");
                   setOpen(false);
                   inputRef.current?.focus();
                 }}
@@ -333,47 +374,68 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
           </div>
         </div>
 
-        {/* Results dropdown */}
-        {open && results.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 overflow-hidden shadow-2xl z-50">
-            <ul id="search-results" role="listbox" aria-label="Search results">
-              {results.map((result, i) => (
-                <li
-                  key={result.id}
-                  id={`search-result-${i}`}
-                  role="option"
-                  aria-selected={focusedIndex === i}
-                  onClick={() => handleSelect(result)}
-                  onMouseEnter={() => setFocusedIndex(i)}
-                  className={`
-                    flex items-start gap-3 px-4 py-2.5 cursor-pointer
-                    transition-colors duration-100
-                    ${focusedIndex === i ? "bg-white/10" : "hover:bg-white/5"}
-                  `}
-                >
-                  <div className="mt-0.5 shrink-0">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                      className="w-4 h-4 text-zinc-500"
-                    >
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                      <circle cx="12" cy="10" r="3" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm text-zinc-200 truncate">
-                      {result.placeName}
+        {/* Results dropdown. D1: renders for ALL three resolved outcomes
+            (ok/empty/error), not just "ok" -- an empty or failed search
+            previously dropped the query on the floor with no visible
+            signal. role="status" + aria-live so a screen-reader user gets
+            the outcome even though nothing else on the page changes. */}
+        {open && searchStatus !== "idle" && (
+          <div
+            id="search-results"
+            role="status"
+            aria-live="polite"
+            className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 overflow-hidden shadow-2xl z-50"
+          >
+            {searchStatus === "ok" && (
+              <ul role="listbox" aria-label="Search results">
+                {results.map((result, i) => (
+                  <li
+                    key={result.id}
+                    id={`search-result-${i}`}
+                    role="option"
+                    aria-selected={focusedIndex === i}
+                    onClick={() => handleSelect(result)}
+                    onMouseEnter={() => setFocusedIndex(i)}
+                    className={`
+                      flex items-start gap-3 px-4 py-2.5 cursor-pointer
+                      transition-colors duration-100
+                      ${focusedIndex === i ? "bg-white/10" : "hover:bg-white/5"}
+                    `}
+                  >
+                    <div className="mt-0.5 shrink-0">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        className="w-4 h-4 text-zinc-500"
+                      >
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
                     </div>
-                    <div className="text-xs text-zinc-400 truncate">
-                      {result.region}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-zinc-200 truncate">
+                        {result.placeName}
+                      </div>
+                      <div className="text-xs text-zinc-400 truncate">
+                        {result.region}
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {searchStatus === "empty" && (
+              <div className="px-4 py-3 text-sm text-zinc-400">No matches in BC</div>
+            )}
+
+            {searchStatus === "error" && (
+              <div className="px-4 py-3 text-sm text-zinc-400">
+                Search is unavailable — try again
+              </div>
+            )}
           </div>
         )}
       </div>
