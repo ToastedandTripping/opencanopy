@@ -23,25 +23,34 @@ import { useLayerState } from "@/hooks/useLayerState";
 import { useMapState } from "@/hooks/useMapState";
 import { useTimeline } from "@/hooks/useTimeline";
 import { useWatershedSelection } from "@/hooks/useWatershedSelection";
-import { calculateSelectionStats, calculateFinancialValue } from "@/lib/carbon";
+import {
+  calculateSelectionStats,
+  calculateFinancialValue,
+  clipFeaturesToSelection,
+} from "@/lib/carbon";
 import type { SelectionStats } from "@/lib/carbon";
+import {
+  fetchForestAgeForSelection,
+  bboxAreaKm2,
+  isSelectionTooLarge,
+  createSeqGuard,
+  ForestCarbonFetchError,
+  hasSchemaDrift,
+} from "@/lib/data/forest-carbon-client";
 import { generateReport } from "@/lib/export/pdf-generator";
-import bbox from "@turf/bbox";
+import type { BBox } from "@/types/layers";
+import type { CalcStatus, CalcErrorInfo, CalcCaveats } from "@/components/panels/CalculatorPanel";
 
-// ── Empty stats constant (reused for "no data" states) ──────────────
-const EMPTY_STATS: SelectionStats = {
-  totalCarbonTonnes: 0,
-  totalCo2eTonnes: 0,
-  totalAreaHa: 0,
-  oldGrowthHa: 0,
-  matureHa: 0,
-  youngHa: 0,
-  harvestedHa: 0,
-  unknownHa: 0,
-  speciesBreakdown: {},
-  equivalences: { cars: 0, homes: 0, flights: 0 },
-  featureCount: 0,
-};
+function nowMs(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+// Single console.info line per calc attempt (X6 operability) -- lets a field
+// report ("the calculator said X") be diagnosed from the browser console
+// without a debugger attached.
+function logCalc(payload: Record<string, unknown>): void {
+  console.info("[opencanopy:calc]", payload);
+}
 
 export default function Home() {
   const mapRef = useRef<MapRef>(null);
@@ -61,6 +70,143 @@ export default function Home() {
 
   // Watershed mode
   const watershedSelection = useWatershedSelection();
+
+  // ── CO2 calc state machine (loading | ok | no-data | error | too-large) ──
+  // Render-independent replacement for the old queryRenderedFeatures path.
+  // Headline is a function of calcStatus, NEVER of stats.totalCo2eTonnes
+  // (which is 0 in both the real-zero and no-data cases -- conflating them
+  // was the original bug). See CalculatorPanel.tsx for the state -> copy map.
+  const [calcStatus, setCalcStatus] = useState<CalcStatus | null>(null);
+  const [calcErrorInfo, setCalcErrorInfo] = useState<CalcErrorInfo | null>(null);
+  const [calcCaveats, setCalcCaveats] = useState<CalcCaveats | null>(null);
+
+  // Shared sequence-token guard across BOTH entry points (draw + watershed):
+  // a new selection aborts the prior in-flight fetch/clip, and every async
+  // resolution checks the token before calling setState so a slow stale
+  // response can never overwrite a newer result (X5). Also covers React
+  // StrictMode's double-effect-invocation in dev. See createSeqGuard
+  // (forest-carbon-client.ts) for the extracted, unit-tested primitive.
+  const calcGuardRef = useRef(createSeqGuard());
+  // Last draw selection's polygon+bbox, for the error state's "try again"
+  // button -- re-runs the same calc without requiring the user to redraw.
+  const lastDrawCalcRef = useRef<{ polygon: GeoJSON.Feature<GeoJSON.Polygon>; bbox: BBox } | null>(
+    null
+  );
+
+  const resetCalc = useCallback(() => {
+    calcGuardRef.current.reset();
+    setSelectionStats(null);
+    setCalcStatus(null);
+    setCalcErrorInfo(null);
+    setCalcCaveats(null);
+  }, []);
+
+  const runCalculation = useCallback(
+    (polygon: GeoJSON.Feature<GeoJSON.Polygon>, bboxCoords: BBox) => {
+      const { signal, token } = calcGuardRef.current.start();
+
+      setCalcErrorInfo(null);
+      setCalcCaveats(null);
+
+      // Pre-fetch bbox-area guard (empirically calibrated -- see
+      // forest-carbon-client.ts for the full measurement table). This is the
+      // real defense against feature-cap truncation in v1: it keeps
+      // draw-select out of the regime where the cap is even reachable.
+      if (isSelectionTooLarge(bboxCoords)) {
+        setSelectionStats(null);
+        setCalcStatus("too-large");
+        logCalc({ status: "too-large", areaKm2: Math.round(bboxAreaKm2(bboxCoords)) });
+        return;
+      }
+
+      setSelectionStats(null);
+      setCalcStatus("loading");
+      const t0 = nowMs();
+
+      (async () => {
+        try {
+          const { features, maybeTruncated } = await fetchForestAgeForSelection(bboxCoords, {
+            signal,
+          });
+          if (!calcGuardRef.current.isCurrent(token)) return; // superseded by a newer selection
+
+          if (features.length === 0) {
+            setSelectionStats(null);
+            setCalcStatus("no-data");
+            logCalc({ status: "no-data", features: 0, ms: Math.round(nowMs() - t0) });
+            return;
+          }
+
+          // Schema-drift guard (hasSchemaDrift, forest-carbon-client.ts) --
+          // this is the class of bug that silently zeroed the original
+          // calculator. See that function's docstring for why it's keyed on
+          // `class`, not `PROJ_AGE_1` (a genuinely all-harvested selection
+          // must still compute normally, not be flagged as drift).
+          if (hasSchemaDrift(features)) {
+            setSelectionStats(null);
+            setCalcStatus("error");
+            setCalcErrorInfo({
+              message: "Forest data format changed — please try again later.",
+            });
+            logCalc({ status: "error", kind: "schema-drift", ms: Math.round(nowMs() - t0) });
+            return;
+          }
+
+          const { features: clipped, skipped, total } = await clipFeaturesToSelection(
+            features,
+            polygon,
+            { signal }
+          );
+          if (!calcGuardRef.current.isCurrent(token)) return; // superseded mid-clip
+
+          const stats = calculateSelectionStats(clipped);
+          setSelectionStats(stats);
+          setCalcStatus("ok");
+          setCalcCaveats({
+            truncated: maybeTruncated,
+            skippedFraction: total > 0 ? skipped / total : 0,
+          });
+          logCalc({
+            status: "ok",
+            features: features.length,
+            skipped,
+            truncated: maybeTruncated,
+            ms: Math.round(nowMs() - t0),
+          });
+        } catch (err) {
+          if (!calcGuardRef.current.isCurrent(token)) return; // superseded -- stale error, don't surface
+          const isAbort =
+            (err instanceof DOMException && err.name === "AbortError") ||
+            (err as { name?: string } | null)?.name === "AbortError";
+          if (isAbort) return; // superseded fetch/clip abort, not a real failure
+
+          const fcErr = err instanceof ForestCarbonFetchError ? err : null;
+          const kind = fcErr?.kind ?? "network";
+          const message =
+            kind === "timeout"
+              ? "This is taking longer than expected — try again."
+              : kind === "rate-limit"
+                ? "Too many requests — try again shortly."
+                : "Forest data unavailable — try again.";
+          setSelectionStats(null);
+          setCalcStatus("error");
+          setCalcErrorInfo({
+            message,
+            retryAvailableAt: fcErr?.retryAfterSeconds
+              ? Date.now() + fcErr.retryAfterSeconds * 1000
+              : undefined,
+          });
+          logCalc({ status: "error", kind, ms: Math.round(nowMs() - t0) });
+        }
+      })();
+    },
+    []
+  );
+
+  const onRetryCalc = useCallback(() => {
+    const last = lastDrawCalcRef.current;
+    if (last) runCalculation(last.polygon, last.bbox);
+  }, [runCalculation]);
 
   const {
     enabledLayers,
@@ -199,16 +345,19 @@ export default function Home() {
   const toggleDrawMode = useCallback(() => {
     // Disable watershed mode when entering draw mode
     if (!drawActive) {
+      if (watershedSelection.mode !== "off") {
+        resetCalc();
+      }
       watershedSelection.disableMode();
     }
     setDrawActive((prev) => !prev);
-  }, [drawActive, watershedSelection]);
+  }, [drawActive, watershedSelection, resetCalc]);
 
   const clearSelection = useCallback(() => {
     setSelection(null);
-    setSelectionStats(null);
+    resetCalc();
     setDrawActive(false);
-  }, []);
+  }, [resetCalc]);
 
   // ── Watershed handlers ─────────────────────────────────────────────
 
@@ -217,16 +366,18 @@ export default function Home() {
       // Disable draw mode when entering watershed mode
       setDrawActive(false);
       setSelection(null);
-      setSelectionStats(null);
+      resetCalc();
       watershedSelection.enableMode();
     } else {
+      resetCalc();
       watershedSelection.clear();
     }
-  }, [watershedSelection]);
+  }, [watershedSelection, resetCalc]);
 
   const clearWatershed = useCallback(() => {
+    resetCalc();
     watershedSelection.clear();
-  }, [watershedSelection]);
+  }, [watershedSelection, resetCalc]);
 
   // Map click interceptor: handle watershed clicks
   const handleMapClick = useCallback(
@@ -240,142 +391,41 @@ export default function Home() {
     [watershedSelection]
   );
 
-  // Message shown in calculator when forest layer data is unavailable
-  const [calcMessage, setCalcMessage] = useState<string | null>(null);
-
-  // ── Query forest features within the watershed bbox ────────────────
-
-  const queryForestFeaturesInBBox = useCallback(
-    (bboxCoords: [number, number, number, number]) => {
-      const map = mapRef.current;
-      if (!map) return;
-
-      const queryFeatures = () => {
-        const sw = map.project([bboxCoords[0], bboxCoords[1]]);
-        const ne = map.project([bboxCoords[2], bboxCoords[3]]);
-
-        const topLeft: [number, number] = [
-          Math.min(sw.x, ne.x),
-          Math.min(sw.y, ne.y),
-        ];
-        const bottomRight: [number, number] = [
-          Math.max(sw.x, ne.x),
-          Math.max(sw.y, ne.y),
-        ];
-
-        return map.queryRenderedFeatures([topLeft, bottomRight], {
-          layers: ["layer-forest-age-fill"],
-        });
-      };
-
-      const features = queryFeatures();
-
-      if (!features || features.length === 0) {
-        if (!enabledLayers.includes("forest-age")) {
-          toggleLayer("forest-age");
-          // Wait for tiles to actually render before retrying, not a fixed timer.
-          // Listen for the map's "idle" event (all pending renders done + tiles loaded).
-          // Fall back to a 3s timeout so this can never hang indefinitely.
-          const mapInstance = map.getMap();
-          let settled = false;
-          const FALLBACK_MS = 3000;
-
-          const doRetry = () => {
-            if (settled) return;
-            settled = true;
-            mapInstance.off("idle", doRetry);
-            clearTimeout(fallbackTimer);
-
-            const retried = queryFeatures();
-            if (retried && retried.length > 0) {
-              const seen = new Set<string>();
-              const unique = retried.filter((f) => {
-                const id =
-                  String(f.properties?.OBJECTID ?? "") ||
-                  String(f.properties?.FEATURE_ID ?? "") ||
-                  JSON.stringify(f.geometry);
-                if (seen.has(id)) return false;
-                seen.add(id);
-                return true;
-              });
-              const stats = calculateSelectionStats(
-                unique as unknown as GeoJSON.Feature[]
-              );
-              setSelectionStats(stats);
-            } else {
-              setCalcMessage("Zoom in to see forest data for this area.");
-              setSelectionStats(EMPTY_STATS);
-            }
-          };
-
-          const fallbackTimer = setTimeout(doRetry, FALLBACK_MS);
-          mapInstance.once("idle", doRetry);
-          return;
-        }
-
-        setCalcMessage("Zoom in to see forest data for this area.");
-        setSelectionStats(EMPTY_STATS);
-        return;
-      }
-
-      if (features && features.length > 0) {
-        const seen = new Set<string>();
-        const unique = features.filter((f) => {
-          const id =
-            String(f.properties?.OBJECTID ?? "") ||
-            String(f.properties?.FEATURE_ID ?? "") ||
-            JSON.stringify(f.geometry);
-          if (seen.has(id)) return false;
-          seen.add(id);
-          return true;
-        });
-
-        const stats = calculateSelectionStats(
-          unique as unknown as GeoJSON.Feature[]
-        );
-        setSelectionStats(stats);
-      }
-    },
-    [enabledLayers, toggleLayer]
-  );
-
-  // When watershed selection completes, query forest features in the watershed bbox
+  // When a watershed selection completes: carbon is DESCOPED in v1 (BC
+  // watershed groups run ~1,000-10,000+ km^2, far past both the pre-fetch
+  // area guard and the fetch timeout -- probe: a 2,900km^2 draw already
+  // takes 22s). Never feed it through the fetch/clip path. The boundary,
+  // name, and official AREA_HA still render (WatershedOverlay + the areaHa
+  // computed below) -- only the carbon readout goes straight to "too-large".
+  // Option C (class-encoded raster) is the named follow-up that restores
+  // watershed-scale carbon.
   useEffect(() => {
-    if (
-      watershedSelection.mode === "selected" &&
-      watershedSelection.watershed
-    ) {
-      setCalcMessage(null);
-      const geoBbox = bbox(watershedSelection.watershed.polygon) as [
-        number,
-        number,
-        number,
-        number,
-      ];
-      queryForestFeaturesInBBox(geoBbox);
+    if (watershedSelection.mode === "selected" && watershedSelection.watershed) {
+      calcGuardRef.current.reset();
+      setSelectionStats(null);
+      setCalcErrorInfo(null);
+      setCalcCaveats(null);
+      setCalcStatus("too-large");
+      logCalc({ status: "too-large", reason: "watershed-descoped-v1" });
     }
-  }, [
-    watershedSelection.mode,
-    watershedSelection.watershed,
-    queryForestFeaturesInBBox,
-  ]);
+  }, [watershedSelection.mode, watershedSelection.watershed]);
 
   const handleSelectionChange = useCallback(
     (sel: SelectionBBox | null) => {
       setSelection(sel);
-      setCalcMessage(null);
 
-      if (!sel || !mapRef.current) {
-        setSelectionStats(null);
+      if (!sel) {
+        resetCalc();
         return;
       }
 
-      queryForestFeaturesInBBox(sel.bbox);
+      lastDrawCalcRef.current = { polygon: sel.polygon, bbox: sel.bbox };
+      runCalculation(sel.polygon, sel.bbox);
 
       // Deactivate draw mode after completing selection
       setDrawActive(false);
     },
-    [queryForestFeaturesInBBox]
+    [resetCalc, runCalculation]
   );
 
   // ── Keyboard shortcuts ───────────────────────────────────────────
@@ -446,28 +496,46 @@ export default function Home() {
 
   const enabledCount = enabledLayers.length;
 
-  // Panel visibility: show for draw selection OR watershed selection
+  // Panel visibility: show for draw selection OR watershed selection, driven
+  // by calcStatus (not stats-nullness -- Core-3c) so the loading spinner can
+  // actually render: stats are null while a fetch is in flight, but the
+  // panel must still be open and showing "Calculating...".
   const isWatershedSelected =
     watershedSelection.mode === "selected" &&
     watershedSelection.watershed !== null;
-  const isDrawSelected = selection !== null && selectionStats !== null;
-  const panelVisible =
-    (isDrawSelected && !isWatershedSelected) ||
-    (isWatershedSelected && selectionStats !== null);
+  const panelVisible = isWatershedSelected || (selection !== null && calcStatus !== null);
 
-  // For watershed: use watershed area for the stats if we have it
-  const displayStats =
-    isWatershedSelected && selectionStats
-      ? { ...selectionStats, totalAreaHa: watershedSelection.watershed!.areaHa }
-      : selectionStats;
+  // Header area figure: watershed's own official AREA_HA (kept visible even
+  // in the "too-large" carbon state -- Core-8, the plan explicitly keeps the
+  // boundary/name/area for watershed even though carbon is descoped), or the
+  // clipped forested area for a completed draw calc, relabelled "forested
+  // area analyzed" in the panel (it is NOT the raw drawn-rectangle area).
+  // Null (no figure shown) for any draw selection that never reached "ok".
+  const areaHa = isWatershedSelected
+    ? watershedSelection.watershed!.areaHa
+    : calcStatus === "ok" && selectionStats
+      ? selectionStats.totalAreaHa
+      : null;
+
+  // stats (breakdown / equivalences / financial) only ever populated for a
+  // completed, non-descoped calc -- by construction selectionStats is null
+  // in every branch except "ok" (see runCalculation/resetCalc above), this
+  // extra gate is defense-in-depth against that invariant drifting later.
+  const displayStats = calcStatus === "ok" ? selectionStats : null;
 
   const handlePanelClose = isWatershedSelected ? clearWatershed : clearSelection;
 
   // ── Export PDF handler ──────────────────────────────────────────────
-
+  // Gated to calcStatus === "ok": the PDF template requires a real
+  // SelectionStats object, and "never a number" applies to Export exactly
+  // as it does to the headline (X4). Watershed carbon never reaches "ok" in
+  // v1 (always "too-large"), so watershedName below is currently
+  // unreachable in practice -- kept as-is, forward-compatible with the
+  // Option C follow-up that restores watershed-scale carbon.
   const handleExport = useCallback(() => {
+    if (calcStatus !== "ok" || !displayStats) return;
     const canvas = mapRef.current?.getCanvas();
-    if (!canvas || !displayStats) return;
+    if (!canvas) return;
     const mapImageDataUrl = canvas.toDataURL("image/png");
     const financial = calculateFinancialValue(displayStats);
     generateReport({
@@ -484,7 +552,7 @@ export default function Home() {
         day: "numeric",
       }),
     });
-  }, [displayStats, enabledLayers, isWatershedSelected, watershedSelection.watershed]);
+  }, [calcStatus, displayStats, enabledLayers, isWatershedSelected, watershedSelection.watershed]);
 
   const watershedActive = watershedSelection.mode !== "off";
 
@@ -780,11 +848,15 @@ export default function Home() {
 
       {/* Calculator results panel */}
       <CalculatorPanel
+        calcStatus={calcStatus}
         stats={displayStats}
+        areaHa={areaHa}
         visible={panelVisible}
         onClose={handlePanelClose}
         onExport={handleExport}
-        message={calcMessage}
+        onRetry={calcStatus === "error" ? onRetryCalc : undefined}
+        errorInfo={calcErrorInfo}
+        caveats={calcCaveats}
         watershedName={
           isWatershedSelected
             ? watershedSelection.watershed!.name

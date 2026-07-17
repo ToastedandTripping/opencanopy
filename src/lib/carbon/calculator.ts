@@ -191,12 +191,26 @@ export function calculateSelectionStats(
   }
 
   // Equivalence conversions
-  stats.equivalences.cars = stats.totalCo2eTonnes / EQUIVALENCES.carsPerYear;
-  stats.equivalences.homes = stats.totalCo2eTonnes / EQUIVALENCES.homesPerYear;
-  stats.equivalences.flights =
-    stats.totalCo2eTonnes / EQUIVALENCES.flightsYvrYyz;
+  stats.equivalences = calculateEquivalences(stats.totalCo2eTonnes);
 
   return stats;
+}
+
+/**
+ * Cars/homes/flights equivalence conversions for a given CO2e tonnage.
+ * Exported separately from calculateSelectionStats (which calls it against
+ * the raw, un-rounded total) so a consumer can also re-derive equivalences
+ * from a DIFFERENT tonnage -- specifically, the rounded headline figure
+ * (presentCo2Tonnes(...).rounded) -- and get a self-consistent set of
+ * numbers. Without this, "1,230,000 tonnes" could sit beside a car count
+ * that only back-computes to 1,234,582 tonnes (critic X4).
+ */
+export function calculateEquivalences(co2eTonnes: number): SelectionStats["equivalences"] {
+  return {
+    cars: co2eTonnes / EQUIVALENCES.carsPerYear,
+    homes: co2eTonnes / EQUIVALENCES.homesPerYear,
+    flights: co2eTonnes / EQUIVALENCES.flightsYvrYyz,
+  };
 }
 
 // ── Financial value calculation ────────────────────────────────────────
@@ -231,4 +245,51 @@ export function calculateFinancialValue(
   const ecosystemServicesAnnual = forestedHa * ECOSYSTEM_SERVICES_PER_HA;
 
   return { carbonValues, stumpageRevenue, ecosystemServicesAnnual };
+}
+
+// ── Public presentation (honesty) helpers ──────────────────────────────
+//
+// These do NOT change the underlying math (calculateFeatureCarbon /
+// calculateSelectionStats / calculateFinancialValue are all unchanged) --
+// they exist because the model's own sourcing comment above admits the
+// output "may overestimate by 10-20%", but the UI previously rendered every
+// digit of a raw float. A single shared implementation here (rather than
+// duplicating rounding logic in CalculatorPanel.tsx and pdf-generator.ts)
+// is what keeps the headline, the Share text, the Export/PDF, and the
+// FinancialSection dollars from drifting apart.
+
+/**
+ * Round to `sigFigs` significant figures. Uses `toPrecision` (decimal-string
+ * based) rather than a `10^n` multiply/divide -- the naive
+ * `Math.round(n * factor) / factor` approach hits real floating-point
+ * artifacts at exactly the magnitudes this function is used for (e.g.
+ * `12 / 0.0001` evaluates to `120000.00000000001`, not `120000`, in IEEE 754
+ * double precision -- verified while writing this relay's tests).
+ */
+export function roundToSigFigs(n: number, sigFigs: number): number {
+  if (!Number.isFinite(n) || n === 0) return 0;
+  return Number(n.toPrecision(sigFigs));
+}
+
+export interface Co2Presentation {
+  /** Headline figure, rounded to ~3 significant figures. */
+  rounded: number;
+  /** One-sided downward band: the model's own sourcing comment says it "may
+   *  overestimate by 10-20%", i.e. the true figure is more likely BELOW this
+   *  number, never above it. A symmetric +/- band would manufacture
+   *  confidence on the high side the model doesn't support (critic X3). */
+  bandLow: number;
+}
+
+export function presentCo2Tonnes(totalCo2eTonnes: number): Co2Presentation {
+  const rounded = roundToSigFigs(totalCo2eTonnes, 3);
+  return { rounded, bandLow: roundToSigFigs(rounded * 0.8, 3) };
+}
+
+/** Same false-precision fix applied to dollar figures (stumpage revenue,
+ *  carbon market values, ecosystem services) -- these inherit ballpark
+ *  per-hectare rates (markets.ts), so a to-the-dollar figure implies
+ *  precision the inputs don't have (critic X4). */
+export function presentDollars(n: number): number {
+  return roundToSigFigs(n, 2);
 }
