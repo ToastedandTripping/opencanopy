@@ -464,9 +464,16 @@ function PanelContent({
   if (calcStatus === null) return null;
 
   const isOk = calcStatus === "ok" && stats !== null && co2 !== null;
+  // Watershed carbon is DESCOPED for every watershed (page.tsx sets
+  // "too-large" unconditionally on selection, not as a size gate -- see
+  // that effect's comment) -- no smaller watershed would ever succeed, and
+  // the user picked a watershed, they didn't draw. A message that tells
+  // them to "draw a smaller area" misattributes the cause (the exact
+  // honesty defect this relay exists to fix). The draw path's message cites
+  // the real guard threshold instead of a vague instruction.
   const tooLargeMessage = watershedName
-    ? "This area is too large for a precise carbon estimate — draw a smaller area to calculate."
-    : "Area too large — draw a smaller area.";
+    ? "Carbon estimates aren't available for watersheds yet — try drawing a custom area on the map instead."
+    : "Area too large (max ~500 km²) — draw a smaller area.";
 
   return (
     <div className="flex flex-col gap-0 p-5 overflow-y-auto flex-1">

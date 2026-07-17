@@ -287,4 +287,44 @@ describe("CalculatorPanel status gating (X4)", () => {
     expect(container.textContent).toContain(carsFromRounded);
     expect(container.textContent).not.toContain(carsFromRawFixture);
   });
+
+  // Jen Stage-3 #1 (honesty defect): page.tsx sets calcStatus "too-large"
+  // for EVERY watershed unconditionally (carbon is v1-descoped, not
+  // size-gated) -- no smaller watershed would ever succeed, and the user
+  // picked a watershed, they didn't draw. The watershed path must get its
+  // own message, distinct from the draw-path "too-large" copy, or it
+  // reintroduces the exact misattribute-the-cause bug this relay exists to
+  // fix.
+  it("shows a watershed-specific too-large message, never the draw-path message (Jen #1)", () => {
+    const { container } = render(
+      <CalculatorPanel
+        calcStatus="too-large"
+        stats={null}
+        areaHa={98765.4}
+        visible
+        onClose={vi.fn()}
+        watershedName="Fraser River Watershed"
+      />
+    );
+    expect(container.textContent).toMatch(/Carbon estimates aren.t available for watersheds/);
+    expect(container.textContent).not.toMatch(/draw a smaller area/i);
+  });
+
+  // Companion case: the genuine guard-refused draw path keeps its own
+  // distinct message (and now cites the real guard threshold) -- this test
+  // pins that the two "too-large" messages stay different, not that they
+  // collapse back into one.
+  it("shows the draw-path too-large message (citing the guard) when there is no watershed", () => {
+    const { container } = render(
+      <CalculatorPanel
+        calcStatus="too-large"
+        stats={null}
+        areaHa={null}
+        visible
+        onClose={vi.fn()}
+      />
+    );
+    expect(container.textContent).toMatch(/Area too large.*draw a smaller area/i);
+    expect(container.textContent).not.toMatch(/watersheds/i);
+  });
 });
