@@ -16,7 +16,7 @@ export function Footer() {
               OpenCanopy
             </a>
           </p>
-          <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-500">
+          <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-400">
             <a
               href="https://github.com/ToastedandTripping/opencanopy"
               target="_blank"

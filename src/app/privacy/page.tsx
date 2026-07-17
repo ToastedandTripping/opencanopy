@@ -12,13 +12,13 @@ export default function PrivacyPage() {
       <div className="max-w-2xl mx-auto px-6 py-20">
         <Link
           href="/"
-          className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-12 block"
+          className="text-sm text-zinc-400 hover:text-zinc-300 transition-colors mb-12 block"
         >
           &larr; OpenCanopy
         </Link>
 
         <h1 className="text-2xl font-semibold text-white mb-2">Privacy</h1>
-        <p className="text-sm text-zinc-500 mb-12">Last updated June 2026</p>
+        <p className="text-sm text-zinc-400 mb-12">Last updated June 2026</p>
 
         <div className="space-y-10 text-sm text-zinc-400 leading-relaxed">
           <section>
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
             <h2 className="text-base font-medium text-zinc-200 mb-3">
               What we do not collect
             </h2>
-            <ul className="space-y-1 list-disc list-inside text-zinc-500">
+            <ul className="space-y-1 list-disc list-inside text-zinc-400">
               <li>Names, email addresses, or contact information</li>
               <li>IP addresses or precise location</li>
               <li>Persistent identifiers or cross-session tracking</li>
@@ -65,7 +65,7 @@ export default function PrivacyPage() {
               Vegetation Resources Inventory. OpenCanopy displays this data as
               an independent research tool.
             </p>
-            <p className="mt-3 text-zinc-500">
+            <p className="mt-3 text-zinc-400">
               OpenCanopy is not affiliated with or endorsed by the Province of
               British Columbia.
             </p>

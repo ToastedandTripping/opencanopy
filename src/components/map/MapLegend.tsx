@@ -88,7 +88,7 @@ function CompactDots({ layer }: { layer: LayerDefinition }) {
         <ColorDot key={i} item={item} layer={layer} />
       ))}
       {overflow > 0 && (
-        <span className="text-[9px] text-zinc-500 leading-none">
+        <span className="text-[9px] text-zinc-400 leading-none">
           +{overflow}
         </span>
       )}
@@ -124,7 +124,8 @@ function ExpandedItems({
             <button
               key={i}
               onClick={() => onToggleClassFilter(layer.id, item.label)}
-              className={`flex items-center gap-2 w-full text-left transition-opacity duration-200 ${
+              aria-pressed={isActive}
+              className={`flex items-center gap-2 w-full text-left transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-sm ${
                 isActive ? "" : "opacity-30"
               }`}
             >
@@ -156,8 +157,8 @@ const STATUS_CONFIG: Record<
   { text: string; className: string }
 > = {
   loading: { text: "Loading…", className: "text-zinc-400" },
-  empty: { text: "No data here", className: "text-zinc-500" },
-  zoom: { text: "Zoom in", className: "text-zinc-500" },
+  empty: { text: "No data here", className: "text-zinc-400" },
+  zoom: { text: "Zoom in", className: "text-zinc-400" },
   error: { text: "BC data unavailable", className: "text-amber-400" },
 };
 
@@ -198,7 +199,7 @@ function LegendRow({
         <button
           onClick={onToggleExpand}
           aria-expanded={expanded}
-          className="flex items-center gap-1.5 flex-1 min-w-0 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-sm"
+          className="flex items-center gap-1.5 flex-1 min-w-0 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-sm"
         >
           <svg
             viewBox="0 0 24 24"
@@ -226,7 +227,7 @@ function LegendRow({
         {/* Dismiss button */}
         <button
           onClick={onDismiss}
-          className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-sm"
+          className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-sm"
           aria-label={`Remove ${layer.label}`}
           title={`Remove ${layer.label}`}
         >

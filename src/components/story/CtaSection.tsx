@@ -74,7 +74,7 @@ export function CtaSection() {
               <span className="text-zinc-300">TANTALIS</span> and the{" "}
               <span className="text-zinc-300">Old Growth Strategic Review</span>.
             </p>
-            <p className="mt-3 text-sm text-zinc-500 leading-relaxed">
+            <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
               Nothing is modelled, estimated, or editorially filtered. If the government
               says a stand is 250 years old, that&apos;s what the map shows. If it says
               it was harvested, same. The{" "}
@@ -84,7 +84,7 @@ export function CtaSection() {
           </div>
 
           <div className="mt-16 flex flex-col items-center gap-3">
-            <p className="text-xs text-zinc-500">Support OpenCanopy</p>
+            <p className="text-xs text-zinc-400">Support OpenCanopy</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <a
                 href="https://github.com/sponsors/ToastedandTripping"
@@ -131,7 +131,7 @@ export function CtaSection() {
             </div>
           </div>
 
-          <p className="mt-10 text-xs text-zinc-500">
+          <p className="mt-10 text-xs text-zinc-400">
             Not affiliated with or endorsed by the Province of British Columbia.
           </p>
         </div>

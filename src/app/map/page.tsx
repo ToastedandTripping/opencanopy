@@ -3,9 +3,14 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { CanopyMap } from "@/components/map";
-import { DrawTool } from "@/components/map/DrawTool";
+import { DrawTool, boundsToSelectionBBox } from "@/components/map/DrawTool";
 import { WatershedOverlay } from "@/components/map/WatershedOverlay";
 import type { SelectionBBox } from "@/components/map/DrawTool";
+import {
+  isTextEntryTarget,
+  matchesAltShortcut,
+  isTimelineTransportKey,
+} from "@/lib/keyboard/map-shortcuts";
 import { PresetChips } from "@/components/ui/PresetChips";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { LoadingBar } from "@/components/ui/LoadingBar";
@@ -57,6 +62,45 @@ export default function Home() {
   const [layerPanelOpen, setLayerPanelOpen] = useState(false);
   const [hotSpotPanelOpen, setHotSpotPanelOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Mutual exclusion between the two panels (Razor W1), scoped to mobile
+  // only (Jen, P2 design review): below the md breakpoint both LayerPanel
+  // and HotSpotPanel render a `role="dialog" aria-modal="true"` sheet, so
+  // opening one while the other's sheet is still mounted would arm two
+  // modal Tab traps at once. useDialogA11y's `defaultPrevented` guard
+  // (useDialogA11y.ts) already makes that duel structurally impossible
+  // regardless of this check, but closing the sibling here also avoids the
+  // visual stack-up of two full-screen sheets. At >=768px both panels
+  // render their `role="region"` (non-modal, opposite-edge, non-overlapping)
+  // desktop variant, where closing the sibling has no a11y benefit and
+  // removes a real "keep both open" workflow -- so it's skipped there.
+  // window.innerWidth check (not a resize listener) mirrors the same
+  // pattern SearchBar already uses; the narrow edge case of two panels open
+  // on desktop then resized below md is accepted, not engineered around.
+  const toggleLayerPanel = useCallback(() => {
+    setLayerPanelOpen((prev) => {
+      const next = !prev;
+      if (next && window.innerWidth < 768) setHotSpotPanelOpen(false);
+      return next;
+    });
+  }, []);
+
+  const toggleHotSpotPanel = useCallback(() => {
+    setHotSpotPanelOpen((prev) => {
+      const next = !prev;
+      if (next && window.innerWidth < 768) setLayerPanelOpen(false);
+      return next;
+    });
+  }, []);
+
+  // Focus-restore targets for useDialogA11y (part C): each panel's own
+  // trigger button (tier-2 fallback if the pre-open focus target is gone --
+  // e.g. a sibling dialog closed first and took it with it) and the map
+  // container itself (tier-3, last resort). mainRef needs tabIndex={-1} on
+  // <main> below to be a valid programmatic focus target.
+  const layerToggleRef = useRef<HTMLButtonElement>(null);
+  const hotSpotToggleRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   // Draw tool state
   const [drawActive, setDrawActive] = useState(false);
@@ -428,6 +472,23 @@ export default function Home() {
     [resetCalc, runCalculation]
   );
 
+  // B3 (WCAG 2.1.1): keyboard-reachable equivalent of a manual box-draw --
+  // selects the current viewport bounds and feeds the SAME
+  // handleSelectionChange -> runCalculation spine a mouse drag does (zero
+  // downstream change). The pre-fetch isSelectionTooLarge guard absorbs a
+  // whole-province viewport into the honest "too large" state rather than
+  // a slow/failed fetch. Mirrors toggleDrawMode's mutual-exclusion with
+  // watershed mode so the two selection kinds can never be active at once.
+  const handleSelectVisibleArea = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    if (watershedSelection.mode !== "off") {
+      watershedSelection.disableMode();
+    }
+    setDrawActive(false);
+    handleSelectionChange(boundsToSelectionBBox(map.getBounds()));
+  }, [handleSelectionChange, watershedSelection]);
+
   // ── Keyboard shortcuts ───────────────────────────────────────────
 
   // Destructure stable refs for the keyboard effect dependency array
@@ -437,43 +498,52 @@ export default function Home() {
   const timelineTogglePlay = timeline.togglePlay;
   const timelineDisable = timeline.disable;
 
+  // B1/B2: per-key target guard, NOT a blanket widen. Escape keeps the
+  // original narrow input/textarea-only guard (isTextEntryTarget) so it can
+  // still dismiss panels even when a button has focus -- e.g. the panel
+  // Close button Escape itself just moved focus onto; a wide guard there
+  // would be a keyboard trap. Alt+S / Alt+W / Space / arrows get the wider
+  // isEditableOrControl guard via matchesAltShortcut/isTimelineTransportKey,
+  // which also stops Space from hijacking a focused button's own click.
+  // s/w now require Alt (B2, WCAG 2.1.4) -- bare s/w and any Ctrl/Cmd
+  // combination (so OS/browser shortcuts like Ctrl+S are never hijacked) do
+  // nothing here. See src/lib/keyboard/map-shortcuts.ts for the extracted,
+  // unit-tested guard logic.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      // Ignore if user is typing in an input
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
+      if (matchesAltShortcut(e, "s")) {
+        e.preventDefault();
+        toggleDrawMode();
         return;
       }
 
-      if (e.key === "s" || e.key === "S") {
+      if (matchesAltShortcut(e, "w")) {
         e.preventDefault();
-        toggleDrawMode();
+        toggleWatershedMode();
+        return;
       }
 
       // Timeline: left/right arrow keys step year, space toggles play
-      if (timelineEnabled) {
+      if (timelineEnabled && isTimelineTransportKey(e)) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
           timelineStepBackward();
+          return;
         }
         if (e.key === "ArrowRight") {
           e.preventDefault();
           timelineStepForward();
+          return;
         }
         if (e.key === " ") {
           e.preventDefault();
           timelineTogglePlay();
+          return;
         }
       }
 
-      if (e.key === "w" || e.key === "W") {
-        e.preventDefault();
-        toggleWatershedMode();
-      }
-
       if (e.key === "Escape") {
+        if (isTextEntryTarget(e.target)) return;
         if (timelineEnabled) {
           timelineDisable();
         } else if (watershedSelection.mode !== "off") {
@@ -559,7 +629,11 @@ export default function Home() {
   return (
     <LoadingProvider>
     <MapErrorBoundary>
-    <main className="relative h-screen w-screen overflow-hidden">
+    <main
+      ref={mainRef}
+      tabIndex={-1}
+      className="relative h-screen w-screen overflow-hidden focus:outline-none"
+    >
       {/* Full-screen map */}
       <CanopyMap
         ref={mapRef}
@@ -595,10 +669,12 @@ export default function Home() {
       <div className="absolute top-16 md:top-3 left-3 z-10 flex flex-col gap-2">
         {/* Layer panel toggle */}
         <button
-          onClick={() => setLayerPanelOpen(!layerPanelOpen)}
+          ref={layerToggleRef}
+          onClick={toggleLayerPanel}
           className="relative flex items-center justify-center w-11 h-11 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-300 hover:text-white hover:bg-black/80 transition-colors focus-visible:ring-2 focus-visible:ring-white/30"
           title="Toggle layer panel"
           aria-label="Toggle layer panel"
+          aria-expanded={layerPanelOpen}
         >
           <svg
             viewBox="0 0 24 24"
@@ -620,7 +696,8 @@ export default function Home() {
 
         {/* Hot spots toggle */}
         <button
-          onClick={() => setHotSpotPanelOpen(!hotSpotPanelOpen)}
+          ref={hotSpotToggleRef}
+          onClick={toggleHotSpotPanel}
           className={`
             flex items-center justify-center w-11 h-11 rounded-lg
             backdrop-blur-md border text-zinc-300
@@ -633,7 +710,7 @@ export default function Home() {
           `}
           title="Discover hot spots"
           aria-label="Discover hot spots"
-          aria-pressed={hotSpotPanelOpen}
+          aria-expanded={hotSpotPanelOpen}
         >
           <svg
             viewBox="0 0 24 24"
@@ -656,6 +733,8 @@ export default function Home() {
           enabledLayers={enabledLayers}
           onToggleLayer={toggleLayer}
           onClose={() => setLayerPanelOpen(false)}
+          triggerRef={layerToggleRef}
+          mapContainerRef={mainRef}
         />
       )}
 
@@ -664,6 +743,8 @@ export default function Home() {
         <HotSpotPanel
           onSelect={handleHotSpotSelect}
           onClose={() => setHotSpotPanelOpen(false)}
+          triggerRef={hotSpotToggleRef}
+          mapContainerRef={mainRef}
         />
       )}
 
@@ -676,6 +757,38 @@ export default function Home() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
             Loading watershed...
+          </div>
+        </div>
+      )}
+
+      {/* Watershed error (D3, honest failure state) -- a genuine
+          no-watershed click (e.g. ocean) resolves silently and stays in
+          "selecting" mode with no message; ONLY a real server/network
+          failure sets watershedSelection.error, and only that renders
+          here. role="status" + aria-live so a screen-reader user gets a
+          signal too -- there's no other visible change when this fires. */}
+      {watershedSelection.error && !watershedSelection.loading && (
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-black/80 backdrop-blur-md border border-amber-400/30 text-sm text-amber-300">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4 shrink-0"
+              aria-hidden="true"
+            >
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            {watershedSelection.error}
           </div>
         </div>
       )}
@@ -726,9 +839,10 @@ export default function Home() {
           {/* Select Area button inline with presets */}
           <button
             onClick={toggleDrawMode}
-            title={drawActive ? "Cancel selection (Esc)" : "Select area (S)"}
+            title={drawActive ? "Cancel selection (Esc)" : "Select area (Alt+S)"}
             aria-label={drawActive ? "Cancel area selection" : "Select area"}
             aria-pressed={drawActive}
+            aria-keyshortcuts="Alt+S"
             className={`
               flex items-center gap-1.5 px-2.5 py-2 min-h-[44px] rounded-lg shrink-0
               text-xs font-medium transition-all duration-200
@@ -751,6 +865,29 @@ export default function Home() {
               <path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3" />
             </svg>
             {drawActive ? "Drawing..." : "Select"}
+          </button>
+          {/* Select visible area button (B3, WCAG 2.1.1) -- keyboard-reachable
+              equivalent of a manual box-draw. A real <button>, so it's
+              Tab-reachable and Enter/Space-activatable with no extra wiring. */}
+          <button
+            onClick={handleSelectVisibleArea}
+            title="Select the visible map area for carbon calculation"
+            aria-label="Select visible area"
+            className="flex items-center gap-1.5 px-2.5 py-2 min-h-[44px] rounded-lg shrink-0 text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-3 h-3"
+            >
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="M8 9h8M8 13h5" />
+            </svg>
+            Visible area
           </button>
           {/* Timeline button -- only when cutblocks is enabled */}
           {showTimelineButton && (
@@ -787,9 +924,10 @@ export default function Home() {
           {/* Watershed button */}
           <button
             onClick={toggleWatershedMode}
-            title={watershedActive ? "Cancel watershed (Esc)" : "Watershed report (W)"}
+            title={watershedActive ? "Cancel watershed (Esc)" : "Watershed report (Alt+W)"}
             aria-label={watershedActive ? "Cancel watershed selection" : "Watershed report"}
             aria-pressed={watershedActive}
+            aria-keyshortcuts="Alt+W"
             className={`
               flex items-center gap-1.5 px-2.5 py-2 min-h-[44px] rounded-lg shrink-0
               text-xs font-medium transition-all duration-200

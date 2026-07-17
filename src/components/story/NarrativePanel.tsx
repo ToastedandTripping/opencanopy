@@ -79,7 +79,7 @@ export function NarrativePanel({
         )}
         {body && <p className="mt-4 text-base text-zinc-400 leading-relaxed">{body}</p>}
         {citation && (
-          <p className="mt-4 text-xs text-zinc-500 italic">
+          <p className="mt-4 text-xs text-zinc-400 italic">
             <cite>{citation}</cite>
           </p>
         )}

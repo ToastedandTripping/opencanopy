@@ -82,7 +82,7 @@ export function HeroSection() {
         </div>
 
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-10">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-[0.25em]">
+          <span className="text-[10px] text-zinc-400 uppercase tracking-[0.25em]">
             Scroll
           </span>
           <div className="w-px h-10 hero-pulse-line" />
@@ -125,7 +125,7 @@ export function HeroSection() {
           <p className="mt-6 text-lg md:text-xl text-zinc-400" style={{ fontVariantNumeric: "lining-nums" }}>
             Logged since 1950. An area larger than Ireland.
           </p>
-          <p className="mt-2 text-base text-zinc-500">
+          <p className="mt-2 text-base text-zinc-400">
             Most of it will never be old growth again.
           </p>
         </div>

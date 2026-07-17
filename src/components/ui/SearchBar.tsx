@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createSeqGuard } from "@/lib/data/forest-carbon-client";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -22,28 +23,58 @@ const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
 /** BC bounding box for geocoding constraint */
 const BC_BBOX = "-139.06,48.22,-114.03,60.00";
 
-async function geocode(query: string): Promise<SearchResult[]> {
+/**
+ * Discriminated geocode outcome (D1, honest failure states). Previously
+ * `geocode()` returned `[]` for an HTTP failure, a genuinely empty result,
+ * AND a thrown error alike -- three different situations collapsed into
+ * one silent blank dropdown. Contained to this module-private caller
+ * (SearchBar is the only consumer); the exhaustive switch in the render
+ * below is tsc-enforced against this union.
+ */
+type GeocodeOutcome =
+  | { status: "ok"; results: SearchResult[] }
+  | { status: "empty" }
+  | { status: "error" };
+
+async function geocode(query: string): Promise<GeocodeOutcome> {
   if (!MAPTILER_KEY) {
-    return parseCoordinates(query);
+    // Keyless branch: no live geocoding available at all. parseCoordinates
+    // is a pure local fallback -- a valid "lat,lng" query still resolves
+    // ("ok"), but anything else genuinely can't be searched without a key.
+    // That's "error" (the feature is unavailable), NOT "empty" (which
+    // implies a real search ran and found nothing).
+    const coordResults = parseCoordinates(query);
+    return coordResults.length > 0
+      ? { status: "ok", results: coordResults }
+      : { status: "error" };
   }
 
   try {
     const encoded = encodeURIComponent(query.trim());
     const url = `https://api.maptiler.com/geocoding/${encoded}.json?key=${MAPTILER_KEY}&country=CA&bbox=${BC_BBOX}&limit=5`;
     const res = await fetch(url);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      // SECURITY: the request URL embeds MAPTILER_KEY. Error copy stays
+      // STATIC -- never interpolate this URL or a raw error/response body
+      // into the DOM or logs.
+      return { status: "error" };
+    }
 
     const data = await res.json();
-    if (!data.features || data.features.length === 0) return [];
+    if (!data.features || data.features.length === 0) {
+      return { status: "empty" };
+    }
 
-    return data.features.slice(0, 5).map((f: GeocodingFeature) => ({
+    const results = data.features.slice(0, 5).map((f: GeocodingFeature) => ({
       id: f.id ?? f.properties?.osm_id ?? String(Math.random()),
       placeName: f.text ?? f.place_name ?? "Unknown",
       region: buildRegion(f),
       center: f.center as [number, number],
     }));
+    return { status: "ok", results };
   } catch {
-    return [];
+    // SECURITY: same static-copy rule -- do not surface the caught error.
+    return { status: "error" };
   }
 }
 
@@ -123,6 +154,10 @@ function parseCoordinates(input: string): SearchResult[] {
 export function SearchBar({ onLocationSelect }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  // "idle" = no search attempted yet (or query cleared/too short). "ok" /
+  // "empty" / "error" mirror GeocodeOutcome and drive which of the three
+  // dropdown states renders (D1).
+  const [searchStatus, setSearchStatus] = useState<"idle" | "ok" | "empty" | "error">("idle");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -131,6 +166,20 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Out-of-order-results guard (pre-existing bug, not introduced by this
+  // batch -- flagged by Razor as trivially fixable by reusing the
+  // sequence-token pattern already extracted+tested in
+  // forest-carbon-client.ts for the same class of race on the map page's
+  // own calc pipeline). The debounce timer alone doesn't cover this: Enter
+  // calls handleSearch(query) immediately, bypassing/not-clearing the
+  // scheduled debounced call, so a fast Enter-then-keep-typing sequence can
+  // have two geocode() calls in flight at once, and a slower EARLIER
+  // request resolving after a faster LATER one would silently overwrite
+  // the newer, correct results. This only guards render ordering (skips
+  // applying a superseded response's state) -- it does not thread
+  // AbortSignal into geocode()'s fetch, which would be a larger change
+  // touching that function's error-handling contract.
+  const seqGuardRef = useRef(createSeqGuard());
 
   // Close on click outside
   useEffect(() => {
@@ -171,15 +220,38 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
 
   const handleSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
+      // A slower, still-in-flight search from a previous (longer) query
+      // must not resurrect stale results after the user's cleared back
+      // down below the search threshold -- mark it superseded too.
+      seqGuardRef.current.reset();
       setResults([]);
+      setSearchStatus("idle");
       setOpen(false);
+      // Clear loading here too: a still-in-flight response from the previous
+      // (longer) query will hit the stale-token early-return below and never
+      // reach setLoading(false), so the spinner would otherwise stick on
+      // forever. Do NOT add setLoading(false) to that early-return -- in the
+      // two-in-flight case the newer legit search is still loading.
+      setLoading(false);
       return;
     }
 
+    const { token } = seqGuardRef.current.start();
     setLoading(true);
-    const searchResults = await geocode(q);
-    setResults(searchResults);
-    setOpen(searchResults.length > 0);
+    const outcome = await geocode(q);
+    // Out-of-order guard: Enter calls handleSearch immediately without
+    // clearing the scheduled debounced call, so two geocode() calls can be
+    // in flight at once -- if a newer search has started since this one
+    // began, drop this (now-stale) response instead of overwriting the
+    // newer one's state (including the loading flag, which the newer call
+    // has already set back to true for itself).
+    if (!seqGuardRef.current.isCurrent(token)) return;
+    setSearchStatus(outcome.status);
+    // Dropdown opens for EVERY resolved outcome, not just "ok" -- the
+    // empty/error states need to actually be shown (D1), not just
+    // silently drop the query on the floor.
+    setResults(outcome.status === "ok" ? outcome.results : []);
+    setOpen(true);
     setFocusedIndex(-1);
     setLoading(false);
   }, []);
@@ -266,6 +338,23 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
     setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
+  // Announcement text for the persistent status region (Razor W4). Empty
+  // string whenever there's nothing to say -- idle, dropdown closed, or a
+  // fresh "ok" result set already conveyed visually by the listbox itself
+  // (that set must NOT also live inside an aria-live region, or SRs
+  // re-announce all 5 results on every keystroke). Gated on `open` too, not
+  // just `searchStatus`, so closing and later reopening onto the SAME
+  // status is a real text change (empty -> message) and re-announces,
+  // instead of silently staying whatever it said last time.
+  const statusMessage =
+    !open || searchStatus === "idle"
+      ? ""
+      : searchStatus === "empty"
+        ? "No matches in BC"
+        : searchStatus === "error"
+          ? "Search failed — try again"
+          : `${results.length} result${results.length === 1 ? "" : "s"} found`;
+
   return (
     <div ref={containerRef} className="relative w-full md:w-[min(360px,calc(100vw-2rem))]">
       {/* Mobile collapsed state: just the icon button */}
@@ -290,17 +379,18 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
               type="text"
               role="combobox"
               aria-autocomplete="list"
-              aria-expanded={results.length > 0 && open}
+              aria-expanded={open && searchStatus === "ok"}
               aria-controls="search-results"
               aria-activedescendant={focusedIndex >= 0 ? `search-result-${focusedIndex}` : undefined}
               value={query}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => {
-                if (results.length > 0) setOpen(true);
+                if (searchStatus !== "idle") setOpen(true);
               }}
               placeholder={MAPTILER_KEY ? "Search location..." : "Enter lat,lng..."}
-              className="flex-1 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-500 outline-none min-w-0"
+              aria-label="Search for a location"
+              className="flex-1 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-400 outline-none min-w-0"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
@@ -313,6 +403,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
                 onClick={() => {
                   setQuery("");
                   setResults([]);
+                  setSearchStatus("idle");
                   setOpen(false);
                   inputRef.current?.focus();
                 }}
@@ -333,49 +424,80 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
           </div>
         </div>
 
-        {/* Results dropdown */}
-        {open && results.length > 0 && (
+        {/* Results dropdown. D1: renders for ALL three resolved outcomes
+            (ok/empty/error), not just "ok" -- an empty or failed search
+            previously dropped the query on the floor with no visible
+            signal. This container is NOT itself an aria-live region (Razor
+            W4) -- the combobox's popup listbox (id="search-results",
+            role="listbox") lives directly inside it so the input's
+            aria-controls resolves to the actual popup, and a live 5-item
+            listbox re-announcing on every keystroke is exactly the bug this
+            fixes. SR announcement for the non-listbox outcomes happens via
+            the separate persistent status region below instead. */}
+        {open && searchStatus !== "idle" && (
           <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 overflow-hidden shadow-2xl z-50">
-            <ul id="search-results" role="listbox" aria-label="Search results">
-              {results.map((result, i) => (
-                <li
-                  key={result.id}
-                  id={`search-result-${i}`}
-                  role="option"
-                  aria-selected={focusedIndex === i}
-                  onClick={() => handleSelect(result)}
-                  onMouseEnter={() => setFocusedIndex(i)}
-                  className={`
-                    flex items-start gap-3 px-4 py-2.5 cursor-pointer
-                    transition-colors duration-100
-                    ${focusedIndex === i ? "bg-white/10" : "hover:bg-white/5"}
-                  `}
-                >
-                  <div className="mt-0.5 shrink-0">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                      className="w-4 h-4 text-zinc-500"
-                    >
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                      <circle cx="12" cy="10" r="3" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm text-zinc-200 truncate">
-                      {result.placeName}
+            {searchStatus === "ok" && (
+              <ul id="search-results" role="listbox" aria-label="Search results">
+                {results.map((result, i) => (
+                  <li
+                    key={result.id}
+                    id={`search-result-${i}`}
+                    role="option"
+                    aria-selected={focusedIndex === i}
+                    onClick={() => handleSelect(result)}
+                    onMouseEnter={() => setFocusedIndex(i)}
+                    className={`
+                      flex items-start gap-3 px-4 py-2.5 cursor-pointer
+                      transition-colors duration-100
+                      ${focusedIndex === i ? "bg-white/10" : "hover:bg-white/5"}
+                    `}
+                  >
+                    <div className="mt-0.5 shrink-0">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        className="w-4 h-4 text-zinc-500"
+                      >
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
                     </div>
-                    <div className="text-xs text-zinc-500 truncate">
-                      {result.region}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-zinc-200 truncate">
+                        {result.placeName}
+                      </div>
+                      <div className="text-xs text-zinc-400 truncate">
+                        {result.region}
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {searchStatus === "empty" && (
+              <div className="px-4 py-3 text-sm text-zinc-400">No matches in BC</div>
+            )}
+
+            {searchStatus === "error" && (
+              <div className="px-4 py-3 text-sm text-zinc-400">
+                Search failed — try again
+              </div>
+            )}
           </div>
         )}
+
+        {/* Persistent SR status region (Razor W4). ALWAYS mounted (not
+            conditionally rendered with content) -- a freshly-inserted
+            role="status" node announces inconsistently across SR/browser
+            pairs, so this stays in the DOM with its text simply changing.
+            Visually hidden; carries only the non-listbox outcomes plus an
+            optional result count for "ok" -- never the listbox itself. */}
+        <div role="status" aria-live="polite" className="sr-only">
+          {statusMessage}
+        </div>
       </div>
     </div>
   );

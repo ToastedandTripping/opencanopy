@@ -50,7 +50,7 @@ export function ScrollytellingContainer() {
         </Link>
         <Link
           href="/map"
-          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded"
+          className="text-xs text-zinc-400 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded"
         >
           Skip to map
         </Link>

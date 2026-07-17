@@ -107,7 +107,7 @@ export function TimelineControl({
                 ${
                   playSpeed === opt.value
                     ? "bg-teal-400/20 text-teal-300"
-                    : "text-zinc-500 hover:text-zinc-300"
+                    : "text-zinc-400 hover:text-zinc-300"
                 }
               `}
               title={`Playback speed ${opt.label}`}
@@ -130,7 +130,7 @@ export function TimelineControl({
                 ${
                   stepSize === size
                     ? "bg-teal-400/20 text-teal-300"
-                    : "text-zinc-500 hover:text-zinc-300"
+                    : "text-zinc-400 hover:text-zinc-300"
                 }
               `}
               title={`Step ${size === 1 ? "1 year" : "10 years"} at a time`}

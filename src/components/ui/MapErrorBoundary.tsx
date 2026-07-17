@@ -76,7 +76,7 @@ export class MapErrorBoundary extends React.Component<Props, State> {
             <div className="mt-4">
               <a
                 href={this.buildMailtoHref()}
-                className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2"
+                className="text-sm text-zinc-400 hover:text-zinc-300 transition-colors underline underline-offset-2"
               >
                 Report this issue
               </a>
