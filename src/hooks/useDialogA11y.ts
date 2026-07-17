@@ -137,6 +137,14 @@ export function useDialogA11y(
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== "Tab") return;
+      // Defense-in-depth against two modal traps dueling (Razor W1): if a
+      // sibling instance of this same trap (LayerPanel's + HotSpotPanel's
+      // mobile sheets can, in principle, both be mounted+modal at once)
+      // already handled this keydown and called preventDefault(), bail
+      // immediately rather than re-deciding focus out from under it. Page.tsx
+      // also makes the two panels mutually exclusive on open now, but this
+      // guard means a duel is structurally impossible regardless of that.
+      if (e.defaultPrevented) return;
       const container = containerRef.current;
       if (!container) return;
       const isVisible = options.isVisible ?? defaultIsVisible;
@@ -156,14 +164,21 @@ export function useDialogA11y(
       const last = focusable[focusable.length - 1];
       const active = document.activeElement;
       const activeInside = active instanceof Node && container.contains(active);
+      // A tap on the sheet's own non-interactive body focuses the container
+      // itself (tabIndex={-1}) -- treat that as the wrap case in BOTH
+      // directions (W3), not just forward Tab. Without this, activeInside is
+      // true (a node contains itself) but active is neither first nor last,
+      // so Shift+Tab fell through to the browser default and focus escaped
+      // the modal backward.
+      const activeIsContainer = active === container;
 
       if (e.shiftKey) {
         // Shift+Tab wrap on the FIRST element, explicitly handled.
-        if (!activeInside || active === first) {
+        if (!activeInside || active === first || activeIsContainer) {
           e.preventDefault();
           last.focus();
         }
-      } else if (!activeInside || active === last) {
+      } else if (!activeInside || active === last || activeIsContainer) {
         e.preventDefault();
         first.focus();
       }

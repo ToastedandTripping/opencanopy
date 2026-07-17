@@ -63,6 +63,31 @@ export default function Home() {
   const [hotSpotPanelOpen, setHotSpotPanelOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Mutual exclusion between the two panels (Razor W1): both LayerPanel and
+  // HotSpotPanel render a `role="dialog" aria-modal="true"` mobile sheet
+  // simultaneously with their desktop `role="region"` variant, switched by a
+  // CSS breakpoint, not JS -- so page.tsx has no cheap way to know whether
+  // either open panel is currently showing its modal (mobile) or non-modal
+  // (desktop) face. Opening one panel closing the other, unconditionally,
+  // is the least-disruptive fix that guarantees two modal Tab traps can
+  // never both be armed at once, regardless of viewport. Same pattern
+  // already used below for draw/watershed mode mutual exclusion.
+  const toggleLayerPanel = useCallback(() => {
+    setLayerPanelOpen((prev) => {
+      const next = !prev;
+      if (next) setHotSpotPanelOpen(false);
+      return next;
+    });
+  }, []);
+
+  const toggleHotSpotPanel = useCallback(() => {
+    setHotSpotPanelOpen((prev) => {
+      const next = !prev;
+      if (next) setLayerPanelOpen(false);
+      return next;
+    });
+  }, []);
+
   // Focus-restore targets for useDialogA11y (part C): each panel's own
   // trigger button (tier-2 fallback if the pre-open focus target is gone --
   // e.g. a sibling dialog closed first and took it with it) and the map
@@ -640,7 +665,7 @@ export default function Home() {
         {/* Layer panel toggle */}
         <button
           ref={layerToggleRef}
-          onClick={() => setLayerPanelOpen(!layerPanelOpen)}
+          onClick={toggleLayerPanel}
           className="relative flex items-center justify-center w-11 h-11 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-300 hover:text-white hover:bg-black/80 transition-colors focus-visible:ring-2 focus-visible:ring-white/30"
           title="Toggle layer panel"
           aria-label="Toggle layer panel"
@@ -667,7 +692,7 @@ export default function Home() {
         {/* Hot spots toggle */}
         <button
           ref={hotSpotToggleRef}
-          onClick={() => setHotSpotPanelOpen(!hotSpotPanelOpen)}
+          onClick={toggleHotSpotPanel}
           className={`
             flex items-center justify-center w-11 h-11 rounded-lg
             backdrop-blur-md border text-zinc-300

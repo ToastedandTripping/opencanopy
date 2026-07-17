@@ -27,6 +27,14 @@ interface HarnessProps {
    *  wrap tests). */
   focusableCount?: 0 | 2;
   fallbackRefs?: Array<RefObject<HTMLElement | null>>;
+  /** Distinguishes two simultaneously-mounted instances in the same DOM --
+   *  needed for the dual-modal-collision test (Razor W1), which mounts two
+   *  independent trap instances at once (mirroring LayerPanel's mobile
+   *  sheet + HotSpotPanel's mobile sheet both being open) and needs unique
+   *  testids to query each one separately. Defaults to "" so every
+   *  pre-existing single-instance test keeps its original testids
+   *  unchanged. */
+  idPrefix?: string;
 }
 
 function DialogHarness({
@@ -35,6 +43,7 @@ function DialogHarness({
   onClose,
   focusableCount = 2,
   fallbackRefs,
+  idPrefix = "",
 }: HarnessProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const containerRef = useDialogA11y(true, {
@@ -46,13 +55,13 @@ function DialogHarness({
   });
 
   return (
-    <div ref={containerRef} data-testid="dialog-container" tabIndex={-1}>
+    <div ref={containerRef} data-testid={`${idPrefix}dialog-container`} tabIndex={-1}>
       {focusableCount >= 2 && (
         <>
-          <button ref={closeRef} data-testid="close-btn">
+          <button ref={closeRef} data-testid={`${idPrefix}close-btn`}>
             Close
           </button>
-          <button data-testid="content-btn-1">Item</button>
+          <button data-testid={`${idPrefix}content-btn-1`}>Item</button>
         </>
       )}
     </div>
@@ -215,6 +224,89 @@ describe("useDialogA11y: modal Tab trap", () => {
     });
     // Not wrapped back to close-btn -- no trap listener for modal:false.
     expect(document.activeElement).toBe(getByTestId("content-btn-1"));
+  });
+
+  // Razor W3: a tap on the sheet's own non-interactive body (e.g. empty
+  // padding, the drag handle area) focuses the container itself --
+  // container.contains(container) is true, so `activeInside` was already
+  // true, but `active` was neither `first` nor `last`, so Shift+Tab fell
+  // through to the browser default and focus escaped the modal backward.
+  it("wraps Shift+Tab to the LAST focusable element when focus is on the container itself, not just when it's on the first element", () => {
+    const { getByTestId } = render(
+      <DialogHarness modal={true} visible={true} onClose={vi.fn()} />
+    );
+    const container = getByTestId("dialog-container");
+    act(() => container.focus());
+    expect(document.activeElement).toBe(container);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    });
+    expect(document.activeElement).toBe(getByTestId("content-btn-1"));
+  });
+
+  it("wraps forward Tab to the FIRST focusable element when focus is on the container itself (symmetric case)", () => {
+    const { getByTestId } = render(
+      <DialogHarness modal={true} visible={true} onClose={vi.fn()} />
+    );
+    const container = getByTestId("dialog-container");
+    act(() => container.focus());
+    expect(document.activeElement).toBe(container);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: "Tab" });
+    });
+    expect(document.activeElement).toBe(getByTestId("close-btn"));
+  });
+});
+
+describe("useDialogA11y: dual-modal trap collision (Razor W1 defense-in-depth)", () => {
+  it("when two modal traps are simultaneously armed (mirrors LayerPanel + HotSpotPanel mobile sheets both open), a single Tab keydown is decided by the trap that actually contains focus -- the sibling trap sees e.defaultPrevented and bails instead of overriding it", () => {
+    const { getByTestId } = render(
+      <>
+        <DialogHarness modal={true} visible={true} onClose={vi.fn()} idPrefix="a-" />
+        <DialogHarness modal={true} visible={true} onClose={vi.fn()} idPrefix="b-" />
+      </>
+    );
+
+    // Focus is inside panel A's own focus order (its last focusable
+    // element), nowhere near panel B.
+    act(() => getByTestId("a-content-btn-1").focus());
+    expect(document.activeElement).toBe(getByTestId("a-content-btn-1"));
+
+    act(() => {
+      fireEvent.keyDown(window, { key: "Tab" });
+    });
+
+    // Before the fix: A's listener (registered first) correctly wraps to
+    // A's own close button, but B's listener (registered second, no
+    // defaultPrevented guard) then re-evaluates the SAME keydown, sees
+    // focus is now outside its own container (A's close button isn't
+    // inside B), and unconditionally steals it back to B's close button --
+    // reproducing Razor's probe (6 Tab presses all pinned to "Close layer
+    // panel", i.e. whichever trap mounted last always won). After the fix,
+    // B bails on e.defaultPrevented and A's decision stands.
+    expect(document.activeElement).toBe(getByTestId("a-close-btn"));
+    expect(document.activeElement).not.toBe(getByTestId("b-close-btn"));
+  });
+
+  it("Shift+Tab is likewise decided by the trap that actually contains focus, not the last-registered sibling", () => {
+    const { getByTestId } = render(
+      <>
+        <DialogHarness modal={true} visible={true} onClose={vi.fn()} idPrefix="a-" />
+        <DialogHarness modal={true} visible={true} onClose={vi.fn()} idPrefix="b-" />
+      </>
+    );
+
+    act(() => getByTestId("a-close-btn").focus());
+    expect(document.activeElement).toBe(getByTestId("a-close-btn"));
+
+    act(() => {
+      fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    });
+
+    expect(document.activeElement).toBe(getByTestId("a-content-btn-1"));
+    expect(document.activeElement).not.toBe(getByTestId("b-content-btn-1"));
   });
 });
 
