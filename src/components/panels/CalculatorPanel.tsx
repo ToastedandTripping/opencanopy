@@ -505,7 +505,7 @@ function PanelContent({
         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
           <SpinnerIcon />
           <div className="text-sm text-zinc-400">Calculating…</div>
-          <div className="text-xs text-zinc-500">This can take up to 15 seconds for larger areas.</div>
+          <div className="text-xs text-zinc-500">This can take up to 20 seconds for larger areas.</div>
         </div>
       )}
 
