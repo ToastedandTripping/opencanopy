@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createSeqGuard } from "@/lib/data/forest-carbon-client";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -165,6 +166,20 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Out-of-order-results guard (pre-existing bug, not introduced by this
+  // batch -- flagged by Razor as trivially fixable by reusing the
+  // sequence-token pattern already extracted+tested in
+  // forest-carbon-client.ts for the same class of race on the map page's
+  // own calc pipeline). The debounce timer alone doesn't cover this: Enter
+  // calls handleSearch(query) immediately, bypassing/not-clearing the
+  // scheduled debounced call, so a fast Enter-then-keep-typing sequence can
+  // have two geocode() calls in flight at once, and a slower EARLIER
+  // request resolving after a faster LATER one would silently overwrite
+  // the newer, correct results. This only guards render ordering (skips
+  // applying a superseded response's state) -- it does not thread
+  // AbortSignal into geocode()'s fetch, which would be a larger change
+  // touching that function's error-handling contract.
+  const seqGuardRef = useRef(createSeqGuard());
 
   // Close on click outside
   useEffect(() => {
@@ -205,14 +220,26 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
 
   const handleSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
+      // A slower, still-in-flight search from a previous (longer) query
+      // must not resurrect stale results after the user's cleared back
+      // down below the search threshold -- mark it superseded too.
+      seqGuardRef.current.reset();
       setResults([]);
       setSearchStatus("idle");
       setOpen(false);
       return;
     }
 
+    const { token } = seqGuardRef.current.start();
     setLoading(true);
     const outcome = await geocode(q);
+    // Out-of-order guard: Enter calls handleSearch immediately without
+    // clearing the scheduled debounced call, so two geocode() calls can be
+    // in flight at once -- if a newer search has started since this one
+    // began, drop this (now-stale) response instead of overwriting the
+    // newer one's state (including the loading flag, which the newer call
+    // has already set back to true for itself).
+    if (!seqGuardRef.current.isCurrent(token)) return;
     setSearchStatus(outcome.status);
     // Dropdown opens for EVERY resolved outcome, not just "ok" -- the
     // empty/error states need to actually be shown (D1), not just
@@ -305,6 +332,23 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
     setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
+  // Announcement text for the persistent status region (Razor W4). Empty
+  // string whenever there's nothing to say -- idle, dropdown closed, or a
+  // fresh "ok" result set already conveyed visually by the listbox itself
+  // (that set must NOT also live inside an aria-live region, or SRs
+  // re-announce all 5 results on every keystroke). Gated on `open` too, not
+  // just `searchStatus`, so closing and later reopening onto the SAME
+  // status is a real text change (empty -> message) and re-announces,
+  // instead of silently staying whatever it said last time.
+  const statusMessage =
+    !open || searchStatus === "idle"
+      ? ""
+      : searchStatus === "empty"
+        ? "No matches in BC"
+        : searchStatus === "error"
+          ? "Search is unavailable — try again"
+          : `${results.length} result${results.length === 1 ? "" : "s"} found`;
+
   return (
     <div ref={containerRef} className="relative w-full md:w-[min(360px,calc(100vw-2rem))]">
       {/* Mobile collapsed state: just the icon button */}
@@ -377,17 +421,17 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
         {/* Results dropdown. D1: renders for ALL three resolved outcomes
             (ok/empty/error), not just "ok" -- an empty or failed search
             previously dropped the query on the floor with no visible
-            signal. role="status" + aria-live so a screen-reader user gets
-            the outcome even though nothing else on the page changes. */}
+            signal. This container is NOT itself an aria-live region (Razor
+            W4) -- the combobox's popup listbox (id="search-results",
+            role="listbox") lives directly inside it so the input's
+            aria-controls resolves to the actual popup, and a live 5-item
+            listbox re-announcing on every keystroke is exactly the bug this
+            fixes. SR announcement for the non-listbox outcomes happens via
+            the separate persistent status region below instead. */}
         {open && searchStatus !== "idle" && (
-          <div
-            id="search-results"
-            role="status"
-            aria-live="polite"
-            className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 overflow-hidden shadow-2xl z-50"
-          >
+          <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 overflow-hidden shadow-2xl z-50">
             {searchStatus === "ok" && (
-              <ul role="listbox" aria-label="Search results">
+              <ul id="search-results" role="listbox" aria-label="Search results">
                 {results.map((result, i) => (
                   <li
                     key={result.id}
@@ -438,6 +482,16 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
             )}
           </div>
         )}
+
+        {/* Persistent SR status region (Razor W4). ALWAYS mounted (not
+            conditionally rendered with content) -- a freshly-inserted
+            role="status" node announces inconsistently across SR/browser
+            pairs, so this stays in the DOM with its text simply changing.
+            Visually hidden; carries only the non-listbox outcomes plus an
+            optional result count for "ok" -- never the listbox itself. */}
+        <div role="status" aria-live="polite" className="sr-only">
+          {statusMessage}
+        </div>
       </div>
     </div>
   );

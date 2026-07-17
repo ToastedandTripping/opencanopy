@@ -156,6 +156,88 @@ describe("SearchBar (keyed environment -- fetch-based geocoding, mocked)", () =>
     expect(container.textContent).toMatch(/Search is unavailable — try again/);
     expect(container.textContent).not.toContain("super-secret-key");
   });
+
+  // Pre-existing bug (not introduced by this batch), fixed via the
+  // sequence-token guard already extracted+tested for the same race on the
+  // map page's calc pipeline (forest-carbon-client.ts createSeqGuard).
+  // Enter calls handleSearch immediately, so a fast Enter-then-Enter
+  // sequence (or Enter racing the 300ms debounce) can have two geocode()
+  // calls in flight -- whichever NETWORK response arrives last used to win
+  // regardless of which SEARCH was issued last.
+  it("out-of-order guard: a slower, earlier-started search does not overwrite a faster, later-started one", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "test-key");
+    vi.resetModules();
+
+    let resolveFirst!: (value: unknown) => void;
+    let resolveSecond!: (value: unknown) => void;
+    const firstResponse = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+    const secondResponse = new Promise((resolve) => {
+      resolveSecond = resolve;
+    });
+
+    let callCount = 0;
+    const fetchMock = vi.fn().mockImplementation(() => {
+      callCount += 1;
+      return callCount === 1 ? firstResponse : secondResponse;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { SearchBar } = await import("./SearchBar");
+    const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
+    const input = getInput(container);
+
+    // First search starts (Enter bypasses the debounce -- immediate call).
+    fireEvent.change(input, { target: { value: "first-query" } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+      await Promise.resolve();
+    });
+
+    // Second search starts before the first has resolved at all.
+    fireEvent.change(input, { target: { value: "second-query" } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // The NEWER search's response arrives first.
+    await act(async () => {
+      resolveSecond({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          features: [
+            { id: "2", text: "Second Place", place_type: ["place"], center: [-124, 50] },
+          ],
+        }),
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(container.textContent).toMatch(/Second Place/);
+
+    // The OLDER (now-stale) search's response arrives last -- it must be
+    // dropped, not overwrite the newer result already on screen.
+    await act(async () => {
+      resolveFirst({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          features: [
+            { id: "1", text: "First Place", place_type: ["place"], center: [-123, 49] },
+          ],
+        }),
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(container.textContent).toMatch(/Second Place/);
+    expect(container.textContent).not.toMatch(/First Place/);
+  });
 });
 
 describe("SearchBar accessibility (D1)", () => {
@@ -165,7 +247,7 @@ describe("SearchBar accessibility (D1)", () => {
     expect(getInput(container)).toBeTruthy();
   });
 
-  it("the dropdown region is role=status with aria-live=polite for every non-idle outcome", async () => {
+  it("the persistent status region (role=status, aria-live=polite) announces the outcome text for every non-idle outcome", async () => {
     const { SearchBar } = await import("./SearchBar");
     const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
     const input = getInput(container);
@@ -175,11 +257,67 @@ describe("SearchBar accessibility (D1)", () => {
     const region = container.querySelector('[role="status"]');
     expect(region).toBeTruthy();
     expect(region?.getAttribute("aria-live")).toBe("polite");
+    expect(region?.textContent).toMatch(/Search is unavailable — try again/);
   });
 
-  it("nothing is rendered before any search is attempted (idle state)", async () => {
+  it("nothing VISIBLE is rendered before any search is attempted (idle state) -- but the status region is already mounted, just empty (Razor W4: a freshly-inserted role=status announces inconsistently, so it must exist from first render)", async () => {
     const { SearchBar } = await import("./SearchBar");
     const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
-    expect(container.querySelector('[role="status"]')).toBeNull();
+
+    expect(container.querySelector('[role="listbox"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/No matches in BC/);
+    expect(container.textContent).not.toMatch(/unavailable/i);
+
+    const region = container.querySelector('[role="status"]');
+    expect(region).toBeTruthy();
+    expect(region?.textContent).toBe("");
+  });
+
+  it("the status region's text clears when the dropdown closes (Escape), so re-triggering the same outcome later is a real text change and re-announces", async () => {
+    const { SearchBar } = await import("./SearchBar");
+    const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
+    const input = getInput(container);
+
+    await search(input, "vancouver"); // keyless -> "error"
+    const region = container.querySelector('[role="status"]');
+    expect(region?.textContent).toMatch(/unavailable/i);
+
+    act(() => {
+      fireEvent.keyDown(window, { key: "Escape" });
+    });
+    expect(region?.textContent).toBe("");
+  });
+
+  it("aria-controls on the input references the listbox's own id/role (restored combobox contract), and the listbox has no aria-live ancestor -- a live 5-result listbox must not re-announce on every keystroke", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "test-key");
+    vi.resetModules();
+    mockFetchOnce({
+      json: async () => ({
+        features: [
+          { id: "1", text: "Vancouver", place_type: ["place"], center: [-123.1, 49.28] },
+        ],
+      }),
+    });
+    const { SearchBar } = await import("./SearchBar");
+    const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
+    const input = getInput(container);
+
+    await search(input, "vancouver");
+
+    expect(input.getAttribute("aria-controls")).toBe("search-results");
+
+    const listbox = container.querySelector("#search-results");
+    expect(listbox).toBeTruthy();
+    expect(listbox?.getAttribute("role")).toBe("listbox");
+
+    // Walk up from the listbox -- none of its ancestors may carry
+    // aria-live. Before the fix, id="search-results" lived on a
+    // role="status" aria-live="polite" wrapper that the listbox rendered
+    // INSIDE, so every keystroke re-announced all 5 results.
+    let node: Element | null = listbox;
+    while (node) {
+      expect(node.getAttribute("aria-live")).toBeNull();
+      node = node.parentElement;
+    }
   });
 });
