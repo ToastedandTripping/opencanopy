@@ -503,40 +503,45 @@ function PanelContent({
 
       <div className="h-px bg-white/5 mb-5" />
 
-      {calcStatus === "loading" && (
-        <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-          <SpinnerIcon />
-          <div className="text-sm text-zinc-400">Calculating…</div>
-          <div className="text-xs text-zinc-500">This can take up to 20 seconds for larger areas.</div>
-        </div>
-      )}
+      {/* aria-live: a screen-reader user gets no other signal when a calc
+          resolves to one of these states -- there's no focus move and no
+          visible change outside this panel (a11y, critic #9). */}
+      <div role="status" aria-live="polite">
+        {calcStatus === "loading" && (
+          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+            <SpinnerIcon />
+            <div className="text-sm text-zinc-400">Calculating…</div>
+            <div className="text-xs text-zinc-500">This can take up to 20 seconds for larger areas.</div>
+          </div>
+        )}
 
-      {calcStatus === "no-data" && (
-        <div className="text-sm text-zinc-400 text-center py-10">
-          No forest data in this area.
-        </div>
-      )}
+        {calcStatus === "no-data" && (
+          <div className="text-sm text-zinc-400 text-center py-10">
+            No forest data in this area.
+          </div>
+        )}
 
-      {calcStatus === "error" && (
-        <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <div className="text-sm text-zinc-400">{errorInfo?.message ?? "Forest data unavailable — try again."}</div>
-          {onRetry && (
-            // Keyed on the deadline so a NEW error (new retryAvailableAt)
-            // remounts this button with a fresh countdown -- see
-            // useRetryCountdown's comment for why this is the mount, not a
-            // ref/effect-setState, boundary.
-            <RetryButton
-              key={errorInfo?.retryAvailableAt ?? "none"}
-              retryAvailableAt={errorInfo?.retryAvailableAt}
-              onRetry={onRetry}
-            />
-          )}
-        </div>
-      )}
+        {calcStatus === "error" && (
+          <div className="flex flex-col items-center gap-3 py-10 text-center">
+            <div className="text-sm text-zinc-400">{errorInfo?.message ?? "Forest data unavailable — try again."}</div>
+            {onRetry && (
+              // Keyed on the deadline so a NEW error (new retryAvailableAt)
+              // remounts this button with a fresh countdown -- see
+              // useRetryCountdown's comment for why this is the mount, not a
+              // ref/effect-setState, boundary.
+              <RetryButton
+                key={errorInfo?.retryAvailableAt ?? "none"}
+                retryAvailableAt={errorInfo?.retryAvailableAt}
+                onRetry={onRetry}
+              />
+            )}
+          </div>
+        )}
 
-      {calcStatus === "too-large" && (
-        <div className="text-sm text-zinc-400 text-center py-10">{tooLargeMessage}</div>
-      )}
+        {calcStatus === "too-large" && (
+          <div className="text-sm text-zinc-400 text-center py-10">{tooLargeMessage}</div>
+        )}
+      </div>
 
       {isOk && stats && co2 && (
         <>

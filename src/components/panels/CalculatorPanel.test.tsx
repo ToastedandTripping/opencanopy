@@ -327,4 +327,17 @@ describe("CalculatorPanel status gating (X4)", () => {
     expect(container.textContent).toMatch(/Area too large.*draw a smaller area/i);
     expect(container.textContent).not.toMatch(/watersheds/i);
   });
+
+  // Jen Stage-3 #9 (a11y): screen-reader users get no other signal when a
+  // calc resolves to no-data/error/too-large -- there's no focus move and no
+  // visible change outside this panel. The state-switch block must be an
+  // aria-live region.
+  it("wraps the state-dependent region in an aria-live region (Jen #9)", () => {
+    const { container } = render(
+      <CalculatorPanel calcStatus="no-data" stats={null} areaHa={null} visible onClose={vi.fn()} />
+    );
+    const liveRegion = container.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toBeTruthy();
+    expect(liveRegion?.textContent).toContain("No forest data in this area");
+  });
 });
