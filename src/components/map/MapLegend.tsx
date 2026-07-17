@@ -88,7 +88,7 @@ function CompactDots({ layer }: { layer: LayerDefinition }) {
         <ColorDot key={i} item={item} layer={layer} />
       ))}
       {overflow > 0 && (
-        <span className="text-[9px] text-zinc-500 leading-none">
+        <span className="text-[9px] text-zinc-400 leading-none">
           +{overflow}
         </span>
       )}

@@ -9,9 +9,15 @@
  *     3:1 non-text contrast threshold, not the 4.5:1 text threshold.
  *   - a loading-spinner border (not text at all).
  *   - src/lib/layers/registry.ts's "#71717a" map paint color (not UI text).
- *   - three sites explicitly left UNSURE for Jen's call (see the relay
- *     report): MapLegend's "+N" overflow count, HeroSection's "Scroll"
- *     cue, and SearchBar's input placeholder.
+ *
+ * Three sites were left UNSURE for Jen's call in the original relay:
+ * MapLegend's "+N" overflow count, HeroSection's "Scroll" cue, and
+ * SearchBar's input placeholder. Jen ruled PROMOTE all three (2026-07-16
+ * design review, P2 a11y cluster) — "zinc-500 is for icons/non-text, never
+ * for glyphs that inform" — so they're promoted to zinc-400 and removed
+ * from KEEP_ALLOWLIST below; the census guard now correctly fails if any of
+ * the three regresses back to zinc-500. See the third `it` in this file for
+ * the mutation-proof pin on the resolved (zinc-400) state.
  *
  * This test regenerates the census on every run (walks src/, greps for
  * "zinc-500") rather than trusting a hardcoded count, and matches KEEP
@@ -42,8 +48,6 @@ const KEEP_ALLOWLIST: Record<string, string[]> = {
     "rounded text-zinc-500 hover:text-white hover:bg-white/10",
   ],
   "src/components/map/MapLegend.tsx": [
-    // UNSURE (left for Jen): "+N" overflow count.
-    "text-[9px] text-zinc-500 leading-none",
     // Icon-only expand/collapse chevron.
     "text-zinc-500 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
     // Icon-only per-layer dismiss button.
@@ -66,18 +70,12 @@ const KEEP_ALLOWLIST: Record<string, string[]> = {
     "w-3 h-3 text-zinc-500 transition-transform duration-200",
   ],
   "src/components/ui/SearchBar.tsx": [
-    // UNSURE (left for Jen): input placeholder.
-    "placeholder:text-zinc-500",
     // Loading spinner border — not text.
     "border-zinc-500 border-t-zinc-300",
     // Icon-only clear-search button.
     "w-8 h-8 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0",
     // Icon-only result-row marker icon.
     'className="w-4 h-4 text-zinc-500"',
-  ],
-  "src/components/story/HeroSection.tsx": [
-    // UNSURE (left for Jen): "Scroll" cue.
-    "text-[10px] text-zinc-500 uppercase tracking-[0.25em]",
   ],
   "src/app/map/page.tsx": [
     // Icon-only copy-link button (text content, when present, is emerald-400
@@ -150,15 +148,19 @@ describe("contrast audit (WCAG 1.4.3): text-zinc-500 census", () => {
     expect(stale, stale.join("\n")).toEqual([]);
   });
 
-  it("the three explicitly-UNSURE sites are still zinc-500 (documents the open decision for Jen)", () => {
-    const unsure: Array<{ file: string; snippet: string }> = [
-      { file: "src/components/map/MapLegend.tsx", snippet: "text-[9px] text-zinc-500 leading-none" },
-      { file: "src/components/story/HeroSection.tsx", snippet: "text-[10px] text-zinc-500 uppercase tracking-[0.25em]" },
-      { file: "src/components/ui/SearchBar.tsx", snippet: "placeholder:text-zinc-500" },
+  it("the three formerly-UNSURE sites are promoted to zinc-400, not zinc-500 (documents Jen's PROMOTE ruling; fails if any of the three regresses)", () => {
+    const promoted: Array<{ file: string; snippet: string }> = [
+      { file: "src/components/map/MapLegend.tsx", snippet: "text-[9px] text-zinc-400 leading-none" },
+      { file: "src/components/story/HeroSection.tsx", snippet: "text-[10px] text-zinc-400 uppercase tracking-[0.25em]" },
+      { file: "src/components/ui/SearchBar.tsx", snippet: "placeholder:text-zinc-400" },
     ];
-    for (const { file, snippet } of unsure) {
+    for (const { file, snippet } of promoted) {
       const content = readFileSync(join(ROOT, file), "utf-8");
-      expect(content.includes(snippet), `${file}: expected UNSURE snippet -- ${snippet}`).toBe(true);
+      expect(content.includes(snippet), `${file}: expected promoted (zinc-400) snippet -- ${snippet}`).toBe(true);
+      // Mutation-proof against reversion: the pre-promotion zinc-500 form
+      // must no longer exist for this exact site.
+      const reverted = snippet.replace("zinc-400", "zinc-500");
+      expect(content.includes(reverted), `${file}: found reverted zinc-500 snippet -- ${reverted}`).toBe(false);
     }
   });
 });

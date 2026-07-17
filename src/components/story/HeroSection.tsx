@@ -82,7 +82,7 @@ export function HeroSection() {
         </div>
 
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-10">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-[0.25em]">
+          <span className="text-[10px] text-zinc-400 uppercase tracking-[0.25em]">
             Scroll
           </span>
           <div className="w-px h-10 hero-pulse-line" />

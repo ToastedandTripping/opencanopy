@@ -390,7 +390,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
               }}
               placeholder={MAPTILER_KEY ? "Search location..." : "Enter lat,lng..."}
               aria-label="Search for a location"
-              className="flex-1 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-500 outline-none min-w-0"
+              className="flex-1 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-400 outline-none min-w-0"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
