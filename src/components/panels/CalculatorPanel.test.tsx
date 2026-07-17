@@ -340,4 +340,39 @@ describe("CalculatorPanel status gating (X4)", () => {
     expect(liveRegion).toBeTruthy();
     expect(liveRegion?.textContent).toContain("No forest data in this area");
   });
+
+  // Jen Stage-3 #10 (a11y): the rAF count-up has no prefers-reduced-motion
+  // check -- a CSS media query can't stop a JS-driven animation loop.
+  // Sitewide precedent (useDeviceCapability/useScrollytelling/HeroSection)
+  // guards every other animation the same way.
+  it("under prefers-reduced-motion, the headline renders the final value immediately with no count-up (Jen #10)", () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      media: "(prefers-reduced-motion: reduce)",
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }) as unknown as typeof window.matchMedia;
+
+    try {
+      const { container } = render(
+        <CalculatorPanel
+          calcStatus="ok"
+          stats={FULL_PRECISION_STATS}
+          areaHa={FULL_PRECISION_STATS.totalAreaHa}
+          visible
+          onClose={vi.fn()}
+        />
+      );
+      // 1,234,567.89 -> rounded 1,230,000, shown immediately -- no rAF
+      // frames needed/advanced for this assertion to pass.
+      expect(container.textContent).toContain("1,230,000");
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
 });

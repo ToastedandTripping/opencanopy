@@ -73,6 +73,17 @@ function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
+/** A CSS `prefers-reduced-motion` media query can't stop a JS-driven rAF
+ *  loop -- `useAnimatedNumber` below has to check this itself (sitewide
+ *  precedent: useDeviceCapability, useScrollytelling, HeroSection all guard
+ *  their own animation loops the same way). Read directly (no per-frame
+ *  caching like useScrollytelling's `prefersReducedMotion` -- this is called
+ *  once per target/duration/active change, not once per rAF frame). */
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function useAnimatedNumber(target: number, duration = 2000, active = true): number {
   const [display, setDisplay] = useState(0);
   const frameRef = useRef<number>(0);
@@ -80,6 +91,19 @@ function useAnimatedNumber(target: number, duration = 2000, active = true): numb
 
   useEffect(() => {
     if (!active) { prevTargetRef.current = 0; return; }
+    if (prefersReducedMotion()) {
+      // Jump straight to the final value -- no count-up (a11y, critic #10).
+      // matchMedia is an effect-only read (the purity rule bars it from the
+      // render body), so the resulting setState has to live here too; this
+      // mirrors the setState-in-effect precedent in
+      // useLayerState.ts/useTimeline.ts, both of which disable the same
+      // rule for the same "synchronize with an external, non-derivable
+      // value" reason.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDisplay(target);
+      prevTargetRef.current = target;
+      return;
+    }
     const from = prevTargetRef.current;
     const delta = target - from;
     let startTime = 0;
