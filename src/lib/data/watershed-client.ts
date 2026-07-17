@@ -14,20 +14,47 @@ export interface WatershedInfo {
 }
 
 /**
+ * Thrown for genuine server/network failure (D3, honest failure states) --
+ * distinct from a resolved-but-empty result, which means "no watershed
+ * here" (e.g. an ocean click) and is NOT an error. Previously both
+ * collapsed to the same `null` return, so a 502 and an ocean click were
+ * indistinguishable to the caller and both failed silently.
+ */
+export class WatershedFetchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WatershedFetchError";
+  }
+}
+
+/**
  * Fetch the watershed boundary that contains the given point.
- * Returns null if no watershed is found (e.g. click was in the ocean).
+ * Returns null if no watershed is found (e.g. click was in the ocean) --
+ * a genuine, non-error result. Throws WatershedFetchError for a real
+ * server/network failure (D3) so the caller can tell the two apart instead
+ * of both silently landing back in "selecting" mode.
  */
 export async function fetchWatershedAtPoint(
   lng: number,
   lat: number
 ): Promise<WatershedInfo | null> {
-  const res = await fetch(
-    `/api/wfs?layer=watershed-boundaries&point=${lng},${lat}`
-  );
+  let res: Response;
+  try {
+    res = await fetch(`/api/wfs?layer=watershed-boundaries&point=${lng},${lat}`);
+  } catch {
+    throw new WatershedFetchError("Network error");
+  }
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    throw new WatershedFetchError(`HTTP ${res.status}`);
+  }
 
-  const fc = (await res.json()) as GeoJSON.FeatureCollection;
+  let fc: GeoJSON.FeatureCollection;
+  try {
+    fc = (await res.json()) as GeoJSON.FeatureCollection;
+  } catch {
+    throw new WatershedFetchError("Invalid response from data source");
+  }
   if (!fc.features?.length) return null;
 
   const f = fc.features[0];

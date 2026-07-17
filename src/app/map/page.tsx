@@ -732,6 +732,38 @@ export default function Home() {
         </div>
       )}
 
+      {/* Watershed error (D3, honest failure state) -- a genuine
+          no-watershed click (e.g. ocean) resolves silently and stays in
+          "selecting" mode with no message; ONLY a real server/network
+          failure sets watershedSelection.error, and only that renders
+          here. role="status" + aria-live so a screen-reader user gets a
+          signal too -- there's no other visible change when this fires. */}
+      {watershedSelection.error && !watershedSelection.loading && (
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-black/80 backdrop-blur-md border border-amber-400/30 text-sm text-amber-300">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4 shrink-0"
+              aria-hidden="true"
+            >
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            {watershedSelection.error}
+          </div>
+        </div>
+      )}
+
       {/* On-map legend / active layer indicator */}
       <MapLegend
         enabledLayers={enabledLayers}
