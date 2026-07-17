@@ -583,7 +583,8 @@ function PanelContent({
           {financial && <FinancialSection financial={financial} />}
 
           <p className="text-xs text-zinc-500 mt-1">
-            Approximate — may overestimate by up to ~20% (see methodology). No longer zoom-dependent.
+            Approximate — may overestimate by up to ~20%. Calculated from official BC government
+            forest inventory data.
           </p>
         </>
       )}
