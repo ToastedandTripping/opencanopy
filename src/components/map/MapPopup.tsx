@@ -237,7 +237,7 @@ export function MapPopup({
             </div>
           ))}
         </div>
-        <div className="mt-2 pt-2 border-t border-white/5 text-[10px] text-zinc-500">
+        <div className="mt-2 pt-2 border-t border-white/5 text-[10px] text-zinc-400">
           {latitude.toFixed(4)}, {longitude.toFixed(4)}
         </div>
       </div>

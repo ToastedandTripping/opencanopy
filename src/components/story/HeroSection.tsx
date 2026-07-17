@@ -125,7 +125,7 @@ export function HeroSection() {
           <p className="mt-6 text-lg md:text-xl text-zinc-400" style={{ fontVariantNumeric: "lining-nums" }}>
             Logged since 1950. An area larger than Ireland.
           </p>
-          <p className="mt-2 text-base text-zinc-500">
+          <p className="mt-2 text-base text-zinc-400">
             Most of it will never be old growth again.
           </p>
         </div>

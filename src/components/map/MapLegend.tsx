@@ -156,8 +156,8 @@ const STATUS_CONFIG: Record<
   { text: string; className: string }
 > = {
   loading: { text: "Loading…", className: "text-zinc-400" },
-  empty: { text: "No data here", className: "text-zinc-500" },
-  zoom: { text: "Zoom in", className: "text-zinc-500" },
+  empty: { text: "No data here", className: "text-zinc-400" },
+  zoom: { text: "Zoom in", className: "text-zinc-400" },
   error: { text: "BC data unavailable", className: "text-amber-400" },
 };
 

@@ -220,7 +220,7 @@ function EquivRow({ icon, value, unit }: { icon: React.ReactNode; value: number;
     <div className="flex items-center gap-3">
       <div className="w-5 h-5 flex items-center justify-center text-zinc-500 shrink-0">{icon}</div>
       <span className="text-sm text-zinc-200 tabular-nums font-medium">{fmt(Math.round(value))}</span>
-      <span className="text-xs text-zinc-500">{unit}</span>
+      <span className="text-xs text-zinc-400">{unit}</span>
     </div>
   );
 }
@@ -267,7 +267,7 @@ function ValueBar({
         <span className="text-zinc-400">{label}</span>
         <span className="text-zinc-300 tabular-nums">
           {fmtCurrency(value)}
-          {suffix && <span className="text-zinc-500">{suffix}</span>}
+          {suffix && <span className="text-zinc-400">{suffix}</span>}
         </span>
       </div>
       <div className="h-2 rounded-full bg-white/5 overflow-hidden">
@@ -306,7 +306,7 @@ function FinancialSection({ financial }: { financial: FinancialValue }) {
       <div className="h-px bg-white/5 mb-5" />
 
       <div className="mb-5">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">
+        <h3 className="text-[10px] uppercase tracking-widest text-zinc-400 mb-3">
           Value If Protected vs. Revenue If Logged
         </h3>
 
@@ -328,7 +328,7 @@ function FinancialSection({ financial }: { financial: FinancialValue }) {
           />
         </div>
 
-        <p className="text-xs text-zinc-500 mt-3">
+        <p className="text-xs text-zinc-400 mt-3">
           Carbon values represent avoided emissions credits. Both figures are one-time,
           rounded estimates. Compliance-market pricing applies to regulated emitters; a
           landowner selling forest-carbon credits would typically access voluntary-market
@@ -338,7 +338,7 @@ function FinancialSection({ financial }: { financial: FinancialValue }) {
         {roundedEcosystem > 0 && (
           <div className="mt-3 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5">
             <span className="text-sm text-zinc-300 tabular-nums">{fmtCurrency(roundedEcosystem)}</span>
-            <span className="text-xs text-zinc-500">/yr in ecosystem services</span>
+            <span className="text-xs text-zinc-400">/yr in ecosystem services</span>
             <p className="text-[10px] text-zinc-400 mt-0.5">Water filtration, habitat, recreation (excl. carbon)</p>
           </div>
         )}
@@ -505,7 +505,7 @@ function PanelContent({
     <div className="flex flex-col gap-0 p-5 overflow-y-auto flex-1">
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="text-xs uppercase tracking-widest text-zinc-500 mb-1">
+          <h2 className="text-xs uppercase tracking-widest text-zinc-400 mb-1">
             {watershedName ? "Watershed" : "Selected Area"}
           </h2>
           {watershedName && (
@@ -535,7 +535,7 @@ function PanelContent({
           <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
             <SpinnerIcon />
             <div className="text-sm text-zinc-400">Calculating…</div>
-            <div className="text-xs text-zinc-500">This can take up to 20 seconds for larger areas.</div>
+            <div className="text-xs text-zinc-400">This can take up to 20 seconds for larger areas.</div>
           </div>
         )}
 
@@ -590,7 +590,7 @@ function PanelContent({
           <div className="h-px bg-white/5 mb-5" />
 
           <div className="mb-5">
-            <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">Breakdown</h3>
+            <h3 className="text-[10px] uppercase tracking-widest text-zinc-400 mb-3">Breakdown</h3>
             <div className="space-y-3">
               <AgeBar label="Old growth (250+ yr)" value={stats.oldGrowthHa} total={stats.totalAreaHa} color={FOREST_AGE_PALETTE["old-growth"]} />
               <AgeBar label="Mature (80-250 yr)" value={stats.matureHa} total={stats.totalAreaHa} color="#4ade80" />
@@ -603,7 +603,7 @@ function PanelContent({
           <div className="h-px bg-white/5 mb-5" />
 
           <div className="mb-5">
-            <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">That is equivalent to (approx.)</h3>
+            <h3 className="text-[10px] uppercase tracking-widest text-zinc-400 mb-3">That is equivalent to (approx.)</h3>
             <div className="space-y-2.5">
               <EquivRow icon={<CarIcon />} value={equiv?.cars ?? 0} unit="cars driven for a year" />
               <EquivRow icon={<HomeIcon />} value={equiv?.homes ?? 0} unit="Canadian homes for a year" />
@@ -613,7 +613,7 @@ function PanelContent({
 
           {financial && <FinancialSection financial={financial} />}
 
-          <p className="text-xs text-zinc-500 mt-1">
+          <p className="text-xs text-zinc-400 mt-1">
             Approximate — may overestimate by up to ~20%. Calculated from official BC government
             forest inventory data.
           </p>
@@ -625,7 +625,7 @@ function PanelContent({
             <summary className="text-xs text-zinc-400 underline decoration-dotted underline-offset-2 cursor-pointer select-none">
               How this is calculated
             </summary>
-            <div className="mt-2 space-y-1.5 text-[11px] text-zinc-500 leading-relaxed">
+            <div className="mt-2 space-y-1.5 text-[11px] text-zinc-400 leading-relaxed">
               <p>
                 Carbon is estimated per forest polygon from BC&apos;s Vegetation Resource
                 Inventory (VRI) — the province&apos;s official forest data — using species and

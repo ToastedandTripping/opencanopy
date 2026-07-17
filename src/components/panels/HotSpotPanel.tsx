@@ -25,11 +25,11 @@ function HotSpotCard({ hotspot, onSelect }: { hotspot: HotSpot; onSelect: () => 
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-medium text-zinc-200 mb-0.5">{hotspot.name}</h3>
-          <p className="text-xs text-zinc-500 leading-relaxed mb-2">{hotspot.description}</p>
+          <p className="text-xs text-zinc-400 leading-relaxed mb-2">{hotspot.description}</p>
           {hotspot.stats?.oldGrowthHa && (
             <div className="flex items-center gap-1.5 mb-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500/60" />
-              <span className="text-[10px] text-zinc-500">{hotspot.stats.oldGrowthHa.toLocaleString()} ha old growth</span>
+              <span className="text-[10px] text-zinc-400">{hotspot.stats.oldGrowthHa.toLocaleString()} ha old growth</span>
             </div>
           )}
           <button
@@ -62,7 +62,7 @@ export function HotSpotPanel({ onSelect, onClose }: HotSpotPanelProps) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-zinc-200 tracking-wide">Discover</h2>
-            <p className="text-[10px] text-zinc-500 mt-0.5">Notable conservation areas in BC</p>
+            <p className="text-[10px] text-zinc-400 mt-0.5">Notable conservation areas in BC</p>
           </div>
           <button onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close discover panel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -86,7 +86,7 @@ export function HotSpotPanel({ onSelect, onClose }: HotSpotPanelProps) {
         <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-zinc-200 tracking-wide">Discover</h2>
-            <p className="text-[10px] text-zinc-500 mt-0.5">Notable conservation areas in BC</p>
+            <p className="text-[10px] text-zinc-400 mt-0.5">Notable conservation areas in BC</p>
           </div>
           <button onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close discover panel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4"><path d="M18 6L6 18M6 6l12 12" /></svg>

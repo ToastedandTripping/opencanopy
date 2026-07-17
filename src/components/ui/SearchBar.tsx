@@ -367,7 +367,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
                     <div className="text-sm text-zinc-200 truncate">
                       {result.placeName}
                     </div>
-                    <div className="text-xs text-zinc-500 truncate">
+                    <div className="text-xs text-zinc-400 truncate">
                       {result.region}
                     </div>
                   </div>
