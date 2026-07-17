@@ -81,7 +81,7 @@ describe("SearchBar (keyless environment -- this worktree's actual default)", ()
     expect(listbox).toBeTruthy();
     expect(container.textContent).toMatch(/49\.1000, -123\.5000/);
     expect(container.textContent).not.toMatch(/No matches in BC/);
-    expect(container.textContent).not.toMatch(/unavailable/i);
+    expect(container.textContent).not.toMatch(/failed/i);
   });
 
   it('renders "error" (NOT "empty") for a non-coordinate query with no key -- genuinely unavailable, not a real search that found nothing', async () => {
@@ -91,7 +91,7 @@ describe("SearchBar (keyless environment -- this worktree's actual default)", ()
 
     await search(input, "vancouver");
 
-    expect(container.textContent).toMatch(/Search is unavailable — try again/);
+    expect(container.textContent).toMatch(/Search failed — try again/);
     expect(container.textContent).not.toMatch(/No matches in BC/);
     expect(container.querySelector('[role="listbox"]')).toBeNull();
   });
@@ -123,7 +123,7 @@ describe("SearchBar (keyed environment -- fetch-based geocoding, mocked)", () =>
     await search(input, "nowhere-in-particular");
 
     expect(container.textContent).toMatch(/No matches in BC/);
-    expect(container.textContent).not.toMatch(/unavailable/i);
+    expect(container.textContent).not.toMatch(/failed/i);
   });
 
   it('renders "error" for an HTTP failure, and never leaks the request URL (which embeds the key) or a raw error into the DOM', async () => {
@@ -136,7 +136,7 @@ describe("SearchBar (keyed environment -- fetch-based geocoding, mocked)", () =>
 
     await search(input, "vancouver");
 
-    expect(container.textContent).toMatch(/Search is unavailable — try again/);
+    expect(container.textContent).toMatch(/Search failed — try again/);
     expect(container.textContent).not.toContain("super-secret-key");
     expect(container.textContent).not.toContain("key=");
     expect(container.textContent).not.toMatch(/502|HTTP/);
@@ -153,7 +153,7 @@ describe("SearchBar (keyed environment -- fetch-based geocoding, mocked)", () =>
 
     await search(input, "vancouver");
 
-    expect(container.textContent).toMatch(/Search is unavailable — try again/);
+    expect(container.textContent).toMatch(/Search failed — try again/);
     expect(container.textContent).not.toContain("super-secret-key");
   });
 
@@ -305,7 +305,7 @@ describe("SearchBar accessibility (D1)", () => {
     const region = container.querySelector('[role="status"]');
     expect(region).toBeTruthy();
     expect(region?.getAttribute("aria-live")).toBe("polite");
-    expect(region?.textContent).toMatch(/Search is unavailable — try again/);
+    expect(region?.textContent).toMatch(/Search failed — try again/);
   });
 
   it("nothing VISIBLE is rendered before any search is attempted (idle state) -- but the status region is already mounted, just empty (Razor W4: a freshly-inserted role=status announces inconsistently, so it must exist from first render)", async () => {
@@ -314,7 +314,7 @@ describe("SearchBar accessibility (D1)", () => {
 
     expect(container.querySelector('[role="listbox"]')).toBeNull();
     expect(container.textContent).not.toMatch(/No matches in BC/);
-    expect(container.textContent).not.toMatch(/unavailable/i);
+    expect(container.textContent).not.toMatch(/failed/i);
 
     const region = container.querySelector('[role="status"]');
     expect(region).toBeTruthy();
@@ -328,7 +328,7 @@ describe("SearchBar accessibility (D1)", () => {
 
     await search(input, "vancouver"); // keyless -> "error"
     const region = container.querySelector('[role="status"]');
-    expect(region?.textContent).toMatch(/unavailable/i);
+    expect(region?.textContent).toMatch(/failed/i);
 
     act(() => {
       fireEvent.keyDown(window, { key: "Escape" });

@@ -81,7 +81,7 @@ export function useWatershedSelection(): WatershedSelectionState {
       // branch above. Stay in selecting mode (clicking again should still
       // work) but surface the failure instead of swallowing it.
       setMode("selecting");
-      setError("Couldn't load watershed data — try again.");
+      setError("Couldn't load watershed data — try again");
     } finally {
       setLoading(false);
       loadingRef.current = false;

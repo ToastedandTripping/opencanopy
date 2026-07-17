@@ -352,7 +352,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
       : searchStatus === "empty"
         ? "No matches in BC"
         : searchStatus === "error"
-          ? "Search is unavailable — try again"
+          ? "Search failed — try again"
           : `${results.length} result${results.length === 1 ? "" : "s"} found`;
 
   return (
@@ -483,7 +483,7 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
 
             {searchStatus === "error" && (
               <div className="px-4 py-3 text-sm text-zinc-400">
-                Search is unavailable — try again
+                Search failed — try again
               </div>
             )}
           </div>
