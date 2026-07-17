@@ -586,6 +586,31 @@ function PanelContent({
             Approximate — may overestimate by up to ~20%. Calculated from official BC government
             forest inventory data.
           </p>
+
+          {/* Real affordance replacing the dead "(see methodology)" text --
+              the panel now discloses the same plain-language basics the PDF
+              footer already carries (critic #4). */}
+          <details className="mt-2">
+            <summary className="text-xs text-zinc-400 underline decoration-dotted underline-offset-2 cursor-pointer select-none">
+              How this is calculated
+            </summary>
+            <div className="mt-2 space-y-1.5 text-[11px] text-zinc-500 leading-relaxed">
+              <p>
+                Carbon is estimated per forest polygon from BC&apos;s Vegetation Resource
+                Inventory (VRI) — the province&apos;s official forest data — using species and
+                stand age.
+              </p>
+              <p>
+                Growth follows a standard curve: carbon builds up quickly in young stands, then
+                levels off toward maturity, calibrated from published forest-carbon research.
+              </p>
+              <p>
+                These are upper-range ecosystem estimates (soil and root carbon included, not
+                just merchantable timber), so they may overestimate by 10–20% compared to more
+                conservative figures.
+              </p>
+            </div>
+          </details>
         </>
       )}
 
