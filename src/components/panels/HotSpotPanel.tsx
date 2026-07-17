@@ -1,13 +1,23 @@
 "use client";
 
+import { useRef, type RefObject } from "react";
 import { HOT_SPOTS, type HotSpot } from "@/data/hotspots";
 import { useDragDismiss } from "@/hooks/useDragDismiss";
+import { useDialogA11y } from "@/hooks/useDialogA11y";
+import { mergeRefs } from "@/lib/react/merge-refs";
 
 // ── Types ───────────────────────────────────────────────────
 
 interface HotSpotPanelProps {
   onSelect: (hotspot: HotSpot) => void;
   onClose: () => void;
+  /** The toolbar button that opened this panel -- tier-2 focus-restore
+   *  fallback (useDialogA11y, part C) if the element that had focus before
+   *  open is gone by close time. */
+  triggerRef?: RefObject<HTMLElement | null>;
+  /** The map's root container -- tier-3 (last-resort) focus-restore
+   *  fallback. */
+  mapContainerRef?: RefObject<HTMLElement | null>;
 }
 
 // ── Hot spot card ───────────────────────────────────────────
@@ -50,21 +60,53 @@ function HotSpotCard({ hotspot, onSelect }: { hotspot: HotSpot; onSelect: () => 
 
 // ── Main panel ──────────────────────────────────────────────
 
-export function HotSpotPanel({ onSelect, onClose }: HotSpotPanelProps) {
+export function HotSpotPanel({ onSelect, onClose, triggerRef, mapContainerRef }: HotSpotPanelProps) {
   const { sheetRef, handleTouchStart, handleTouchMove, handleTouchEnd } = useDragDismiss(onClose);
+
+  // Close-button refs -- useDialogA11y's initial-focus target for each
+  // variant. Both variants render simultaneously (hidden md:flex /
+  // md:hidden); the hook's own visibility check ensures only the currently
+  // visible one actually moves focus.
+  const desktopCloseRef = useRef<HTMLButtonElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  const restoreFallbackRefs = triggerRef
+    ? mapContainerRef
+      ? [triggerRef, mapContainerRef]
+      : [triggerRef]
+    : mapContainerRef
+      ? [mapContainerRef]
+      : undefined;
+
+  const desktopContainerRef = useDialogA11y(true, {
+    modal: false,
+    onClose,
+    initialFocusRef: desktopCloseRef,
+    restoreFallbackRefs,
+  });
+  const mobileContainerRef = useDialogA11y(true, {
+    modal: true,
+    onClose,
+    initialFocusRef: mobileCloseRef,
+    restoreFallbackRefs,
+  });
 
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-20 md:hidden" onClick={onClose} />
 
       {/* Desktop panel */}
-      <div className="hidden md:flex flex-col fixed z-30 top-0 right-0 h-full w-80 bg-black/80 backdrop-blur-xl border-l border-white/10 overflow-hidden animate-in-right">
+      <div
+        ref={desktopContainerRef}
+        role="region"
+        aria-label="Discover"
+        className="hidden md:flex flex-col fixed z-30 top-0 right-0 h-full w-80 bg-black/80 backdrop-blur-xl border-l border-white/10 overflow-hidden animate-in-right"
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-zinc-200 tracking-wide">Discover</h2>
             <p className="text-[10px] text-zinc-400 mt-0.5">Notable conservation areas in BC</p>
           </div>
-          <button onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close discover panel">
+          <button ref={desktopCloseRef} onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close discover panel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
@@ -79,7 +121,14 @@ export function HotSpotPanel({ onSelect, onClose }: HotSpotPanelProps) {
       </div>
 
       {/* Mobile bottom sheet */}
-      <div ref={sheetRef} className="md:hidden fixed z-30 bottom-0 left-0 right-0 h-[50vh] bg-black/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl flex flex-col overflow-hidden animate-in">
+      <div
+        ref={mergeRefs(sheetRef, mobileContainerRef)}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Discover"
+        tabIndex={-1}
+        className="md:hidden fixed z-30 bottom-0 left-0 right-0 h-[50vh] bg-black/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl flex flex-col overflow-hidden animate-in focus:outline-none"
+      >
         <div className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           <div className="w-10 h-1 rounded-full bg-white/20" />
         </div>
@@ -88,7 +137,7 @@ export function HotSpotPanel({ onSelect, onClose }: HotSpotPanelProps) {
             <h2 className="text-sm font-semibold text-zinc-200 tracking-wide">Discover</h2>
             <p className="text-[10px] text-zinc-400 mt-0.5">Notable conservation areas in BC</p>
           </div>
-          <button onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close discover panel">
+          <button ref={mobileCloseRef} onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close discover panel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>

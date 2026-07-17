@@ -63,6 +63,15 @@ export default function Home() {
   const [hotSpotPanelOpen, setHotSpotPanelOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Focus-restore targets for useDialogA11y (part C): each panel's own
+  // trigger button (tier-2 fallback if the pre-open focus target is gone --
+  // e.g. a sibling dialog closed first and took it with it) and the map
+  // container itself (tier-3, last resort). mainRef needs tabIndex={-1} on
+  // <main> below to be a valid programmatic focus target.
+  const layerToggleRef = useRef<HTMLButtonElement>(null);
+  const hotSpotToggleRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+
   // Draw tool state
   const [drawActive, setDrawActive] = useState(false);
   const [selection, setSelection] = useState<SelectionBBox | null>(null);
@@ -590,7 +599,11 @@ export default function Home() {
   return (
     <LoadingProvider>
     <MapErrorBoundary>
-    <main className="relative h-screen w-screen overflow-hidden">
+    <main
+      ref={mainRef}
+      tabIndex={-1}
+      className="relative h-screen w-screen overflow-hidden focus:outline-none"
+    >
       {/* Full-screen map */}
       <CanopyMap
         ref={mapRef}
@@ -626,10 +639,12 @@ export default function Home() {
       <div className="absolute top-16 md:top-3 left-3 z-10 flex flex-col gap-2">
         {/* Layer panel toggle */}
         <button
+          ref={layerToggleRef}
           onClick={() => setLayerPanelOpen(!layerPanelOpen)}
           className="relative flex items-center justify-center w-11 h-11 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-300 hover:text-white hover:bg-black/80 transition-colors focus-visible:ring-2 focus-visible:ring-white/30"
           title="Toggle layer panel"
           aria-label="Toggle layer panel"
+          aria-expanded={layerPanelOpen}
         >
           <svg
             viewBox="0 0 24 24"
@@ -651,6 +666,7 @@ export default function Home() {
 
         {/* Hot spots toggle */}
         <button
+          ref={hotSpotToggleRef}
           onClick={() => setHotSpotPanelOpen(!hotSpotPanelOpen)}
           className={`
             flex items-center justify-center w-11 h-11 rounded-lg
@@ -665,6 +681,7 @@ export default function Home() {
           title="Discover hot spots"
           aria-label="Discover hot spots"
           aria-pressed={hotSpotPanelOpen}
+          aria-expanded={hotSpotPanelOpen}
         >
           <svg
             viewBox="0 0 24 24"
@@ -687,6 +704,8 @@ export default function Home() {
           enabledLayers={enabledLayers}
           onToggleLayer={toggleLayer}
           onClose={() => setLayerPanelOpen(false)}
+          triggerRef={layerToggleRef}
+          mapContainerRef={mainRef}
         />
       )}
 
@@ -695,6 +714,8 @@ export default function Home() {
         <HotSpotPanel
           onSelect={handleHotSpotSelect}
           onClose={() => setHotSpotPanelOpen(false)}
+          triggerRef={hotSpotToggleRef}
+          mapContainerRef={mainRef}
         />
       )}
 

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import type { LayerCategory, LayerDefinition } from "@/types/layers";
 import { LAYER_REGISTRY_AVAILABLE as LAYER_REGISTRY } from "@/lib/layers";
 import { useDragDismiss } from "@/hooks/useDragDismiss";
+import { useDialogA11y } from "@/hooks/useDialogA11y";
+import { mergeRefs } from "@/lib/react/merge-refs";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -11,6 +13,13 @@ interface LayerPanelProps {
   enabledLayers: string[];
   onToggleLayer: (id: string) => void;
   onClose: () => void;
+  /** The toolbar button that opened this panel -- tier-2 focus-restore
+   *  fallback (useDialogA11y, part C) if the element that had focus before
+   *  open is gone by close time. */
+  triggerRef?: RefObject<HTMLElement | null>;
+  /** The map's root container -- tier-3 (last-resort) focus-restore
+   *  fallback. */
+  mapContainerRef?: RefObject<HTMLElement | null>;
 }
 
 interface CategoryConfig {
@@ -267,9 +276,38 @@ export function LayerPanel({
   enabledLayers,
   onToggleLayer,
   onClose,
+  triggerRef,
+  mapContainerRef,
 }: LayerPanelProps) {
   const { sheetRef, handleTouchStart, handleTouchMove, handleTouchEnd } =
     useDragDismiss(onClose);
+
+  // Close-button refs -- useDialogA11y's initial-focus target for each
+  // variant. Both variants render simultaneously (hidden md:flex /
+  // md:hidden); the hook's own visibility check ensures only the currently
+  // visible one actually moves focus.
+  const desktopCloseRef = useRef<HTMLButtonElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  const restoreFallbackRefs = triggerRef
+    ? mapContainerRef
+      ? [triggerRef, mapContainerRef]
+      : [triggerRef]
+    : mapContainerRef
+      ? [mapContainerRef]
+      : undefined;
+
+  const desktopContainerRef = useDialogA11y(true, {
+    modal: false,
+    onClose,
+    initialFocusRef: desktopCloseRef,
+    restoreFallbackRefs,
+  });
+  const mobileContainerRef = useDialogA11y(true, {
+    modal: true,
+    onClose,
+    initialFocusRef: mobileCloseRef,
+    restoreFallbackRefs,
+  });
 
   const layersByCategory = CATEGORIES.map((cat) => ({
     config: cat,
@@ -285,10 +323,15 @@ export function LayerPanel({
       />
 
       {/* Desktop panel */}
-      <div className="hidden md:flex flex-col fixed z-30 top-0 left-0 h-full w-80 bg-black/80 backdrop-blur-xl border-r border-white/10 overflow-hidden animate-in">
+      <div
+        ref={desktopContainerRef}
+        role="region"
+        aria-label="Layers"
+        className="hidden md:flex flex-col fixed z-30 top-0 left-0 h-full w-80 bg-black/80 backdrop-blur-xl border-r border-white/10 overflow-hidden animate-in"
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 shrink-0">
           <h2 className="text-sm font-semibold text-zinc-200 tracking-wide">Layers</h2>
-          <button onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close layer panel">
+          <button ref={desktopCloseRef} onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close layer panel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
@@ -303,13 +346,20 @@ export function LayerPanel({
       </div>
 
       {/* Mobile bottom sheet */}
-      <div ref={sheetRef} className="md:hidden fixed z-30 bottom-0 left-0 right-0 h-[50vh] bg-black/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl flex flex-col overflow-hidden animate-in">
+      <div
+        ref={mergeRefs(sheetRef, mobileContainerRef)}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Layers"
+        tabIndex={-1}
+        className="md:hidden fixed z-30 bottom-0 left-0 right-0 h-[50vh] bg-black/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl flex flex-col overflow-hidden animate-in focus:outline-none"
+      >
         <div className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           <div className="w-10 h-1 rounded-full bg-white/20" />
         </div>
         <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 shrink-0">
           <h2 className="text-sm font-semibold text-zinc-200 tracking-wide">Layers</h2>
-          <button onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close layer panel">
+          <button ref={mobileCloseRef} onClick={onClose} className="flex items-center justify-center w-11 h-11 rounded-md hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" aria-label="Close layer panel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
