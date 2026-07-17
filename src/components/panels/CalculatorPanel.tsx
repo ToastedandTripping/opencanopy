@@ -306,7 +306,9 @@ function FinancialSection({ financial }: { financial: FinancialValue }) {
 
         <p className="text-xs text-zinc-500 mt-3">
           Carbon values represent avoided emissions credits. Both figures are one-time,
-          rounded estimates.
+          rounded estimates. Compliance-market pricing applies to regulated emitters; a
+          landowner selling forest-carbon credits would typically access voluntary-market
+          rates.
         </p>
 
         {roundedEcosystem > 0 && (
