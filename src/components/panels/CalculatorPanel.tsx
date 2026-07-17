@@ -574,7 +574,7 @@ function PanelContent({
           <div className="h-px bg-white/5 mb-5" />
 
           <div className="mb-5">
-            <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">That is equivalent to</h3>
+            <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">That is equivalent to (approx.)</h3>
             <div className="space-y-2.5">
               <EquivRow icon={<CarIcon />} value={equiv?.cars ?? 0} unit="cars driven for a year" />
               <EquivRow icon={<HomeIcon />} value={equiv?.homes ?? 0} unit="Canadian homes for a year" />
