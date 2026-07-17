@@ -227,6 +227,12 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
       setResults([]);
       setSearchStatus("idle");
       setOpen(false);
+      // Clear loading here too: a still-in-flight response from the previous
+      // (longer) query will hit the stale-token early-return below and never
+      // reach setLoading(false), so the spinner would otherwise stick on
+      // forever. Do NOT add setLoading(false) to that early-return -- in the
+      // two-in-flight case the newer legit search is still loading.
+      setLoading(false);
       return;
     }
 

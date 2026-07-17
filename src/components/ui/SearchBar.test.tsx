@@ -238,6 +238,54 @@ describe("SearchBar (keyed environment -- fetch-based geocoding, mocked)", () =>
     expect(container.textContent).toMatch(/Second Place/);
     expect(container.textContent).not.toMatch(/First Place/);
   });
+
+  // Regression (introduced by the seq-guard fix, caught in Razor re-review):
+  // typing >=2 chars starts a search (loading=true), then backspacing below
+  // the 2-char threshold while that request is still in flight used to leave
+  // the spinner stuck on forever -- the reset() branch invalidated the token
+  // but did not clear loading, and the in-flight response then early-returned
+  // on the stale-token check without ever reaching setLoading(false).
+  it("clears the loading spinner when the query is backspaced below the threshold while a search is in flight", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "test-key");
+    vi.resetModules();
+
+    let resolveFetch!: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => pending);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { SearchBar } = await import("./SearchBar");
+    const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
+    const input = getInput(container);
+
+    // Search fires and the geocode request stays in flight -> spinner is up.
+    fireEvent.change(input, { target: { value: "vancouver" } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+      await Promise.resolve();
+    });
+    expect(container.querySelector(".animate-spin")).toBeTruthy();
+
+    // User backspaces below the 2-char threshold while the request is pending.
+    fireEvent.change(input, { target: { value: "v" } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+      await Promise.resolve();
+    });
+    // The spinner must clear immediately -- not wait on (or get stuck behind)
+    // the now-stale in-flight response.
+    expect(container.querySelector(".animate-spin")).toBeNull();
+
+    // When the stale response finally lands it must stay cleared, not resurrect.
+    await act(async () => {
+      resolveFetch({ ok: true, status: 200, json: async () => ({ features: [] }) });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(container.querySelector(".animate-spin")).toBeNull();
+  });
 });
 
 describe("SearchBar accessibility (D1)", () => {
