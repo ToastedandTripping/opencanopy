@@ -237,7 +237,7 @@ function buildReportHtml(options: ReportOptions): string {
     ${watershedName ? "Watershed" : "Selected Area"}
   </h2>
   ${watershedName ? `<div style="font-size:16px;font-weight:600;color:#222;margin-bottom:2px;">${escapeHtml(watershedName)}</div>` : ""}
-  <div style="font-size:20px;font-weight:600;color:#222;">
+  <div style="font-family:Literata,Georgia,'Times New Roman',serif;font-size:20px;font-weight:600;color:#222;">
     ${fmt(stats.totalAreaHa, 1)} <span style="font-size:14px;font-weight:400;color:#888;">${areaLabel}</span>
   </div>
 </div>
@@ -245,7 +245,7 @@ function buildReportHtml(options: ReportOptions): string {
 <!-- Carbon Stats -->
 <div style="background:#f8faf9;border-radius:10px;padding:20px;margin-bottom:24px;border:1px solid #e8ede9;">
   <div style="text-align:center;margin-bottom:16px;">
-    <div style="font-size:32px;font-weight:700;color:#222;font-variant-numeric:tabular-nums;">${fmt(co2.rounded)}</div>
+    <div style="font-family:Literata,Georgia,'Times New Roman',serif;font-size:32px;font-weight:700;color:#222;font-variant-numeric:tabular-nums;">${fmt(co2.rounded)}</div>
     <div style="font-size:13px;color:#666;margin-top:2px;">tonnes CO&#8322; stored in this area</div>
     <div style="font-size:11px;color:#aaa;margin-top:2px;">may be as low as ${fmt(co2.bandLow)} tonnes</div>
     <div style="font-size:11px;color:#aaa;margin-top:2px;">${stats.featureCount} forest polygons analyzed</div>
