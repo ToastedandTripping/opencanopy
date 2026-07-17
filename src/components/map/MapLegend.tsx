@@ -124,7 +124,8 @@ function ExpandedItems({
             <button
               key={i}
               onClick={() => onToggleClassFilter(layer.id, item.label)}
-              className={`flex items-center gap-2 w-full text-left transition-opacity duration-200 ${
+              aria-pressed={isActive}
+              className={`flex items-center gap-2 w-full text-left transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-sm ${
                 isActive ? "" : "opacity-30"
               }`}
             >
