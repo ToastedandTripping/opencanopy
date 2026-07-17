@@ -74,7 +74,7 @@ function expandLayer(container: HTMLElement) {
   const expandButton = Array.from(container.querySelectorAll("button")).find(
     (b) => b.textContent?.includes("Forest Age")
   );
-  expandButton && fireEvent.click(expandButton);
+  if (expandButton) fireEvent.click(expandButton);
 }
 
 describe("MapLegend class-filter buttons (D2)", () => {
