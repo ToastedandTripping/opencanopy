@@ -11,6 +11,12 @@ export interface ScrubTable {
   end: number;
   /** Monotonic 0..1, one entry per year; [0]===0 and [last]===1 (pinned at build). */
   cumulativeNorm: number[];
+  /** Absolute area total (hectares) the normalized curve is a fraction of.
+   *  Optional -- older/regenerated-without-total JSONs still validate; new
+   *  builds always emit it (build-scrub-tables.py). Lets a consumer render a
+   *  real "X ha through {year}" figure via `total * cumulativeNorm[i]`
+   *  instead of only the normalized 0..1 curve. */
+  total?: number;
 }
 
 /**

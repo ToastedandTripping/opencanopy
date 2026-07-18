@@ -12,12 +12,17 @@ Emits one JSON per dataset:
   src/data/scrub/fire-scrub.json        cumulative FIRE_SIZE_HECTARES by FIRE_YEAR (1917-2025)
 
 Shape:
-  { "start": 1950, "end": 2025, "cumulativeNorm": [ ... one float per year, monotonic 0..1 ... ] }
+  { "start": 1950, "end": 2025, "cumulativeNorm": [ ... one float per year, monotonic 0..1 ... ], "total": 1234567.89 }
 
 `cumulativeNorm[i]` is the fraction of total area disturbed by year `start+i`,
 inclusive. `cumulativeNorm[0]` is pinned to 0.0 and `[last]` to 1.0 so the
 runtime inverse lookup yields exactly `start` at progress 0 and `end` at
 progress 1 (boundary invariant the unit test asserts).
+
+`total` is the absolute area (hectares) the normalized curve is a fraction
+of -- `total * cumulativeNorm[i]` recovers a real "X ha through year Y"
+figure (Phase A honest-timeline readout). Added 2026-07 -- older consumers
+that only read cumulativeNorm are unaffected.
 
 The dataset start/end MUST match the matching *_OVERLAY_RANGE constant in
 src/lib/story/setup-layers.ts (a TS-side assertion enforces this at import).
@@ -144,7 +149,7 @@ def build(dataset: str) -> dict:
         if cumulative_norm[i] < cumulative_norm[i - 1]:
             cumulative_norm[i] = cumulative_norm[i - 1]
 
-    table = {"start": start, "end": end, "cumulativeNorm": cumulative_norm}
+    table = {"start": start, "end": end, "cumulativeNorm": cumulative_norm, "total": round(total, 2)}
 
     # Report a few inflection points so the pacing is reviewable.
     print(f"  features: {rows:,} dated ({folded:,} folded into {start}, {undated_skipped:,} undated skipped)")
