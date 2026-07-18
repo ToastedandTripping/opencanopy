@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import type { LayerDefinition } from "@/types/layers";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
@@ -141,22 +141,29 @@ export function useTimeline(
   }, [activeTimelineLayers]);
 
   // ── Always-fresh refs (the stale-closure guard) ─────────────────────────
-  // Assigned during render (not in an effect) so the play loop -- which runs
-  // across many awaits, well outside any single render -- always reads the
-  // LIVE value on its next synchronous check, never a value captured when
-  // the effect started.
+  // React forbids writing ref.current during render (react-hooks/refs --
+  // it can desync a ref from what actually got committed if the render is
+  // thrown away/retried). Synced in a useLayoutEffect instead: it runs
+  // synchronously right after the DOM commit, before paint and before any
+  // passive effect -- still well ahead of every read site (the async play
+  // loop only ever reads these AFTER an `await`, i.e. after a real timer or
+  // promise tick, by which point this has long since run). No dependency
+  // array -- runs after every commit, so this is never a render behind.
   const rangeRef = useRef(range);
-  rangeRef.current = range;
   const stepSizeRef = useRef(stepSize);
-  stepSizeRef.current = stepSize;
   const playSpeedRef = useRef(playSpeed);
-  playSpeedRef.current = playSpeed;
   const currentYearRef = useRef(currentYear);
-  currentYearRef.current = currentYear;
   const waitForRenderRef = useRef(waitForRender);
-  waitForRenderRef.current = waitForRender;
   const prefersReducedMotionRef = useRef(prefersReducedMotion);
-  prefersReducedMotionRef.current = prefersReducedMotion;
+
+  useLayoutEffect(() => {
+    rangeRef.current = range;
+    stepSizeRef.current = stepSize;
+    playSpeedRef.current = playSpeed;
+    currentYearRef.current = currentYear;
+    waitForRenderRef.current = waitForRender;
+    prefersReducedMotionRef.current = prefersReducedMotion;
+  });
 
   // Re-entrancy guards for the async play loop.
   const runIdRef = useRef(0);
@@ -219,7 +226,6 @@ export function useTimeline(
     }
 
     async function runContinuousLoop() {
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (cancelledRef.current || runIdRef.current !== runId) return;
 
