@@ -316,15 +316,44 @@ export function useTimeline(
       // is" or, after that restart, "jump from the start" -- satisfying the
       // "restarts to start then jumps to end" pinned RM play-at-end
       // semantics without any RM-specific branching in togglePlay itself.
-      setCurrentYear(rangeRef.current[1]);
-      const watchdogFired = await waitForPaintTracked();
-      if (watchdogFired) {
-        pipelineLog("timeline-watchdog", `year=${rangeRef.current[1]}`, {
-          watchdogMs: RENDER_WATCHDOG_MS,
-          reducedMotion: true,
-        });
+      //
+      // Razor W1-analog: gate ONLY when the jump is a real transition.
+      // currentYearRef.current is the ACTUAL net paint state here, not the
+      // surface call -- it's synced via useLayoutEffect (runs before any
+      // passive effect, including this one), so it already reflects
+      // togglePlay's restart by the time this runs. Empirically verified
+      // (not assumed) that "RM-play while already at the end" does NOT
+      // collapse to a no-op: setCurrentYear calls issued from a useEffect
+      // callback are never eligible for React's render-phase-update
+      // coalescing (that only applies to updates issued during the render
+      // body itself), so the restart (range[1] -> range[0]) commits as its
+      // own real render before this effect even runs, making the
+      // subsequent jump (range[0] -> range[1]) a genuine second transition
+      // -- confirmed via a probe harness logging every distinct
+      // currentYear commit, which showed both landing as separate commits,
+      // never a single coalesced no-op. So on every path reachable through
+      // togglePlay today, `target` differs from `currentYearRef.current`
+      // and this always gates for real. The no-op check below is still
+      // real defensive coverage, not dead code for an impossible case --
+      // it's reachable today via a degenerate single-year range
+      // (range[0] === range[1], where togglePlay's own restart-check is
+      // itself a same-value no-op), and it protects any future caller that
+      // invokes this jump without going through that restart-check.
+      const target = rangeRef.current[1];
+      const hasRealTransition = currentYearRef.current !== target;
+
+      setCurrentYear(target);
+
+      if (hasRealTransition) {
+        const watchdogFired = await waitForPaintTracked();
+        if (watchdogFired) {
+          pipelineLog("timeline-watchdog", `year=${target}`, {
+            watchdogMs: RENDER_WATCHDOG_MS,
+            reducedMotion: true,
+          });
+        }
+        if (cancelledRef.current || runIdRef.current !== runId) return;
       }
-      if (cancelledRef.current || runIdRef.current !== runId) return;
       setPlaying(false);
     }
 

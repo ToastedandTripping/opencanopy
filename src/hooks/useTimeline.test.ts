@@ -443,18 +443,22 @@ describe("useTimeline — reduced motion (WCAG 2.2.2)", () => {
     expect(waitForRender).toHaveBeenCalledTimes(1);
   });
 
-  it("pressing play again while at the end restarts to start then jumps back to end (no dead-end)", async () => {
+  it("pressing play again while at the end restarts to start then jumps back to end (no dead-end, and does not stall)", async () => {
     // togglePlay's restart-at-end check (unchanged, shared with the
     // non-reduced-motion path) fires FIRST -- setCurrentYear(range[0]) is
-    // batched together with the setPlaying(true) that follows it, and the
-    // effect's own setCurrentYear(range[1]) then runs synchronously within
-    // the SAME act() flush (no await before it) -- so the 1917 waypoint is
-    // real (it's what makes this "restart then jump" rather than a no-op)
-    // but isn't independently observable via result.current between two
-    // synchronous state transitions in one commit cascade. What IS
-    // observable and proves the no-dead-end contract: the render-gate
-    // machinery runs AGAIN (a second waitForRender call) rather than
-    // bailing out because "we're already at range[1]".
+    // batched together with the setPlaying(true) that follows it. Verified
+    // empirically (a probe harness logging every distinct currentYear
+    // commit, run by hand before landing this fix) that this restart is
+    // NOT coalesced away: setCurrentYear calls issued from a useEffect
+    // callback -- as opposed to during the render body -- are never
+    // eligible for React's render-phase-update escape hatch, so 1917 and
+    // 2025 each commit as their own real render/repaint here. That's WHY
+    // this is a genuine "restart then jump" (two real transitions) rather
+    // than a no-op the render-gate would need to skip -- see the no-op
+    // guard test below for the case that DOES skip it. Advancing only 0ms
+    // of fake time and still landing on the fully-settled end state is
+    // itself proof this doesn't stall (a real stall would still be sitting
+    // mid-watchdog at this point).
     const waitForRender = vi.fn(() => Promise.resolve());
     const { result } = renderHook(() =>
       useTimeline(FIRE_RANGE_LAYERS, { waitForRender, prefersReducedMotion: () => true })
@@ -469,11 +473,36 @@ describe("useTimeline — reduced motion (WCAG 2.2.2)", () => {
 
     act(() => result.current.togglePlay());
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(0); // NOT RENDER_WATCHDOG_MS -- must not need it
     });
 
     expect(waitForRender).toHaveBeenCalledTimes(2); // ran again -- not a no-op
     expect(result.current.currentYear).toBe(2025); // lands back at the end
     expect(result.current.playing).toBe(false);
+  });
+
+  it("Razor follow-up: a genuine no-op jump (degenerate single-year range, where togglePlay's own restart-check is itself a same-value no-op) skips the render-gate entirely -- zero waitForRender calls, settles synchronously", async () => {
+    // range[0] === range[1] is the one reachable path where
+    // currentYearRef.current already equals the jump target BEFORE
+    // runReducedMotionJump runs (togglePlay's restart-check computes
+    // `year >= range[1] ? range[0] : year`, and range[0] === range[1]
+    // here, so that check is itself a no-op -- currentYear never actually
+    // leaves the single valid year). This is the case W1's sibling guard
+    // exists for: nothing new to paint, so gating would eat the full
+    // RENDER_WATCHDOG_MS on a value that was never going to change.
+    const { fn: waitForRender } = makeControllableWaitForRender();
+    const DEGENERATE_RANGE = [
+      { timelineRange: [2020, 2020] },
+    ] as unknown as LayerDefinition[];
+    const { result } = renderHook(() =>
+      useTimeline(DEGENERATE_RANGE, { waitForRender, prefersReducedMotion: () => true })
+    );
+    act(() => result.current.enable()); // currentYear = 2020 = range[0] = range[1]
+    act(() => result.current.togglePlay());
+
+    expect(waitForRender).toHaveBeenCalledTimes(0);
+    expect(result.current.currentYear).toBe(2020);
+    expect(result.current.playing).toBe(false); // settled synchronously -- no stall, no chip
+    expect(result.current.rendering).toBe(false);
   });
 });
