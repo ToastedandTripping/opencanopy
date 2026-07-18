@@ -291,12 +291,20 @@ export default function Home() {
   // Render-gate for the timeline scheduler (Phase A, honest timeline): the
   // hook stays maplibre-free, so this is built here from mapRef and injected
   // in. Reads mapRef.current lazily (never captured) so it's never stale.
-  // The internal RENDER_WATCHDOG_MS timeout is this function's OWN safety
-  // net (guarantees the promise always settles even if 'idle' never fires
-  // or the map instance disappears mid-wait); useTimeline's play loop races
-  // this against its own separate watchdog for the same reason, so a
-  // caller that wires up a waitForRender WITHOUT this guarantee still can't
-  // deadlock playback.
+  // The internal timeout is this function's OWN LAST-RESORT safety net
+  // (guarantees the promise always settles even if 'idle' never fires or
+  // the map instance disappears mid-wait) -- it is deliberately set to
+  // RENDER_WATCHDOG_MS + 250, NOT the same RENDER_WATCHDOG_MS the hook
+  // races it against (Razor W2): at equal delays, this timer is always
+  // registered first (synchronously, before the hook's own
+  // sleep(RENDER_WATCHDOG_MS) call in its Promise.race), so on an equal-
+  // delay tie it would always resolve "render" a microtask before the
+  // hook's "watchdog" branch could ever win -- silently making
+  // watchdogFired permanently false and pipelineLog("timeline-watchdog")
+  // dead code, even for a genuinely stalled multi-second paint. The +250ms
+  // margin lets the hook's own watchdog deterministically own the
+  // timeout+logging semantics; this timer only fires as a true last resort
+  // (map torn down, 'idle' never coming at all).
   const waitForRender = useCallback(
     () =>
       new Promise<void>((resolve) => {
@@ -311,7 +319,7 @@ export default function Home() {
           resolve();
         };
         const onIdle = () => finish();
-        const t = setTimeout(finish, RENDER_WATCHDOG_MS);
+        const t = setTimeout(finish, RENDER_WATCHDOG_MS + 250);
         map.once("idle", onIdle);
       }),
     []

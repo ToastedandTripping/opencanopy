@@ -71,6 +71,16 @@ export function getScentedTrack(activeLayerIds: readonly string[]): ScentedTrack
  * [track.start, track.end]. Matches the map's `<=` filter semantics: a year
  * before `start` reads as 0 (nothing shown yet), a year at/after `end` reads
  * as the full `total` (everything shown).
+ *
+ * N4 (Razor): at `track.start` (1917) this reads exactly 0 ha even though
+ * the map paints some 1917 fires -- `cumulativeNorm[0]` is pinned to 0.0 by
+ * build-scrub-tables.py (features dated before `start` fold INTO `start`,
+ * see its docstring), so the very first year is definitionally "not yet
+ * counted" in the cumulative curve. The magnitude is negligible (<600ha of
+ * a 22.1M ha total) and this is a pre-existing scrub-table convention this
+ * readout merely exposes, not a bug introduced by it -- documented here so
+ * the "honest" framing is a deliberate, known tradeoff rather than an
+ * accident someone has to re-discover later.
  */
 export function cumulativeHectares(track: ScentedTrack, year: number): number {
   const idx = Math.max(

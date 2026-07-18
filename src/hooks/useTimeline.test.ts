@@ -58,7 +58,30 @@ afterEach(() => {
 });
 
 describe("useTimeline — render-gated scheduler (new)", () => {
-  it("does not advance the year until the injected waitForRender resolves", async () => {
+  it("Razor W1: the FIRST iteration of a run does NOT gate on waitForRender -- a settled map (nothing to paint yet this run) must not stall play/resume", async () => {
+    const { fn: waitForRender } = makeControllableWaitForRender();
+    const { result } = renderHook(() =>
+      useTimeline(FIRE_RANGE_LAYERS, { waitForRender, prefersReducedMotion: () => false })
+    );
+
+    act(() => result.current.enable());
+    const startYear = result.current.currentYear;
+    act(() => result.current.togglePlay());
+
+    // No render-wait call yet -- there's nothing painted this run to gate on.
+    expect(waitForRender).toHaveBeenCalledTimes(0);
+    expect(result.current.rendering).toBe(false);
+
+    // The dwell floor alone is enough to advance -- no 1800ms watchdog stall.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_SPEED);
+    });
+    expect(result.current.currentYear).toBe(startYear + 1);
+    // Iteration 2 (now painting a real year) gates normally.
+    expect(waitForRender).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not advance the year until the injected waitForRender resolves (iteration 2+, once this run has actually painted something)", async () => {
     const { fn: waitForRender, resolvers } = makeControllableWaitForRender();
     const { result } = renderHook(() =>
       useTimeline(FIRE_RANGE_LAYERS, { waitForRender, prefersReducedMotion: () => false })
@@ -68,13 +91,20 @@ describe("useTimeline — render-gated scheduler (new)", () => {
     const startYear = result.current.currentYear;
     act(() => result.current.togglePlay());
 
-    expect(waitForRender).toHaveBeenCalledTimes(1);
+    // Iteration 1 advances for free (Razor W1 -- no gate on the first
+    // iteration of a run).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_SPEED);
+    });
+    const yearAfterFirstAdvance = result.current.currentYear;
+    expect(yearAfterFirstAdvance).toBe(startYear + 1);
+    expect(waitForRender).toHaveBeenCalledTimes(1); // iteration 2's gate call
 
     // Dwell + well past it, WITHOUT resolving the render-wait -- must stay gated.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DEFAULT_SPEED * 3);
     });
-    expect(result.current.currentYear).toBe(startYear);
+    expect(result.current.currentYear).toBe(yearAfterFirstAdvance);
     expect(result.current.playing).toBe(true);
 
     // Resolve the render-wait -- the dwell already elapsed, so the advance
@@ -83,10 +113,10 @@ describe("useTimeline — render-gated scheduler (new)", () => {
       resolvers[0]();
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(result.current.currentYear).toBe(startYear + 1);
+    expect(result.current.currentYear).toBe(yearAfterFirstAdvance + 1);
   });
 
-  it("advances via the watchdog if the injected waitForRender never resolves, and logs it", async () => {
+  it("advances via the watchdog if the injected waitForRender never resolves, and logs it (iteration 2+)", async () => {
     const waitForRender = vi.fn(() => new Promise<void>(() => {})); // never resolves
     const { result } = renderHook(() =>
       useTimeline(FIRE_RANGE_LAYERS, { waitForRender, prefersReducedMotion: () => false })
@@ -95,37 +125,80 @@ describe("useTimeline — render-gated scheduler (new)", () => {
     const startYear = result.current.currentYear;
     act(() => result.current.togglePlay());
 
+    // Iteration 1 advances for free (no gate -- Razor W1).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_SPEED);
+    });
+    expect(result.current.currentYear).toBe(startYear + 1);
+
+    // Iteration 2 gates on the (never-resolving) mock -- must watchdog through.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(RENDER_WATCHDOG_MS + DEFAULT_SPEED + 10);
     });
 
-    expect(result.current.currentYear).toBe(startYear + 1);
+    expect(result.current.currentYear).toBe(startYear + 2);
     expect(pipelineLog).toHaveBeenCalledWith(
       "timeline-watchdog",
-      expect.stringContaining(`year=${startYear}`),
+      expect.stringContaining(`year=${startYear + 1}`),
       expect.objectContaining({ watchdogMs: RENDER_WATCHDOG_MS })
     );
   });
 
-  it("stops scheduling once paused, even if a stale render-wait later resolves", async () => {
-    const { fn: waitForRender, resolvers } = makeControllableWaitForRender();
+  it("Razor W3 (mutation lock): a pause DURING the dwell window -- not just the render-gate window -- prevents the pending advance from applying", async () => {
+    // The post-dwell cancellation guard (`if (cancelledRef.current || ...)
+    // return;` right after `await dwellPromise`) has no other test lock:
+    // every other pause test in this file pauses while parked at the
+    // render-gate, never mid-dwell. This test fails if that guard is
+    // deleted (the dwell's own setTimeout still fires regardless of pause,
+    // so without the guard the advance would apply anyway).
+    const { fn: waitForRender } = makeControllableWaitForRender();
     const { result } = renderHook(() =>
       useTimeline(FIRE_RANGE_LAYERS, { waitForRender, prefersReducedMotion: () => false })
     );
     act(() => result.current.enable());
     const startYear = result.current.currentYear;
     act(() => result.current.togglePlay());
-    act(() => result.current.togglePlay()); // pause immediately
 
+    // Halfway through iteration 1's dwell (no gate on iteration 1 -- W1).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_SPEED / 2);
+    });
+    expect(result.current.currentYear).toBe(startYear); // still mid-dwell
+
+    act(() => result.current.togglePlay()); // pause mid-dwell
     expect(result.current.playing).toBe(false);
 
+    // Advance PAST the full dwell duration -- the dwellPromise's own timer
+    // fires regardless of pause, but the post-dwell guard must stop the
+    // advance from being applied.
     await act(async () => {
-      resolvers[0]?.();
+      await vi.advanceTimersByTimeAsync(DEFAULT_SPEED);
+    });
+
+    expect(result.current.currentYear).toBe(startYear);
+    expect(result.current.playing).toBe(false);
+  });
+
+  it("stops scheduling once paused immediately (before iteration 1's dwell even completes)", async () => {
+    const { fn: waitForRender } = makeControllableWaitForRender();
+    const { result } = renderHook(() =>
+      useTimeline(FIRE_RANGE_LAYERS, { waitForRender, prefersReducedMotion: () => false })
+    );
+    act(() => result.current.enable());
+    const startYear = result.current.currentYear;
+    act(() => result.current.togglePlay());
+    act(() => result.current.togglePlay()); // pause immediately -- no gate call yet (W1)
+
+    expect(result.current.playing).toBe(false);
+    expect(waitForRender).toHaveBeenCalledTimes(0);
+
+    await act(async () => {
       await vi.advanceTimersByTimeAsync(RENDER_WATCHDOG_MS + DEFAULT_SPEED * 2);
     });
 
     expect(result.current.currentYear).toBe(startYear);
     expect(result.current.playing).toBe(false);
+    expect(waitForRender).toHaveBeenCalledTimes(0);
   });
 
   it("stops scheduling on unmount, even if a stale render-wait later resolves", async () => {
@@ -135,6 +208,13 @@ describe("useTimeline — render-gated scheduler (new)", () => {
     );
     act(() => result.current.enable());
     act(() => result.current.togglePlay());
+
+    // Let iteration 1's dwell elapse so iteration 2 actually calls
+    // waitForRender (a real, in-flight render-wait to unmount underneath).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_SPEED);
+    });
+    expect(resolvers.length).toBe(1);
 
     unmount();
 
@@ -201,15 +281,32 @@ describe("useTimeline — render-gated scheduler (new)", () => {
     expect(order).toEqual(["commit-1950", "commit-1917"]);
 
     act(() => result.current.togglePlay());
-    expect(order).toEqual(["commit-1950", "commit-1917", "waitForRender-call-0"]);
+    // Iteration 1 does NOT call waitForRender (Razor W1 -- nothing painted
+    // yet this run to gate on); it goes straight to the dwell.
+    expect(order).toEqual(["commit-1950", "commit-1917"]);
 
+    // Let iteration 1's dwell elapse -- its advance (to 1918) is what
+    // iteration 2 gates on. This is the transition the invariant covers:
+    // waitForRender must be called for 1918's paint SYNCHRONOUSLY, in the
+    // same tick as the setCurrentYear(1918) call that ends iteration 1 --
+    // before React has a chance to commit that render.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_SPEED);
+    });
+
+    const idxCall = order.indexOf("waitForRender-call-0");
+    const idxCommit1918 = order.indexOf("commit-1918");
+    expect(idxCall).toBeGreaterThan(-1);
+    expect(idxCommit1918).toBeGreaterThan(-1);
+    expect(idxCall).toBeLessThan(idxCommit1918);
+
+    // And the SAME invariant holds again on the next transition (1918 -> 1919).
     await act(async () => {
       resolvers[0]();
       await vi.advanceTimersByTimeAsync(DEFAULT_SPEED);
     });
-
     const idxNextCall = order.indexOf("waitForRender-call-1");
-    const idxNextCommit = order.indexOf("commit-1918");
+    const idxNextCommit = order.indexOf("commit-1919");
     expect(idxNextCall).toBeGreaterThan(-1);
     expect(idxNextCommit).toBeGreaterThan(-1);
     expect(idxNextCall).toBeLessThan(idxNextCommit);
@@ -223,6 +320,13 @@ describe("useTimeline — render-gated scheduler (new)", () => {
     act(() => result.current.enable());
     act(() => result.current.togglePlay());
 
+    // Iteration 1 has no gate (W1), so let its dwell elapse first --
+    // iteration 2 is the first one that actually starts a render-wait for
+    // the debounce timer to measure.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_SPEED);
+    });
+    expect(waitForRender).toHaveBeenCalledTimes(1);
     expect(result.current.rendering).toBe(false);
 
     await act(async () => {

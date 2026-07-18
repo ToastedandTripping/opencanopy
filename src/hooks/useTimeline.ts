@@ -215,17 +215,48 @@ export function useTimeline(
         setRendering(true);
       }, RENDERING_DEBOUNCE_MS);
 
-      const winner = await Promise.race([
-        waitForRenderRef.current().then(() => "render" as const),
-        sleep(RENDER_WATCHDOG_MS).then(() => "watchdog" as const),
-      ]);
+      let watchdogFired: boolean;
+      try {
+        const winner = await Promise.race([
+          waitForRenderRef.current().then(() => "render" as const),
+          sleep(RENDER_WATCHDOG_MS).then(() => "watchdog" as const),
+        ]);
+        watchdogFired = winner === "watchdog";
+      } catch {
+        // N1: an injected waitForRender that throws/rejects must not kill
+        // the loop silently (playing stuck true, button shows pause,
+        // nothing advances) -- treat a rejection exactly like a watchdog
+        // timeout: advance anyway, same as any other paint that never
+        // settled.
+        watchdogFired = true;
+      }
 
-      clearRenderingTimer();
-      setRendering(false);
-      return winner === "watchdog";
+      // N3: a STALE run's continuation (this race settled only after a
+      // newer run already started -- e.g. pause then immediate resume)
+      // must not clobber the newer run's chip state, since the timer ref
+      // and `rendering` state are shared across runs, not per-run. Leave
+      // them alone here; the caller's own cancelledRef/runIdRef checks
+      // handle terminating this stale run right after.
+      if (runIdRef.current === runId) {
+        clearRenderingTimer();
+        setRendering(false);
+      }
+      return watchdogFired;
     }
 
     async function runContinuousLoop() {
+      // Razor W1: the FIRST iteration of a run has not issued any
+      // setCurrentYear/setFilter yet -- there is nothing painting for this
+      // run to wait on. On an already-settled map (the common case: every
+      // pause -> resume re-enters this effect and re-runs from iteration 1)
+      // `map.once('idle')` never fires because nothing is dirtying the map,
+      // so gating here would eat the full RENDER_WATCHDOG_MS on EVERY
+      // play/resume, not just cold start -- and falsely show the
+      // "rendering..." chip the whole time. Skip the render-gate (and its
+      // debounce) on iteration 1; go straight to dwell, then advance.
+      // Iteration 2+ gate normally, once this run has actually issued a
+      // setFilter to wait on.
+      let isFirstIteration = true;
       while (true) {
         if (cancelledRef.current || runIdRef.current !== runId) return;
 
@@ -234,22 +265,26 @@ export function useTimeline(
         // fast repaint still waits out the chosen "speed"; a slow repaint
         // is never rushed past dwell).
         const dwellPromise = sleep(playSpeedRef.current);
-        const watchdogFired = await waitForPaintTracked();
-        if (watchdogFired) {
-          pipelineLog("timeline-watchdog", `year=${currentYearRef.current}`, {
-            watchdogMs: RENDER_WATCHDOG_MS,
-          });
-        }
-        if (cancelledRef.current || runIdRef.current !== runId) return;
 
-        // The year whose paint we just confirmed is already the end of the
-        // range -- we're done. This is what makes "final year settled
-        // before we stop" true: we only reach this branch AFTER a
-        // waitForPaintTracked() call for that exact year.
-        if (currentYearRef.current >= rangeRef.current[1]) {
-          setPlaying(false);
-          return;
+        if (!isFirstIteration) {
+          const watchdogFired = await waitForPaintTracked();
+          if (watchdogFired) {
+            pipelineLog("timeline-watchdog", `year=${currentYearRef.current}`, {
+              watchdogMs: RENDER_WATCHDOG_MS,
+            });
+          }
+          if (cancelledRef.current || runIdRef.current !== runId) return;
+
+          // The year whose paint we just confirmed is already the end of
+          // the range -- we're done. This is what makes "final year
+          // settled before we stop" true: we only reach this branch AFTER
+          // a waitForPaintTracked() call for that exact year.
+          if (currentYearRef.current >= rangeRef.current[1]) {
+            setPlaying(false);
+            return;
+          }
         }
+        isFirstIteration = false;
 
         await dwellPromise;
         if (cancelledRef.current || runIdRef.current !== runId) return;
@@ -265,6 +300,11 @@ export function useTimeline(
         // Loop back to the top immediately (no await before the next
         // waitForPaintTracked() call) -- this is the synchronous
         // attach-before-flush ordering the docstring above calls load-bearing.
+        // N2: an unrelated idle transition (e.g. the user panning the map
+        // while playing) can also resolve this gate a touch early -- that's
+        // inherent and self-correcting (the dwell floor + 300ms fade still
+        // keep the bar close), the accepted side of the honesty tradeoff
+        // documented in the plan's pre-mortem #3, not a bug to fix here.
       }
     }
 
