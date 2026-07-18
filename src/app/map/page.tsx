@@ -26,7 +26,7 @@ import { MapErrorBoundary } from "@/components/ui/MapErrorBoundary";
 import { getLayer } from "@/lib/layers";
 import { useLayerState } from "@/hooks/useLayerState";
 import { useMapState } from "@/hooks/useMapState";
-import { useTimeline } from "@/hooks/useTimeline";
+import { useTimeline, RENDER_WATCHDOG_MS } from "@/hooks/useTimeline";
 import { useWatershedSelection } from "@/hooks/useWatershedSelection";
 import {
   calculateSelectionStats,
@@ -55,6 +55,23 @@ function nowMs(): number {
 // without a debugger attached.
 function logCalc(payload: Record<string, unknown>): void {
   console.info("[opencanopy:calc]", payload);
+}
+
+// Injectable-matchMedia reduced-motion check for the timeline scheduler,
+// mirroring the pattern in useScrollytelling.ts (cached MediaQueryList,
+// keyed on window.matchMedia identity so a test that swaps the mock still
+// gets a fresh result). Kept local rather than shared -- useScrollytelling's
+// version isn't exported and this plan doesn't touch that file.
+let cachedTimelineMql: MediaQueryList | null = null;
+let cachedTimelineMatchMediaFn: typeof window.matchMedia | null = null;
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  if (cachedTimelineMql === null || cachedTimelineMatchMediaFn !== window.matchMedia) {
+    cachedTimelineMatchMediaFn = window.matchMedia;
+    cachedTimelineMql = window.matchMedia("(prefers-reduced-motion: reduce)");
+  }
+  return cachedTimelineMql.matches;
 }
 
 export default function Home() {
@@ -271,7 +288,47 @@ export default function Home() {
     [enabledLayers]
   );
 
-  const timeline = useTimeline(activeTimelineLayers);
+  // Render-gate for the timeline scheduler (Phase A, honest timeline): the
+  // hook stays maplibre-free, so this is built here from mapRef and injected
+  // in. Reads mapRef.current lazily (never captured) so it's never stale.
+  // The internal timeout is this function's OWN LAST-RESORT safety net
+  // (guarantees the promise always settles even if 'idle' never fires or
+  // the map instance disappears mid-wait) -- it is deliberately set to
+  // RENDER_WATCHDOG_MS + 250, NOT the same RENDER_WATCHDOG_MS the hook
+  // races it against (Razor W2): at equal delays, this timer is always
+  // registered first (synchronously, before the hook's own
+  // sleep(RENDER_WATCHDOG_MS) call in its Promise.race), so on an equal-
+  // delay tie it would always resolve "render" a microtask before the
+  // hook's "watchdog" branch could ever win -- silently making
+  // watchdogFired permanently false and pipelineLog("timeline-watchdog")
+  // dead code, even for a genuinely stalled multi-second paint. The +250ms
+  // margin lets the hook's own watchdog deterministically own the
+  // timeout+logging semantics; this timer only fires as a true last resort
+  // (map torn down, 'idle' never coming at all).
+  const waitForRender = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const map = mapRef.current?.getMap();
+        if (!map) return resolve();
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(t);
+          map.off("idle", onIdle);
+          resolve();
+        };
+        const onIdle = () => finish();
+        const t = setTimeout(finish, RENDER_WATCHDOG_MS + 250);
+        map.once("idle", onIdle);
+      }),
+    []
+  );
+
+  const timeline = useTimeline(activeTimelineLayers, {
+    waitForRender,
+    prefersReducedMotion,
+  });
 
   // Auto-disable timeline when no timeline-eligible layers are enabled
   const timelineEligible = activeTimelineLayers.length > 0;
@@ -812,6 +869,9 @@ export default function Home() {
             playSpeed={timeline.playSpeed}
             range={timeline.range}
             stepSize={timeline.stepSize}
+            rendering={timeline.rendering}
+            prefersReducedMotion={prefersReducedMotion()}
+            activeLayerIds={activeTimelineLayers.map((l) => l.id)}
             onTogglePlay={timeline.togglePlay}
             onSetYear={timeline.setYear}
             onSetSpeed={timeline.setSpeed}

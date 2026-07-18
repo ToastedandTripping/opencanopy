@@ -23,6 +23,7 @@ type PipelineStage =
   | "setMapLoaded"
   | "visibility-effect"
   | "timeline-effect"
+  | "timeline-watchdog"
   | "setPaintProperty"
   | "setFilter"
   | "onStepEnter"
