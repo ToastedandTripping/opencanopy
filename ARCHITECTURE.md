@@ -109,11 +109,11 @@ abort-on-supersede, and a 50-entry LRU cache.
 
 ## State
 
-Four hooks own UI state; URL is the shareable source of truth:
+Seven hooks own UI state; URL is the shareable source of truth:
 
 - `useLayerState` — enabled layers; hydrates URL → localStorage → defaults
 - `useMapState` — viewport ↔ URL, history push only on genuine user changes
-- `useTimeline` — year filter; PMTiles filter on GPU, WFS filters client-side
+- `useTimeline` — year filter; PMTiles filter on GPU via `setFilter`
 - `useScrollytelling` / story — the `/` landing scrollytelling map
   (`src/lib/story/`) is a deliberately separate, deterministic layer setup;
   it shares constants with the registry via audits, not imports. Do not

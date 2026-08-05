@@ -159,17 +159,15 @@ describe("Check 5: Opacity visibility", () => {
           it(`is visible (opacity >= ${OPACITY_THRESHOLD}) at z${zoom}`, () => {
             const opacity = getEffectiveOpacity(layer, zoom);
 
-            // If we can't evaluate the expression, warn but don't fail
-            if (opacity === null) {
-              console.warn(
-                `[opacity-audit] layer "${layer.id}": could not evaluate opacity at z${zoom}`
-              );
-              return;
-            }
-
             expect(
               opacity,
-              `layer "${layer.id}" has opacity ${opacity.toFixed(3)} at z${zoom} ` +
+              `layer "${layer.id}": could not evaluate opacity expression at z${zoom} — ` +
+                "add the expression shape to evaluateZoomInterpolation or the invariant is unenforced"
+            ).not.toBeNull();
+
+            expect(
+              opacity!,
+              `layer "${layer.id}" has opacity ${opacity!.toFixed(3)} at z${zoom} ` +
                 `(below threshold of ${OPACITY_THRESHOLD})`
             ).toBeGreaterThanOrEqual(OPACITY_THRESHOLD);
           });

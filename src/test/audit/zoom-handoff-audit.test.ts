@@ -171,30 +171,16 @@ describe("Check 6: Zoom handoff continuity", () => {
     }
   });
 
-  it("documents the forest-age PMTiles dead zone (known expected condition)", () => {
-    /**
-     * The forest-age PMTiles file has minzoom=maxzoom=11 in its tile metadata
-     * (from tippecanoe's --minimum-zoom and --maximum-zoom settings).
-     * This means tiles only exist at zoom 11 within the PMTiles archive.
-     *
-     * The registry configuration (tileSource.maxZoom = 10) means MapLibre
-     * requests tiles at z0-z10, but the actual tile data is only at z11.
-     * This is a known data artifact from the tile build process.
-     *
-     * Impact: at z0-z10, PMTiles requests may return empty (no tiles at those
-     * zoom levels in the archive). The raster overview covers z4-z10, so
-     * in practice the dead zone is masked by the raster tier.
-     *
-     * This test documents the expectation rather than detecting it at runtime
-     * (runtime detection requires reading the PMTiles file, which is Part A).
-     */
+  it("forest-age raster overview hands off to PMTiles without a gap", () => {
     const forestAge = LAYER_REGISTRY.find((l) => l.id === "forest-age");
     expect(forestAge).toBeDefined();
     expect(forestAge!.rasterOverview).toBeDefined();
-    // The raster overview should cover the range where PMTiles has no data
-    expect(forestAge!.rasterOverview!.minZoom).toBeLessThanOrEqual(
-      forestAge!.tileSource!.maxZoom
-    );
+    expect(forestAge!.tileSource).toBeDefined();
+    expect(
+      forestAge!.rasterOverview!.maxZoom + 1,
+      "raster overview maxZoom+1 should equal or overlap with the PMTiles " +
+        "vector render start — a gap means empty tiles at that zoom"
+    ).toBeLessThanOrEqual(forestAge!.tileSource!.maxZoom);
   });
 
   describe("zoom range consistency", () => {

@@ -32,7 +32,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
-import { STORY_LAYER_IDS, STORY_SOURCE_IDS } from "@/lib/story/setup-layers";
+import { STORY_LAYER_IDS, STORY_SOURCE_IDS, YEAR_OVERLAY_RANGE, FIRE_OVERLAY_RANGE } from "@/lib/story/setup-layers";
 import { CHAPTERS } from "@/data/chapters";
 
 // ── Read setup-layers.ts source to extract hardcoded values ───────────────────
@@ -189,6 +189,23 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
     it("has at least 2 chapters with layers defined", () => {
       const chaptersWithLayers = CHAPTERS.filter((c) => c.layers.length > 0);
       expect(chaptersWithLayers.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe("story overlay ranges match registry timeline ranges", () => {
+    const cutblocks = LAYER_REGISTRY.find((l) => l.id === "cutblocks");
+    const fireHistory = LAYER_REGISTRY.find((l) => l.id === "fire-history");
+
+    it("YEAR_OVERLAY_RANGE matches cutblocks.timelineRange", () => {
+      expect(cutblocks?.timelineRange).toBeDefined();
+      expect(YEAR_OVERLAY_RANGE.start).toBe(cutblocks!.timelineRange![0]);
+      expect(YEAR_OVERLAY_RANGE.end).toBe(cutblocks!.timelineRange![1]);
+    });
+
+    it("FIRE_OVERLAY_RANGE matches fire-history.timelineRange", () => {
+      expect(fireHistory?.timelineRange).toBeDefined();
+      expect(FIRE_OVERLAY_RANGE.start).toBe(fireHistory!.timelineRange![0]);
+      expect(FIRE_OVERLAY_RANGE.end).toBe(fireHistory!.timelineRange![1]);
     });
   });
 });
