@@ -110,7 +110,6 @@ export function findSatelliteAnchor(
  * Exported for unit testing.
  */
 import { getFirstSymbolId } from "@/lib/map/layer-utils";
-export { getFirstSymbolId };
 
 function SatelliteLayers({
   layer,

@@ -4,7 +4,6 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import Map, { type MapRef, AttributionControl } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLES } from "@/lib/mapConfig";
-import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import type { ChapterCamera, ChapterLayer } from "@/data/chapters";
 import { setupStoryLayers, OVERLAY_SOURCES } from "@/lib/story/setup-layers";
 import { applyLayerVisibility } from "@/lib/story/visibility";
@@ -17,7 +16,6 @@ import {
 import type { ResolvedOverlay } from "@/hooks/useScrollytelling";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 
-initPMTiles();
 registerBinaryTileProtocol();
 
 interface StoryMapProps {

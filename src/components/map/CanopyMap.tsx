@@ -170,9 +170,6 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
               case "line":
                 ids.push(`layer-${l.id}-tiles-line`);
                 break;
-              case "circle":
-                ids.push(`layer-${l.id}-tiles-circle`);
-                break;
             }
           }
           return ids;
