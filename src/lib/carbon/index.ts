@@ -3,7 +3,6 @@ export {
   calculateSelectionStats,
   calculateEquivalences,
   calculateFinancialValue,
-  roundToSigFigs,
   presentCo2Tonnes,
   presentDollars,
 } from "./calculator";

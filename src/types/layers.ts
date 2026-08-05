@@ -10,15 +10,13 @@ export type LayerCategory =
 
 /** Source configuration for a layer */
 export interface LayerSource {
-  type: "wfs" | "static" | "tiles" | "raster";
+  type: "wfs" | "raster";
   /** WFS endpoint or tile URL template */
   url?: string;
   /** WFS type name (e.g. pub:WHSE_FOREST_VEGETATION.VEG_COMP_LYR_R1_POLY) */
   typeName?: string;
   /** Optional CQL filter for WFS requests */
   cqlFilter?: string;
-  /** Path to static GeoJSON for non-WFS sources */
-  staticData?: string;
   /** Data source attribution text */
   attribution?: string;
 }
