@@ -370,13 +370,17 @@ function PmtilesLayers({
                 "source-layer": sourceLayer,
                 minzoom,
                 maxzoom,
-                paint: {
-                  ...(layer.style.paint as Record<string, unknown>),
+                paint: pickDefinedPaint({
                   "line-opacity": visible
                     ? (layer.style.paint["line-opacity"] as number) ?? 0.8
                     : 0,
                   "line-opacity-transition": { duration: 300 },
-                } as maplibregl.LineLayerSpecification["paint"],
+                  "line-color": layer.style.paint["line-color"],
+                  "line-width": layer.style.paint["line-width"],
+                  "line-dasharray": layer.style.paint["line-dasharray"],
+                  "line-blur": layer.style.paint["line-blur"],
+                  "line-gap-width": layer.style.paint["line-gap-width"],
+                }) as maplibregl.LineLayerSpecification["paint"],
                 ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
               },
               firstSymbolId,
