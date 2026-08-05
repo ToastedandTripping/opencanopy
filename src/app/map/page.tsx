@@ -59,20 +59,7 @@ function logCalc(payload: Record<string, unknown>): void {
 
 // Injectable-matchMedia reduced-motion check for the timeline scheduler,
 // mirroring the pattern in useScrollytelling.ts (cached MediaQueryList,
-// keyed on window.matchMedia identity so a test that swaps the mock still
-// gets a fresh result). Kept local rather than shared -- useScrollytelling's
-// version isn't exported and this plan doesn't touch that file.
-let cachedTimelineMql: MediaQueryList | null = null;
-let cachedTimelineMatchMediaFn: typeof window.matchMedia | null = null;
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  if (cachedTimelineMql === null || cachedTimelineMatchMediaFn !== window.matchMedia) {
-    cachedTimelineMatchMediaFn = window.matchMedia;
-    cachedTimelineMql = window.matchMedia("(prefers-reduced-motion: reduce)");
-  }
-  return cachedTimelineMql.matches;
-}
+import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
 
 export default function Home() {
   const mapRef = useRef<MapRef>(null);

@@ -3,10 +3,7 @@
 import { useMemo } from "react";
 import { Source, Layer } from "react-map-gl/maplibre";
 
-const EMPTY_FC: GeoJSON.FeatureCollection = {
-  type: "FeatureCollection",
-  features: [],
-};
+import { EMPTY_FC } from "@/lib/map/empty-fc";
 
 interface WatershedOverlayProps {
   /** The watershed polygon feature to render, or null to hide */

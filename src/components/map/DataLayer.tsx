@@ -41,10 +41,7 @@ const CLASS_LABEL_MAP: Record<string, string> = {
 /** Canonical class slugs for per-class raster tile sources. */
 const CLASS_NAMES = ["old-growth", "mature", "harvested", "young"];
 
-const EMPTY_FC: GeoJSON.FeatureCollection = {
-  type: "FeatureCollection",
-  features: [],
-};
+import { EMPTY_FC } from "@/lib/map/empty-fc";
 
 // ── Imperative Raster (Satellite) Layer Manager ─────────────────────────────
 //
@@ -112,11 +109,8 @@ export function findSatelliteAnchor(
  *
  * Exported for unit testing.
  */
-export function getFirstSymbolId(
-  layers: { id: string; type: string }[],
-): string | undefined {
-  return layers.find((l) => l.type === "symbol")?.id;
-}
+import { getFirstSymbolId } from "@/lib/map/layer-utils";
+export { getFirstSymbolId };
 
 function SatelliteLayers({
   layer,
@@ -278,10 +272,7 @@ function PmtilesLayers({
         const maxzoom = 22;
         const minzoom = tileMinZoom ?? 0;
 
-        // Bug 4 fix: insert data layers below basemap labels
-        const firstSymbolId = mapInstance.getStyle().layers.find(
-          (l: maplibregl.LayerSpecification) => l.type === "symbol"
-        )?.id;
+        const firstSymbolId = getFirstSymbolId(mapInstance.getStyle().layers);
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-tiles-fill`)) {
@@ -660,10 +651,7 @@ function WfsLayers({
       if (cancelled) return;
 
       try {
-        // Insert data layers below first basemap symbol
-        const firstSymbolId = mapInstance.getStyle().layers.find(
-          (l: maplibregl.LayerSpecification) => l.type === "symbol"
-        )?.id;
+        const firstSymbolId = getFirstSymbolId(mapInstance.getStyle().layers);
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-fill`)) {

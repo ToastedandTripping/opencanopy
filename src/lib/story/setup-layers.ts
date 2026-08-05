@@ -11,6 +11,7 @@
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { BINARY_TILE_URL } from "@/lib/story/tile-manifest";
 import { TERRAIN_SOURCE } from "@/lib/mapConfig";
+import { getFirstSymbolId } from "@/lib/map/layer-utils";
 
 /** Overlay image bounds: [west, south, east, north] matching build-year-overlays.py BC_BOUNDS */
 export const OVERLAY_BOUNDS: [number, number, number, number] = [-139.5, 48.0, -114.0, 60.5];
@@ -113,10 +114,7 @@ export interface MapLike {
  * All layers start at opacity 0 so the visibility lifecycle can control them.
  */
 export function setupStoryLayers(map: MapLike): void {
-  // Find the first symbol layer to insert data layers below it
-  const firstSymbolId = map.getStyle().layers.find(
-    (l) => l.type === "symbol"
-  )?.id;
+  const firstSymbolId = getFirstSymbolId(map.getStyle().layers);
 
   pipelineLog("onLoad", "registering sources", {
     firstSymbolId,

@@ -21,10 +21,7 @@ interface DrawToolProps {
   onSelectionChange: (selection: SelectionBBox | null) => void;
 }
 
-const EMPTY_FC: GeoJSON.FeatureCollection = {
-  type: "FeatureCollection",
-  features: [],
-};
+import { EMPTY_FC } from "@/lib/map/empty-fc";
 
 /** Build a GeoJSON polygon from two corner points (lng/lat). Exported for
  *  the "Select visible area" keyboard entry point (page.tsx, B3) -- reuses
