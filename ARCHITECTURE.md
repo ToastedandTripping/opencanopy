@@ -28,9 +28,17 @@ renderer needs:
 - `style` — MapLibre paint, `zoomRange`, legend items, interactivity
 
 Components never special-case a layer id; they interpret the config.
+Only 7 of 18 registry entries are publicly available at runtime
+(`PUBLIC_LAYER_IDS` → `LAYER_REGISTRY_AVAILABLE`); the remaining 11 are
+gated — they exist in the full registry for audit coverage and can be
+re-enabled by adding their id to the public set.
+
 The proxy keeps a mirrored per-layer config (`LAYER_CONFIG` in
 `netlify/edge-functions/wfs-proxy.ts`); `proxy-consistency-audit` guards the
-mirror against drift.
+mirror against drift. Three proxy entries have no registry counterpart
+(`watershed-boundaries` for watershed selection, `operating-territories` and
+`planned-cutblocks` for future layers) — the audit documents these as
+informational orphans.
 
 URL single source of truth: `src/lib/r2-config.ts` (R2 origin, raster URL
 template). Never inline an R2 URL elsewhere.
@@ -110,6 +118,9 @@ Four hooks own UI state; URL is the shareable source of truth:
   (`src/lib/story/`) is a deliberately separate, deterministic layer setup;
   it shares constants with the registry via audits, not imports. Do not
   merge the two paths (decided 2026-06-02).
+- `useWatershedSelection` — watershed click/selection lifecycle
+- `useDeviceCapability` — device performance detection (SSR-safe lazy init)
+- `useDialogA11y` — dialog focus management (focus-in, restore, Tab trap)
 
 Presets (`src/lib/layers/presets.ts`) are named layer combinations the map
 shell activates.
@@ -131,7 +142,7 @@ fidelity). Output ships to R2 under versioned dirs (`raster/v2/...`):
 upload new dirs, flip the client URL in `r2-config.ts`, keep old dirs one
 verified release.
 
-Quality net: the 7-audit suite (`scripts/audit-*.ts`, `npm run audit:all`)
+Quality net: the 11-audit suite (`scripts/audit-*.ts`, `npm run audit:all`)
 traces source→tile fidelity, geometry precision, spatial/temporal/cross-source
 consistency; `e2e/` adds screenshot regression and live monitoring.
 
@@ -140,11 +151,13 @@ consistency; `e2e/` adds screenshot regression and live monitoring.
 ```
 src/app/            routes (map shell at /map, story at /, privacy, OG images)
 src/components/     map/ (CanopyMap, DataLayer, legend, popup, draw, timeline)
-                    panels/ (layers, calculator, hotspots), story/, ui/
+                    panels/ (layers, calculator, hotspots), story/, landing/, ui/
 src/hooks/          state hooks + useDragDismiss
 src/lib/            layers/ (registry, presets), data/ (wfs-client), story/,
                     carbon/ (calculator — must match METHODOLOGY.md exactly),
-                    timeline/, export/, debug/, r2-config
+                    timeline/, export/, debug/, r2-config, mapConfig,
+                    a11y/ (reduced-motion), map/ (shared GeoJSON/layer utils),
+                    keyboard/ (map shortcuts), math/ (interpolation), react/ (merge-refs)
 src/test/           unit + audit suites (vitest), mocks/maplibre
 netlify/            edge functions (wfs-proxy)
 scripts/            pipeline v2, raster builder, audit suite
