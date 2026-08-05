@@ -93,6 +93,7 @@ export function StoryMap({
       mapLoaded,
     });
     applyLayerVisibility(map, layers, revealBinary);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- yearFilter intentionally excluded: this effect drives layer visibility, not filtering (yearFilter only appears in the debug log)
   }, [layers, mapLoaded, revealBinary]);
 
   // Province-scale image overlays (cutblock red + wildfire amber).

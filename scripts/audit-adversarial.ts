@@ -26,7 +26,7 @@
 
 import { mkdirSync } from "fs";
 import path from "path";
-import { AuditResult, printResults, saveResults } from "./lib/audit-types";
+import { AuditResult, printResults } from "./lib/audit-types";
 import {
   PATHS,
   ZOOMS,
@@ -140,7 +140,7 @@ async function checkV2PropertyValue(
   }
 
   // Check if any feature has the expected property value
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const matchingFeature = features.find((f: any) => {
     const val = f.properties?.[point.propertyKey!];
     return matchesExpected(val, point.expectedValue);
@@ -148,7 +148,7 @@ async function checkV2PropertyValue(
 
   if (!matchingFeature) {
     // Collect sample values for diagnostics
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const sampleValues = features.slice(0, 5).map((f: any) => f.properties?.[point.propertyKey!]);
     const expectedDesc =
       point.expectedValue instanceof RegExp
@@ -299,7 +299,7 @@ async function checkV4OldGrowthPostFire(
 
   if (!forestResult.tileExists || !fireResult.tileExists) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const recentFires = fireResult.features.filter((f: any) => {
     const year = Number(f.properties?.FIRE_YEAR);
     return !isNaN(year) && year >= 2000;
@@ -310,7 +310,7 @@ async function checkV4OldGrowthPostFire(
   const totalForest = forestResult.features.length;
   if (totalForest === 0) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const matureOrOldGrowth = forestResult.features.filter((f: any) => {
     const ageClass = String(f.properties?.class ?? "").toLowerCase();
     return ageClass === "old-growth" || ageClass === "mature";

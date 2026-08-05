@@ -451,6 +451,7 @@ function PmtilesLayers({
       }
       // Don't remove layers on unmount -- they persist across re-renders
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onError/tileMinZoom/visible intentionally excluded: including them would teardown+recreate MapLibre sources on every prop change
   }, [map, layer.id, layer.tileSource, layer.style]);
 
   // Update visibility reactively
@@ -885,6 +886,7 @@ function WfsLayers({
         mapInstance.removeSource(sourceId);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- layer/visible excluded: source lifecycle depends only on layer.id+style.type, not visibility or full layer object
   }, [map, layer.id, layer.style.type, layer.source.attribution, wfsMinZoom]);
 
   // 2. Data update: push new GeoJSON data on viewport/timeline changes
@@ -1232,6 +1234,7 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
         setLayerLoading(layer.id, false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- layer.fetchPriority excluded: changing priority should not re-trigger the fetch effect
   }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, hasTileSource, setLayerLoading, setLayerStatus]);
 
   // Clear status on unmount so disabled layers don't pollute the status map

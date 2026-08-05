@@ -32,7 +32,7 @@ function roundCoord(v: number): number {
  * Recursively round all numeric coordinate values in a GeoJSON coordinates
  * structure (handles Point / LineString / Polygon / Multi* types).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function roundCoordinates(coords: unknown): unknown {
   if (typeof coords === "number") return roundCoord(coords);
   if (Array.isArray(coords)) return coords.map(roundCoordinates);

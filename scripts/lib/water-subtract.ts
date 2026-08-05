@@ -19,29 +19,29 @@
 import { createReadStream, createWriteStream, existsSync } from "fs";
 import { createInterface } from "readline";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const turfDifference = require("@turf/difference");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const turfArea = require("@turf/area");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const turfBbox = require("@turf/bbox");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const turfHelpers = require("@turf/helpers");
 
 // Resolve compat shims for default vs named exports (turf v7 pattern)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const difference: (fc: any) => any =
   turfDifference.difference ?? turfDifference.default ?? turfDifference;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const area: (f: any) => number =
   turfArea.area ?? turfArea.default ?? turfArea;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const bbox: (f: any) => [number, number, number, number] =
   turfBbox.bbox ?? turfBbox.default ?? turfBbox;
 const featureCollection: (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   features: any[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
 ) => any =
   turfHelpers.featureCollection ?? turfHelpers.default?.featureCollection;
 // ── Fast point-in-polygon (ray casting) ──────────────────────────────────────
@@ -132,10 +132,6 @@ interface GridIndex {
   cells: Map<string, number[]>; // "lon_lat" → lake indices
   lakes: GeoJSONPolygon[];
   lakeBboxes: Bbox4[];
-}
-
-function cellKey(lon: number, lat: number): string {
-  return `${Math.floor(lon * GRID_SCALE)}_${Math.floor(lat * GRID_SCALE)}`;
 }
 
 function buildGridIndex(lakes: GeoJSONPolygon[], lakeBboxes: Bbox4[]): GridIndex {
@@ -251,7 +247,7 @@ async function loadLakes(lakesPath: string): Promise<GeoJSONPolygon[]> {
  * to individual features.
  */
 export async function createWaterSubtractor(lakesPath: string): Promise<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   subtract: (feature: any) => any | null;
   stats: () => WaterSubtractResult;
 }> {
@@ -294,7 +290,7 @@ export async function createWaterSubtractor(lakesPath: string): Promise<{
     failed: 0,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   function subtract(feature: any): any | null {
     result.total++;
 
@@ -317,7 +313,7 @@ export async function createWaterSubtractor(lakesPath: string): Promise<{
     }
 
     result.intersected++;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let current: any = feature;
     let modified = false;
     let failedForThisFeature = false;
@@ -448,7 +444,7 @@ export async function subtractWaterFromNdjson(
       continue;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const result = subtract(feature as any);
     if (result !== null) {
       writeBuf.push(JSON.stringify(result));

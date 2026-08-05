@@ -8,16 +8,16 @@
  */
 
 import { gunzipSync } from "zlib";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const VectorTileLib = require("@mapbox/vector-tile");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const PbfLib = require("pbf");
 
 // @mapbox/vector-tile uses CommonJS exports
 const { VectorTile } = VectorTileLib;
 
 // pbf is transpiled ESM -- use .default if available
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const Pbf: new (buf: Uint8Array) => unknown = (PbfLib as any).default ?? PbfLib;
 
 // Magic bytes for gzip

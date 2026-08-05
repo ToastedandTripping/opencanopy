@@ -54,6 +54,7 @@ export function HeroSection() {
         ref={setRef(0)}
         className="hero-beat hero-visible relative min-h-[100dvh] flex items-center justify-center px-6 overflow-hidden"
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- static export with images.unoptimized: next/image adds wrapper markup with no benefit */}
         <img
           src="/images/story/old-growth-canopy.webp"
           alt="Looking up into an old-growth canopy, moss-covered branches and a red cedar trunk"
@@ -97,6 +98,7 @@ export function HeroSection() {
         {/* Decorative fog texture — heavily dimmed so the loss figure stays the
             focal point; an offset crop of the Beat-3 fog so it reads as the fog
             emerging rather than a repeat. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- static export with images.unoptimized */}
         <img
           src="/images/story/hero-fog.webp"
           alt=""

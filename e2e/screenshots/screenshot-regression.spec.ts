@@ -13,7 +13,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { join } from 'path';
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync } from 'fs';
 import {
   compareScreenshots,
   loadBaseline,
@@ -21,7 +21,6 @@ import {
 } from '../../scripts/lib/screenshot-utils';
 import {
   SCREENSHOT_VIEWPORTS,
-  BC_SAMPLE_POINTS,
   EXPECTED_SOURCE_LAYERS,
   SOURCE_TO_MAPLIBRE,
 } from '../../scripts/lib/bc-sample-grid';
@@ -187,7 +186,7 @@ test.describe('Screenshot Regression — 12 layer isolation at BC center', () =>
 
       const featureCount = await page.evaluate(
         (layer: string) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           const map = (window as any).__opencanopy_map;
           if (!map || typeof map.queryRenderedFeatures !== 'function') return -1;
           if (!map.getLayer(layer)) return -2;

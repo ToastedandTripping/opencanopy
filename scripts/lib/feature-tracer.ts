@@ -19,8 +19,6 @@ import type { GeoJSON } from "geojson";
 import { latLonToTile } from "./tile-math";
 import { parseTile, getLayerFeatures } from "./mvt-reader";
 import {
-  propsMatch as _propsMatch,
-  fingerprintScore as _fingerprintScore,
   buildPropertyComparison as _buildPropertyComparison,
   findBestCandidate as _findBestCandidate,
 } from "./feature-matcher";
@@ -49,7 +47,7 @@ function extractFirstCoord(
 ): [number, number] | null {
   if (!geometry) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const coords = (geometry as any).coordinates;
   if (!coords) return null;
 
@@ -123,8 +121,6 @@ async function fetchTile(
 }
 
 // Delegate to feature-matcher.ts — single source of truth for matching logic
-const propsMatch = _propsMatch;
-const fingerprintScore = _fingerprintScore;
 const buildPropertyComparison = _buildPropertyComparison;
 const findBestCandidate = _findBestCandidate;
 const MATCH_THRESHOLD = THRESHOLDS.matchThreshold;

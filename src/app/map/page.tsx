@@ -336,6 +336,7 @@ export default function Home() {
     if (timeline.enabled && !timelineEligible) {
       timeline.disable();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- timeline object identity changes every render; listing .enabled and .disable is more correct
   }, [timelineEligible, timeline.enabled, timeline.disable]);
 
   const showTimelineButton = timelineEligible;
@@ -402,6 +403,7 @@ export default function Home() {
       let next: string[];
       if (isEnabled && current.length === 1) {
         // Last class toggled off -- reset to show all
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructuring to remove a key
         const { [layerId]: _, ...rest } = prev;
         return rest;
       } else if (isEnabled) {
