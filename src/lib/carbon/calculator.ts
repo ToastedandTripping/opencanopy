@@ -105,7 +105,7 @@ export function calculateFeatureCarbon(
 
   // 5. Carbon density calculation
   const density = CARBON_DENSITY[species] ?? CARBON_DENSITY.DEFAULT;
-  const effectiveAge = age ?? 0;
+  const effectiveAge = Math.max(0, age ?? 0);
   const carbonPerHa =
     density.max * (1 - Math.exp(-density.k * effectiveAge));
   const carbonTonnes = carbonPerHa * areaHa;
