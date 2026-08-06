@@ -8,25 +8,9 @@
  * to keep in the output NDJSON, or null to skip the feature entirely.
  */
 
-// -- Company lookup (mirrors wfs-proxy.ts) ------------------------------------
+// -- Company lookup (SSOT: src/data/companies.ts) ----------------------------
 
-export const COMPANY_MAP: Record<string, string> = {
-  "00001271": "canfor",
-  "00142662": "west-fraser",
-  "00147603": "tolko",
-  "00002176": "interfor",
-  "00149081": "western-forest-products",
-  "00109260": "bc-timber-sales",
-  "00160953": "mosaic",
-  "00000230": "weyerhaeuser",
-  "00007629": "teal-jones",
-  "00148968": "san-group",
-  "00155498": "conifex",
-  "00001701": "dunkley",
-  "00001297": "carrier",
-  "00003248": "gorman",
-  "00166320": "canoe-forest",
-};
+import { lookupCompany } from "../../src/data/companies";
 
 // -- Per-layer property extractors --------------------------------------------
 
@@ -35,9 +19,8 @@ export type PropertyExtractor = (
 ) => Record<string, unknown> | null;
 
 export const extractTenureCutblocks: PropertyExtractor = (props) => {
-  const clientNum = String(props.CLIENT_NUMBER ?? "").padStart(8, "0");
   return {
-    company_id: COMPANY_MAP[clientNum] ?? "other",
+    company_id: lookupCompany(String(props.CLIENT_NUMBER ?? "")),
     DISTURBANCE_START_DATE: props.DISTURBANCE_START_DATE != null && String(props.DISTURBANCE_START_DATE) !== "null"
       ? String(props.DISTURBANCE_START_DATE)
       : null,

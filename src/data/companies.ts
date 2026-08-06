@@ -56,6 +56,27 @@ export const PRESENT_COMPANIES = COMPANY_REGISTRY.filter((c) => c.present);
 /** Gray swatch used for unlisted licensees ("other" / not-yet-mapped). */
 export const OTHER_COMPANY_COLOR = "#6b7280";
 
+// ── Client number → slug lookup ────────────────────────────────────────
+// Canonical mapping from zero-padded CLIENT_NUMBER to company slug.
+// The proxy and extractors keep local copies; consistency tests guard them.
+
+const SLUG_BY_CLIENT_NUMBER = new Map<string, string>();
+for (const c of COMPANY_REGISTRY) {
+  for (const cn of c.clientNumbers) {
+    SLUG_BY_CLIENT_NUMBER.set(cn, c.id);
+  }
+}
+
+/**
+ * Look up a company slug from a CLIENT_NUMBER value.
+ * Handles zero-padding internally — callers can pass raw or padded values.
+ * Returns "other" for unknown client numbers.
+ */
+export function lookupCompany(clientNumber: string): string {
+  const padded = clientNumber.padStart(8, "0");
+  return SLUG_BY_CLIENT_NUMBER.get(padded) ?? "other";
+}
+
 const DISPLAY_NAME_BY_ID = new Map(
   COMPANY_REGISTRY.map((c) => [c.id, c.displayName])
 );

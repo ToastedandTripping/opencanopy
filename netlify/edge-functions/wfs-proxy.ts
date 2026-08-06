@@ -729,14 +729,14 @@ export default async function handler(
       // Tenure-cutblocks: resolve company from CLIENT_NUMBER
       if (layerId === "tenure-cutblocks" || layerId === "cutblocks") {
         const props = feature.properties as Record<string, unknown>;
-        const cn = String(props.CLIENT_NUMBER ?? "");
+        const cn = String(props.CLIENT_NUMBER ?? "").padStart(8, "0");
         props.company_id = COMPANY_MAP[cn] ?? "other";
       }
 
       // Operating territories: resolve company from CLIENT_NUMBER1
       if (layerId === "operating-territories") {
         const props = feature.properties as Record<string, unknown>;
-        const cn = String(props.CLIENT_NUMBER1 ?? "");
+        const cn = String(props.CLIENT_NUMBER1 ?? "").padStart(8, "0");
         props.company_id = COMPANY_MAP[cn] ?? "other";
       }
 

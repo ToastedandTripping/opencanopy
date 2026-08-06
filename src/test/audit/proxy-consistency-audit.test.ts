@@ -495,22 +495,9 @@ describe("Check 10: Company Map Consistency", () => {
     }
   });
 
-  it("extractors COMPANY_MAP entries match src/data/companies.ts", () => {
-    const extractorMap = parseCompanyMap(extractorsSource);
-    expect(extractorMap.size).toBeGreaterThan(0);
-    for (const [clientNum, slug] of extractorMap) {
-      expect(
-        canonical.get(clientNum),
-        `Extractors maps CLIENT_NUMBER "${clientNum}" → "${slug}" but companies.ts ` +
-          `maps it to "${canonical.get(clientNum) ?? "(missing)"}"`
-      ).toBe(slug);
-    }
-    for (const [clientNum, slug] of canonical) {
-      expect(
-        extractorMap.get(clientNum),
-        `companies.ts maps CLIENT_NUMBER "${clientNum}" → "${slug}" but ` +
-          `extractors COMPANY_MAP is missing this entry`
-      ).toBe(slug);
-    }
+  it("extractors imports lookupCompany from src/data/companies.ts (no local copy)", () => {
+    // Extractors should import from companies.ts, not maintain a local COMPANY_MAP
+    expect(extractorsSource).toContain("lookupCompany");
+    expect(extractorsSource).not.toMatch(/^export const COMPANY_MAP/m);
   });
 });
