@@ -81,7 +81,7 @@ describe("fetchForestAgeForSelection", () => {
     await expect(
       fetchForestAgeForSelection(BBOX, { signal: new AbortController().signal })
     ).rejects.toMatchObject({
-      name: "ForestCarbonFetchError",
+      name: "DataFetchError",
       kind: "rate-limit",
       retryAfterSeconds: 23,
     });
@@ -91,7 +91,7 @@ describe("fetchForestAgeForSelection", () => {
     mockFetchOnce({ ok: false, status: 502 });
     await expect(
       fetchForestAgeForSelection(BBOX, { signal: new AbortController().signal })
-    ).rejects.toMatchObject({ name: "ForestCarbonFetchError", kind: "http" });
+    ).rejects.toMatchObject({ name: "DataFetchError", kind: "http" });
   });
 
   it("a genuine network failure (not caused by the timeout or caller abort) is classified as 'network', not 'timeout'", async () => {
@@ -99,7 +99,7 @@ describe("fetchForestAgeForSelection", () => {
     vi.stubGlobal("fetch", fetchMock);
     await expect(
       fetchForestAgeForSelection(BBOX, { signal: new AbortController().signal })
-    ).rejects.toMatchObject({ name: "ForestCarbonFetchError", kind: "network" });
+    ).rejects.toMatchObject({ name: "DataFetchError", kind: "network" });
   });
 
   it("caller-initiated abort (a newer selection superseding this one) rethrows AbortError untouched, not a ForestCarbonFetchError", async () => {
@@ -135,7 +135,7 @@ describe("fetchForestAgeForSelection", () => {
     const controller = new AbortController();
     const pending = fetchForestAgeForSelection(BBOX, { signal: controller.signal });
     const assertion = expect(pending).rejects.toMatchObject({
-      name: "ForestCarbonFetchError",
+      name: "DataFetchError",
       kind: "timeout",
     });
     await vi.advanceTimersByTimeAsync(20_000);
@@ -177,7 +177,7 @@ describe("fetchForestAgeForSelection", () => {
     const controller = new AbortController();
     const pending = fetchForestAgeForSelection(BBOX, { signal: controller.signal });
     const assertion = expect(pending).rejects.toMatchObject({
-      name: "ForestCarbonFetchError",
+      name: "DataFetchError",
       kind: "timeout",
     });
     await vi.advanceTimersByTimeAsync(20_000);

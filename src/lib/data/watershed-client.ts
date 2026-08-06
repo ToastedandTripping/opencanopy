@@ -13,19 +13,10 @@ export interface WatershedInfo {
   polygon: GeoJSON.Feature;
 }
 
-/**
- * Thrown for genuine server/network failure (D3, honest failure states) --
- * distinct from a resolved-but-empty result, which means "no watershed
- * here" (e.g. an ocean click) and is NOT an error. Previously both
- * collapsed to the same `null` return, so a 502 and an ocean click were
- * indistinguishable to the caller and both failed silently.
- */
-export class WatershedFetchError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "WatershedFetchError";
-  }
-}
+import { DataFetchError } from "./fetch-errors";
+
+/** @deprecated Use DataFetchError directly. Kept as a re-export for backward compat. */
+export const WatershedFetchError = DataFetchError;
 
 /**
  * Fetch the watershed boundary that contains the given point.
@@ -42,18 +33,18 @@ export async function fetchWatershedAtPoint(
   try {
     res = await fetch(`/api/wfs?layer=watershed-boundaries&point=${lng},${lat}`);
   } catch {
-    throw new WatershedFetchError("Network error");
+    throw new DataFetchError("network", "Network error");
   }
 
   if (!res.ok) {
-    throw new WatershedFetchError(`HTTP ${res.status}`);
+    throw new DataFetchError("http", `HTTP ${res.status}`);
   }
 
   let fc: GeoJSON.FeatureCollection;
   try {
     fc = (await res.json()) as GeoJSON.FeatureCollection;
   } catch {
-    throw new WatershedFetchError("Invalid response from data source");
+    throw new DataFetchError("http", "Invalid response from data source");
   }
   if (!fc.features?.length) return null;
 
