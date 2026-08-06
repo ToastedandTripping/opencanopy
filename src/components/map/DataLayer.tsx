@@ -1141,7 +1141,16 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
     // D10 fix: tile-backed layers use PMTiles at all zooms; the supplemental
     // WFS render path was dead code (WfsLayers was not mounted for these layers).
     // Skip the fetch entirely — behavior-neutral by construction.
-    if (!map || !visible || layer.source.type !== "wfs" || hasTileSource) return;
+    if (!map || layer.source.type !== "wfs" || hasTileSource) return;
+
+    // When toggled off, clear any stale status (error/empty/zoom) so StatusToast
+    // doesn't keep showing an indicator for a disabled layer. DataLayer never
+    // unmounts (CanopyMap always-mounts all layers), so unmount cleanup alone
+    // is insufficient.
+    if (!visible) {
+      clearLayerStatus(layer.id);
+      return;
+    }
 
     const bounds = map.getBounds();
     if (!bounds) return;
@@ -1232,7 +1241,7 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- layer.fetchPriority excluded: changing priority should not re-trigger the fetch effect
-  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, hasTileSource, setLayerLoading, setLayerStatus]);
+  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, hasTileSource, setLayerLoading, setLayerStatus, clearLayerStatus]);
 
   // Clear status on unmount so disabled layers don't pollute the status map
   useEffect(() => {
