@@ -15,6 +15,7 @@
 
 import type maplibregl from "maplibre-gl";
 import type { LayerDefinition } from "@/types/layers";
+import { PMTILES_SOURCE_ID } from "@/lib/layers/registry";
 
 type PipelineStage =
   | "onLoad"
@@ -133,11 +134,10 @@ export function pipelineHealthReport(
     const enabled = enabledLayers.includes(layer.id);
     const errors: string[] = [];
 
-    // PMTiles check
+    // PMTiles check — all tile-backed layers share one source (PMTILES_SOURCE_ID)
     let pmtilesStatus = "-";
     if (layer.tileSource) {
-      const sourceId = `source-${layer.id}-tiles`;
-      const hasSource = !!map.getSource(sourceId);
+      const hasSource = !!map.getSource(PMTILES_SOURCE_ID);
       if (!hasSource) {
         pmtilesStatus = "no source";
         if (enabled) errors.push("PMTiles source missing");

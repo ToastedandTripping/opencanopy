@@ -183,7 +183,9 @@ export function useLayerState(): LayerStateReturn {
   const applyPreset = useCallback((presetId: string) => {
     const preset = LAYER_PRESETS.find((p) => p.id === presetId);
     if (!preset) return;
-    setEnabledLayers(preset.layers);
+    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
+    const filtered = preset.layers.filter((id) => validIds.has(id));
+    setEnabledLayers(deconflictExclusivePairs(filtered));
   }, []);
 
   const resetToDefaults = useCallback(() => {
