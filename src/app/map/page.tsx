@@ -389,7 +389,7 @@ export default function Home() {
         .filter((s): s is string => s !== undefined);
       if (allClasses.length === 0) return prev;
       const current = prev[layerId] ?? allClasses;
-      const isEnabled = current.includes(className);
+      const isEnabled = current.includes(classSlug);
       let next: string[];
       if (isEnabled && current.length === 1) {
         // Last class toggled off -- reset to show all
@@ -397,9 +397,9 @@ export default function Home() {
         const { [layerId]: _, ...rest } = prev;
         return rest;
       } else if (isEnabled) {
-        next = current.filter(c => c !== className);
+        next = current.filter(c => c !== classSlug);
       } else {
-        next = [...current, className];
+        next = [...current, classSlug];
       }
       return { ...prev, [layerId]: next };
     });
