@@ -101,7 +101,7 @@ describe("fetchLayerData", () => {
 
     const result = await resultPromise;
     expect(result).toBeInstanceOf(Error);
-    expect(result.message).toBe("Server Error");
+    expect((result as Error).message).toBe("Server Error");
   });
 
   // ── Debounce ─────────────────────────────────────────────────────
