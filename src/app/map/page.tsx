@@ -380,11 +380,14 @@ export default function Home() {
 
   // ── Class filter handler ───────────────────────────────────────────
 
-  const handleToggleClassFilter = useCallback((layerId: string, className: string) => {
+  const handleToggleClassFilter = useCallback((layerId: string, classSlug: string) => {
     setClassFilters(prev => {
       const layer = getLayer(layerId);
       if (!layer) return prev;
-      const allClasses = layer.legendItems.map(item => item.label);
+      const allClasses = layer.legendItems
+        .map(item => item.classSlug)
+        .filter((s): s is string => s !== undefined);
+      if (allClasses.length === 0) return prev;
       const current = prev[layerId] ?? allClasses;
       const isEnabled = current.includes(className);
       let next: string[];
