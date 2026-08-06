@@ -5,6 +5,7 @@ import { Source, Layer, useMap } from "react-map-gl/maplibre";
 import maplibregl, { GeoJSONSource, type FilterSpecification } from "maplibre-gl";
 import type { LayerDefinition, BBox } from "@/types/layers";
 import { fetchLayerData } from "@/lib/data/wfs-client";
+import { resolveWfsStatus, shouldSurfaceWfsLoading } from "@/lib/data/wfs-status";
 import { useLoadingContext } from "@/contexts/LoadingContext";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
@@ -248,6 +249,7 @@ function PmtilesLayers({
     const mapInstance = map.getMap();
     const sourceId = PMTILES_SOURCE_ID;
     let sourcedataHandler: ((e: maplibregl.MapSourceDataEvent) => void) | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     /** Register the shared vector tile source (idempotent). */
     function addSource() {
@@ -413,7 +415,7 @@ function PmtilesLayers({
       mapInstance.on("sourcedata", sourcedataHandler);
 
       // Timeout: if source doesn't load in 15s, report error status
-      const timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (sourcedataHandler) {
           mapInstance.off("sourcedata", sourcedataHandler);
           sourcedataHandler = null;
@@ -421,6 +423,7 @@ function PmtilesLayers({
           console.warn(`[OpenCanopy] PMTiles source for ${layer.id} failed to load within 15s`);
           onError?.(layer.id);
         }
+        timeoutId = null;
       }, 15_000);
     }
 
@@ -436,6 +439,7 @@ function PmtilesLayers({
         if (sourcedataHandler) {
           mapInstance.off("sourcedata", sourcedataHandler);
         }
+        if (timeoutId) clearTimeout(timeoutId);
       };
     }
 
@@ -443,6 +447,7 @@ function PmtilesLayers({
       if (sourcedataHandler) {
         mapInstance.off("sourcedata", sourcedataHandler);
       }
+      if (timeoutId) clearTimeout(timeoutId);
       // Don't remove layers on unmount -- they persist across re-renders
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onError/tileMinZoom/visible intentionally excluded: including them would teardown+recreate MapLibre sources on every prop change
@@ -1137,7 +1142,16 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
     // D10 fix: tile-backed layers use PMTiles at all zooms; the supplemental
     // WFS render path was dead code (WfsLayers was not mounted for these layers).
     // Skip the fetch entirely — behavior-neutral by construction.
-    if (!map || !visible || layer.source.type !== "wfs" || hasTileSource) return;
+    if (!map || layer.source.type !== "wfs" || hasTileSource) return;
+
+    // When toggled off, clear any stale status (error/empty/zoom) so StatusToast
+    // doesn't keep showing an indicator for a disabled layer. DataLayer never
+    // unmounts (CanopyMap always-mounts all layers), so unmount cleanup alone
+    // is insufficient.
+    if (!visible) {
+      clearLayerStatus(layer.id);
+      return;
+    }
 
     const bounds = map.getBounds();
     if (!bounds) return;
@@ -1206,27 +1220,27 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
       const elapsed = (performance.now() - fetchStart).toFixed(0);
       pipelineLog("wfs-data", layer.id, { features: fc.features.length, elapsed: elapsed + "ms" });
       // B.2: success path — distinguish ok vs empty (WFS-only layers only)
-      if (!hasTileSource) {
-        setLayerStatus(layer.id, fc.features.length > 0 ? "ok" : "empty");
-      }
+      const successStatus = resolveWfsStatus(hasTileSource, fc.features.length > 0 ? "ok" : "empty");
+      if (successStatus) setLayerStatus(layer.id, successStatus);
     } catch (err) {
+      // Abort is not an error — it means the fetch was superseded by a newer one
+      if (err instanceof DOMException && err.name === "AbortError") return;
       console.error(`Failed to load layer ${layer.id}:`, err);
       // B.2: error path — clear stale features so error doesn't masquerade as data
       setData(EMPTY_FC);
       // Only surface "error" status for WFS-only layers; tile-backed layers
       // still render via PMTiles so the WFS failure is not user-visible.
-      if (!hasTileSource) {
-        setLayerStatus(layer.id, "error");
-      }
+      const errorStatus = resolveWfsStatus(hasTileSource, "error");
+      if (errorStatus) setLayerStatus(layer.id, errorStatus);
     } finally {
       setLoading(false);
-      if (!hasTileSource) {
+      if (shouldSurfaceWfsLoading(hasTileSource)) {
         // Back-compat: only clears "loading" state, won't overwrite terminal status
         setLayerLoading(layer.id, false);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- layer.fetchPriority excluded: changing priority should not re-trigger the fetch effect
-  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, hasTileSource, setLayerLoading, setLayerStatus]);
+  }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, hasTileSource, setLayerLoading, setLayerStatus, clearLayerStatus]);
 
   // Clear status on unmount so disabled layers don't pollute the status map
   useEffect(() => {
