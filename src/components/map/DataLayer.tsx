@@ -5,6 +5,7 @@ import { Source, Layer, useMap } from "react-map-gl/maplibre";
 import maplibregl, { GeoJSONSource, type FilterSpecification } from "maplibre-gl";
 import type { LayerDefinition, BBox } from "@/types/layers";
 import { fetchLayerData } from "@/lib/data/wfs-client";
+import { resolveWfsStatus, shouldSurfaceWfsLoading } from "@/lib/data/wfs-status";
 import { useLoadingContext } from "@/contexts/LoadingContext";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
@@ -1219,9 +1220,8 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
       const elapsed = (performance.now() - fetchStart).toFixed(0);
       pipelineLog("wfs-data", layer.id, { features: fc.features.length, elapsed: elapsed + "ms" });
       // B.2: success path — distinguish ok vs empty (WFS-only layers only)
-      if (!hasTileSource) {
-        setLayerStatus(layer.id, fc.features.length > 0 ? "ok" : "empty");
-      }
+      const successStatus = resolveWfsStatus(hasTileSource, fc.features.length > 0 ? "ok" : "empty");
+      if (successStatus) setLayerStatus(layer.id, successStatus);
     } catch (err) {
       // Abort is not an error — it means the fetch was superseded by a newer one
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -1230,12 +1230,11 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
       setData(EMPTY_FC);
       // Only surface "error" status for WFS-only layers; tile-backed layers
       // still render via PMTiles so the WFS failure is not user-visible.
-      if (!hasTileSource) {
-        setLayerStatus(layer.id, "error");
-      }
+      const errorStatus = resolveWfsStatus(hasTileSource, "error");
+      if (errorStatus) setLayerStatus(layer.id, errorStatus);
     } finally {
       setLoading(false);
-      if (!hasTileSource) {
+      if (shouldSurfaceWfsLoading(hasTileSource)) {
         // Back-compat: only clears "loading" state, won't overwrite terminal status
         setLayerLoading(layer.id, false);
       }

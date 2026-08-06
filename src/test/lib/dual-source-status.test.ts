@@ -6,9 +6,9 @@
  * PMTiles with overzoom, so a supplemental WFS failure is not user-visible
  * and must NOT produce an error indicator.
  *
- * These tests validate the gating logic in DataLayer.tsx's loadData callback
- * by simulating the status-update paths directly via LoadingContext, mirroring
- * exactly what DataLayer does for each layer type.
+ * These tests validate the REAL gating functions (resolveWfsStatus,
+ * shouldSurfaceWfsLoading) extracted from DataLayer.tsx, then exercise them
+ * against LoadingContext to verify end-to-end status propagation.
  *
  * Tests:
  * 1. WFS-only layer: WFS error → status "error" (honest — no tile fallback)
@@ -25,78 +25,57 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import React from "react";
 import { LoadingProvider, useLoadingContext } from "@/contexts/LoadingContext";
+import { resolveWfsStatus, shouldSurfaceWfsLoading } from "@/lib/data/wfs-status";
+import type { WfsTerminalStatus } from "@/lib/data/wfs-status";
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(LoadingProvider, null, children);
 }
 
 /**
- * Simulates the loadData error path from DataLayer.tsx.
- * hasTileSource gates whether setLayerStatus("error") is called.
+ * Apply the real gating logic to set layer status + loading, mirroring
+ * exactly what DataLayer does. Uses the extracted shared functions —
+ * no re-implementation of the gating condition.
  */
-function simulateWfsError(
+function applyWfsOutcome(
   layerId: string,
   hasTileSource: boolean,
+  outcome: WfsTerminalStatus,
   setLayerStatus: (id: string, status: "error" | "empty" | "zoom" | "ok" | "loading") => void,
   setLayerLoading: (id: string, loading: boolean) => void,
 ) {
-  // WFS fetch fails
-  if (!hasTileSource) {
-    setLayerStatus(layerId, "error");
-  }
-  // setLayerLoading(false) is also gated on !hasTileSource in DataLayer
-  if (!hasTileSource) {
+  const status = resolveWfsStatus(hasTileSource, outcome);
+  if (status) setLayerStatus(layerId, status);
+  if (shouldSurfaceWfsLoading(hasTileSource)) {
     setLayerLoading(layerId, false);
   }
 }
 
-/**
- * Simulates the loadData success path for an empty FeatureCollection.
- */
-function simulateWfsEmpty(
-  layerId: string,
-  hasTileSource: boolean,
-  setLayerStatus: (id: string, status: "error" | "empty" | "zoom" | "ok" | "loading") => void,
-  setLayerLoading: (id: string, loading: boolean) => void,
-) {
-  if (!hasTileSource) {
-    setLayerStatus(layerId, "empty");
-    setLayerLoading(layerId, false);
-  }
-}
+describe("resolveWfsStatus — pure function", () => {
+  it("returns the outcome for WFS-only layers", () => {
+    expect(resolveWfsStatus(false, "error")).toBe("error");
+    expect(resolveWfsStatus(false, "empty")).toBe("empty");
+    expect(resolveWfsStatus(false, "zoom")).toBe("zoom");
+    expect(resolveWfsStatus(false, "ok")).toBe("ok");
+  });
 
-/**
- * Simulates the loadData success path with features present.
- */
-function simulateWfsSuccess(
-  layerId: string,
-  hasTileSource: boolean,
-  setLayerStatus: (id: string, status: "error" | "empty" | "zoom" | "ok" | "loading") => void,
-  setLayerLoading: (id: string, loading: boolean) => void,
-) {
-  if (!hasTileSource) {
-    setLayerStatus(layerId, "ok");
-    setLayerLoading(layerId, false);
-  }
-}
+  it("returns null for tile-backed layers", () => {
+    expect(resolveWfsStatus(true, "error")).toBeNull();
+    expect(resolveWfsStatus(true, "empty")).toBeNull();
+    expect(resolveWfsStatus(true, "zoom")).toBeNull();
+    expect(resolveWfsStatus(true, "ok")).toBeNull();
+  });
+});
 
-/**
- * Simulates the viewport area guard path.
- * The guard itself is already gated on !layer.tileSource in DataLayer, so
- * for tile-backed layers this block is never entered — but we test the status
- * surfacing behavior at the setLayerStatus call site.
- */
-function simulateViewportGuard(
-  layerId: string,
-  hasTileSource: boolean,
-  setLayerStatus: (id: string, status: "error" | "empty" | "zoom" | "ok" | "loading") => void,
-) {
-  // The viewport guard block is inside `if (!layer.tileSource)` in DataLayer,
-  // so tile-backed layers never reach this. For WFS-only layers it fires normally.
-  if (!hasTileSource) {
-    setLayerStatus(layerId, "zoom");
-  }
-}
+describe("shouldSurfaceWfsLoading — pure function", () => {
+  it("returns true for WFS-only layers", () => {
+    expect(shouldSurfaceWfsLoading(false)).toBe(true);
+  });
+
+  it("returns false for tile-backed layers", () => {
+    expect(shouldSurfaceWfsLoading(true)).toBe(false);
+  });
+});
 
 describe("Dual-source status rule — WFS terminal status gating", () => {
   beforeEach(() => {
@@ -113,7 +92,7 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      simulateWfsError("fish-streams", false, result.current.setLayerStatus, result.current.setLayerLoading);
+      applyWfsOutcome("fish-streams", false, "error", result.current.setLayerStatus, result.current.setLayerLoading);
       vi.runAllTimers(); // flush debounce
     });
 
@@ -124,7 +103,7 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      simulateWfsError("forest-age", true, result.current.setLayerStatus, result.current.setLayerLoading);
+      applyWfsOutcome("forest-age", true, "error", result.current.setLayerStatus, result.current.setLayerLoading);
       vi.runAllTimers();
     });
 
@@ -138,7 +117,7 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      simulateWfsEmpty("species-at-risk", false, result.current.setLayerStatus, result.current.setLayerLoading);
+      applyWfsOutcome("species-at-risk", false, "empty", result.current.setLayerStatus, result.current.setLayerLoading);
       vi.runAllTimers();
     });
 
@@ -149,7 +128,7 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      simulateWfsEmpty("cutblocks", true, result.current.setLayerStatus, result.current.setLayerLoading);
+      applyWfsOutcome("cutblocks", true, "empty", result.current.setLayerStatus, result.current.setLayerLoading);
       vi.runAllTimers();
     });
 
@@ -162,8 +141,7 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      // fish-streams is genuinely WFS-only (tap-deferrals is now tile-backed).
-      simulateWfsSuccess("fish-streams", false, result.current.setLayerStatus, result.current.setLayerLoading);
+      applyWfsOutcome("fish-streams", false, "ok", result.current.setLayerStatus, result.current.setLayerLoading);
       vi.runAllTimers();
     });
 
@@ -174,7 +152,7 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      simulateWfsSuccess("forest-age", true, result.current.setLayerStatus, result.current.setLayerLoading);
+      applyWfsOutcome("forest-age", true, "ok", result.current.setLayerStatus, result.current.setLayerLoading);
       vi.runAllTimers();
     });
 
@@ -187,7 +165,8 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      simulateViewportGuard("fish-streams", false, result.current.setLayerStatus);
+      const status = resolveWfsStatus(false, "zoom");
+      if (status) result.current.setLayerStatus("fish-streams", status);
       vi.runAllTimers();
     });
 
@@ -198,7 +177,8 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
     act(() => {
-      simulateViewportGuard("forest-age", true, result.current.setLayerStatus);
+      const status = resolveWfsStatus(true, "zoom");
+      if (status) result.current.setLayerStatus("forest-age", status);
       vi.runAllTimers();
     });
 
@@ -213,7 +193,9 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
 
     act(() => {
       // Simulate the pre-fetch path: setLayerLoading(true) for WFS-only
-      result.current.setLayerLoading("fish-streams", true);
+      if (shouldSurfaceWfsLoading(false)) {
+        result.current.setLayerLoading("fish-streams", true);
+      }
     });
 
     expect(result.current.layerStatuses.get("fish-streams")).toBe("loading");
@@ -226,7 +208,8 @@ describe("Dual-source status rule — WFS terminal status gating", () => {
     // tile-backed layer, the legend correctly shows no loading indicator.
     const { result } = renderHook(() => useLoadingContext(), { wrapper });
 
-    // No setLayerLoading call for tile-backed layer (as per DataLayer gating)
+    // shouldSurfaceWfsLoading(true) returns false — no setLayerLoading call
+    expect(shouldSurfaceWfsLoading(true)).toBe(false);
     expect(result.current.loadingLayers.has("forest-age")).toBe(false);
     expect(result.current.layerStatuses.has("forest-age")).toBe(false);
   });
