@@ -10,7 +10,6 @@ import type { BBox } from "@/types/layers";
 
 // We need a fresh module for each test to reset module-level Maps (cache, pending, etc.)
 let fetchLayerData: typeof import("@/lib/data/wfs-client").fetchLayerData;
-let cacheKey: typeof import("@/lib/data/wfs-client").cacheKey;
 
 const MOCK_FC: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
@@ -55,7 +54,6 @@ describe("fetchLayerData", () => {
     vi.resetModules();
     const mod = await import("@/lib/data/wfs-client");
     fetchLayerData = mod.fetchLayerData;
-    cacheKey = mod.cacheKey;
   });
 
   afterEach(() => {
@@ -247,9 +245,7 @@ describe("fetchLayerData", () => {
 
   // ── Deduplication ────────────────────────────────────────────────
 
-  it("deduplicates concurrent requests for the same cache key", async () => {
-    // Two calls with the same key before the debounce fires
-    // After the first debounce completes, the second should get the same result
+  it("returns cached result on repeated call with same key", async () => {
     const p1 = fetchLayerData("fish-streams", TEST_BBOX, 10, 0);
     // Let the debounce fire for the first
     await vi.advanceTimersByTimeAsync(300);
