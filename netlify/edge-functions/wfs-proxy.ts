@@ -472,20 +472,28 @@ async function fetchWithRetry(url: string): Promise<string> {
 
 // ── CORS/Cache response headers ─────────────────────────────────
 
-function corsHeaders(): Record<string, string> {
-  return {
-    "Access-Control-Allow-Origin": "*",
+const ALLOWED_ORIGINS = new Set([
+  "https://opencanopy.ca",
+  "https://www.opencanopy.ca",
+]);
+
+function corsHeaders(request?: Request): Record<string, string> {
+  const origin = request?.headers.get("Origin") ?? "";
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json",
-    // 7-day cache
     "Cache-Control": "public, max-age=604800",
+    "Vary": "Origin",
   };
+  if (ALLOWED_ORIGINS.has(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
 }
 
-function errorResponse(message: string, status = 400): Response {
-  const headers = corsHeaders();
-  // Never cache error responses
+function errorResponse(message: string, status = 400, request?: Request): Response {
+  const headers = corsHeaders(request);
   headers["Cache-Control"] = "no-cache";
   return new Response(JSON.stringify({ error: message }), {
     status,
@@ -547,8 +555,8 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfter: number } {
   return { allowed: true, retryAfter: 0 };
 }
 
-function rateLimitResponse(retryAfter: number): Response {
-  const headers = corsHeaders(); // preserve Access-Control-Allow-Origin: *
+function rateLimitResponse(retryAfter: number, request?: Request): Response {
+  const headers = corsHeaders(request);
   headers["Cache-Control"] = "no-cache"; // never cache a 429
   headers["Retry-After"] = String(retryAfter);
   return new Response(
@@ -570,7 +578,7 @@ export default async function handler(
 ): Promise<Response> {
   // Handle CORS preflight
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders() });
+    return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
 
   // Rate limit by client IP (best-effort per isolate — see comment above).
@@ -585,12 +593,12 @@ export default async function handler(
   const { allowed, retryAfter } = checkRateLimit(clientIp);
   if (!allowed) {
     console.warn(`WFS proxy: rate limit exceeded for IP ${clientIp}`);
-    return rateLimitResponse(retryAfter);
+    return rateLimitResponse(retryAfter, request);
   }
 
   // Only allow GET requests
   if (request.method !== "GET") {
-    return errorResponse("Method not allowed", 405);
+    return errorResponse("Method not allowed", 405, request);
   }
 
   const url = new URL(request.url);
@@ -601,12 +609,12 @@ export default async function handler(
 
   // Validate: layer is always required; either bbox+zoom or point must be present
   if (!layerId) {
-    return errorResponse("Missing required parameter: layer");
+    return errorResponse("Missing required parameter: layer", 400, request);
   }
 
   const config = LAYER_CONFIG[layerId];
   if (!config) {
-    return errorResponse(`Unknown layer: ${layerId}`);
+    return errorResponse(`Unknown layer: ${layerId}`, 400, request);
   }
 
   // ── Point-intersect query (e.g. watershed lookup) ─────────────────
@@ -615,7 +623,7 @@ export default async function handler(
   if (isPointQuery) {
     const pointParts = pointParam.split(",").map(Number);
     if (pointParts.length !== 2 || pointParts.some(isNaN)) {
-      return errorResponse("Invalid point format. Expected: lng,lat");
+      return errorResponse("Invalid point format. Expected: lng,lat", 400, request);
     }
 
     const lng = Math.max(-180, Math.min(180, pointParts[0]));
@@ -647,17 +655,17 @@ export default async function handler(
         geojson = JSON.parse(responseText) as GeoJSON.FeatureCollection;
       } catch {
         console.error(`WFS proxy JSON parse error (point query, layer ${layerId}):`, responseText.slice(0, 200));
-        return errorResponse("Data source returned invalid JSON", 502);
+        return errorResponse("Data source returned invalid JSON", 502, request);
       }
 
       // No simplification for point queries -- we need accurate boundaries
       return new Response(JSON.stringify(geojson), {
         status: 200,
-        headers: corsHeaders(),
+        headers: corsHeaders(request),
       });
     } catch (err) {
       console.error(`WFS proxy point query error for layer ${layerId}:`, (err as Error).message);
-      return errorResponse("Data source temporarily unavailable", 502);
+      return errorResponse("Data source temporarily unavailable", 502, request);
     }
   }
 
@@ -665,18 +673,20 @@ export default async function handler(
 
   if (!bboxParam || !zoomParam) {
     return errorResponse(
-      "Missing required parameters: bbox, zoom (or use point=lng,lat)"
+      "Missing required parameters: bbox, zoom (or use point=lng,lat)",
+      400,
+      request
     );
   }
 
   const bboxParts = bboxParam.split(",").map(Number);
   if (bboxParts.length !== 4 || bboxParts.some(isNaN)) {
-    return errorResponse("Invalid bbox format. Expected: west,south,east,north");
+    return errorResponse("Invalid bbox format. Expected: west,south,east,north", 400, request);
   }
 
   const zoom = parseInt(zoomParam, 10);
   if (isNaN(zoom)) {
-    return errorResponse("Invalid zoom parameter");
+    return errorResponse("Invalid zoom parameter", 400, request);
   }
 
   // Clamp bbox to valid coordinate ranges
@@ -705,7 +715,7 @@ export default async function handler(
       geojson = JSON.parse(responseText) as GeoJSON.FeatureCollection;
     } catch {
       console.error(`WFS proxy JSON parse error (bbox query, layer ${layerId}):`, responseText.slice(0, 200));
-      return errorResponse("Data source returned invalid JSON", 502);
+      return errorResponse("Data source returned invalid JSON", 502, request);
     }
 
     // Process features
@@ -800,11 +810,11 @@ export default async function handler(
 
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: corsHeaders(),
+      headers: corsHeaders(request),
     });
   } catch (err) {
     console.error(`WFS proxy error for layer ${layerId}:`, (err as Error).message);
-    return errorResponse("Data source temporarily unavailable", 502);
+    return errorResponse("Data source temporarily unavailable", 502, request);
   }
 }
 

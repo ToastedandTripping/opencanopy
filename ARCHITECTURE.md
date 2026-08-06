@@ -94,7 +94,8 @@ tiles render fine). Statuses clear on layer unmount.
 ## The WFS proxy
 
 `netlify/edge-functions/wfs-proxy.ts` (`/api/wfs`) is the only client path to
-BC's WFS — same-origin (no CORS), per-IP rate-limited, response-shaping:
+BC's WFS — origin-locked CORS (`opencanopy.ca` only), per-IP rate-limited,
+response-shaping:
 
 - Converts WGS84 viewport bboxes to BC Albers (EPSG:3005) for the upstream.
 - GeoServer constraint: `bbox` and `CQL_FILTER` are mutually exclusive — a
