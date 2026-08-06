@@ -10,51 +10,22 @@
 import { describe, it, expect } from "vitest";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
 import { LAYER_PRESETS } from "@/lib/layers/presets";
+import { LAYER_CONFIG } from "../../../scripts/lib/extractors";
+import { derivePropertySchemas } from "./schema-helpers";
 
 // ── Known PMTiles source layers ──────────────────────────────────────────────
+// Derived from the pipeline's LAYER_CONFIG (non-VRI layers) plus "forest-age".
 
 const KNOWN_SOURCE_LAYERS = new Set([
   "forest-age",
-  "tenure-cutblocks",
-  "fire-history",
-  "parks",
-  "conservancies",
-  "ogma",
-  "wildlife-habitat-areas",
-  "ungulate-winter-range",
-  "community-watersheds",
-  "mining-claims",
-  "forestry-roads",
-  "conservation-priority",
+  ...LAYER_CONFIG.map((c) => c.name),
 ]);
 
 // ── Known NDJSON property schemas ────────────────────────────────────────────
+// Derived programmatically from extractors so the test stays in sync with the
+// pipeline automatically. See schema-helpers.ts for the derivation logic.
 
-const KNOWN_PROPERTIES: Record<string, Set<string>> = {
-  "forest-age": new Set(["class", "age", "species"]),
-  "tenure-cutblocks": new Set([
-    "company_id",
-    "DISTURBANCE_START_DATE",
-    "PLANNED_GROSS_BLOCK_AREA",
-  ]),
-  "fire-history": new Set(["FIRE_YEAR", "FIRE_SIZE_HECTARES", "FIRE_CAUSE"]),
-  parks: new Set(["PROTECTED_LANDS_NAME", "PROTECTED_LANDS_DESIGNATION"]),
-  conservancies: new Set(["CONSERVANCY_AREA_NAME"]),
-  ogma: new Set(["OGMA_TYPE", "LANDSCAPE_UNIT_NAME"]),
-  "wildlife-habitat-areas": new Set(["COMMON_SPECIES_NAME", "HABITAT_AREA_ID"]),
-  "ungulate-winter-range": new Set(["SPECIES_1", "UWR_TAG"]),
-  "community-watersheds": new Set(["CW_NAME", "AREA_HA"]),
-  "mining-claims": new Set([
-    "TENURE_TYPE_DESCRIPTION",
-    "OWNER_NAME",
-    "TENURE_STATUS",
-  ]),
-  "forestry-roads": new Set(["ROAD_SECTION_NAME", "CLIENT_NAME"]),
-  "conservation-priority": new Set([
-    "TAP_CLASSIFICATION_LABEL",
-    "LANDSCAPE_UNIT_NAME",
-  ]),
-};
+const KNOWN_PROPERTIES = derivePropertySchemas();
 
 // ── Helper: extract ["get", "propName"] references from a filter expression ──
 

@@ -15,62 +15,12 @@
 
 import { describe, it, expect } from "vitest";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
+import { derivePropertySchemas } from "./schema-helpers";
 
 // ── Canonical property schemas per source layer ──────────────────────────────
-//
-// These are derived from the extractors in scripts/build-tiles.ts.
-// Each field listed here is guaranteed to be written into the NDJSON file
-// by the corresponding PropertyExtractor function.
-//
-// forest-age: classifyVRIFeature() outputs class, age, species
-// tenure-cutblocks: extractTenureCutblocks() outputs company_id, DISTURBANCE_START_DATE, PLANNED_GROSS_BLOCK_AREA
-// fire-history: extractFireHistory() outputs FIRE_YEAR, FIRE_SIZE_HECTARES, FIRE_CAUSE
-// parks: downloadSimpleLayer() keeps all WFS properties (no extractor) -> schema from WFS source
-//        Popup references PROTECTED_LANDS_NAME, PARK_CLASS (WFS props kept verbatim)
-// conservancies: downloadSimpleLayer() keeps all WFS properties
-//        Popup references CONSERVANCY_AREA_NAME
-// ogma: extractOgma() outputs OGMA_TYPE, LANDSCAPE_UNIT_NAME
-// wildlife-habitat-areas: extractWildlifeHabitatAreas() outputs COMMON_SPECIES_NAME, HABITAT_AREA_ID
-// ungulate-winter-range: extractUngulateWinterRange() outputs SPECIES_1, UWR_TAG
-// community-watersheds: extractCommunityWatersheds() outputs CW_NAME, AREA_HA
-// mining-claims: extractMiningClaims() outputs TENURE_TYPE_DESCRIPTION, OWNER_NAME, TENURE_STATUS
-// forestry-roads: extractForestryRoads() outputs ROAD_SECTION_NAME, CLIENT_NAME
-// conservation-priority: extractConservationPriority() outputs TAP_CLASSIFICATION_LABEL,
-//   LANDSCAPE_UNIT_NAME, ANCIENT_FOREST_IND, PRIORITY_BIG_TREED_OG_IND, BGC_LABEL,
-//   FIELD_VERIFIED_IND, FEATURE_AREA_SQM
+// Derived programmatically from the pipeline extractors. See schema-helpers.ts.
 
-export const LAYER_PROPERTY_SCHEMAS: Record<string, Set<string>> = {
-  "forest-age": new Set(["class", "age", "species"]),
-  "tenure-cutblocks": new Set([
-    "company_id",
-    "DISTURBANCE_START_DATE",
-    "PLANNED_GROSS_BLOCK_AREA",
-  ]),
-  "fire-history": new Set(["FIRE_YEAR", "FIRE_SIZE_HECTARES", "FIRE_CAUSE"]),
-  // parks and conservancies use downloadSimpleLayer() which keeps all WFS properties.
-  // We include the specific WFS fields the popup and registry reference.
-  parks: new Set(["PROTECTED_LANDS_NAME", "PROTECTED_LANDS_DESIGNATION"]),
-  conservancies: new Set(["CONSERVANCY_AREA_NAME"]),
-  ogma: new Set(["OGMA_TYPE", "LANDSCAPE_UNIT_NAME"]),
-  "wildlife-habitat-areas": new Set(["COMMON_SPECIES_NAME", "HABITAT_AREA_ID"]),
-  "ungulate-winter-range": new Set(["SPECIES_1", "UWR_TAG"]),
-  "community-watersheds": new Set(["CW_NAME", "AREA_HA"]),
-  "mining-claims": new Set([
-    "TENURE_TYPE_DESCRIPTION",
-    "OWNER_NAME",
-    "TENURE_STATUS",
-  ]),
-  "forestry-roads": new Set(["ROAD_SECTION_NAME", "CLIENT_NAME"]),
-  "conservation-priority": new Set([
-    "TAP_CLASSIFICATION_LABEL",
-    "LANDSCAPE_UNIT_NAME",
-    "ANCIENT_FOREST_IND",
-    "PRIORITY_BIG_TREED_OG_IND",
-    "BGC_LABEL",
-    "FIELD_VERIFIED_IND",
-    "FEATURE_AREA_SQM",
-  ]),
-};
+export const LAYER_PROPERTY_SCHEMAS = derivePropertySchemas();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -377,10 +327,14 @@ describe("Check 12: Popup property references", () => {
     "ENGLISH_NAME",
     "BC_LIST",
     "COSEWIC_STATUS",
-    // parks WFS has more fields than the tile schema
+    // parks: extractor remaps to name/designation; WFS serves original keys too
+    "PROTECTED_LANDS_NAME",
+    "PROTECTED_LANDS_DESIGNATION",
     "PARK_CLASS",
     // wildlife-habitat-areas WFS has more fields
     "SCIENTIFIC_SPECIES_NAME",
+    // conservancies: extractor remaps to name; WFS serves original key too
+    "CONSERVANCY_AREA_NAME",
     // ungulate WFS has secondary species
     "SPECIES_2",
     // mining claims WFS has more fields

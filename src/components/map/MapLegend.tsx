@@ -107,23 +107,21 @@ function ExpandedItems({
   classFilters?: Record<string, string[]>;
   onToggleClassFilter?: (layerId: string, className: string) => void;
 }) {
-  // Check if the layer has a class-based fill-color expression
-  const isFilterable =
-    Array.isArray(layer.style.paint["fill-color"]) &&
-    JSON.stringify(layer.style.paint["fill-color"]).includes('"class"');
-
   return (
     <div className="mt-1.5 ml-0.5 space-y-1">
       {layer.legendItems.map((item, i) => {
+        const isFilterable = item.classSlug !== undefined;
         const isActive =
           !classFilters?.[layer.id] ||
-          classFilters[layer.id].includes(item.label);
+          (item.classSlug
+            ? classFilters[layer.id].includes(item.classSlug)
+            : true);
 
-        if (isFilterable && onToggleClassFilter) {
+        if (isFilterable && onToggleClassFilter && item.classSlug) {
           return (
             <button
               key={i}
-              onClick={() => onToggleClassFilter(layer.id, item.label)}
+              onClick={() => onToggleClassFilter(layer.id, item.classSlug!)}
               aria-pressed={isActive}
               className={`flex items-center gap-2 w-full text-left transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-sm ${
                 isActive ? "" : "opacity-30"

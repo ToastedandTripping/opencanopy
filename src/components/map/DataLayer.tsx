@@ -28,19 +28,10 @@ interface DataLayerProps {
 
 // ── Class filter helpers ────────────────────────────────────────────
 
-const CLASS_LABEL_MAP: Record<string, string> = {
-  "Old Growth (250+ yr)": "old-growth",
-  "Mature (80-250 yr)": "mature",
-  "Young (<80 yr)": "young",
-  "Harvested": "harvested",
-  "High (Old Growth)": "old-growth",
-  "Moderate (Mature)": "mature",
-  "Low (Young)": "young",
-  "Logged": "harvested",
-};
+import { FOREST_AGE_CLASSES } from "@/lib/taxonomy/forest-age";
 
 /** Canonical class slugs for per-class raster tile sources. */
-const CLASS_NAMES = ["old-growth", "mature", "harvested", "young"];
+const CLASS_NAMES = [...FOREST_AGE_CLASSES];
 
 import { EMPTY_FC } from "@/lib/map/empty-fc";
 
@@ -508,7 +499,7 @@ function PmtilesLayers({
     // Build class filter expression
     const activeClassFilter = classFilters?.[layer.id];
     const classFilterExpr: unknown[] | null = activeClassFilter
-      ? ["in", ["get", "class"], ["literal", activeClassFilter.map(label => CLASS_LABEL_MAP[label]).filter(Boolean)]] as unknown[]
+      ? ["in", ["get", "class"], ["literal", activeClassFilter]] as unknown[]
       : null;
 
     // Build base registry filter (e.g. cutblocks area guard)
@@ -986,8 +977,7 @@ function WfsLayers({
 
     const activeFilter = classFilters?.[layer.id];
     if (activeFilter) {
-      const values = activeFilter.map(label => CLASS_LABEL_MAP[label]).filter(Boolean);
-      const filter = ["in", ["get", "class"], ["literal", values]] as unknown as FilterSpecification;
+      const filter = ["in", ["get", "class"], ["literal", activeFilter]] as unknown as FilterSpecification;
       if (mapInstance.getLayer(fillId)) mapInstance.setFilter(fillId, filter);
       if (mapInstance.getLayer(outlineId)) mapInstance.setFilter(outlineId, filter);
     } else {
@@ -1287,9 +1277,8 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
     const rasterMaxZoom = layer.rasterOverview?.maxZoom ?? 0;
 
     // Determine which per-class rasters to show based on class filter state
-    const activeClasses = classFilters?.[layer.id]
-      ? classFilters[layer.id].map(label => CLASS_LABEL_MAP[label]).filter(Boolean)
-      : null;
+    // classFilters now stores slugs directly (no label-to-slug mapping needed)
+    const activeClasses = classFilters?.[layer.id] ?? null;
     const allClassesSelected = !activeClasses || activeClasses.length === CLASS_NAMES.length || activeClasses.length === 0;
     const showDefault = allClassesSelected;
 

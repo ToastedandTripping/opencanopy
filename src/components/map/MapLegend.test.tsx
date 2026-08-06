@@ -39,8 +39,8 @@ const FILTERABLE_LAYER: LayerDefinition = {
   defaultEnabled: true,
   interactive: true,
   legendItems: [
-    { color: "#d4a017", label: "Old growth" },
-    { color: "#71717a", label: "Unknown" },
+    { color: "#d4a017", label: "Old growth", classSlug: "old-growth" },
+    { color: "#71717a", label: "Unknown", classSlug: "unknown" },
   ],
 };
 
@@ -79,7 +79,7 @@ function expandLayer(container: HTMLElement) {
 
 describe("MapLegend class-filter buttons (D2)", () => {
   it("sets aria-pressed=true on an active class and false on a filtered-out class", () => {
-    const { container } = renderLegend({ "forest-age": ["Old growth"] });
+    const { container } = renderLegend({ "forest-age": ["old-growth"] });
     expandLayer(container);
 
     const oldGrowthBtn = Array.from(container.querySelectorAll("button")).find((b) =>
@@ -107,18 +107,18 @@ describe("MapLegend class-filter buttons (D2)", () => {
   });
 
   it("clicking a class-filter button still invokes onToggleClassFilter (behavior unchanged)", () => {
-    const { container, onToggleClassFilter } = renderLegend({ "forest-age": ["Old growth"] });
+    const { container, onToggleClassFilter } = renderLegend({ "forest-age": ["old-growth"] });
     expandLayer(container);
 
     const unknownBtn = Array.from(container.querySelectorAll("button")).find((b) =>
       b.textContent?.includes("Unknown")
     );
     fireEvent.click(unknownBtn!);
-    expect(onToggleClassFilter).toHaveBeenCalledWith("forest-age", "Unknown");
+    expect(onToggleClassFilter).toHaveBeenCalledWith("forest-age", "unknown");
   });
 
   it("carries the sibling focus-visible ring pattern used elsewhere in this file, at the site-wide ring-white/30 strength (1.4.11 non-text contrast; ring-white/20 was under the 3:1 bar over bg-black/70)", () => {
-    const { container } = renderLegend({ "forest-age": ["Old growth"] });
+    const { container } = renderLegend({ "forest-age": ["old-growth"] });
     expandLayer(container);
 
     const oldGrowthBtn = Array.from(container.querySelectorAll("button")).find((b) =>

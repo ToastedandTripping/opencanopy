@@ -70,6 +70,9 @@ export interface LayerStyle {
 export interface LegendItem {
   color: string;
   label: string;
+  /** When set, this legend item is a toggleable class filter.
+   *  The slug maps directly to the feature property `class` value. */
+  classSlug?: string;
 }
 
 /**

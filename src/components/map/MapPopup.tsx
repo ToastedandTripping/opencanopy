@@ -2,6 +2,7 @@
 
 import { Popup } from "react-map-gl/maplibre";
 import { getCompanyDisplayName } from "@/data/companies";
+import { CLASS_DISPLAY_NAMES, type ForestAgeClass } from "@/lib/taxonomy/forest-age";
 
 interface MapPopupProps {
   longitude: number;
@@ -114,13 +115,7 @@ function formatPropertyValue(key: string, value: unknown): string {
     return `${value.toFixed(1)} m`;
   }
   if (key === "class") {
-    const classLabels: Record<string, string> = {
-      "old-growth": "Old Growth",
-      mature: "Mature Second Growth",
-      young: "Young Forest",
-      harvested: "Harvested",
-    };
-    return classLabels[value as string] || String(value);
+    return CLASS_DISPLAY_NAMES[value as ForestAgeClass] ?? String(value);
   }
 
   return String(value);

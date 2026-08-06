@@ -52,18 +52,26 @@ const EQUIVALENCES = {
 
 // ── Age classification ─────────────────────────────────────────────────
 
-export type AgeClass = "old-growth" | "mature" | "young" | "harvested" | "unknown";
+import {
+  type ForestAgeClass,
+  classifyForestAge,
+} from "@/lib/taxonomy/forest-age";
+
+/**
+ * Calculator-specific age class: extends the canonical 4 classes with
+ * "unknown" for features that have no age AND no harvest date AND no
+ * pre-classified `class` property. The taxonomy module returns null for
+ * these; the calculator maps null → "unknown" to keep its own output
+ * exhaustive.
+ */
+export type AgeClass = ForestAgeClass | "unknown";
 
 function classifyAge(
   age: number | null | undefined,
   hasHarvestDate: boolean
 ): AgeClass {
-  if (age === null || age === undefined || age <= 0) {
-    return hasHarvestDate ? "harvested" : "unknown";
-  }
-  if (age >= 250) return "old-growth";
-  if (age >= 80) return "mature";
-  return "young";
+  const normalized = age === undefined ? null : age;
+  return classifyForestAge(normalized, hasHarvestDate) ?? "unknown";
 }
 
 // ── Single feature calculation ─────────────────────────────────────────
