@@ -11,6 +11,7 @@
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { fetchWatershedAtPoint, WatershedFetchError } from "@/lib/data/watershed-client";
+import { DataFetchError } from "@/lib/data/fetch-errors";
 
 function mockFetchOnce(response: Partial<Response> & { json?: () => Promise<unknown> }) {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -74,25 +75,28 @@ describe("fetchWatershedAtPoint", () => {
     expect(result?.areaHa).toBe(5000);
   });
 
-  it("THROWS WatershedFetchError on a 502 -- distinct from the empty-result (ocean) case", async () => {
+  it("THROWS DataFetchError on a 502 -- distinct from the empty-result (ocean) case", async () => {
     mockFetchOnce({ ok: false, status: 502 });
     await expect(fetchWatershedAtPoint(-121.5, 49.3)).rejects.toMatchObject({
-      name: "WatershedFetchError",
+      name: "DataFetchError",
+      kind: "http",
     });
   });
 
-  it("THROWS WatershedFetchError on a genuine network failure", async () => {
+  it("THROWS DataFetchError on a genuine network failure", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
     vi.stubGlobal("fetch", fetchMock);
-    await expect(fetchWatershedAtPoint(-121.5, 49.3)).rejects.toBeInstanceOf(WatershedFetchError);
+    await expect(fetchWatershedAtPoint(-121.5, 49.3)).rejects.toBeInstanceOf(DataFetchError);
+    await expect(fetchWatershedAtPoint(-121.5, 49.3)).rejects.toMatchObject({ kind: "network" });
   });
 
-  it("THROWS WatershedFetchError when the response body isn't valid JSON", async () => {
+  it("THROWS DataFetchError when the response body isn't valid JSON", async () => {
     mockFetchOnce({
       json: async () => {
         throw new SyntaxError("Unexpected token");
       },
     });
-    await expect(fetchWatershedAtPoint(-121.5, 49.3)).rejects.toBeInstanceOf(WatershedFetchError);
+    await expect(fetchWatershedAtPoint(-121.5, 49.3)).rejects.toBeInstanceOf(DataFetchError);
+    await expect(fetchWatershedAtPoint(-121.5, 49.3)).rejects.toMatchObject({ kind: "http" });
   });
 });

@@ -73,21 +73,12 @@ export const CALC_AREA_GUARD_KM2 = 500;
  *  12-15s timeout risks misreporting a live-but-slow fetch as `error`. */
 const FETCH_TIMEOUT_MS = 20_000;
 
-export type ForestCarbonErrorKind = "network" | "http" | "rate-limit" | "timeout";
+import { DataFetchError } from "./fetch-errors";
 
-export class ForestCarbonFetchError extends Error {
-  kind: ForestCarbonErrorKind;
-  /** Parsed from the proxy's Retry-After header on a 429 -- lets the UI show
-   *  an accurate countdown instead of a guessed "brief" disable window. */
-  retryAfterSeconds?: number;
-
-  constructor(kind: ForestCarbonErrorKind, message: string, retryAfterSeconds?: number) {
-    super(message);
-    this.name = "ForestCarbonFetchError";
-    this.kind = kind;
-    this.retryAfterSeconds = retryAfterSeconds;
-  }
-}
+/** @deprecated Use DataFetchError directly. Kept as a re-export for backward compat. */
+export const ForestCarbonFetchError = DataFetchError;
+/** @deprecated Use FetchErrorKind directly. */
+export type ForestCarbonErrorKind = "network" | "http" | "rate-limit" | "timeout" | "abort";
 
 export interface ForestCarbonFetchResult {
   features: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];
@@ -218,7 +209,7 @@ export function createSeqGuard(): SeqGuard {
  * with an internal hard timeout, so both "superseded" and "genuinely stuck"
  * can be distinguished by the caller: a caller-initiated abort rethrows the
  * original AbortError untouched; an internal timeout throws a typed
- * ForestCarbonFetchError("timeout", ...) instead.
+ * DataFetchError("timeout", ...) instead.
  */
 export async function fetchForestAgeForSelection(
   bbox: BBox,
@@ -266,22 +257,22 @@ export async function fetchForestAgeForSelection(
       // are NOT the same class of error and get different UI copy
       // downstream.
       if (timedOut) {
-        throw new ForestCarbonFetchError("timeout", "Request timed out");
+        throw new DataFetchError("timeout", "Request timed out");
       }
-      throw new ForestCarbonFetchError("network", "Network error");
+      throw new DataFetchError("network", "Network error");
     }
 
     if (res.status === 429) {
       const retryAfterHeader = res.headers.get("Retry-After");
       const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
-      throw new ForestCarbonFetchError(
+      throw new DataFetchError(
         "rate-limit",
         "Rate limited",
         Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : undefined
       );
     }
     if (!res.ok) {
-      throw new ForestCarbonFetchError("http", `HTTP ${res.status}`);
+      throw new DataFetchError("http", `HTTP ${res.status}`);
     }
 
     let data: GeoJSON.FeatureCollection;
@@ -292,18 +283,18 @@ export async function fetchForestAgeForSelection(
       // deferred to the outer `finally`), so a stalled body stream aborted
       // mid-read rejects `res.json()` and lands in this catch -- it must be
       // reclassified as an abort/timeout, not a generic parse failure, or
-      // it surfaces as ForestCarbonFetchError("http") with only the
+      // it surfaces as DataFetchError("http") with only the
       // upstream seq-token guard masking it.
       if (signal.aborted) {
         // Caller (a new selection) superseded this fetch mid-body-read --
         // same treatment as the headers-phase case above: rethrow
-        // untouched, not a ForestCarbonFetchError.
+        // untouched, not a DataFetchError.
         throw err;
       }
       if (timedOut) {
-        throw new ForestCarbonFetchError("timeout", "Request timed out");
+        throw new DataFetchError("timeout", "Request timed out");
       }
-      throw new ForestCarbonFetchError("http", "Invalid response from data source");
+      throw new DataFetchError("http", "Invalid response from data source");
     }
 
     const rawFeatures = data.features ?? [];

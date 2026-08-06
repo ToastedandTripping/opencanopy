@@ -1,4 +1,5 @@
 import type { BBox } from "@/types/layers";
+import { DataFetchError } from "./fetch-errors";
 
 /**
  * Client-side WFS data fetcher.
@@ -122,7 +123,8 @@ export function fetchLayerData(
               const error = await res.json().catch(() => ({
                 error: res.statusText,
               }));
-              throw new Error(
+              throw new DataFetchError(
+                "http",
                 (error as { error: string }).error || `HTTP ${res.status}`
               );
             }
