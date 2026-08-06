@@ -248,6 +248,7 @@ function PmtilesLayers({
     const mapInstance = map.getMap();
     const sourceId = PMTILES_SOURCE_ID;
     let sourcedataHandler: ((e: maplibregl.MapSourceDataEvent) => void) | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     /** Register the shared vector tile source (idempotent). */
     function addSource() {
@@ -413,7 +414,7 @@ function PmtilesLayers({
       mapInstance.on("sourcedata", sourcedataHandler);
 
       // Timeout: if source doesn't load in 15s, report error status
-      const timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (sourcedataHandler) {
           mapInstance.off("sourcedata", sourcedataHandler);
           sourcedataHandler = null;
@@ -421,6 +422,7 @@ function PmtilesLayers({
           console.warn(`[OpenCanopy] PMTiles source for ${layer.id} failed to load within 15s`);
           onError?.(layer.id);
         }
+        timeoutId = null;
       }, 15_000);
     }
 
@@ -436,6 +438,7 @@ function PmtilesLayers({
         if (sourcedataHandler) {
           mapInstance.off("sourcedata", sourcedataHandler);
         }
+        if (timeoutId) clearTimeout(timeoutId);
       };
     }
 
@@ -443,6 +446,7 @@ function PmtilesLayers({
       if (sourcedataHandler) {
         mapInstance.off("sourcedata", sourcedataHandler);
       }
+      if (timeoutId) clearTimeout(timeoutId);
       // Don't remove layers on unmount -- they persist across re-renders
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onError/tileMinZoom/visible intentionally excluded: including them would teardown+recreate MapLibre sources on every prop change
