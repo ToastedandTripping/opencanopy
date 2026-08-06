@@ -8,6 +8,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { useLayerState } from "@/hooks/useLayerState";
+import { LAYER_REGISTRY_AVAILABLE } from "@/lib/layers";
 
 beforeEach(() => {
   // Clear localStorage and URL hash between tests
@@ -131,5 +132,32 @@ describe("useLayerState — setLayers validation and mutual exclusivity", () => 
     });
 
     expect(result.current.enabledLayers).toHaveLength(0);
+  });
+});
+
+describe("useLayerState — applyPreset availability gate", () => {
+  const availableIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
+
+  it("applyPreset filters out non-available layer IDs", () => {
+    const { result } = renderHook(() => useLayerState());
+
+    act(() => {
+      result.current.applyPreset("overview");
+    });
+
+    for (const id of result.current.enabledLayers) {
+      expect(availableIds.has(id), `${id} should be in LAYER_REGISTRY_AVAILABLE`).toBe(true);
+    }
+  });
+
+  it("applyPreset with unknown preset ID is a no-op", () => {
+    const { result } = renderHook(() => useLayerState());
+    const before = [...result.current.enabledLayers];
+
+    act(() => {
+      result.current.applyPreset("nonexistent");
+    });
+
+    expect(result.current.enabledLayers).toEqual(before);
   });
 });
