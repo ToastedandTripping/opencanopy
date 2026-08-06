@@ -19,6 +19,11 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
+import {
+  FOREST_AGE_CLASSES,
+  AGE_THRESHOLDS,
+} from "@/lib/taxonomy/forest-age";
+import { COMPANY_REGISTRY } from "@/data/companies";
 
 // ── Read proxy file as text ───────────────────────────────────────────────────
 
@@ -28,6 +33,13 @@ const PROXY_PATH = resolve(
 );
 
 const proxySource = readFileSync(PROXY_PATH, "utf-8");
+
+const EXTRACTORS_PATH = resolve(
+  __dirname,
+  "../../../scripts/lib/extractors.ts"
+);
+
+const extractorsSource = readFileSync(EXTRACTORS_PATH, "utf-8");
 
 // ── Parse LAYER_CONFIG from proxy source ─────────────────────────────────────
 //
@@ -333,5 +345,172 @@ describe("Check 8: WFS Proxy ↔ Registry Consistency", () => {
       `Unexpected proxy LAYER_CONFIG orphan(s): ${unsanctioned.join(", ")}. ` +
         "Add to the registry, remove from the proxy, or add to sanctionedOrphans with a reason."
     ).toHaveLength(0);
+  });
+});
+
+// ── Check 9: Forest age taxonomy consistency ──────────────────────────────────
+//
+// The proxy and extractors keep local copies of the forest age classification
+// (Deno edge fn / Node tooling can't import from src/). These tests verify
+// the copies match the canonical taxonomy in src/lib/taxonomy/forest-age.ts.
+
+describe("Check 9: Forest Age Taxonomy Consistency", () => {
+  // --- Helper: extract the 4 class string values from a ForestClass type ---
+  function extractClassValues(source: string): string[] {
+    // Match: type ForestClass = "old-growth" | "mature" | "young" | "harvested";
+    const typeMatch = source.match(
+      /type\s+ForestClass\s*=\s*([^;]+);/
+    );
+    if (!typeMatch) return [];
+    const values: string[] = [];
+    const strPattern = /"([^"]+)"/g;
+    let m: RegExpExecArray | null;
+    while ((m = strPattern.exec(typeMatch[1])) !== null) {
+      values.push(m[1]);
+    }
+    return values;
+  }
+
+  // --- Helper: extract threshold numbers from classify function ---
+  function extractThresholds(source: string): { oldGrowth: number | null; mature: number | null } {
+    // Match: age >= 250 and age >= 80 patterns
+    const ogMatch = source.match(/age\s*>=\s*(\d+)\s*\)\s*return\s*"old-growth"/);
+    const matMatch = source.match(/age\s*>=\s*(\d+)\s*\)\s*return\s*"mature"/);
+    return {
+      oldGrowth: ogMatch ? Number(ogMatch[1]) : null,
+      mature: matMatch ? Number(matMatch[1]) : null,
+    };
+  }
+
+  // --- Helper: check HARVEST_DATE-wins precedence ---
+  function harvestDateWins(source: string): boolean {
+    // In both proxy and extractors, the classify function checks harvest date
+    // BEFORE age. If harvest date check comes first → harvest wins.
+    const classifyBlock = source.match(
+      /function\s+(?:classifyVRIFeature|classify)\s*\([^)]*\)[^{]*\{([\s\S]*?\n\})/
+    );
+    if (!classifyBlock) return false;
+    const body = classifyBlock[1];
+    const hdIndex = body.indexOf("harvested");
+    const ageIndex = body.indexOf("old-growth");
+    return hdIndex >= 0 && ageIndex >= 0 && hdIndex < ageIndex;
+  }
+
+  const canonicalClasses = [...FOREST_AGE_CLASSES];
+
+  describe("proxy (wfs-proxy.ts)", () => {
+    it("ForestClass type values match canonical taxonomy", () => {
+      const proxyClasses = extractClassValues(proxySource);
+      expect(proxyClasses.sort()).toEqual([...canonicalClasses].sort());
+    });
+
+    it("age thresholds match canonical values", () => {
+      const t = extractThresholds(proxySource);
+      expect(t.oldGrowth).toBe(AGE_THRESHOLDS.oldGrowth);
+      expect(t.mature).toBe(AGE_THRESHOLDS.mature);
+    });
+
+    it("HARVEST_DATE wins over age (correct precedence)", () => {
+      expect(harvestDateWins(proxySource)).toBe(true);
+    });
+  });
+
+  describe("extractors (scripts/lib/extractors.ts)", () => {
+    it("ForestClass type values match canonical taxonomy", () => {
+      const extractorClasses = extractClassValues(extractorsSource);
+      expect(extractorClasses.sort()).toEqual([...canonicalClasses].sort());
+    });
+
+    it("age thresholds match canonical values", () => {
+      const t = extractThresholds(extractorsSource);
+      expect(t.oldGrowth).toBe(AGE_THRESHOLDS.oldGrowth);
+      expect(t.mature).toBe(AGE_THRESHOLDS.mature);
+    });
+
+    it("HARVEST_DATE wins over age (correct precedence)", () => {
+      expect(harvestDateWins(extractorsSource)).toBe(true);
+    });
+  });
+});
+
+// ── Check 10: Company Map Consistency ─────────────────────────────────────────
+//
+// The proxy keeps its own COMPANY_MAP copy (Deno can't import from src/).
+// Verify every entry matches src/data/companies.ts.
+
+describe("Check 10: Company Map Consistency", () => {
+  // Parse COMPANY_MAP from proxy source
+  function parseCompanyMap(source: string): Map<string, string> {
+    const result = new Map<string, string>();
+    const blockStart = source.indexOf("const COMPANY_MAP:");
+    if (blockStart === -1) return result;
+
+    const openBrace = source.indexOf("{", blockStart);
+    if (openBrace === -1) return result;
+
+    let depth = 0;
+    let closeBrace = openBrace;
+    for (let i = openBrace; i < source.length; i++) {
+      if (source[i] === "{") depth++;
+      else if (source[i] === "}") {
+        depth--;
+        if (depth === 0) { closeBrace = i; break; }
+      }
+    }
+
+    const block = source.slice(openBrace, closeBrace + 1);
+    const entryPattern = /"(\d+)":\s*"([^"]+)"/g;
+    let m: RegExpExecArray | null;
+    while ((m = entryPattern.exec(block)) !== null) {
+      result.set(m[1], m[2]);
+    }
+    return result;
+  }
+
+  // Build canonical map from COMPANY_REGISTRY
+  const canonical = new Map<string, string>();
+  for (const c of COMPANY_REGISTRY) {
+    for (const cn of c.clientNumbers) {
+      canonical.set(cn, c.id);
+    }
+  }
+
+  it("proxy COMPANY_MAP entries match src/data/companies.ts", () => {
+    const proxyMap = parseCompanyMap(proxySource);
+    expect(proxyMap.size).toBeGreaterThan(0);
+    for (const [clientNum, slug] of proxyMap) {
+      expect(
+        canonical.get(clientNum),
+        `Proxy maps CLIENT_NUMBER "${clientNum}" → "${slug}" but companies.ts ` +
+          `maps it to "${canonical.get(clientNum) ?? "(missing)"}"`
+      ).toBe(slug);
+    }
+    // Also check no canonical entries are missing from the proxy
+    for (const [clientNum, slug] of canonical) {
+      expect(
+        proxyMap.get(clientNum),
+        `companies.ts maps CLIENT_NUMBER "${clientNum}" → "${slug}" but ` +
+          `proxy COMPANY_MAP is missing this entry`
+      ).toBe(slug);
+    }
+  });
+
+  it("extractors COMPANY_MAP entries match src/data/companies.ts", () => {
+    const extractorMap = parseCompanyMap(extractorsSource);
+    expect(extractorMap.size).toBeGreaterThan(0);
+    for (const [clientNum, slug] of extractorMap) {
+      expect(
+        canonical.get(clientNum),
+        `Extractors maps CLIENT_NUMBER "${clientNum}" → "${slug}" but companies.ts ` +
+          `maps it to "${canonical.get(clientNum) ?? "(missing)"}"`
+      ).toBe(slug);
+    }
+    for (const [clientNum, slug] of canonical) {
+      expect(
+        extractorMap.get(clientNum),
+        `companies.ts maps CLIENT_NUMBER "${clientNum}" → "${slug}" but ` +
+          `extractors COMPANY_MAP is missing this entry`
+      ).toBe(slug);
+    }
   });
 });

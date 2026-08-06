@@ -95,7 +95,10 @@ export interface ForestCarbonFetchResult {
   maybeTruncated: boolean;
 }
 
-const KNOWN_AGE_CLASSES = new Set(["old-growth", "mature", "young", "harvested", "unknown"]);
+import { FOREST_AGE_CLASSES } from "@/lib/taxonomy/forest-age";
+
+/** Recognized class values: the 4 canonical classes plus "unknown" (calculator fallback). */
+const KNOWN_AGE_CLASSES = new Set([...FOREST_AGE_CLASSES, "unknown"]);
 
 /**
  * Schema-drift guard: true when NONE of the given features carry a
