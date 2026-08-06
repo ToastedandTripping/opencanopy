@@ -33,7 +33,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMockMap } from "../mocks/maplibre";
-import { getFirstSymbolId } from "@/components/map/DataLayer";
+import { getFirstSymbolId } from "@/lib/map/layer-utils";
 
 describe("getFirstSymbolId — raster-overview z-order fix", () => {
   it("returns the id of the first symbol-type layer", () => {

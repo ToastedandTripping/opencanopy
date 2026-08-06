@@ -20,8 +20,6 @@ import {
   writeFileSync,
   unlinkSync,
 } from "fs";
-import { PMTiles } from "pmtiles";
-import { NodeFileSource } from "./lib/node-file-source";
 import {
   extractTestRegion,
   buildTippecanoeCommands,

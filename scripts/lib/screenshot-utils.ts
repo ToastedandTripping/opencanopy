@@ -8,9 +8,9 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const pixelmatch = require("pixelmatch");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const { PNG } = require("pngjs");
 
 export interface DiffResult {

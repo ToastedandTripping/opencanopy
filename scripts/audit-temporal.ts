@@ -96,7 +96,7 @@ async function countFeaturesPerLayer(
  * as a proxy for identity. This is approximate but sufficient for bulk disappearance detection.
  */
 function featureFingerprint(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   feature: any
 ): string {
   const props = feature.properties ?? {};

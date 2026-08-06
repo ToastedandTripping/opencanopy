@@ -43,7 +43,7 @@ export function propsMatch(a: unknown, b: unknown): boolean {
  */
 export function fingerprintScore(
   sourceProps: Record<string, unknown>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   tileFeature: any
 ): number {
   const tileProps: Record<string, unknown> = tileFeature.properties ?? {};
@@ -67,7 +67,7 @@ export function fingerprintScore(
  */
 export function buildPropertyComparison(
   sourceProps: Record<string, unknown>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   tileFeature: any
 ): Record<string, { source: unknown; tile: unknown; match: boolean }> {
   const tileProps: Record<string, unknown> = tileFeature.properties ?? {};
@@ -93,7 +93,7 @@ export function findBestCandidate(
   features: unknown[],
   sourceProps: Record<string, unknown>,
   threshold: number = THRESHOLDS.matchThreshold
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
 ): [any | null, number] {
   let best: unknown = null;
   let bestScore = 0;

@@ -27,7 +27,7 @@ export const HOT_SPOTS: HotSpot[] = [
       "1,131 hectares of old growth near Powell River. Ancient cedars exceeding 1,200 years.",
     center: [-124.21, 50.16],
     zoom: 12,
-    layers: ["forest-age", "tap-deferrals", "fish-streams"],
+    layers: ["forest-age", "tap-deferrals"],
     stats: {
       oldGrowthHa: 1131,
     },
@@ -57,7 +57,7 @@ export const HOT_SPOTS: HotSpot[] = [
       "Unlogged watershed sacred to the Nlaka'pamux and Lil'wat Nations. One of the largest intact valleys in southern BC.",
     center: [-121.9, 50.35],
     zoom: 11,
-    layers: ["forest-age", "parks", "fish-streams"],
+    layers: ["forest-age", "parks"],
   },
   {
     id: "carmanah-walbran",

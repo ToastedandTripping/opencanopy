@@ -321,17 +321,17 @@ describe("Check 8: WFS Proxy ↔ Registry Consistency", () => {
       }
     }
 
-    // This is informational -- we document orphans but don't fail.
-    // Proxy may support layers not yet in the UI registry.
-    if (orphans.length > 0) {
-      console.warn(
-        `[proxy-consistency-audit] LAYER_CONFIG has ${orphans.length} entry(entries) ` +
-          `with no corresponding registry layer: ${orphans.join(", ")}. ` +
-          "These may be legacy or unreleased layers."
-      );
-    }
+    const sanctionedOrphans = new Set([
+      "watershed-boundaries",
+      "operating-territories",
+      "planned-cutblocks",
+    ]);
 
-    // We pass regardless -- this is a NOTE, not a failure.
-    expect(true).toBe(true);
+    const unsanctioned = orphans.filter((id) => !sanctionedOrphans.has(id));
+    expect(
+      unsanctioned,
+      `Unexpected proxy LAYER_CONFIG orphan(s): ${unsanctioned.join(", ")}. ` +
+        "Add to the registry, remove from the proxy, or add to sanctionedOrphans with a reason."
+    ).toHaveLength(0);
   });
 });

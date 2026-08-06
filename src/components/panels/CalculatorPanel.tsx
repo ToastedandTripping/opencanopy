@@ -73,16 +73,7 @@ function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
-/** A CSS `prefers-reduced-motion` media query can't stop a JS-driven rAF
- *  loop -- `useAnimatedNumber` below has to check this itself (sitewide
- *  precedent: useDeviceCapability, useScrollytelling, HeroSection all guard
- *  their own animation loops the same way). Read directly (no per-frame
- *  caching like useScrollytelling's `prefersReducedMotion` -- this is called
- *  once per target/duration/active change, not once per rAF frame). */
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
+import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
 
 function useAnimatedNumber(target: number, duration = 2000, active = true): number {
   const [display, setDisplay] = useState(0);

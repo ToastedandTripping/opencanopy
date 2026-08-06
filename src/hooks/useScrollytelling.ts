@@ -38,17 +38,7 @@ function clamp01(x: number): number {
  * `window.matchMedia` for a new mock per-suite, the identity check detects
  * the swap and re-queries, so mocked reduced-motion states are still honored.
  */
-let cachedMql: MediaQueryList | null = null;
-let cachedMatchMediaFn: typeof window.matchMedia | null = null;
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  if (cachedMql === null || cachedMatchMediaFn !== window.matchMedia) {
-    cachedMatchMediaFn = window.matchMedia;
-    cachedMql = window.matchMedia("(prefers-reduced-motion: reduce)");
-  }
-  return cachedMql.matches;
-}
+import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
 
 /** Field-compare two cameras -- avoids treating a same-value re-render as a change. */
 function camerasEqual(a: ChapterCamera, b: ChapterCamera): boolean {

@@ -59,7 +59,7 @@ interface PointResult {
 
 // ── Helper: is this a "mature/old-growth" age class? ─────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function isMatureOrOldGrowth(feature: any): boolean {
   // Tile stores `class` as a descriptive string emitted by the VRI extractor:
   // "old-growth" | "mature" | "young" | "harvested"
@@ -69,7 +69,7 @@ function isMatureOrOldGrowth(feature: any): boolean {
 
 // ── Helper: is this a "harvested/young" age class? ───────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function isHarvestedOrYoung(feature: any): boolean {
   // Tile stores `class` as a descriptive string emitted by the VRI extractor:
   // "old-growth" | "mature" | "young" | "harvested"
@@ -114,10 +114,10 @@ async function checkPoint(
   const cutblockFeatures = getLayerFeatures(tile, "tenure-cutblocks");
 
   // Collect forest age classes for summary
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const forestAgeClasses = [
     ...new Set(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       forestAgeFeatures.map((f: any) =>
         String(f.properties?.class ?? "unknown")
       )
@@ -126,7 +126,7 @@ async function checkPoint(
 
   // Collect recent fire years
   const recentFireYears = fireHistoryFeatures
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     .map((f: any) => Number(f.properties?.FIRE_YEAR))
     .filter((y: number) => !isNaN(y) && y >= 2000);
 
@@ -136,7 +136,7 @@ async function checkPoint(
   // boundaries where a fire only clipped the edge of a mature stand.
   let r1Conflict = false;
   if (recentFireYears.length > 0 && forestAgeFeatures.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const matureFeatures = forestAgeFeatures.filter(isMatureOrOldGrowth);
     const matureRatio = matureFeatures.length / forestAgeFeatures.length;
     if (matureRatio > 0.5) {
@@ -149,7 +149,7 @@ async function checkPoint(
         description: `Fire history FIRE_YEAR >= 2000 (${recentFireYears.join(", ")}) but ${(matureRatio * 100).toFixed(1)}% of forest-age features show mature/old-growth`,
         details: {
           recentFireYears,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           matureAgeClasses: matureFeatures.map((f: any) => f.properties?.class),
           matureFeatureCount: matureFeatures.length,
           totalForestAgeFeatures: forestAgeFeatures.length,

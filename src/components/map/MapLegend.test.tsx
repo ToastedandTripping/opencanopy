@@ -28,7 +28,7 @@ const FILTERABLE_LAYER: LayerDefinition = {
   label: "Forest Age",
   category: "forest",
   description: "test fixture",
-  source: { type: "tiles" },
+  source: { type: "wfs" },
   style: {
     type: "fill",
     paint: {

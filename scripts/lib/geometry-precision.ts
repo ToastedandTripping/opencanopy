@@ -15,7 +15,7 @@
 
 import type { GeoJSON } from "geojson";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const turfArea = require("@turf/area");
 const area: (f: unknown) => number = turfArea.default ?? turfArea;
 
@@ -105,7 +105,7 @@ function extractOuterRing(
  * feature.toGeoJSON(x, y, z).
  */
 function extractTileOuterRing(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   tileFeature: any
 ): Array<[number, number]> | null {
   try {
@@ -217,7 +217,7 @@ function featureArea(geometry: GeoJSON.Geometry | null | undefined): number {
  */
 export function measurePrecision(
   sourceFeature: GeoJSON.Feature,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   tileFeature: any,
   sourceLayer: string,
   zoom: number,
@@ -225,7 +225,7 @@ export function measurePrecision(
   tileY: number
 ): PrecisionResult {
   // Convert tile feature to WGS84 GeoJSON
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let tileGeoJSON: any = null;
   try {
     tileGeoJSON = tileFeature.toGeoJSON(tileX, tileY, zoom);

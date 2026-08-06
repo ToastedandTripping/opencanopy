@@ -135,7 +135,7 @@ test('forest-age raster overview renders at z5 on production', async ({ page }) 
   await waitForMapIdle(page, 60000);
 
   const rasterState = await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const map = (window as any).__opencanopy_map;
     if (!map) return { found: false };
     const layer = map.getLayer('layer-forest-age-raster');
@@ -157,7 +157,7 @@ test('forest-age vector tiles render features at z11 on production', async ({ pa
 
   // Navigate to a definitely-forested area at z11 (Prince George vicinity)
   await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const map = (window as any).__opencanopy_map;
     if (!map) return;
     map.flyTo({ center: [-122.7, 53.9], zoom: 11, duration: 0 });
@@ -190,7 +190,7 @@ test('tenure-cutblocks vector tiles render features at z11 on production', async
 
   // Navigate to central interior at z11 where cutblocks should be dense
   await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const map = (window as any).__opencanopy_map;
     if (!map) return;
     map.flyTo({ center: [-122.7, 53.9], zoom: 11, duration: 0 });
@@ -250,7 +250,7 @@ test('D3: fish-streams WFS returns features via cqlFilter proxy fix', async ({ p
   // Navigate to Campbell River area at z10 — inside fish-streams zoomRange,
   // well under the 50,000 km² area guard.
   await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const map = (window as any).__opencanopy_map;
     if (!map) return;
     map.flyTo({ center: [-125.3, 50.0], zoom: 10, duration: 0 });
@@ -292,7 +292,7 @@ test('tap-deferrals (old growth) renders via PMTiles across the z10-12 band', as
 
   // Wells Gray area at z11 — known old-growth concentration, mid PMTiles band.
   await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const map = (window as any).__opencanopy_map;
     if (!map) return;
     map.flyTo({ center: [-119.9, 51.7], zoom: 11, duration: 0 });

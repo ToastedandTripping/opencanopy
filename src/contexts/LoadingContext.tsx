@@ -60,11 +60,12 @@ function useDebounce(delay: number) {
 
   // Clear all pending timers on unmount to prevent setState-after-unmount.
   useEffect(() => {
+    const t = timers.current;
     return () => {
-      for (const id of timers.current.values()) {
+      for (const id of t.values()) {
         clearTimeout(id);
       }
-      timers.current.clear();
+      t.clear();
     };
   }, []);
 

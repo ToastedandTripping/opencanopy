@@ -5,12 +5,6 @@ const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
  * Falls back to OpenFreeMap when no MapTiler key is configured.
  */
 export const MAP_STYLES = {
-  satellite: MAPTILER_KEY
-    ? `https://api.maptiler.com/maps/satellite/style.json?key=${MAPTILER_KEY}`
-    : "https://tiles.openfreemap.org/styles/liberty",
-  outdoor: MAPTILER_KEY
-    ? `https://api.maptiler.com/maps/outdoor-v2/style.json?key=${MAPTILER_KEY}`
-    : "https://tiles.openfreemap.org/styles/liberty",
   dark: MAPTILER_KEY
     ? `https://api.maptiler.com/maps/backdrop-dark/style.json?key=${MAPTILER_KEY}`
     : "https://tiles.openfreemap.org/styles/dark",

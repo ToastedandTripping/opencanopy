@@ -515,11 +515,6 @@ interface BucketEntry {
   windowStart: number;
 }
 
-// Exported for unit testing the bucket logic in isolation.
-export function rateLimitMap(): Map<string, BucketEntry> {
-  return _rateLimitMap;
-}
-
 const _rateLimitMap = new Map<string, BucketEntry>();
 
 function checkRateLimit(ip: string): { allowed: boolean; retryAfter: number } {

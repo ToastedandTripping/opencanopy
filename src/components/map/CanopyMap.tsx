@@ -70,12 +70,6 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    // Expose map instance for e2e testing (Playwright screenshot regression).
-    // Dev-only (D-fix): never ship a live map handle to the production window scope.
-    if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
-      (window as unknown as Record<string, unknown>).__opencanopy_map = map;
-    }
-
     // Add terrain source for 3D hillshade
     if (TERRAIN_SOURCE.enabled && !map.getSource("terrain-rgb")) {
       map.addSource("terrain-rgb", {
@@ -175,9 +169,6 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
                 break;
               case "line":
                 ids.push(`layer-${l.id}-tiles-line`);
-                break;
-              case "circle":
-                ids.push(`layer-${l.id}-tiles-circle`);
                 break;
             }
           }

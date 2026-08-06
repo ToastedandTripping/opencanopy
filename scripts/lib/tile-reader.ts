@@ -23,7 +23,7 @@ export { parseTile, getLayerFeatures, getLayerPropertyKeys };
 // ── Types ────────────────────────────────────────────────────────────────────
 
 /** Parsed MVT tile (opaque VectorTile object) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export type ParsedTile = any;
 
 export interface TileReaderOptions {
@@ -111,7 +111,7 @@ export class TileReader {
     lon: number,
     layer: string,
     zoom: number = ZOOMS.feature
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
   ): Promise<{ features: any[]; tileExists: boolean; tileCoord: { z: number; x: number; y: number } }> {
     const { x, y, z } = latLonToTile(lat, lon, zoom);
     const tile = await this.getTile(z, x, y);
@@ -134,7 +134,7 @@ export class TileReader {
     lon: number,
     layers: readonly string[],
     zoom: number = ZOOMS.feature
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
   ): Promise<{ layerFeatures: Map<string, any[]>; tileExists: boolean }> {
     const { x, y, z } = latLonToTile(lat, lon, zoom);
     const tile = await this.getTile(z, x, y);

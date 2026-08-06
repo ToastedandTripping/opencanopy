@@ -1,5 +1,7 @@
 "use client";
 
+import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
+
 interface NarrativePanelProps {
   heading: string;
   subheading?: string;
@@ -26,11 +28,6 @@ export function NarrativePanel({
   headingWeight = "semibold",
   children,
 }: NarrativePanelProps) {
-  // Detect prefers-reduced-motion; SSR-safe (window is undefined on server).
-  const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
   const positionClasses =
     position === "center"
       ? "flex items-end md:items-center justify-center pb-[max(2rem,env(safe-area-inset-bottom,2rem))] md:pb-0"
@@ -44,7 +41,7 @@ export function NarrativePanel({
   // Transition styles gated on prefers-reduced-motion.
   // When reduced motion is preferred: no animation, just instant opacity snap.
   // This applies to ALL chapters, not just "remains".
-  const cardStyle = prefersReducedMotion
+  const cardStyle = prefersReducedMotion()
     ? {
         opacity: active ? 1 : 0,
         transform: "none",

@@ -14,7 +14,7 @@ import { latLonToTile } from "./tile-math";
 import { AuditResult } from "./audit-types";
 import type { SamplePoint } from "./bc-sample-grid";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const turf = {
   bbox: require("@turf/bbox").default ?? require("@turf/bbox"),
   intersect: require("@turf/intersect").default ?? require("@turf/intersect"),
@@ -93,23 +93,13 @@ async function readTile(
  * MVT features use tile-local integer coordinates; we convert to WGS84.
  */
 function mvtFeatureToGeoJSON(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   feature: any,
   tileX: number,
   tileY: number,
   zoom: number
 ): GeoJSONFeature | null {
   try {
-    const extent = feature.extent ?? 4096;
-    const n = Math.pow(2, zoom);
-
-    function pixelToLonLat(px: number, py: number): [number, number] {
-      const lon = ((tileX + px / extent) / n) * 360 - 180;
-      const y = tileY + py / extent;
-      const latRad = Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n)));
-      return [lon, (latRad * 180) / Math.PI];
-    }
-
     const geomType = feature.type; // 1=Point, 2=LineString, 3=Polygon
     if (geomType !== 3) return null; // Only polygons for water-body overlap
 
@@ -127,9 +117,9 @@ function mvtFeatureToGeoJSON(
 // ── Bounding-box pre-filter ───────────────────────────────────────────────────
 
 function bboxesOverlap(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   a: [number, number, number, number],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   b: [number, number, number, number]
 ): boolean {
   return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
@@ -188,7 +178,7 @@ export async function checkWaterBodyOverlap(
     console.log(`  Loaded ${lakes.length} lake polygons`);
 
     // Pre-compute bboxes for lakes to speed up pre-filtering
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     lakeBboxes = lakes.map((l) => {
       try {
         return turf.bbox.default
@@ -235,7 +225,7 @@ export async function checkWaterBodyOverlap(
     let pointWaterOverlaps = 0;
 
     for (const rawFeature of features) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const feature = rawFeature as any;
       const geoFeature = mvtFeatureToGeoJSON(feature, tile.x, tile.y, zoom);
       if (!geoFeature) continue;

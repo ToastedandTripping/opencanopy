@@ -151,8 +151,6 @@ const DASHBOARD_LAYERS = [
   "conservation-priority",
 ] as const;
 
-type DashboardLayer = typeof DASHBOARD_LAYERS[number];
-
 /**
  * Read a report JSON file and return its results array.
  * Returns [] if the file is missing or malformed.

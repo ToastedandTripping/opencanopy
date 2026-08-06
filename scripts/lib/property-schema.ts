@@ -161,7 +161,7 @@ export function getSignatureProperties(layer: string): string[] {
  */
 export function checkPresence(
   layer: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   feature: any
 ): boolean {
   const sigProps = getSignatureProperties(layer);

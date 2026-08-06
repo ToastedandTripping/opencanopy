@@ -17,8 +17,6 @@ export const PMTILES_MAX_ZOOM = 12;
  */
 const WFS_ENDPOINTS = {
   vri: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.VEG_COMP_LYR_R1_POLY/ows",
-  results:
-    "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.RSLT_FOREST_COVER_INV_SVW/ows",
   freshwater:
     "https://openmaps.gov.bc.ca/geo/pub/WHSE_BASEMAPPING.FWA_STREAM_NETWORKS_SP/ows",
   cdc: "https://openmaps.gov.bc.ca/geo/pub/WHSE_TERRESTRIAL_ECOLOGY.BIOT_OCCR_NON_SENS_AREA_SVW/ows",
@@ -28,10 +26,6 @@ const WFS_ENDPOINTS = {
     "https://openmaps.gov.bc.ca/geo/pub/WHSE_TANTALIS.TA_CONSERVANCY_AREAS_SVW/ows",
   tenureCutblocks:
     "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW/ows",
-  operatingTerritories:
-    "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FSP_FDU_POLY_SPG/ows",
-  plannedCutblocks:
-    "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FOM_CUTBLOCK_SP/ows",
   fireHistory: "https://openmaps.gov.bc.ca/geo/pub/WHSE_LAND_AND_NATURAL_RESOURCE.PROT_HISTORICAL_FIRE_POLYS_SP/ows",
   ogma: "https://openmaps.gov.bc.ca/geo/pub/WHSE_LAND_USE_PLANNING.RMP_OGMA_LEGAL_CURRENT_SVW/ows",
   wildlifeHabitatAreas: "https://openmaps.gov.bc.ca/geo/pub/WHSE_WILDLIFE_MANAGEMENT.WCP_WILDLIFE_HABITAT_AREA_POLY/ows",

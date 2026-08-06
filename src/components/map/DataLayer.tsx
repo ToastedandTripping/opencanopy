@@ -41,10 +41,7 @@ const CLASS_LABEL_MAP: Record<string, string> = {
 /** Canonical class slugs for per-class raster tile sources. */
 const CLASS_NAMES = ["old-growth", "mature", "harvested", "young"];
 
-const EMPTY_FC: GeoJSON.FeatureCollection = {
-  type: "FeatureCollection",
-  features: [],
-};
+import { EMPTY_FC } from "@/lib/map/empty-fc";
 
 // ── Imperative Raster (Satellite) Layer Manager ─────────────────────────────
 //
@@ -112,11 +109,7 @@ export function findSatelliteAnchor(
  *
  * Exported for unit testing.
  */
-export function getFirstSymbolId(
-  layers: { id: string; type: string }[],
-): string | undefined {
-  return layers.find((l) => l.type === "symbol")?.id;
-}
+import { getFirstSymbolId } from "@/lib/map/layer-utils";
 
 function SatelliteLayers({
   layer,
@@ -278,10 +271,7 @@ function PmtilesLayers({
         const maxzoom = 22;
         const minzoom = tileMinZoom ?? 0;
 
-        // Bug 4 fix: insert data layers below basemap labels
-        const firstSymbolId = mapInstance.getStyle().layers.find(
-          (l: maplibregl.LayerSpecification) => l.type === "symbol"
-        )?.id;
+        const firstSymbolId = getFirstSymbolId(mapInstance.getStyle().layers);
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-tiles-fill`)) {
@@ -370,13 +360,17 @@ function PmtilesLayers({
                 "source-layer": sourceLayer,
                 minzoom,
                 maxzoom,
-                paint: {
-                  ...(layer.style.paint as Record<string, unknown>),
+                paint: pickDefinedPaint({
                   "line-opacity": visible
                     ? (layer.style.paint["line-opacity"] as number) ?? 0.8
                     : 0,
                   "line-opacity-transition": { duration: 300 },
-                } as maplibregl.LineLayerSpecification["paint"],
+                  "line-color": layer.style.paint["line-color"],
+                  "line-width": layer.style.paint["line-width"],
+                  "line-dasharray": layer.style.paint["line-dasharray"],
+                  "line-blur": layer.style.paint["line-blur"],
+                  "line-gap-width": layer.style.paint["line-gap-width"],
+                }) as maplibregl.LineLayerSpecification["paint"],
                 ...(layer.style.filter ? { filter: layer.style.filter as maplibregl.FilterSpecification } : {}),
               },
               firstSymbolId,
@@ -451,6 +445,7 @@ function PmtilesLayers({
       }
       // Don't remove layers on unmount -- they persist across re-renders
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onError/tileMinZoom/visible intentionally excluded: including them would teardown+recreate MapLibre sources on every prop change
   }, [map, layer.id, layer.tileSource, layer.style]);
 
   // Update visibility reactively
@@ -655,10 +650,7 @@ function WfsLayers({
       if (cancelled) return;
 
       try {
-        // Insert data layers below first basemap symbol
-        const firstSymbolId = mapInstance.getStyle().layers.find(
-          (l: maplibregl.LayerSpecification) => l.type === "symbol"
-        )?.id;
+        const firstSymbolId = getFirstSymbolId(mapInstance.getStyle().layers);
 
         if (layer.style.type === "fill") {
           if (!mapInstance.getLayer(`layer-${layer.id}-fill`)) {
@@ -885,6 +877,7 @@ function WfsLayers({
         mapInstance.removeSource(sourceId);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- layer/visible excluded: source lifecycle depends only on layer.id+style.type, not visibility or full layer object
   }, [map, layer.id, layer.style.type, layer.source.attribution, wfsMinZoom]);
 
   // 2. Data update: push new GeoJSON data on viewport/timeline changes
@@ -1232,6 +1225,7 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
         setLayerLoading(layer.id, false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- layer.fetchPriority excluded: changing priority should not re-trigger the fetch effect
   }, [map, visible, layer.id, layer.source.type, layer.zoomRange, layer.tileSource, hasTileSource, setLayerLoading, setLayerStatus]);
 
   // Clear status on unmount so disabled layers don't pollute the status map

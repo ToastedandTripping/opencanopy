@@ -203,7 +203,7 @@ async function checkForestAgeConsistency(
     let pointInconsistent = 0;
 
     for (const rawFeature of features) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const feature = rawFeature as any;
       const props: Record<string, unknown> = feature.properties ?? {};
       const cls = props["class"];
