@@ -1214,6 +1214,8 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
         setLayerStatus(layer.id, fc.features.length > 0 ? "ok" : "empty");
       }
     } catch (err) {
+      // Abort is not an error — it means the fetch was superseded by a newer one
+      if (err instanceof DOMException && err.name === "AbortError") return;
       console.error(`Failed to load layer ${layer.id}:`, err);
       // B.2: error path — clear stale features so error doesn't masquerade as data
       setData(EMPTY_FC);
