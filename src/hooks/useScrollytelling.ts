@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CHAPTERS, type ChapterCamera } from "@/data/chapters";
 import { computeBinaryRevealOpacity } from "@/lib/story/binary-opacity";
-import { interpolateCamera, easeInOut } from "@/lib/math/interpolation";
+import { interpolateCamera } from "@/lib/math/interpolation";
 import { yearFromProgress, type ScrubTable } from "@/lib/story/scrub";
 import cutblocksScrub from "@/data/scrub/cutblocks-scrub.json";
 import fireScrub from "@/data/scrub/fire-scrub.json";
@@ -91,23 +91,18 @@ export function useScrollytelling() {
 
       const reducedMotion = prefersReducedMotion();
 
-      // Intra-chapter dolly: when a chapter declares `cameraTo`, scrub
-      // chapter.camera → chapter.cameraTo across the chapter's own progress,
-      // eased and completing at DOLLY_END so the camera settles before the CTA.
-      // Under prefers-reduced-motion, snap straight to the destination (t=1).
-      // This takes priority over the toward-next interpolation so chapters with
-      // `cameraTo` are not subject to the end-of-chapter camera jump.
-      //
-      // For chapters WITHOUT `cameraTo`: only interpolate toward the next chapter
-      // in the last 20% of scroll (the existing toward-next dolly behavior).
-      const DOLLY_END = 0.8;
+      // Toward-next interpolation: in the last 20% of a chapter's scroll, ease
+      // the camera toward the NEXT chapter's camera so there's no hard jump at
+      // the step boundary. (The live intra-chapter `cameraTo` dolly this used
+      // to compete with — the `remains` z5→z8 zoom — was replaced by a
+      // pre-rendered play-on-scroll video, DollyVideo; `cameraTo` is unused by
+      // any current chapter, so this is the only camera-interpolation path
+      // left. The `cameraTo` field itself stays on the Chapter type for any
+      // future chapter that wants a live scrub.)
       const nextChapter = CHAPTERS[chapterIdx + 1];
       let camera: ChapterCamera;
 
-      if (chapter.cameraTo) {
-        const t = reducedMotion ? 1 : easeInOut(clamp01(prog / DOLLY_END));
-        camera = interpolateCamera(chapter.camera, chapter.cameraTo, t);
-      } else if (nextChapter && prog > 0.8) {
+      if (nextChapter && prog > 0.8) {
         const t = reducedMotion ? 1 : (prog - 0.8) / 0.2;
         camera = interpolateCamera(chapter.camera, nextChapter.camera, t);
       } else {

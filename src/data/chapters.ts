@@ -75,8 +75,12 @@ export interface Chapter {
    * When set, useScrollytelling scrubs `camera → cameraTo` across the chapter's
    * own scroll progress (eased, finishing at DOLLY_END=0.8 so it settles before
    * the CTA). The toward-next interpolation does NOT apply to chapters with this
-   * field. Set on `remains` so the dolly is spread over the chapter's 800vh rather
-   * than crammed into the last 20% of `ending`.
+   * field.
+   *
+   * UNUSED as of the pre-rendered dolly video (Phase 2): the live z5→z8 zoom
+   * this drove was replaced by DollyVideo, a play-on-scroll clip. `remains` no
+   * longer sets this — the field stays available for any future chapter that
+   * wants a live intra-chapter camera scrub.
    */
   cameraTo?: ChapterCamera;
   /**
@@ -112,10 +116,15 @@ export const FLAT_BC_CAMERA: ChapterCamera = {
  * read as green amid a field of red clearcuts. Iconic, recognizable, and the
  * starkest "what's left" of the candidate pockets. Deuteranopia-checked (the
  * green/red luminance gap widens to ~4.5:1 under simulation). Everything else
- * (CTA hash, prefetch, remains chapter camera) derives from here as the SSOT.
+ * (CTA hash, prefetch, the offline-rendered dolly frame sequence) derives from
+ * here as the SSOT — `dolly-config.ts` IMPORTS this constant, never copies it.
  *
  * z8 (not 8.5) so the dolly endpoint lands on crisp z9 binary tiles — the
  * binary raster source is maxzoom 9, and 256px tiles fetch tile-zoom = display+1.
+ *
+ * MAINTENANCE: changing this constant requires re-rendering the dolly video:
+ * `npm run render:dolly` -> `scripts/encode-dolly.sh` -> re-upload to R2. The
+ * DOLLY_FRAME_SIGNATURE drift test fails CI to enforce this.
  */
 export const STORY_END_CAMERA: ChapterCamera = {
   center: [-125.86, 49.38],
@@ -190,8 +199,7 @@ export const CHAPTERS: Chapter[] = [
     // old-growth (dark green) vs everything else (red). The map goes almost
     // entirely red — 35,000 ha of large old-growth out of 1.1M ha total.
     // Shortened to 300vh so the red reveal and the explanatory panel land
-    // together. The dolly now lives in `remains` as an intra-chapter cameraTo
-    // scrub, not here.
+    // together. The dolly video lives in `remains`, not here.
     id: "ending",
     heading: "35,000 hectares.",
     subheading: "That's what remains of BC's large old-growth trees. 0.3% of the province's forest.",
@@ -212,18 +220,28 @@ export const CHAPTERS: Chapter[] = [
     scrollHeight: 300,
   },
   {
-    // Intra-chapter dolly: starts at province scale (FLAT_BC_CAMERA, same as
-    // `ending`) and eases into the Vancouver Island old-growth pocket
-    // (STORY_END_CAMERA) over the chapter's 800vh. The camera scrub is driven
-    // by `cameraTo` in updateCamera (eased, completing at DOLLY_END=0.8) so it
-    // settles at the pocket well before the user reaches the CTA. The binary
-    // layer stays on (revealBinary). Scrolling past reveals the CTA section.
+    // Pre-rendered dolly video: the live map holds flat at province scale
+    // (FLAT_BC_CAMERA, same as `ending` — no cameraTo, no live jumpTo churn)
+    // while DollyVideo plays a pre-rendered clip over it that zooms into the
+    // Vancouver Island old-growth pocket (STORY_END_CAMERA). Plays once on
+    // scroll-into-view; degrades to a final-frame still (or, if that's also
+    // unavailable, this flat live map + binary reveal) — see DollyVideo.tsx.
+    // The binary layer stays on (revealBinary) as the coherent fallback under
+    // the video. Scrolling past reveals the CTA section.
+    //
+    // scrollHeight ~400vh: sized for an ~8s clip + read time (plan default;
+    // Jen 4a may retune). Scroll position no longer drives the camera directly
+    // (the video plays on its own timeline once triggered) — it still gates
+    // when the chapter is active/visible.
+    //
+    // MAINTENANCE: changing this chapter's camera or STORY_END_CAMERA requires
+    // re-running `npm run render:dolly` + `scripts/encode-dolly.sh` and
+    // re-uploading to R2. The DOLLY_FRAME_SIGNATURE drift test enforces this.
     id: "remains",
     heading: "This is what's left.",
     camera: FLAT_BC_CAMERA,
-    cameraTo: STORY_END_CAMERA,
     layers: [{ id: "forest-age", opacity: 0.25 }],
     revealBinary: true,
-    scrollHeight: 800,
+    scrollHeight: 400,
   },
 ];

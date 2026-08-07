@@ -72,3 +72,8 @@ scripts/lib/pmtiles-point-reader.mjs
 /data/checkpoint/
 __pycache__/
 /test-results/
+
+# Dolly offline-render scratch frames (npm run render:dolly) — never committed.
+# The shippable artifact is the encoded video + posters (scripts/encode-dolly.sh),
+# uploaded to R2, not the frames themselves.
+/.render-scratch/
