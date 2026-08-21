@@ -96,6 +96,28 @@ open-source base.
   skips → 404s (MapLibre renders nothing = correct, but it's console noise). A
   tile bounds/manifest so MapLibre never requests skipped tiles would clean it.
 
+## Parking Lot — every deferral, one index
+
+**This is the single entry point for named-but-unscheduled work.** Added 2026-08-21, when the
+held/deferred list was moved out of `.claude/handoff.md` (it was living under "Standing Gates",
+where a routine hand-off rewrite could have dropped it). Rulings and constraints went to
+`.claude/DECISIONS.md`; this is the work. A deferral is recorded here or it does not exist.
+
+### Held — decided, not scheduled
+
+- **Phase 2 dolly play-on-scroll video** -- branch `relay/story-phase2-dolly-video`, code-complete, Razor-passed, still unmerged. Blocked on the ffmpeg render chain (Lee-terminal); the do-not-merge-before-assets ruling is in `.claude/DECISIONS.md`.
+- **CSP is report-only, not enforcing.** The enforce-flip is gated behind a cold-cache/incognito/mobile console watch that hasn't happened yet.
+- **GFW decode-shader endgame** (year-encoded raster + custom WebGL shader for the scroll-story) -- feasibility study done, encoding spec frozen, held behind the pre-committed scroll-story Phase-3 gate (ruling in `.claude/DECISIONS.md`).
+- **The /map improvement program** is fully designed but not started: a small-win MapLibre `global-state` batch, then Phases B (harvest consolidation + accountability), C (color/threat re-spine), D (proposed-logging FOM layer, probed and GO), E (layer architecture). Research lives at `~/marvin/research/opencanopy-map-layering-comms-20260717/` (PLAN.md + 4 lens files + probe outputs). Each phase needs its own plan-mode + Fable critic + relay, on Lee's go. Sequencing is an open question in `.claude/handoff.md`.
+
+### Deferred — known, unscheduled
+
+- **z10+ rectangle tile artifact** (Phase 5 of the original scroll-story plan) -- confirmed live and worse than "contained." Still unaddressed. Root cause: tippecanoe `--drop-densest` + 5MB cap; fix is a tile rebuild with tuned flags.
+- **P3 ops backlog:** cache headers for `/raster` and `/images`, hero `srcset` (584KB LCP), prefetch gating (~8MB), `DEPLOY.md` + rollback runbook, scheduled `audit:live`, re-gating the `__opencanopy_map` debug handle on `OC_DEBUG`, minor dependency bumps, a shared-store WFS rate limiter.
+- **a11y deferred notes** (non-blocking): Dvorak physical-key shortcut nuance, Escape-should-own-the-modal-first ordering, an ellipsis (U+2026 vs `...`) sweep.
+- **CO2 calculator follow-ups:** k/C_max yield-curve data sourcing, an Option C watershed fast-path, a Web Worker for the turf-clip wait if live QA finds it slow, the PDF financial-compliance/voluntary caveat (currently panel-only).
+- **Preset opacity overrides** (Wave 3 item 3.8, `styleOverrides`/`opacityScale`) -- deferred 2026-06-19; its own relay batch after the styling pass, touches `DataLayer.tsx` at 4 wiring points.
+
 ## Reference
 
 - Architecture: `ARCHITECTURE.md` (in-repo, authored 2026-06-10)
