@@ -24,12 +24,19 @@ does. The convention is documented in `.claude/rules/project-docs.md`.
 
 ## Product rulings
 
+### The landing page ends on the province-wide red reveal; the zoom into the old-growth pocket is /map's job, via the CTA deep-link.
+*2026-08-21, per Lee*
+
+The in-story ending zoom (the dolly) went through three relays and never shipped smooth: the live scroll-scrub lags and drops tiles, and the pre-rendered video needs an ffmpeg -> R2 chain that only runs from Lee's terminal. Lee's call: the landing page was trying too hard and absorbing effort that belongs to /map, which is the product. So the story closes on `ending` ('35,000 hectares') and the CTA's 'Explore the Map' carries the reader to STORY_END_CAMERA on /map, where the zoom is interactive and free. The dolly is docked, not deleted (tags `dock/dolly-live-scrub`, `dock/dolly-phase2-video`); an in-story zoom comes back only by a deliberate decision to un-dock it, never by drift — `cameraTo` was removed from the `Chapter` type for exactly that reason.
+
 ## Engineering pins
 
 ### Do not merge the Phase 2 dolly-video branch until real video assets exist.
-*2026-07-17, per Lee*
+*2026-07-17, per Lee, amended 2026-08-21*
 
 Branch `relay/story-phase2-dolly-video` is code-complete and Razor-passed, but merging it before the rendered video exists would drop the ending's live zoom: the `remains` chapter falls back to static. Lee explicitly deprioritized it ("leave it till later", 2026-07-17). Blocked on the ffmpeg constraint above.
+
+**Amended, per Lee, 2026-08-21:** Still true, and now moot: the ending dolly was DOCKED on 2026-08-21. Both versions are preserved as annotated tags — `dock/dolly-live-scrub` (main's `remains` + `cameraTo` scroll-scrub, as it was before the cut) and `dock/dolly-phase2-video` (the video branch, `relay/story-phase2-dolly-video` merged into `dolly/phase2-video`). Neither merges to main. If the video version ever comes back it still needs real assets first; the restore recipe is in the ROADMAP Parking Lot.
 
 ### The GFW decode-shader endgame stays behind the pre-committed scroll-story Phase-3 gate; do not pull it forward.
 *2026-07-03, per Lee*

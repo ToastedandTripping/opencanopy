@@ -18,6 +18,8 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Live browser QA** on four deployed relays the keyless sandbox could not verify: Phase A "honest timeline" (full 1917->2025 sweep in lockstep with the last fire patch; mobile readout, reduced-motion jump-to-end, histogram scent), a11y P2 cluster, CO2 calculator redesign, audit P0+P1 remediation. Checklist: `~/marvin/state/opencanopy-a11y-p2-live-qa-2026-07-17.md` + the 07-15 hand-off.
 
+- **Live QA on the docked-dolly landing page** (Lee, after deploy): scroll the whole story — the '35,000 hectares' red reveal lands with its panel, the page proceeds to the CTA with no dead stretch, 'Explore the Map' opens /map at the Clayoquot/Strathcona pocket with forest-age on, the ending heading is still semibold and centered. Mobile once. If the ending feels truncated, the fix is `ending.scrollHeight` 300 -> 400 in chapters.ts, nothing more.
+
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |
@@ -31,6 +33,9 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-08-21 -- Ending dolly docked; landing page ends on the reveal
+Lee's call: the landing page was trying too hard and keeping the project from /map. Cut the `remains` chapter and the `cameraTo` camera scrub from main (branch `story/retire-dolly`); the CTA's existing deep-link to STORY_END_CAMERA now carries the zoom. Both dolly versions preserved as annotated tags (`dock/dolly-live-scrub`, `dock/dolly-phase2-video`) with a restore recipe in the ROADMAP Parking Lot. Plan `.claude/plans/misty-waddling-hinton.md`, critic CONCERN -> 5 must-fixes folded, prefetch guard revert-proven, 816 tests + tsc + lint + build + reduced-motion e2e green. Awaiting Razor, merge, deploy, and Lee's live QA.
 
 ### 2026-08-21 -- Standing gates migrated out of the hand-off
 Split the 11 "Standing Gates" by lifetime: three environment constraints plus the dolly do-not-merge and GFW hold-back rulings went to `.claude/DECISIONS.md` (append-and-amend only, created today); the eight held/deferred work items went to `ROADMAP.md -> Parking Lot`. This file is now the slim volatile layer. Same shape as the Fern migration of 2026-08-20, done before a rewrite could lose anything here.
