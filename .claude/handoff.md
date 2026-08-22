@@ -20,6 +20,8 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Live QA on the docked-dolly landing page** (Lee, after deploy): scroll the whole story — the '35,000 hectares' red reveal lands with its panel, the page proceeds to the CTA with no dead stretch, 'Explore the Map' opens /map at the Clayoquot/Strathcona pocket with forest-age on, the ending heading is still semibold and centered. Mobile once. If the ending feels truncated, the fix is `ending.scrollHeight` 300 -> 400 in chapters.ts, nothing more.
 
+- **Batch 0 hotfix from the /map visual audit** (trivial tier, no relay needed): P1 — `useMapState.ts:172` on-mount flyTo gives up after 2 s, dropping deep-link cameras (breaks share links and the landing CTA); P8 — `useMapState.ts:251` gates layer restore on `layers=`, so `preset=` alone does nothing. Two one-liners + a mount-delay test. Ship before anything else in the program. Tracking: `research/map-visual-audit-2026-08-22.md`.
+
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |
@@ -29,10 +31,19 @@ in this project has already been ruled on, usually for a reason that is not obvi
 | Phase B: give the consolidated harvest layer its own preset chip, or fold it into the existing threats/fire-logging preset? | Affects layer architecture and preset UX | 2026-07-18 |
 | Live visual sign-off on Phase A "honest timeline": does a full 1917->2025 sweep finish in lockstep with the last fire patch painting? Also: mobile readout legibility, reduced-motion jump-to-end, histogram scent at a glance. | This is the exact honesty judgment the mechanism can't self-certify -- everything mechanical is already verified | 2026-07-18 |
 | Live browser QA still owed on three earlier deployed relays: a11y P2 cluster, the CO2 calculator redesign, and the audit P0+P1 remediation (keyless sandbox couldn't verify any of them) | Confirms the accessibility fixes, the carbon calculator's real numbers, and the /map perf cascade fix actually work for a human on a real device | a11y P2: 2026-07-17; CO2 calc: 2026-07-16; audit P0+P1: 2026-07-11 |
+| Audit Q1 (P6): restore the 11 hidden registry layers once the PMTiles archive is split (P3), or delete them from the registry? | Decides Batch 3/4 scope and whether the May per-layer findings get fixed or retired | 2026-08-22 |
+| Audit Q2 (PR2): should the 'Threats' preset be renamed 'Logging' (it shows history only), or wait for Phase D's FOM proposed-logging layer to make it a real threat map? | Batch 2 copy vs. Phase D sequencing | 2026-08-22 |
+| Audit Q3: legend chips are collapsed by default (labels one click away). Keep that, or expand by default on desktop / on first enable? | Resolves F1 and CH1 either way; Lee flagged the collapsed state as deliberate | 2026-08-22 |
+| Audit Q4 (PR4): Protection preset — rename to 'Old growth + protection', or remove old growth from it so parks/deferrals carry the name? | The preset currently says 'all this old growth is protected' | 2026-08-22 |
+| Audit Q5 (PR5): Overview preset — keep satellite (only appears from z10) or drop it and make the preset 'Forest age + parks'? | Overview is forest-age alone at every arrival zoom today | 2026-08-22 |
+| Audit Q6 (T2): is SITE_INDEX in the VRI extract? If not, is a Price/Holt/Daust big-tree subset layer worth a data pull? | The only way the map can show the story's 0.3% rather than VRI's 13–30% | 2026-08-22 |
 
 ---
 
 ## Log (newest first)
+
+### 2026-08-22 -- /map visual layer audit complete; remediation program recorded
+144 live captures (7 public layers + 4 presets × 9 views + baselines), PMTiles network timing per shot, two Jen (Fable) design passes + cross-check. Report artifact https://claude.ai/code/artifact/4e3b7b25-9897-4ac0-9955-6e4287d6416f; tracking checklist `research/map-visual-audit-2026-08-22.md` (35 findings with IDs, batches 0–5); program in ROADMAP `next:`. Lee's correction folded: legend detail exists on expand, so F1/K2/CH1 downgraded to default-state questions; the VRI caveat in `description` is still never on the map surface (F2/T2 stand). Six decisions await Lee (Q1–Q6). Batch 0 (two one-liners) is owed first.
 
 ### 2026-08-21 -- Ending dolly docked; landing page ends on the reveal
 Lee's call: the landing page was trying too hard and keeping the project from /map. Cut the `remains` chapter and the `cameraTo` camera scrub from main (branch `story/retire-dolly`); the CTA's existing deep-link to STORY_END_CAMERA now carries the zoom. Both dolly versions preserved as annotated tags (`dock/dolly-live-scrub`, `dock/dolly-phase2-video`) with a restore recipe in the ROADMAP Parking Lot. Plan `.claude/plans/misty-waddling-hinton.md`, critic CONCERN -> 5 must-fixes folded, prefetch guard revert-proven, 816 tests + tsc + lint + build + reduced-motion e2e green. Awaiting Razor, merge, deploy, and Lee's live QA.
