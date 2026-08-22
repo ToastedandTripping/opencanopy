@@ -42,6 +42,12 @@ function deconflictExclusivePairs(ids: string[]): string[] {
 
 const STORAGE_KEY = "opencanopy-layers-v2";
 
+/** Keep only ids that exist in the public registry (order preserved). */
+export function validateLayerIds(ids: string[]): string[] {
+  const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
+  return ids.filter((id) => validIds.has(id));
+}
+
 /**
  * Parse layer IDs from the URL hash: `layers=` is authoritative; a bare
  * `preset=` (no layers) resolves to that preset's layers. Before the
@@ -52,18 +58,16 @@ function parseLayersFromHash(): string[] | null {
   try {
     const hash = window.location.hash.slice(1);
     const params = new URLSearchParams(hash);
-    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
     const raw = params.get("layers");
     if (raw) {
-      const ids = raw.split(",").filter((id) => id.length > 0);
-      const filtered = ids.filter((id) => validIds.has(id));
+      const filtered = validateLayerIds(raw.split(",").filter((id) => id.length > 0));
       if (filtered.length > 0) return filtered;
     }
     const presetId = params.get("preset");
     if (presetId) {
       const preset = LAYER_PRESETS.find((p) => p.id === presetId);
       if (preset) {
-        const filtered = preset.layers.filter((id) => validIds.has(id));
+        const filtered = validateLayerIds(preset.layers);
         if (filtered.length > 0) return filtered;
       }
     }

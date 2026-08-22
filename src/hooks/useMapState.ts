@@ -9,7 +9,7 @@ import {
   DEFAULT_BEARING,
   MAP_STYLES,
 } from "@/lib/mapConfig";
-import { resolveInitialLayers, computeActivePreset } from "@/hooks/useLayerState";
+import { resolveInitialLayers, computeActivePreset, validateLayerIds } from "@/hooks/useLayerState";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -153,14 +153,10 @@ export function useMapState({
   onLayerRestore,
 }: UseMapStateOptions) {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mountedRef = useRef(false);
   const lastLayerHash = useRef<string>("");
 
   // On mount: if URL has position params, fly to them
   useEffect(() => {
-    if (mountedRef.current) return;
-    mountedRef.current = true;
-
     const parsed = parseHash();
     const hasPosition =
       window.location.hash.includes("lat=") &&
@@ -173,13 +169,28 @@ export function useMapState({
     // cache, mobile) the deep-link camera was dropped while `layers=` still
     // applied, so shared links and the landing-page CTA landed on the default
     // province view (visual audit 2026-08-22, P1). Now: poll until the map
-    // ref exists (bounded only by unmount), and if the map exists but hasn't
-    // finished loading, fly on its `load` event.
+    // ref exists — 10 Hz for the first 10 s, then 2 Hz, giving up only after
+    // 120 s (a map that never mounts: error boundary, no WebGL) or unmount.
+    //
+    // One fly is enough. MapLibre honours flyTo({duration:0}) any time after
+    // construction: the style only overrides the camera on `style.load` when
+    // the transform is still `unmodified` (maplibre map.ts ~830), and
+    // INITIAL_VIEW_STATE already modified it. A re-fly on `load` was tried and
+    // removed: `load` fires seconds later on slow devices and flyTo calls
+    // stop() first, which would yank the camera back over the user's first pan.
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const fly = () => {
+    const startedAt = Date.now();
+    const tryFly = () => {
       if (cancelled) return;
-      mapRef.current?.flyTo({
+      const handle = mapRef.current;
+      if (!handle) {
+        const elapsed = Date.now() - startedAt;
+        if (elapsed > 120_000) return;
+        timer = setTimeout(tryFly, elapsed > 10_000 ? 500 : 100);
+        return;
+      }
+      handle.flyTo({
         center: [parsed.lng, parsed.lat],
         zoom: parsed.zoom,
         pitch: parsed.pitch,
@@ -187,32 +198,14 @@ export function useMapState({
         duration: 0, // Instant on initial load
       });
     };
-    const tryFly = () => {
-      if (cancelled) return;
-      const handle = mapRef.current;
-      if (!handle) {
-        timer = setTimeout(tryFly, 100);
-        return;
-      }
-      // Fly now (flyTo is valid any time after construction), and if the map
-      // hasn't finished its first load, fly again on `load` in case the style
-      // application resets the view. `loaded()` also reads false while tiles
-      // are merely in flight, so it must never be the ONLY trigger.
-      fly();
-      const map = handle.getMap?.();
-      if (map && typeof map.loaded === "function" && !map.loaded()) {
-        map.once("load", fly);
-      }
-    };
 
     // Small delay to let map initialize
     timer = setTimeout(tryFly, 200);
     return () => {
+      // Also what makes a StrictMode double-invoke safe: the first run is
+      // cancelled before its 200 ms timer fires, so exactly one fly happens.
       cancelled = true;
       if (timer) clearTimeout(timer);
-      // Let a StrictMode re-run (dev) schedule its own fly; the cancelled
-      // flag above already prevents the first run from double-flying.
-      mountedRef.current = false;
     };
   }, [mapRef]);
 
@@ -274,8 +267,11 @@ export function useMapState({
       // A bare `#preset=` hash (no `layers=`) used to restore nothing here —
       // the gate only looked at layers (visual audit 2026-08-22, P8). The
       // restore handler already falls back to the preset when layers is empty.
+      // Validate ids here so an all-invalid `layers=` list becomes [] and the
+      // handler's preset fallback engages — the same resolution the initial
+      // load path (parseLayersFromHash) applies to the same URL.
       if ((parsed.layers || parsed.preset) && onLayerRestore) {
-        onLayerRestore(parsed.layers ?? [], parsed.preset);
+        onLayerRestore(validateLayerIds(parsed.layers ?? []), parsed.preset);
       }
     };
     window.addEventListener("popstate", handlePopState);
