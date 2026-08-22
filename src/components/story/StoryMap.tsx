@@ -25,7 +25,7 @@ interface StoryMapProps {
   overlays: ResolvedOverlay[];
   counterLabel?: string;
   supports3D: boolean;
-  /** When true, shows the binary end-reveal raster (ending + remains chapters). */
+  /** When true, shows the binary end-reveal raster (the ending chapter). */
   revealBinary?: boolean;
   /**
    * Per-frame opacity for story-binary-reveal [0, 0.85].
@@ -143,7 +143,7 @@ export function StoryMap({
   // Per-frame binary end-reveal opacity.
   // SOLE writer of story-binary-reveal raster-opacity. applyLayerVisibility
   // does not touch this layer. The opacity is driven by binaryRevealOpacity
-  // (scroll-coupled in `ending`, immediate 0.85 in `remains`, 0 elsewhere).
+  // (scroll-coupled in `ending`, 0 elsewhere).
   // Guards redundant GL calls with binaryAppliedRef so per-frame identity
   // churn doesn't fire unnecessary setPaintProperty calls.
   useEffect(() => {

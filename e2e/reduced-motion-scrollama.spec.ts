@@ -93,7 +93,7 @@ test.describe('scrollama under prefers-reduced-motion: reduce', () => {
 
     expect(
       bodyScrollHeight,
-      `body.scrollHeight=${bodyScrollHeight}px — story appears collapsed (expected > 8000px for 5 chapters with combined ~1350vh at 720px viewport)`
+      `body.scrollHeight=${bodyScrollHeight}px — story appears collapsed (expected > 8000px for 5 chapters with combined ~1500vh at 720px viewport)`
     ).toBeGreaterThan(8000);
   });
 

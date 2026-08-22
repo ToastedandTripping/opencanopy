@@ -30,7 +30,7 @@ export const FOREST_AGE_CLASS_RASTER_URL = `${R2_PUBLIC_BASE}/raster/v2/{class}/
 /**
  * Binary end-reveal raster tiles (z4-z9).
  * Old-growth = dark green (#0d5c2a); mature/young/harvested = red (#ef4444).
- * Used by the story's ending + remains chapters to reveal what's left.
+ * Used by the story's ending chapter to reveal what's left.
  * Built by: python3 scripts/build-raster-tiles.py --theme binary
  * Uploaded to: r2:opencanopy-tiles/raster/v3/binary/
  */

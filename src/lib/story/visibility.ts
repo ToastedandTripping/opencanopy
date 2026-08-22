@@ -35,7 +35,7 @@ export interface VisibilityMap {
  * also drive were removed in Phase 1 (dead in the story: pinned to 0,
  * never zoomed to, or gated on a flag no chapter ever set).
  *
- * @param revealBinary - When true (ending + remains chapters), the binary
+ * @param revealBinary - When true (the ending chapter), the binary
  *   end-reveal raster is showing and the forest-base is hidden so it doesn't
  *   obscure the red/green contrast. Uses an explicit chapter flag rather than
  *   sniffing layer opacity to avoid fragile heuristics.

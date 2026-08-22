@@ -10,15 +10,6 @@ export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-/**
- * Cubic ease-in-out (smoothstep): 0→0, 1→1, symmetric midpoint at 0.5.
- * Caller must clamp t to [0,1] — this function does not clamp internally
- * so it remains a pure math function and the caller controls saturation.
- */
-export function easeInOut(t: number): number {
-  return t * t * (3 - 2 * t);
-}
-
 /** Shortest-angle interpolation that avoids spinning the long way around. */
 export function lerpAngle(a: number, b: number, t: number): number {
   const delta = ((b - a + 540) % 360) - 180;

@@ -6,7 +6,6 @@
  * as the user scrolls.
  */
 
-import { CHAPTERS } from "@/data/chapters";
 import {
   YEAR_OVERLAY_URL_PATTERN,
   YEAR_OVERLAY_RANGE,
@@ -60,11 +59,11 @@ function viewportTiles(
 let binaryPrefetchStarted = false;
 
 /**
- * Prefetch binary end-reveal raster tiles for the ending + remains chapters.
+ * Prefetch binary end-reveal raster tiles for the ending chapter.
  *
- * Warms two viewports:
- *   1. Province scale (z5-z6) — the ending chapter entry view
- *   2. Old-growth pocket (z7-z8) — STORY_END_CAMERA, the dolly destination
+ * Warms the province-scale viewport (z5-z6) only. The z6-z8 old-growth-pocket
+ * warm-up that served the ending dolly went with the dolly (docked 2026-08-21,
+ * tag dock/dolly-live-scrub) — the pocket is /map's job via the CTA deep-link.
  *
  * Called from StoryMap.onLoad so tiles are in the browser cache well before
  * the user scrolls into the ending chapter.
@@ -90,29 +89,6 @@ export function prefetchBinaryTiles(): void {
           .replace("{x}", String(x))
           .replace("{y}", String(y))
       );
-    }
-  }
-
-  // For any chapter with a cameraTo dolly, warm the destination viewport at
-  // z6, z7, and z8 so tiles are cached for every step of the zoom path.
-  // z6 covers the mid-dolly intermediate; z7-z8 cover the landing pocket.
-  // The province start (z5/z6 above) already covers the dolly entry.
-  // Idempotent: seen-set deduplicates any overlap with the province block.
-  for (const chapter of CHAPTERS) {
-    if (!chapter.cameraTo) continue;
-    const [lon, lat] = chapter.cameraTo.center;
-    for (const z of [6, 7, 8]) {
-      const tiles = viewportTiles(lon, lat, z, 2);
-      for (const { z: tz, x, y } of tiles) {
-        const key = `b:${tz}/${x}/${y}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        urls.push(
-          BINARY_RASTER_URL.replace("{z}", String(tz))
-            .replace("{x}", String(x))
-            .replace("{y}", String(y))
-        );
-      }
     }
   }
 

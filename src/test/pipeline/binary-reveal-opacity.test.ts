@@ -8,7 +8,7 @@ import { computeBinaryRevealOpacity } from "@/lib/story/binary-opacity";
  * is consumed by useScrollytelling's updateCamera callback. It must handle:
  *   - Non-reveal chapters → 0
  *   - revealBinary + fadeIn window → scroll-coupled ramp
- *   - revealBinary + no fadeIn (e.g. `remains`) → immediate 0.85
+ *   - revealBinary + no fadeIn → immediate 0.85
  *   - prefers-reduced-motion → immediate 0.85 regardless of fadeIn
  */
 
@@ -76,9 +76,9 @@ describe("computeBinaryRevealOpacity", () => {
     });
   });
 
-  // ── remains chapter: revealBinary=true, no fadeIn ─────────────────────────
+  // ── revealBinary=true, no fadeIn (no chapter uses this today; pure-function contract) ─────────────────────────
 
-  describe("remains chapter: revealBinary=true, no fadeIn", () => {
+  describe("revealBinary=true, no fadeIn", () => {
     it("returns 0.85 immediately at prog=0 (no fadeIn window)", () => {
       expect(computeBinaryRevealOpacity(true, undefined, 0, false)).toBe(0.85);
     });
