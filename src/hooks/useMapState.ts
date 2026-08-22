@@ -168,19 +168,18 @@ export function useMapState({
 
     if (!hasPosition) return;
 
-    // Wait for map to be ready, then fly to the URL position
-    let flyAttempts = 0;
-    const MAX_FLY_ATTEMPTS = 20; // 20 * 100ms = 2 seconds max
-    const tryFly = () => {
-      const map = mapRef.current;
-      if (!map) {
-        flyAttempts++;
-        if (flyAttempts >= MAX_FLY_ATTEMPTS) return; // Give up silently
-        setTimeout(tryFly, 100);
-        return;
-      }
-
-      map.flyTo({
+    // Wait for the map, then fly to the URL position. This used to poll
+    // 20 × 100 ms and "give up silently" — on any load slower than ~2 s (cold
+    // cache, mobile) the deep-link camera was dropped while `layers=` still
+    // applied, so shared links and the landing-page CTA landed on the default
+    // province view (visual audit 2026-08-22, P1). Now: poll until the map
+    // ref exists (bounded only by unmount), and if the map exists but hasn't
+    // finished loading, fly on its `load` event.
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const fly = () => {
+      if (cancelled) return;
+      mapRef.current?.flyTo({
         center: [parsed.lng, parsed.lat],
         zoom: parsed.zoom,
         pitch: parsed.pitch,
@@ -188,9 +187,33 @@ export function useMapState({
         duration: 0, // Instant on initial load
       });
     };
+    const tryFly = () => {
+      if (cancelled) return;
+      const handle = mapRef.current;
+      if (!handle) {
+        timer = setTimeout(tryFly, 100);
+        return;
+      }
+      // Fly now (flyTo is valid any time after construction), and if the map
+      // hasn't finished its first load, fly again on `load` in case the style
+      // application resets the view. `loaded()` also reads false while tiles
+      // are merely in flight, so it must never be the ONLY trigger.
+      fly();
+      const map = handle.getMap?.();
+      if (map && typeof map.loaded === "function" && !map.loaded()) {
+        map.once("load", fly);
+      }
+    };
 
     // Small delay to let map initialize
-    setTimeout(tryFly, 200);
+    timer = setTimeout(tryFly, 200);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      // Let a StrictMode re-run (dev) schedule its own fly; the cancelled
+      // flag above already prevents the first run from double-flying.
+      mountedRef.current = false;
+    };
   }, [mapRef]);
 
   // Update URL on map move (replaceState, debounced)
@@ -248,8 +271,11 @@ export function useMapState({
           duration: 500,
         });
       }
-      if (parsed.layers && onLayerRestore) {
-        onLayerRestore(parsed.layers, parsed.preset);
+      // A bare `#preset=` hash (no `layers=`) used to restore nothing here —
+      // the gate only looked at layers (visual audit 2026-08-22, P8). The
+      // restore handler already falls back to the preset when layers is empty.
+      if ((parsed.layers || parsed.preset) && onLayerRestore) {
+        onLayerRestore(parsed.layers ?? [], parsed.preset);
       }
     };
     window.addEventListener("popstate", handlePopState);
