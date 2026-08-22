@@ -42,19 +42,36 @@ function deconflictExclusivePairs(ids: string[]): string[] {
 
 const STORAGE_KEY = "opencanopy-layers-v2";
 
-/** Parse layer IDs from URL hash `layers=` param */
+/** Keep only ids that exist in the public registry (order preserved). */
+export function validateLayerIds(ids: string[]): string[] {
+  const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
+  return ids.filter((id) => validIds.has(id));
+}
+
+/**
+ * Parse layer IDs from the URL hash: `layers=` is authoritative; a bare
+ * `preset=` (no layers) resolves to that preset's layers. Before the
+ * 2026-08-22 visual audit (P8) a preset-only link hydrated nothing.
+ */
 function parseLayersFromHash(): string[] | null {
   if (typeof window === "undefined") return null;
   try {
     const hash = window.location.hash.slice(1);
     const params = new URLSearchParams(hash);
     const raw = params.get("layers");
-    if (!raw) return null;
-    const ids = raw.split(",").filter((id) => id.length > 0);
-    // Validate against registry
-    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
-    const filtered = ids.filter((id) => validIds.has(id));
-    return filtered.length > 0 ? filtered : null;
+    if (raw) {
+      const filtered = validateLayerIds(raw.split(",").filter((id) => id.length > 0));
+      if (filtered.length > 0) return filtered;
+    }
+    const presetId = params.get("preset");
+    if (presetId) {
+      const preset = LAYER_PRESETS.find((p) => p.id === presetId);
+      if (preset) {
+        const filtered = validateLayerIds(preset.layers);
+        if (filtered.length > 0) return filtered;
+      }
+    }
+    return null;
   } catch {
     return null;
   }
