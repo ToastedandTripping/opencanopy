@@ -109,6 +109,17 @@ describe("prefetchBinaryTiles URL generation", () => {
     expect(zLevels.has(8), "z8 pocket tiles prefetched — dolly warm-up crept back").toBe(false);
   });
 
+  it("prefetch footprint is EXACTLY {z5, z6} — nothing creeps in at z4 or z9 either", async () => {
+    const urls = await runPrefetchAndCaptureUrls();
+    const zLevels = new Set(
+      urls.map((url) => {
+        const m = url.match(/\/binary\/(\d+)\//);
+        return m ? parseInt(m[1]) : -1;
+      })
+    );
+    expect([...zLevels].sort()).toEqual([5, 6]);
+  });
+
   it("does not emit tiles outside z4-z9 (the raster overlay band)", async () => {
     const urls = await runPrefetchAndCaptureUrls();
     const zLevels = urls.map((url) => {

@@ -572,3 +572,91 @@ describe("Perf floor: idle-frame render guard", () => {
     }
   });
 });
+
+// ─── Last chapter holds flat into the CTA (dolly docked 2026-08-21) ──────────
+//
+// With the `remains` chapter and its `cameraTo` scrub docked, `ending` is the
+// last chapter and must HOLD its own camera past prog 0.8 -- there is no next
+// chapter to interpolate toward. Every real chapter shares FLAT_BC_CAMERA, so a
+// bare "equals FLAT_BC_CAMERA" assertion would be tautological; each test
+// therefore runs a CONTROL first: temporarily push a fake next chapter with a
+// different zoom and prove the toward-next branch DOES move the camera, then
+// pop it and prove the last chapter does NOT.
+describe("Last chapter holds flat into the CTA", () => {
+  const FAKE_NEXT = {
+    id: "__fake_next__",
+    heading: "x",
+    camera: { center: [-125.86, 49.38] as [number, number], zoom: 8, pitch: 0, bearing: 0 },
+    layers: [],
+    scrollHeight: 100,
+  };
+
+  function mockReducedMotion(matches: boolean) {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches,
+      media: matches ? "(prefers-reduced-motion: reduce)" : "",
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }) as unknown as typeof window.matchMedia;
+  }
+
+  beforeEach(() => {
+    capturedEnter = null;
+    capturedProgress = null;
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    // Belt and braces: never leak the control chapter into other suites.
+    while (CHAPTERS[CHAPTERS.length - 1]?.id === FAKE_NEXT.id) CHAPTERS.pop();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("`ending` is the last chapter", () => {
+    expect(CHAPTERS[CHAPTERS.length - 1].id).toBe("ending");
+  });
+
+  it("non-reduced: toward-next interpolates when a next chapter exists (control), and the last chapter holds flat", async () => {
+    mockReducedMotion(false);
+    const endingIdx = CHAPTERS.findIndex((c) => c.id === "ending");
+    const { result } = await setupHook();
+
+    // CONTROL: with a fake next chapter, prog=0.9 is halfway through the
+    // toward-next window, so zoom must have moved off 5 toward 8.
+    CHAPTERS.push(FAKE_NEXT);
+    act(() => { fireProgress(endingIdx, 0.9); });
+    act(() => { flushRaf(); });
+    expect(result.current.currentCamera.zoom).toBeCloseTo(6.5, 5);
+    CHAPTERS.pop();
+
+    // REAL: no next chapter -- holds the chapter's own camera, byte for byte.
+    act(() => { fireProgress(endingIdx, 0.95); });
+    act(() => { flushRaf(); });
+    expect(result.current.currentCamera).toEqual(CHAPTERS[endingIdx].camera);
+  });
+
+  it("reduced-motion: toward-next snaps to the next camera (control), and the last chapter holds flat", async () => {
+    mockReducedMotion(true);
+    const endingIdx = CHAPTERS.findIndex((c) => c.id === "ending");
+    const { result } = await setupHook();
+
+    // CONTROL: under reduced motion the toward-next branch uses t=1, so any
+    // prog > 0.8 lands EXACTLY on the next camera (no sweep).
+    CHAPTERS.push(FAKE_NEXT);
+    act(() => { fireProgress(endingIdx, 0.81); });
+    act(() => { flushRaf(); });
+    expect(result.current.currentCamera).toEqual(FAKE_NEXT.camera);
+    CHAPTERS.pop();
+
+    // REAL: no next chapter -- the reduced-motion snap has nothing to snap to
+    // and must not be consulted; camera holds.
+    act(() => { fireProgress(endingIdx, 0.95); });
+    act(() => { flushRaf(); });
+    expect(result.current.currentCamera).toEqual(CHAPTERS[endingIdx].camera);
+  });
+});

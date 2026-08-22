@@ -48,7 +48,6 @@ export function NarrativePanel({
           : "opacity 200ms cubic-bezier(0.4, 0, 1, 1), transform 200ms cubic-bezier(0.4, 0, 1, 1)",
       };
 
-
   return (
     <div
       className={`pointer-events-none absolute inset-0 z-10 ${positionClasses}`}
@@ -58,7 +57,7 @@ export function NarrativePanel({
         style={cardStyle}
       >
         <h2
-          className={`text-2xl md:text-3xl font-semibold text-white tracking-normal`}
+          className="text-2xl md:text-3xl font-semibold text-white tracking-normal"
           style={{ fontFamily: "var(--font-display)" }}
         >
           {heading}
