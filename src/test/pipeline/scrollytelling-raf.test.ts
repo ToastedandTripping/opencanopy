@@ -528,7 +528,7 @@ describe("Perf floor: idle-frame render guard", () => {
   it("repeating the exact same {index, progress} keeps the same camera/overlays object references", async () => {
     const { result } = await setupHook();
     // `baseline` has a static overlay with fadeIn, forest-age layer only, no
-    // cameraTo/toward-next dolly at prog=0.5 — the common "idle mid-chapter"
+    // toward-next interpolation at prog=0.5 — the common "idle mid-chapter"
     // shape most of a chapter's scroll range actually looks like.
     const idx = CHAPTERS.findIndex((c) => c.id === "baseline");
 
@@ -557,7 +557,7 @@ describe("Perf floor: idle-frame render guard", () => {
   it("repeated identical progress within a chapter's flat camera range keeps the SAME camera object across many frames", async () => {
     const { result } = await setupHook();
     // `overview` never triggers the toward-next dolly at these progress
-    // values (all <= 0.8) and has no cameraTo -- camera is a constant spread
+    // values (all <= 0.8) -- camera is a constant spread
     // of chapter.camera on every frame, the textbook idle case.
     const idx = CHAPTERS.findIndex((c) => c.id === "overview");
 

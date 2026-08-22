@@ -6,7 +6,7 @@
  * currently scrolled into view — was pulled out of the accessibility tree.
  * A screen-reader user tabbing/reading through the scroll-story could only
  * ever reach the single active chapter's heading; the rest of the narrative
- * (all 6 chapters in src/data/chapters.ts) was invisible to AT. The
+ * (all 5 chapters in src/data/chapters.ts) was invisible to AT. The
  * opacity/transform visual animation (`cardStyle`) already handles the
  * inactive → invisible-on-screen transition; aria-hidden was redundant and
  * wrong (it hides an inactive-but-about-to-be-active panel from AT even
@@ -57,8 +57,9 @@ describe("NarrativePanel a11y", () => {
     expect(getByRole("heading", { name: "See what's left." })).toBeTruthy();
   });
 
-  it("all 6 story chapters have a non-empty heading (completeness guard for the panel a11y fix)", () => {
-    expect(CHAPTERS.length).toBe(6);
+  it("all 5 story chapters have a non-empty heading (completeness guard for the panel a11y fix)", () => {
+    // 5 since the ending dolly (`remains`) was docked 2026-08-21 — tag dock/dolly-live-scrub.
+    expect(CHAPTERS.length).toBe(5);
     for (const chapter of CHAPTERS) {
       expect(chapter.heading.length).toBeGreaterThan(0);
     }

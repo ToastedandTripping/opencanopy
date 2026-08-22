@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CHAPTERS, type ChapterCamera } from "@/data/chapters";
 import { computeBinaryRevealOpacity } from "@/lib/story/binary-opacity";
-import { interpolateCamera, easeInOut } from "@/lib/math/interpolation";
+import { interpolateCamera } from "@/lib/math/interpolation";
 import { yearFromProgress, type ScrubTable } from "@/lib/story/scrub";
 import cutblocksScrub from "@/data/scrub/cutblocks-scrub.json";
 import fireScrub from "@/data/scrub/fire-scrub.json";
@@ -91,23 +91,15 @@ export function useScrollytelling() {
 
       const reducedMotion = prefersReducedMotion();
 
-      // Intra-chapter dolly: when a chapter declares `cameraTo`, scrub
-      // chapter.camera → chapter.cameraTo across the chapter's own progress,
-      // eased and completing at DOLLY_END so the camera settles before the CTA.
-      // Under prefers-reduced-motion, snap straight to the destination (t=1).
-      // This takes priority over the toward-next interpolation so chapters with
-      // `cameraTo` are not subject to the end-of-chapter camera jump.
-      //
-      // For chapters WITHOUT `cameraTo`: only interpolate toward the next chapter
-      // in the last 20% of scroll (the existing toward-next dolly behavior).
-      const DOLLY_END = 0.8;
+      // Camera: hold the chapter's own camera, and only interpolate toward the
+      // next chapter in the last 20% of scroll. Under prefers-reduced-motion,
+      // snap to the next camera instead of sweeping. The last chapter has no
+      // next, so it holds flat into the CTA. (The intra-chapter dolly that
+      // used to live here is docked: tag dock/dolly-live-scrub.)
       const nextChapter = CHAPTERS[chapterIdx + 1];
       let camera: ChapterCamera;
 
-      if (chapter.cameraTo) {
-        const t = reducedMotion ? 1 : easeInOut(clamp01(prog / DOLLY_END));
-        camera = interpolateCamera(chapter.camera, chapter.cameraTo, t);
-      } else if (nextChapter && prog > 0.8) {
+      if (nextChapter && prog > 0.8) {
         const t = reducedMotion ? 1 : (prog - 0.8) / 0.2;
         camera = interpolateCamera(chapter.camera, nextChapter.camera, t);
       } else {
@@ -173,8 +165,8 @@ export function useScrollytelling() {
       setOverlays((prev) => (overlaysEqual(prev, resolved) ? prev : resolved));
 
       // Per-frame binary reveal opacity. chapters with revealBinaryFadeIn get a
-      // scroll-coupled ramp; chapters with revealBinary but no fadeIn (e.g.
-      // `remains`) jump straight to 0.85. Under prefers-reduced-motion, always
+      // scroll-coupled ramp; chapters with revealBinary but no fadeIn jump
+      // straight to 0.85. Under prefers-reduced-motion, always
       // snap to 0.85 immediately so the reveal is not lost, just not animated.
       const binaryOpacity = computeBinaryRevealOpacity(
         chapter.revealBinary,
@@ -186,7 +178,7 @@ export function useScrollytelling() {
       setBinaryRevealOpacity((prev) => (prev === binaryOpacity ? prev : binaryOpacity));
 
       // Value-equality guard: field-compare against the previous camera so an
-      // idle frame (e.g. mid-chapter, no cameraTo/toward-next interpolation
+      // idle frame (e.g. mid-chapter, no toward-next interpolation
       // active -- the common case for most of a chapter's scroll range) does
       // not allocate/adopt a new camera object and force a re-render.
       setCurrentCamera((prev) => (camerasEqual(prev, camera) ? prev : camera));

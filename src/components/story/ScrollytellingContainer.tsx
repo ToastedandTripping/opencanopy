@@ -102,8 +102,7 @@ export function ScrollytellingContainer() {
               body={chapter.body}
               citation={chapter.citation}
               active={activeChapterIndex === i}
-              position={chapter.id === "ending" || chapter.id === "remains" ? "center" : "left"}
-              headingWeight={chapter.id === "remains" ? "normal" : "semibold"}
+              position={chapter.id === "ending" ? "center" : "left"}
             />
           </div>
         ))}

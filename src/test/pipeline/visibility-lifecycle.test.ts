@@ -68,9 +68,9 @@ describe("visibility lifecycle", () => {
     });
   });
 
-  // ── Binary end-reveal (ending + remains chapters) ──────────────
+  // ── Binary end-reveal (the ending chapter) ──────────────
 
-  describe("revealBinary flag: ending and remains chapters", () => {
+  describe("revealBinary flag: the ending chapter", () => {
     it("revealBinary=true does NOT write story-binary-reveal (per-frame effect owns it)", () => {
       simulateOnLoad();
 
@@ -200,7 +200,7 @@ describe("visibility lifecycle", () => {
       applyLayerVisibility(map, [{ id: "forest-age", opacity: 0.4 }]);
       expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
 
-      // Chapter: ending/remains -- revealBinary flips on, forest-base hides
+      // Chapter: ending -- revealBinary flips on, forest-base hides
       applyLayerVisibility(map, [{ id: "forest-age", opacity: 0.25 }], true);
       expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0);
     });

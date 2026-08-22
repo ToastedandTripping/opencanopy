@@ -4,7 +4,10 @@
  * Verifies that prefetchBinaryTiles() emits BINARY_RASTER_URL-pattern URLs
  * at the expected zoom levels for:
  *   1. Province viewport (z5-z6, centered on BC)
- *   2. Old-growth pocket viewport (z7-z8, STORY_END_CAMERA)
+ *   2. NOTHING deeper: the old-growth pocket (z7-z8) used to be warmed for the
+ *      ending dolly. The dolly is docked (tag dock/dolly-live-scrub, 2026-08-21)
+ *      and the zoom is /map's job via the CTA deep-link, so those tiles must
+ *      not be fetched on every landing-page load.
  *
  * Uses vi.resetModules() to bypass the binaryPrefetchStarted idempotency
  * guard and get a fresh module instance. Uses vi.useFakeTimers() to fire
@@ -94,7 +97,7 @@ describe("prefetchBinaryTiles URL generation", () => {
     expect(zLevels.has(6), "missing z6 province tiles").toBe(true);
   });
 
-  it("includes z7 and z8 tiles (old-growth pocket viewport)", async () => {
+  it("does NOT prefetch z7/z8 pocket tiles (the ending dolly is docked)", async () => {
     const urls = await runPrefetchAndCaptureUrls();
     const zLevels = new Set(
       urls.map((url) => {
@@ -102,8 +105,8 @@ describe("prefetchBinaryTiles URL generation", () => {
         return m ? parseInt(m[1]) : -1;
       })
     );
-    expect(zLevels.has(7), "missing z7 pocket tiles").toBe(true);
-    expect(zLevels.has(8), "missing z8 pocket tiles").toBe(true);
+    expect(zLevels.has(7), "z7 pocket tiles prefetched — dolly warm-up crept back").toBe(false);
+    expect(zLevels.has(8), "z8 pocket tiles prefetched — dolly warm-up crept back").toBe(false);
   });
 
   it("does not emit tiles outside z4-z9 (the raster overlay band)", async () => {

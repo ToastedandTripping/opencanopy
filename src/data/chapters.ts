@@ -72,15 +72,7 @@ export interface Chapter {
   /** Scroll spacer height in vh units */
   scrollHeight: number;
   /**
-   * When set, useScrollytelling scrubs `camera → cameraTo` across the chapter's
-   * own scroll progress (eased, finishing at DOLLY_END=0.8 so it settles before
-   * the CTA). The toward-next interpolation does NOT apply to chapters with this
-   * field. Set on `remains` so the dolly is spread over the chapter's 800vh rather
-   * than crammed into the last 20% of `ending`.
-   */
-  cameraTo?: ChapterCamera;
-  /**
-   * When true, activates the binary end-reveal raster (ending + remains chapters).
+   * When true, activates the binary end-reveal raster (the ending chapter).
    * Hides the forest-base (binary carries old-growth color now). The raster's
    * opacity is managed per-frame by useScrollytelling + the StoryMap binary effect
    * — NOT by applyLayerVisibility.
@@ -89,8 +81,7 @@ export interface Chapter {
   /**
    * Scroll-progress window [startProg, endProg] over which story-binary-reveal
    * fades from 0 → 0.85. When omitted but revealBinary=true, binary is at 0.85
-   * immediately on chapter enter (e.g. `remains` carries the fully-revealed state
-   * forward). Works like overlay `fadeIn`.
+   * immediately on chapter enter. Works like overlay `fadeIn`.
    */
   revealBinaryFadeIn?: [number, number];
 }
@@ -104,18 +95,18 @@ export const FLAT_BC_CAMERA: ChapterCamera = {
 };
 
 /**
- * Final camera for the story's "remains" chapter — the old-growth pocket
- * that the ending dolly zooms into.
+ * The CTA's `/map` destination — the old-growth pocket the reader lands on
+ * when they click "Explore the Map" (CtaSection builds the hash from this).
  *
  * Finalized by eyeball (Phase 1b) against the built binary tiles: Vancouver
  * Island's west coast (Clayoquot Sound / Strathcona), where old-growth survivors
  * read as green amid a field of red clearcuts. Iconic, recognizable, and the
  * starkest "what's left" of the candidate pockets. Deuteranopia-checked (the
- * green/red luminance gap widens to ~4.5:1 under simulation). Everything else
- * (CTA hash, prefetch, remains chapter camera) derives from here as the SSOT.
+ * green/red luminance gap widens to ~4.5:1 under simulation).
  *
- * z8 (not 8.5) so the dolly endpoint lands on crisp z9 binary tiles — the
- * binary raster source is maxzoom 9, and 256px tiles fetch tile-zoom = display+1.
+ * The story itself no longer zooms here: the ending dolly was DOCKED 2026-08-21
+ * (git tags dock/dolly-live-scrub, dock/dolly-phase2-video; ROADMAP Parking Lot
+ * has the restore recipe). The zoom is /map's job, one click later.
  */
 export const STORY_END_CAMERA: ChapterCamera = {
   center: [-125.86, 49.38],
@@ -190,8 +181,9 @@ export const CHAPTERS: Chapter[] = [
     // old-growth (dark green) vs everything else (red). The map goes almost
     // entirely red — 35,000 ha of large old-growth out of 1.1M ha total.
     // Shortened to 300vh so the red reveal and the explanatory panel land
-    // together. The dolly now lives in `remains` as an intra-chapter cameraTo
-    // scrub, not here.
+    // together. This is the FINAL chapter: the page holds flat at province
+    // scale and proceeds to the CTA, whose "Explore the Map" link carries the
+    // reader to STORY_END_CAMERA on /map.
     id: "ending",
     heading: "35,000 hectares.",
     subheading: "That's what remains of BC's large old-growth trees. 0.3% of the province's forest.",
@@ -210,20 +202,5 @@ export const CHAPTERS: Chapter[] = [
     revealBinary: true,
     revealBinaryFadeIn: [0.4, 0.6],
     scrollHeight: 300,
-  },
-  {
-    // Intra-chapter dolly: starts at province scale (FLAT_BC_CAMERA, same as
-    // `ending`) and eases into the Vancouver Island old-growth pocket
-    // (STORY_END_CAMERA) over the chapter's 800vh. The camera scrub is driven
-    // by `cameraTo` in updateCamera (eased, completing at DOLLY_END=0.8) so it
-    // settles at the pocket well before the user reaches the CTA. The binary
-    // layer stays on (revealBinary). Scrolling past reveals the CTA section.
-    id: "remains",
-    heading: "This is what's left.",
-    camera: FLAT_BC_CAMERA,
-    cameraTo: STORY_END_CAMERA,
-    layers: [{ id: "forest-age", opacity: 0.25 }],
-    revealBinary: true,
-    scrollHeight: 800,
   },
 ];

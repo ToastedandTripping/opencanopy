@@ -9,12 +9,6 @@ interface NarrativePanelProps {
   citation?: string;
   active: boolean;
   position: "left" | "center";
-  /**
-   * Font weight for the heading. Accepts Tailwind weight names.
-   * Default: "semibold" (600) — preserved for all existing chapters.
-   * Pass "normal" for the "remains" chapter's contemplative closing line.
-   */
-  headingWeight?: "semibold" | "normal";
   children?: React.ReactNode;
 }
 
@@ -25,7 +19,6 @@ export function NarrativePanel({
   citation,
   active,
   position,
-  headingWeight = "semibold",
   children,
 }: NarrativePanelProps) {
   const positionClasses =
@@ -40,7 +33,7 @@ export function NarrativePanel({
 
   // Transition styles gated on prefers-reduced-motion.
   // When reduced motion is preferred: no animation, just instant opacity snap.
-  // This applies to ALL chapters, not just "remains".
+  // This applies to ALL chapters.
   const cardStyle = prefersReducedMotion()
     ? {
         opacity: active ? 1 : 0,
@@ -55,7 +48,6 @@ export function NarrativePanel({
           : "opacity 200ms cubic-bezier(0.4, 0, 1, 1), transform 200ms cubic-bezier(0.4, 0, 1, 1)",
       };
 
-  const headingWeightClass = headingWeight === "normal" ? "font-normal" : "font-semibold";
 
   return (
     <div
@@ -66,7 +58,7 @@ export function NarrativePanel({
         style={cardStyle}
       >
         <h2
-          className={`text-2xl md:text-3xl ${headingWeightClass} text-white tracking-normal`}
+          className={`text-2xl md:text-3xl font-semibold text-white tracking-normal`}
           style={{ fontFamily: "var(--font-display)" }}
         >
           {heading}
