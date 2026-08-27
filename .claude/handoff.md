@@ -45,6 +45,22 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Log (newest first)
 
+### 2026-08-27 -- Phase B reconciliation: rebase-and-adjust, not a rebuild
+
+`relay/phase-b-harvest` (2026-08-09, complex tier, 5 Ted batches, 31 files, +8219/-228, Razor 3 CRITICALs all closed, Jen spec + PASS) already exists and is complete-unmerged. Lee's B.1/B.2 rulings from 2026-08-26 postdate it by 17 days. Comparison:
+
+**B.1 (province-wide STATIC leaderboard):** MATCH. Phase B built exactly this — plan D2: "province-wide, build-time, exact." `scripts/build-harvest-leaderboard.ts` produces `src/data/harvest-leaderboard.json` at build time, top 5 + Other + undated.
+
+**B.2 (fold harvest into the logging preset, no separate chip):** MATCH. Phase B plan D4: "no dedicated Accountability preset chip; accountability rides along in threats + fire-logging." Both Logging (was Threats) and Fire+Logging get harvest with forest-age harvested-class suppressed via `classFilters`. Lee's singular "the logging preset" is ambiguous but fire-logging inclusion is natural — no conflict.
+
+**Verdict: REBASE-AND-ADJUST.** The substance is aligned. The conflicts are mechanical — three layers of changes on this session branch postdate Phase B's fork point:
+
+1. **Batch 1 renames:** presets.ts (Threats→Logging, Protection→Old Growth+Parks), registry.ts (tap-deferrals→old-growth-250, conservation-priority→tap-priority), legend expanded-by-default, preset chip styling, parks swatch, satellite legend, attribution CSS. Phase B's preset file uses the old names/ids.
+2. **Global-state API:** filter-expressions.ts signatures changed (buildYearFilter/buildAgeGradedOpacity dropped the year param). DataLayer.tsx filter effect restructured (timelineActive boolean deps). Phase B calls the old API.
+3. **Test file conflicts:** Both branches modified contrast-audit, schema-audit, satellite-zorder, data-layer-memo tests.
+
+Estimated rebase effort: ~2-3 hours as a dedicated relay (resolve merge conflicts, update Phase B's code to the new API surface, re-run all gates). No design decisions need revisiting — the plan's substance is what Lee asked for. The rebase is deferred until the session branch's three unmerged layers are deployed, so the fork point is stable.
+
 ### 2026-08-27 -- Global-state year uniform shipped (stacked on Batch 1)
 MapLibre 5.21 setGlobalStateProperty replaces per-layer setFilter for the timeline year. 1 call per year tick instead of 2N. DataLayer filter effect fires on timeline on/off, not every year tick. filter-expressions API simplified (drop year param). Render-gate preserved (verified setGlobalStateProperty triggers repaint/idle). Razor PASS (0 CRITICAL, 1 WARNING: style-loaded coupling — not a ship-blocker). 836 tests green. Stacked on the unmerged Batch 1. Next in Lee's sequence: Phase B (harvest consolidation + accountability).
 
