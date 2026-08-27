@@ -16,9 +16,9 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Owed right now
 
-- **Merge + deploy Batch 1 COPY+CHROME** (relay/batch1-copy-chrome on the session branch). Razor PASS (0 CRITICAL), Jen PASS (6 CONCERNs for live QA). Merge to main + push = deploy. Lee's call.
+- **Merge + deploy two stacked relays** on `marvin/opencanopy-charter`: Batch 1 COPY+CHROME (13 items, Razor 0 CRITICAL) + global-state year uniform (Razor PASS). Merge to main + push = deploy. Lee's call.
 
-- **Live browser QA** on five deployed relays the keyless sandbox could not verify: Phase A "honest timeline", a11y P2 cluster, CO2 calculator redesign, audit P0+P1 remediation, **Batch 1 COPY+CHROME** (preset chips active/inactive, attribution over gold, parks swatch reads green on mobile, legend labels, preset renames). Checklist: `~/marvin/state/opencanopy-a11y-p2-live-qa-2026-07-17.md` + the 07-15 hand-off.
+- **Live browser QA** on six deployed relays the keyless sandbox could not verify: Phase A "honest timeline", a11y P2 cluster, CO2 calculator redesign, audit P0+P1 remediation, **Batch 1 COPY+CHROME** (preset chips, attribution, parks swatch, legend labels, preset renames), **global-state year** (play 1917→2025 with 3+ layers, confirm bar-map lockstep preserved — this is the render-gate contract test that can't be unit-tested). Checklist: `~/marvin/state/opencanopy-a11y-p2-live-qa-2026-07-17.md` + the 07-15 hand-off.
 
 - **Live QA on the docked-dolly landing page** (Lee, after deploy): scroll the whole story — the '35,000 hectares' red reveal lands with its panel, the page proceeds to the CTA with no dead stretch, 'Explore the Map' opens /map at the Clayoquot/Strathcona pocket with forest-age on. Mobile once.
 
@@ -44,6 +44,9 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-08-27 -- Global-state year uniform shipped (stacked on Batch 1)
+MapLibre 5.21 setGlobalStateProperty replaces per-layer setFilter for the timeline year. 1 call per year tick instead of 2N. DataLayer filter effect fires on timeline on/off, not every year tick. filter-expressions API simplified (drop year param). Render-gate preserved (verified setGlobalStateProperty triggers repaint/idle). Razor PASS (0 CRITICAL, 1 WARNING: style-loaded coupling — not a ship-blocker). 836 tests green. Stacked on the unmerged Batch 1. Next in Lee's sequence: Phase B (harvest consolidation + accountability).
 
 ### 2026-08-26 -- Batch 1 COPY+CHROME shipped; charter adopted; Q1-Q6 resolved
 13 visual-audit items on relay/batch1-copy-chrome: label renames (Old Growth → Stands 250+ yr VRI), layer ID renames (tap-deferrals → old-growth-250, conservation-priority → tap-priority) with backward-compatible aliases, parks swatch pre-multiply, satellite basemap indicator, preset chip emerald active state, legend expanded by default, attribution contrast, badge a11y, preset renames (Threats→Logging, Protection→Old Growth + Parks, Overview drops satellite). Lee's Q1-Q6 answers all folded. CHARTER.md adopted from the 2026-08-23 grill draft. Critic Opus (Fable rate-limited) PASS; Razor PASS (1 WARNING fixed); Jen Opus PASS (6 CONCERNs for live QA). 836 tests green. Sequence confirmed: global-state → B → C → D → E. Next: merge + deploy + live QA.
