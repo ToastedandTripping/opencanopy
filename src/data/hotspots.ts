@@ -27,7 +27,7 @@ export const HOT_SPOTS: HotSpot[] = [
       "1,131 hectares of old growth near Powell River. Ancient cedars exceeding 1,200 years.",
     center: [-124.21, 50.16],
     zoom: 12,
-    layers: ["forest-age", "tap-deferrals"],
+    layers: ["forest-age", "old-growth-250"],
     stats: {
       oldGrowthHa: 1131,
     },

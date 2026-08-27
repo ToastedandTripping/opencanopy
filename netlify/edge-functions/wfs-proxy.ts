@@ -96,7 +96,7 @@ const LAYER_CONFIG: Record<string, WFSLayerConfig> = {
     typeName: "pub:WHSE_FOREST_TENURE.FTEN_CUT_BLOCK_POLY_SVW",
     cqlFilter: "PLANNED_GROSS_BLOCK_AREA < 2000",
   },
-  "tap-deferrals": {
+  "old-growth-250": {
     url: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.VEG_COMP_LYR_R1_POLY/ows",
     typeName: "pub:WHSE_FOREST_VEGETATION.VEG_COMP_LYR_R1_POLY",
     cqlFilter: "PROJ_AGE_1 >= 250",
@@ -169,7 +169,7 @@ const LAYER_CONFIG: Record<string, WFSLayerConfig> = {
     url: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_TENURE.FTEN_ROAD_SECTION_LINES_SVW/ows",
     typeName: "pub:WHSE_FOREST_TENURE.FTEN_ROAD_SECTION_LINES_SVW",
   },
-  "conservation-priority": {
+  "tap-priority": {
     url: "https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.OGSR_PRIORITY_DEF_AREA_CUR_SP/ows",
     typeName: "pub:WHSE_FOREST_VEGETATION.OGSR_PRIORITY_DEF_AREA_CUR_SP",
   },
@@ -365,7 +365,7 @@ const PROPERTY_WHITELIST: Record<string, string[]> = {
   "species-at-risk": [
     "SCIENTIFIC_NAME", "ENGLISH_NAME", "BC_LIST", "COSEWIC_STATUS", "ELEMENT_OCCURRENCE_ID",
   ],
-  "tap-deferrals": [
+  "old-growth-250": [
     "class", "PROJ_AGE_1", "SPECIES_CD_1", "PROJ_HEIGHT_1",
     "POLYGON_AREA", "BEC_ZONE_CODE", "HARVEST_DATE", "OBJECTID", "FEATURE_ID",
   ],
@@ -391,7 +391,7 @@ const PROPERTY_WHITELIST: Record<string, string[]> = {
   "community-watersheds": ["CW_NAME", "CW_CODE", "AREA_HA"],
   "mining-claims": ["TENURE_TYPE_DESCRIPTION", "CLAIM_NAME", "OWNER_NAME", "TENURE_STATUS", "TENURE_AREA_IN_HECTARE"],
   "forestry-roads": ["ROAD_SECTION_NAME", "CLIENT_NAME", "FILE_TYPE_CODE", "ROAD_CLASS"],
-  "conservation-priority": [
+  "tap-priority": [
     "CURRENT_PRIORITY_DEFERRAL_ID", "TAP_CLASSIFICATION_LABEL",
     "LANDSCAPE_UNIT_NAME", "ANCIENT_FOREST_IND", "PRIORITY_BIG_TREED_OG_IND",
     "REMNANT_OLD_ECOSYS_IND", "BGC_LABEL", "FIELD_VERIFIED_IND",

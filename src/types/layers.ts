@@ -73,6 +73,9 @@ export interface LegendItem {
   /** When set, this legend item is a toggleable class filter.
    *  The slug maps directly to the feature property `class` value. */
   classSlug?: string;
+  /** Optional explanatory note displayed below the label in the legend.
+   *  Used to reconcile data-definition differences (e.g. VRI vs story metrics). */
+  note?: string;
 }
 
 /**

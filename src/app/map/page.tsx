@@ -737,7 +737,11 @@ export default function Home() {
             <path d="m22 8.5-10 7-10-7" />
           </svg>
           {enabledCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 text-[9px] font-semibold rounded-full bg-emerald-500/90 text-white">
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 text-[9px] font-semibold rounded-full bg-emerald-500/90 text-white"
+              title={`${enabledCount} layer${enabledCount === 1 ? "" : "s"} on`}
+              aria-label={`${enabledCount} layer${enabledCount === 1 ? "" : "s"} on`}
+            >
               {enabledCount}
             </span>
           )}

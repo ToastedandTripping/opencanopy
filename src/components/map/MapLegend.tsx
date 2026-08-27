@@ -119,28 +119,41 @@ function ExpandedItems({
 
         if (isFilterable && onToggleClassFilter && item.classSlug) {
           return (
-            <button
-              key={i}
-              onClick={() => onToggleClassFilter(layer.id, item.classSlug!)}
-              aria-pressed={isActive}
-              className={`flex items-center gap-2 w-full text-left transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-sm ${
-                isActive ? "" : "opacity-30"
-              }`}
-            >
-              <ColorDot item={item} layer={layer} />
-              <span className="text-[10px] text-zinc-400 leading-tight">
-                {item.label}
-              </span>
-            </button>
+            <div key={i}>
+              <button
+                onClick={() => onToggleClassFilter(layer.id, item.classSlug!)}
+                aria-pressed={isActive}
+                className={`flex items-center gap-2 w-full text-left transition-opacity duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-sm ${
+                  isActive ? "" : "opacity-30"
+                }`}
+              >
+                <ColorDot item={item} layer={layer} />
+                <span className="text-[10px] text-zinc-400 leading-tight">
+                  {item.label}
+                </span>
+              </button>
+              {item.note && (
+                <span className="text-[9px] text-zinc-500 leading-tight block ml-4.5">
+                  {item.note}
+                </span>
+              )}
+            </div>
           );
         }
 
         return (
-          <div key={i} className="flex items-center gap-2">
-            <ColorDot item={item} layer={layer} />
-            <span className="text-[10px] text-zinc-400 leading-tight">
-              {item.label}
-            </span>
+          <div key={i}>
+            <div className="flex items-center gap-2">
+              <ColorDot item={item} layer={layer} />
+              <span className="text-[10px] text-zinc-400 leading-tight">
+                {item.label}
+              </span>
+            </div>
+            {item.note && (
+              <span className="text-[9px] text-zinc-500 leading-tight block ml-4.5">
+                {item.note}
+              </span>
+            )}
           </div>
         );
       })}
@@ -275,7 +288,7 @@ export function MapLegend({
   classFilters,
   onToggleClassFilter,
 }: MapLegendProps) {
-  const [expandedLayer, setExpandedLayer] = useState<string | null>(null);
+  const [collapsedLayers, setCollapsedLayers] = useState<Set<string>>(new Set());
   const { layerStatuses } = useLoadingContext();
 
   const legendLayers = enabledLayers
@@ -291,14 +304,15 @@ export function MapLegend({
   }
 
   const handleToggleExpand = (id: string) => {
-    setExpandedLayer((prev) => (prev === id ? null : id));
+    setCollapsedLayers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleDismiss = (id: string) => {
-    // If we're dismissing the expanded layer, collapse first
-    if (expandedLayer === id) {
-      setExpandedLayer(null);
-    }
     onToggleLayer(id);
   };
 
@@ -307,8 +321,8 @@ export function MapLegend({
       role="region"
       aria-label="Map legend"
       className="
-        absolute left-3 bottom-24 z-10 max-w-[180px]
-        md:bottom-24 md:max-w-[220px]
+        absolute left-3 bottom-24 z-10 max-w-[220px]
+        md:bottom-24 md:max-w-[280px]
         bg-black/70 backdrop-blur-md border border-white/10 rounded-xl
         max-h-[25vh] md:max-h-[40vh] overflow-y-auto
         scrollbar-none
@@ -319,7 +333,7 @@ export function MapLegend({
           <LegendRow
             key={layer.id}
             layer={layer}
-            expanded={expandedLayer === layer.id}
+            expanded={!collapsedLayers.has(layer.id)}
             onToggleExpand={() => handleToggleExpand(layer.id)}
             onDismiss={() => handleDismiss(layer.id)}
             classFilters={classFilters}

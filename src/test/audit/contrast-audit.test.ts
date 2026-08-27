@@ -52,6 +52,8 @@ const KEEP_ALLOWLIST: Record<string, string[]> = {
     "text-zinc-500 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
     // Icon-only per-layer dismiss button.
     "w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white transition-colors shrink-0",
+    // Legend item note -- subordinate annotation text, intentionally subdued.
+    "text-[9px] text-zinc-500 leading-tight block ml-4.5",
   ],
   "src/components/ui/StatusToast.tsx": [
     // Icon-only toast dismiss button.
@@ -76,6 +78,10 @@ const KEEP_ALLOWLIST: Record<string, string[]> = {
     "w-8 h-8 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0",
     // Icon-only result-row marker icon.
     'className="w-4 h-4 text-zinc-500"',
+  ],
+  "src/components/ui/PresetChips.tsx": [
+    // Inactive preset chip -- text-zinc-500 with hover:text-zinc-200 upgrade.
+    'bg-transparent text-zinc-500 border border-white/5 hover:bg-white/10 hover:text-zinc-200',
   ],
   "src/app/map/page.tsx": [
     // Icon-only copy-link button (text content, when present, is emerald-400

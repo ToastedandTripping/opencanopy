@@ -9,7 +9,7 @@ import {
   DEFAULT_BEARING,
   MAP_STYLES,
 } from "@/lib/mapConfig";
-import { resolveInitialLayers, computeActivePreset, validateLayerIds } from "@/hooks/useLayerState";
+import { resolveInitialLayers, computeActivePreset, validateLayerIds, resolveAliases } from "@/hooks/useLayerState";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -271,7 +271,7 @@ export function useMapState({
       // handler's preset fallback engages — the same resolution the initial
       // load path (parseLayersFromHash) applies to the same URL.
       if ((parsed.layers || parsed.preset) && onLayerRestore) {
-        onLayerRestore(validateLayerIds(parsed.layers ?? []), parsed.preset);
+        onLayerRestore(validateLayerIds(resolveAliases(parsed.layers ?? [])), parsed.preset);
       }
     };
     window.addEventListener("popstate", handlePopState);

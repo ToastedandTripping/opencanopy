@@ -315,7 +315,7 @@ describe("Check 12: Popup property references", () => {
   // Build the union of all schema properties, plus WFS-only properties known
   // to be returned by the proxy PROPERTY_WHITELIST for non-tile layers.
   const WFS_ONLY_PROPERTIES = new Set([
-    // forest-age / logging-risk / tap-deferrals (VRI WFS response)
+    // forest-age / logging-risk / old-growth-250 (VRI WFS response)
     "PROJ_AGE_1",
     "SPECIES_CD_1",
     "PROJ_HEIGHT_1",

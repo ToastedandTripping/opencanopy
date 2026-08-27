@@ -106,7 +106,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     defaultEnabled: false,
     interactive: true,
     legendItems: [
-      { color: "#0d5c2a", label: "Old Growth (250+ yr)", classSlug: "old-growth" },
+      { color: "#0d5c2a", label: "Stands 250+ yr (VRI)", classSlug: "old-growth", note: "VRI counts all stands modelled at 250+ yr. The story's 0.3% (Price/Holt/Daust) counts large old-growth trees only." },
       { color: "#4ade80", label: "Mature (80-250 yr)", classSlug: "mature" },
       { color: "#f97316", label: "Young (<80 yr)", classSlug: "young" },
       { color: "#ef4444", label: "Harvested", classSlug: "harvested" },
@@ -341,8 +341,8 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
 
   // ── Protection layers ──────────────────────────────────────────
   {
-    id: "tap-deferrals",
-    label: "Old Growth Forest (250+ years)",
+    id: "old-growth-250",
+    label: "Old-Growth Stands (VRI 250+ yr)",
     category: "protection",
     description:
       "Forest stands estimated at 250 years or older (BC VRI). Note: this shows old-growth extent, not official TAP deferral boundaries.",
@@ -390,7 +390,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     zoomRange: [4, 18],
     defaultEnabled: false,
     interactive: true,
-    legendItems: [{ color: FOREST_AGE_PALETTE["old-growth"], label: "Old Growth 250+ yr" }],
+    legendItems: [{ color: FOREST_AGE_PALETTE["old-growth"], label: "Stands 250+ yr" }],
     fetchPriority: 0,
   },
 
@@ -432,7 +432,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     zoomRange: [5, 18],
     defaultEnabled: false,
     interactive: true,
-    legendItems: [{ color: "#34d399", label: "Provincial Park" }],
+    legendItems: [{ color: "#2f6b52", label: "Provincial Park" }],
     fetchPriority: 0,
   },
 
@@ -529,7 +529,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
   },
 
   {
-    id: "conservation-priority",
+    id: "tap-priority",
     label: "Conservation Priority Areas",
     category: "protection",
     description: "2.6 million hectares identified by BC's Old Growth Strategic Review as priority for deferral from logging",
@@ -567,7 +567,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     zoomRange: [5, 18],
     defaultEnabled: false,
     interactive: true,
-    legendItems: [{ color: "#eab308", label: "TAP Priority Deferral" }],
+    legendItems: [{ color: "#eab308", label: "Priority Deferral Area" }],
     fetchPriority: 1,
   },
 
@@ -795,7 +795,7 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     zoomRange: [0, 22],
     defaultEnabled: false,
     interactive: false,
-    legendItems: [{ color: "#4a7c59", label: "Satellite" }],
+    legendItems: [{ color: "#525252", label: "Satellite (base map)" }],
   },
 
   {
@@ -881,11 +881,11 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
 
 const PUBLIC_LAYER_IDS = new Set([
   "forest-age",
-  "tap-deferrals",
+  "old-growth-250",
   "cutblocks",
   "parks",
   "fire-history",
-  "conservation-priority",
+  "tap-priority",
   "satellite",
 ]);
 

@@ -42,6 +42,17 @@ function deconflictExclusivePairs(ids: string[]): string[] {
 
 const STORAGE_KEY = "opencanopy-layers-v2";
 
+/** Backward-compatible URL/storage aliases for renamed layer IDs. */
+const LAYER_ID_ALIASES: Record<string, string> = {
+  "tap-deferrals": "old-growth-250",
+  "conservation-priority": "tap-priority",
+};
+
+/** Resolve any legacy layer IDs to their current names. */
+export function resolveAliases(ids: string[]): string[] {
+  return ids.map((id) => LAYER_ID_ALIASES[id] ?? id);
+}
+
 /** Keep only ids that exist in the public registry (order preserved). */
 export function validateLayerIds(ids: string[]): string[] {
   const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
@@ -60,7 +71,8 @@ function parseLayersFromHash(): string[] | null {
     const params = new URLSearchParams(hash);
     const raw = params.get("layers");
     if (raw) {
-      const filtered = validateLayerIds(raw.split(",").filter((id) => id.length > 0));
+      const resolved = resolveAliases(raw.split(",").filter((id) => id.length > 0));
+      const filtered = validateLayerIds(resolved);
       if (filtered.length > 0) return filtered;
     }
     const presetId = params.get("preset");
@@ -85,10 +97,10 @@ function readFromStorage(): string[] | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
+    const typed = parsed.filter((id: unknown) => typeof id === "string") as string[];
+    const resolved = resolveAliases(typed);
     const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
-    const filtered = parsed.filter(
-      (id: unknown) => typeof id === "string" && validIds.has(id)
-    );
+    const filtered = resolved.filter((id) => validIds.has(id));
     return filtered.length > 0 ? filtered : null;
   } catch {
     return null;

@@ -78,11 +78,12 @@ body {
 
 /* Attribution -- compact, bottom-right, out of the way */
 .maplibregl-ctrl-attrib {
-  background: rgba(17, 17, 20, 0.6) !important;
-  color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  color: #d4d4d8 !important;
   font-size: 9px !important;
   max-width: 300px !important;
   line-height: 1.2 !important;
+  padding: 2px 8px !important;
 }
 
 .maplibregl-ctrl-attrib.maplibregl-compact {
@@ -90,16 +91,17 @@ body {
 }
 
 .maplibregl-ctrl-attrib a {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: #d4d4d8 !important;
 }
 
 /* Scale control -- keep small and unobtrusive */
 .maplibregl-ctrl-scale {
-  background: rgba(17, 17, 20, 0.5) !important;
-  color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: #d4d4d8 !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
   font-size: 9px !important;
   margin-bottom: 4px !important;
+  margin-left: 8px !important;
 }
 
 /* Hide scrollbar on horizontal chip bars + enable iOS momentum scroll

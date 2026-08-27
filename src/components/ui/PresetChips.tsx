@@ -48,8 +48,8 @@ export function PresetChips({ activePreset, onPresetSelect }: PresetChipsProps) 
               focus-visible:ring-2 focus-visible:ring-white/30
               ${
                 isActive
-                  ? "bg-white/15 text-white border border-white/20"
-                  : "bg-white/5 text-zinc-400 border border-white/5 hover:bg-white/10 hover:text-zinc-200"
+                  ? "bg-emerald-500/20 text-white border border-emerald-400/40"
+                  : "bg-transparent text-zinc-500 border border-white/5 hover:bg-white/10 hover:text-zinc-200"
               }
             `}
           >
@@ -64,6 +64,9 @@ export function PresetChips({ activePreset, onPresetSelect }: PresetChipsProps) 
             >
               <path d={ICONS[preset.icon] || ICONS.eye} />
             </svg>
+            {isActive && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+            )}
             {preset.label}
           </button>
         );
