@@ -17,7 +17,7 @@ export interface TimelineState {
   range: [number, number];
 }
 
-const DEFAULT_RANGE: [number, number] = [1950, 2025];
+export const DEFAULT_RANGE: [number, number] = [1950, 2025];
 const DEFAULT_SPEED = 400;
 
 /** How long the render-gate will wait for `map.once('idle')` before giving

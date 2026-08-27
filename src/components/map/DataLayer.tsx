@@ -489,6 +489,8 @@ function PmtilesLayers({
    * When yearFilter is null:
    *   - Restores class-only filter + registry default opacity
    */
+  const timelineActive = yearFilter != null;
+
   useEffect(() => {
     if (!map || !layer.tileSource || layer.style.type !== "fill") return;
     const mapInstance = map.getMap();
@@ -505,9 +507,12 @@ function PmtilesLayers({
     // Build base registry filter (e.g. cutblocks area guard)
     const baseFilter = (layer.style.filter ?? null) as unknown[] | null;
 
-    if (yearFilter != null && layer.timelineField) {
-      // Timeline active: compose all filters and apply age-graded opacity
-      const yearFilterExpr = buildYearFilter(layer.timelineField, yearFilter) as unknown[];
+    if (timelineActive && layer.timelineField) {
+      // Timeline active: compose all filters and apply age-graded opacity.
+      // Expressions use ["global-state", "currentYear"] so they self-update
+      // on the GPU when the global state changes -- this effect only needs to
+      // fire on timeline on/off and class filter changes, not every year tick.
+      const yearFilterExpr = buildYearFilter(layer.timelineField) as unknown[];
       const composedFilter = composeFilters(baseFilter, classFilterExpr, yearFilterExpr) as unknown as FilterSpecification | null;
 
       mapInstance.setFilter(fillId, composedFilter);
@@ -516,7 +521,7 @@ function PmtilesLayers({
       }
 
       // Age-graded fill opacity: bright at 0yr, fade to 0.15 at 50yr+
-      const ageOpacity = buildAgeGradedOpacity(layer.timelineField, yearFilter);
+      const ageOpacity = buildAgeGradedOpacity(layer.timelineField);
       mapInstance.setPaintProperty(fillId, "fill-opacity", ageOpacity);
 
       // Outline opacity: scale proportionally to fill so rings disappear
@@ -526,14 +531,14 @@ function PmtilesLayers({
         mapInstance.setPaintProperty(outlineId, "line-opacity", [
           "interpolate",
           ["linear"],
-          ["-", yearFilter, buildYearExpression(layer.timelineField)],
+          ["-", ["global-state", "currentYear"], buildYearExpression(layer.timelineField)],
           0, 0.3,
           20, 0.15,
           50, 0.05,
         ]);
       }
 
-      pipelineLog("setFilter", layer.id, { type: "pmtiles-year", year: yearFilter, classFilter: activeClassFilter ?? "none" });
+      pipelineLog("setFilter", layer.id, { type: "pmtiles-year", classFilter: activeClassFilter ?? "none" });
     } else {
       // No timeline: class filter only, restore registry default opacity
       const composedFilter = composeFilters(baseFilter, classFilterExpr, null) as unknown as FilterSpecification | null;
@@ -567,7 +572,10 @@ function PmtilesLayers({
 
       pipelineLog("setFilter", layer.id, { type: "pmtiles-class", filter: activeClassFilter ?? "none" });
     }
-  }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.filter, layer.style.paint, layer.style.outline, layer.style.opacity, layer.timelineField, classFilters, yearFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- timelineActive (boolean) replaces yearFilter (number):
+    // expressions embed ["global-state", "currentYear"] and self-update on the GPU, so the effect
+    // only needs to re-run on timeline on/off transitions, not every year tick.
+  }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.filter, layer.style.paint, layer.style.outline, layer.style.opacity, layer.timelineField, classFilters, timelineActive]);
 
   return null; // No DOM output -- layers managed imperatively
 }

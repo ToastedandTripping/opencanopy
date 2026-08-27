@@ -36,8 +36,8 @@ export function buildYearExpression(field: string): unknown[] {
  * null <= number evaluates to false, so undated features are
  * correctly hidden during animation without explicit null checks.
  */
-export function buildYearFilter(field: string, year: number): unknown[] {
-  return ["<=", buildYearExpression(field), year];
+export function buildYearFilter(field: string): unknown[] {
+  return ["<=", buildYearExpression(field), ["global-state", "currentYear"]];
 }
 
 /**
@@ -70,12 +70,12 @@ export function composeFilters(
  * The age is computed as (currentYear - featureYear). MapLibre evaluates
  * this per-feature on the GPU -- no JS iteration needed.
  */
-export function buildAgeGradedOpacity(field: string, year: number): unknown[] {
+export function buildAgeGradedOpacity(field: string): unknown[] {
   const yearExpr = buildYearExpression(field);
   return [
     "interpolate",
     ["linear"],
-    ["-", year, yearExpr],
+    ["-", ["global-state", "currentYear"], yearExpr],
     0, 0.8,
     20, 0.4,
     50, 0.15,

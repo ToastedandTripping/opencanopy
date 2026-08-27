@@ -248,6 +248,10 @@ export function createMockMap() {
       eventListeners.get(event)!.add(wrapped);
     }),
 
+    // ── Global state ──────────────────────────────────────────────
+    setGlobalStateProperty: vi.fn().mockReturnThis(),
+    getGlobalState: vi.fn().mockReturnValue({}),
+
     // ── Image management ──────────────────────────────────────────
     addImage: vi.fn(),
     hasImage: vi.fn(() => false),

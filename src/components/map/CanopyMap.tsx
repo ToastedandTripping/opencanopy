@@ -18,6 +18,7 @@ import Map, {
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLES, INITIAL_VIEW_STATE, TERRAIN_SOURCE } from "@/lib/mapConfig";
+import { DEFAULT_RANGE } from "@/hooks/useTimeline";
 import { LAYER_REGISTRY_AVAILABLE, getLayer } from "@/lib/layers";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import { DataLayer } from "./DataLayer";
@@ -79,6 +80,8 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
       });
       map.setTerrain({ source: "terrain-rgb", exaggeration: 1.2 });
     }
+
+    map.setGlobalStateProperty("currentYear", DEFAULT_RANGE[0]);
 
     pipelineLog("map-load", "CanopyMap ready");
   }, []);

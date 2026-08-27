@@ -43,22 +43,22 @@ describe("buildYearExpression", () => {
 // ── buildYearFilter ───────────────────────────────────────────────────────────
 
 describe("buildYearFilter", () => {
-  it("returns a <= expression with year expression on left", () => {
-    const filter = buildYearFilter("FIRE_YEAR", 2000);
+  it("returns a <= expression with year expression on left and global-state on right", () => {
+    const filter = buildYearFilter("FIRE_YEAR");
     expect(filter[0]).toBe("<=");
     expect(filter[1]).toEqual(["to-number", ["get", "FIRE_YEAR"]]);
-    expect(filter[2]).toBe(2000);
+    expect(filter[2]).toEqual(["global-state", "currentYear"]);
   });
 
   it("uses DATE field expression for date fields", () => {
-    const filter = buildYearFilter("DISTURBANCE_START_DATE", 1990);
+    const filter = buildYearFilter("DISTURBANCE_START_DATE");
     expect(filter[0]).toBe("<=");
     expect(filter[1]).toEqual(["to-number", ["slice", ["get", "DISTURBANCE_START_DATE"], 0, 4]]);
-    expect(filter[2]).toBe(1990);
+    expect(filter[2]).toEqual(["global-state", "currentYear"]);
   });
 
-  it("produces a 3-element array [op, yearExpr, year]", () => {
-    const filter = buildYearFilter("FIRE_YEAR", 2025);
+  it("produces a 3-element array [op, yearExpr, globalState]", () => {
+    const filter = buildYearFilter("FIRE_YEAR");
     expect(filter).toHaveLength(3);
   });
 });
@@ -68,7 +68,7 @@ describe("buildYearFilter", () => {
 describe("composeFilters", () => {
   const base = ["<", ["to-number", ["get", "AREA"]], 2000] as unknown[];
   const classFilter = ["in", ["get", "class"], ["literal", ["old-growth"]]] as unknown[];
-  const yearFilter = ["<=", ["to-number", ["get", "FIRE_YEAR"]], 2000] as unknown[];
+  const yearFilter = ["<=", ["to-number", ["get", "FIRE_YEAR"]], ["global-state", "currentYear"]] as unknown[];
 
   it("returns null when all inputs are null", () => {
     expect(composeFilters(null, null, null)).toBeNull();
@@ -103,19 +103,19 @@ describe("composeFilters", () => {
 
 describe("buildAgeGradedOpacity", () => {
   it("returns an interpolate expression", () => {
-    const expr = buildAgeGradedOpacity("FIRE_YEAR", 2000);
+    const expr = buildAgeGradedOpacity("FIRE_YEAR");
     expect(expr[0]).toBe("interpolate");
     expect(expr[1]).toEqual(["linear"]);
   });
 
-  it("uses subtraction expression (currentYear - featureYear) as the interpolation input", () => {
-    const expr = buildAgeGradedOpacity("FIRE_YEAR", 2000);
-    // expr[2] is the input: ["-", year, yearExpr]
-    expect(expr[2]).toEqual(["-", 2000, ["to-number", ["get", "FIRE_YEAR"]]]);
+  it("uses subtraction expression (global-state currentYear - featureYear) as the interpolation input", () => {
+    const expr = buildAgeGradedOpacity("FIRE_YEAR");
+    // expr[2] is the input: ["-", ["global-state", "currentYear"], yearExpr]
+    expect(expr[2]).toEqual(["-", ["global-state", "currentYear"], ["to-number", ["get", "FIRE_YEAR"]]]);
   });
 
   it("anchors opacity at 0.8 for age 0, 0.4 for age 20, 0.15 for age 50", () => {
-    const expr = buildAgeGradedOpacity("FIRE_YEAR", 2000);
+    const expr = buildAgeGradedOpacity("FIRE_YEAR");
     // expr is ["interpolate", ["linear"], inputExpr, 0, 0.8, 20, 0.4, 50, 0.15]
     expect(expr[3]).toBe(0);
     expect(expr[4]).toBe(0.8);
@@ -126,19 +126,17 @@ describe("buildAgeGradedOpacity", () => {
   });
 
   it("works correctly for DATE fields", () => {
-    const expr = buildAgeGradedOpacity("DISTURBANCE_START_DATE", 1990);
+    const expr = buildAgeGradedOpacity("DISTURBANCE_START_DATE");
     expect(expr[2]).toEqual([
       "-",
-      1990,
+      ["global-state", "currentYear"],
       ["to-number", ["slice", ["get", "DISTURBANCE_START_DATE"], 0, 4]],
     ]);
   });
 
-  it("uses the provided year in the subtraction (not a hardcoded value)", () => {
-    const expr1 = buildAgeGradedOpacity("FIRE_YEAR", 2010);
-    const expr2 = buildAgeGradedOpacity("FIRE_YEAR", 1980);
-    // The interpolation input should reflect the year param
-    expect((expr1[2] as unknown[])[1]).toBe(2010);
-    expect((expr2[2] as unknown[])[1]).toBe(1980);
+  it("uses global-state currentYear (not a hardcoded value) in the subtraction", () => {
+    const expr = buildAgeGradedOpacity("FIRE_YEAR");
+    // The interpolation input should reference global state
+    expect((expr[2] as unknown[])[1]).toEqual(["global-state", "currentYear"]);
   });
 });
