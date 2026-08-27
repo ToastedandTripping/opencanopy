@@ -16,31 +16,37 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Owed right now
 
-- **Live browser QA** on four deployed relays the keyless sandbox could not verify: Phase A "honest timeline" (full 1917->2025 sweep in lockstep with the last fire patch; mobile readout, reduced-motion jump-to-end, histogram scent), a11y P2 cluster, CO2 calculator redesign, audit P0+P1 remediation. Checklist: `~/marvin/state/opencanopy-a11y-p2-live-qa-2026-07-17.md` + the 07-15 hand-off.
+- **Merge + deploy Batch 1 COPY+CHROME** (relay/batch1-copy-chrome on the session branch). Razor PASS (0 CRITICAL), Jen PASS (6 CONCERNs for live QA). Merge to main + push = deploy. Lee's call.
 
-- **Live QA on the docked-dolly landing page** (Lee, after deploy): scroll the whole story — the '35,000 hectares' red reveal lands with its panel, the page proceeds to the CTA with no dead stretch, 'Explore the Map' opens /map at the Clayoquot/Strathcona pocket with forest-age on, the ending heading is still semibold and centered. Mobile once. If the ending feels truncated, the fix is `ending.scrollHeight` 300 -> 400 in chapters.ts, nothing more.
+- **Live browser QA** on five deployed relays the keyless sandbox could not verify: Phase A "honest timeline", a11y P2 cluster, CO2 calculator redesign, audit P0+P1 remediation, **Batch 1 COPY+CHROME** (preset chips active/inactive, attribution over gold, parks swatch reads green on mobile, legend labels, preset renames). Checklist: `~/marvin/state/opencanopy-a11y-p2-live-qa-2026-07-17.md` + the 07-15 hand-off.
 
-- **Batch 0 hotfix from the /map visual audit** (trivial tier, no relay needed): P1 — `useMapState.ts:172` on-mount flyTo gives up after 2 s, dropping deep-link cameras (breaks share links and the landing CTA); P8 — `useMapState.ts:251` gates layer restore on `layers=`, so `preset=` alone does nothing. Two one-liners + a mount-delay test. Ship before anything else in the program. Tracking: `research/map-visual-audit-2026-08-22.md`.
+- **Live QA on the docked-dolly landing page** (Lee, after deploy): scroll the whole story — the '35,000 hectares' red reveal lands with its panel, the page proceeds to the CTA with no dead stretch, 'Explore the Map' opens /map at the Clayoquot/Strathcona pocket with forest-age on. Mobile once.
 
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |
 |---|---|---|
-| Sequence for the /map improvement program -- global-state win -> B -> C -> D -> E, or reorder? | Determines which relay gets planned next | 2026-07-18 |
-| Phase B accountability leaderboard: province-wide static vs. viewport-live? | Drives the design/compute/caching approach for the harvest-accountability feature | 2026-07-18 |
-| Phase B: give the consolidated harvest layer its own preset chip, or fold it into the existing threats/fire-logging preset? | Affects layer architecture and preset UX | 2026-07-18 |
 | Live visual sign-off on Phase A "honest timeline": does a full 1917->2025 sweep finish in lockstep with the last fire patch painting? Also: mobile readout legibility, reduced-motion jump-to-end, histogram scent at a glance. | This is the exact honesty judgment the mechanism can't self-certify -- everything mechanical is already verified | 2026-07-18 |
-| Live browser QA still owed on three earlier deployed relays: a11y P2 cluster, the CO2 calculator redesign, and the audit P0+P1 remediation (keyless sandbox couldn't verify any of them) | Confirms the accessibility fixes, the carbon calculator's real numbers, and the /map perf cascade fix actually work for a human on a real device | a11y P2: 2026-07-17; CO2 calc: 2026-07-16; audit P0+P1: 2026-07-11 |
-| Audit Q1 (P6): restore the 11 hidden registry layers once the PMTiles archive is split (P3), or delete them from the registry? | Decides Batch 3/4 scope and whether the May per-layer findings get fixed or retired | 2026-08-22 |
-| Audit Q2 (PR2): should the 'Threats' preset be renamed 'Logging' (it shows history only), or wait for Phase D's FOM proposed-logging layer to make it a real threat map? | Batch 2 copy vs. Phase D sequencing | 2026-08-22 |
-| Audit Q3: legend chips are collapsed by default (labels one click away). Keep that, or expand by default on desktop / on first enable? | Resolves F1 and CH1 either way; Lee flagged the collapsed state as deliberate | 2026-08-22 |
-| Audit Q4 (PR4): Protection preset — rename to 'Old growth + protection', or remove old growth from it so parks/deferrals carry the name? | The preset currently says 'all this old growth is protected' | 2026-08-22 |
-| Audit Q5 (PR5): Overview preset — keep satellite (only appears from z10) or drop it and make the preset 'Forest age + parks'? | Overview is forest-age alone at every arrival zoom today | 2026-08-22 |
-| Audit Q6 (T2): is SITE_INDEX in the VRI extract? If not, is a Price/Holt/Daust big-tree subset layer worth a data pull? | The only way the map can show the story's 0.3% rather than VRI's 13–30% | 2026-08-22 |
+| Live browser QA still owed on five deployed relays (a11y P2, CO2 calc, audit P0+P1, honest timeline, Batch 1) | Confirms the deployed changes work for a human on a real device | a11y P2: 2026-07-17; CO2 calc: 2026-07-16; audit P0+P1: 2026-07-11; Batch 1: 2026-08-26 |
+
+### Resolved (2026-08-26, per Lee via coordinator)
+
+- **Q1 (P6):** Keep hidden. Verify layer-by-layer before surfacing. Neither restore nor delete.
+- **Q2 (PR2):** Rename Threats → Logging. Done in Batch 1.
+- **Q3:** Expanded by default. Done in Batch 1.
+- **Q4 (PR4):** Rename Protection → Old Growth + Parks. Done in Batch 1.
+- **Q5 (PR5):** Switch to Forest age + parks (drop satellite). Done in Batch 1.
+- **Q6 (T2):** SITE_INDEX not in VRI extract. Big-tree subset needs a data pull (Batch 4).
+- **Sequence:** Confirmed global-state → B → C → D → E.
+- **B.1 leaderboard:** Province-wide static.
+- **B.2 harvest preset:** Fold into the logging preset, no separate chip.
 
 ---
 
 ## Log (newest first)
+
+### 2026-08-26 -- Batch 1 COPY+CHROME shipped; charter adopted; Q1-Q6 resolved
+13 visual-audit items on relay/batch1-copy-chrome: label renames (Old Growth → Stands 250+ yr VRI), layer ID renames (tap-deferrals → old-growth-250, conservation-priority → tap-priority) with backward-compatible aliases, parks swatch pre-multiply, satellite basemap indicator, preset chip emerald active state, legend expanded by default, attribution contrast, badge a11y, preset renames (Threats→Logging, Protection→Old Growth + Parks, Overview drops satellite). Lee's Q1-Q6 answers all folded. CHARTER.md adopted from the 2026-08-23 grill draft. Critic Opus (Fable rate-limited) PASS; Razor PASS (1 WARNING fixed); Jen Opus PASS (6 CONCERNs for live QA). 836 tests green. Sequence confirmed: global-state → B → C → D → E. Next: merge + deploy + live QA.
 
 ### 2026-08-22 -- /map visual layer audit complete; remediation program recorded
 144 live captures (7 public layers + 4 presets × 9 views + baselines), PMTiles network timing per shot, two Jen (Fable) design passes + cross-check. Report artifact https://claude.ai/code/artifact/4e3b7b25-9897-4ac0-9955-6e4287d6416f; tracking checklist `research/map-visual-audit-2026-08-22.md` (35 findings with IDs, batches 0–5); program in ROADMAP `next:`. Lee's correction folded: legend detail exists on expand, so F1/K2/CH1 downgraded to default-state questions; the VRI caveat in `description` is still never on the map surface (F2/T2 stand). Six decisions await Lee (Q1–Q6). Batch 0 (two one-liners) is owed first.
