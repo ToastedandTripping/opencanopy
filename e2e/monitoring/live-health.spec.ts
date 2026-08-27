@@ -13,7 +13,7 @@
  *   4. Forest-age layer returns features at z5
  *   5. Cutblocks layer returns features at z7
  *   6. fish-streams WFS returns features (D3 deploy gate — cqlFilter layer)
- *   7. tap-deferrals old-growth renders via PMTiles (z10-12 band guard)
+ *   7. old-growth-250 renders via PMTiles (z10-12 band guard)
  *   8. cutblocks supplemental WFS returns features (D3 deploy gate — cqlFilter layer)
  */
 
@@ -232,7 +232,7 @@ test('tenure-cutblocks vector tiles render features at z11 on production', async
 // Viewport selection rationale:
 //   - fish-streams (z9+): Campbell River area (-125.3, 50.0) at z10 —
 //     dense FWA stream network, high STREAM_ORDER values. Area ~130 km².
-//   - tap-deferrals (tile-backed old growth): Wells Gray (-119.9, 51.7) at z11 —
+//   - old-growth-250 (tile-backed old growth): Wells Gray (-119.9, 51.7) at z11 —
 //     queries the PMTiles fill (forest-age source filtered to class=old-growth).
 //   - cutblocks (supplemental WFS, tile-backed, z13+): Prince George (-122.7, 53.9)
 //     at z13 — dense tenure cutblocks. Area <50 km². Layer is tile-backed so
@@ -280,13 +280,13 @@ test('D3: fish-streams WFS returns features via cqlFilter proxy fix', async ({ p
   ).toBeGreaterThan(0);
 });
 
-test('tap-deferrals (old growth) renders via PMTiles across the z10-12 band', async ({ page }) => {
-  // tap-deferrals is now tile-backed (forest-age source-layer filtered to
+test('old-growth-250 renders via PMTiles across the z10-12 band', async ({ page }) => {
+  // old-growth-250 is tile-backed (forest-age source-layer filtered to
   // class=old-growth) + a dark-green raster overview — no longer a WFS line.
   // The proxy cqlFilter fix is still gated by the fish-streams + cutblocks tests
   // above. This test guards the NEW behavior and the documented forest-age z11
   // thin-band risk: the fill must populate at z11, not just z10.
-  await page.goto(`${PRODUCTION_URL}#layers=tap-deferrals`, { timeout: 30000, waitUntil: 'domcontentloaded' });
+  await page.goto(`${PRODUCTION_URL}#layers=old-growth-250`, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
   await waitForMapIdle(page, 60000);
 
@@ -303,20 +303,20 @@ test('tap-deferrals (old growth) renders via PMTiles across the z10-12 band', as
 
   let featureCount = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
-    featureCount = await queryFeatureCount(page, 'layer-tap-deferrals-tiles-fill');
+    featureCount = await queryFeatureCount(page, 'layer-old-growth-250-tiles-fill');
     if (featureCount > 0) break;
     if (attempt < 2) await page.waitForTimeout(8000);
   }
 
   if (featureCount === -1) {
-    console.warn('tap-deferrals: Could not access map instance');
+    console.warn('old-growth-250: Could not access map instance');
     test.skip();
     return;
   }
 
   expect(
     featureCount,
-    'tap-deferrals old-growth fill should render via PMTiles at z11 in Wells Gray (z11 thin-band guard)'
+    'old-growth-250 fill should render via PMTiles at z11 in Wells Gray (z11 thin-band guard)'
   ).toBeGreaterThan(0);
 });
 
