@@ -59,7 +59,12 @@ export const TIMBER_VOLUME: Record<string, number> = {
   mature: 500,
   young: 150,
   harvested: 0,
-  unknown: 200,
+  // A stand with no projected age gets no carbon estimate (calculator.ts
+  // clamps its age to 0), so it gets no timber estimate either. Crediting
+  // 200 m³/ha here while the carbon side saw bare ground tilted the
+  // protect-vs-log comparison toward logging (fixed 2026-09-02, per Lee:
+  // never a number the data cannot support).
+  unknown: 0,
 };
 
 // Annual ecosystem services value ($/ha/year) EXCLUDING carbon

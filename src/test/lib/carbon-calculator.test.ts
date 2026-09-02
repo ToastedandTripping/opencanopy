@@ -192,12 +192,25 @@ describe("calculateFinancialValue", () => {
     ];
     const stats = calculateSelectionStats(features);
     const financials = calculateFinancialValue(stats);
-    // Ecosystem services should be based on (totalAreaHa - harvestedHa)
-    const expectedForested = stats.totalAreaHa - stats.harvestedHa;
+    // Ecosystem services should be based on (totalAreaHa - harvestedHa - unknownHa)
+    const expectedForested = stats.totalAreaHa - stats.harvestedHa - stats.unknownHa;
     expect(financials.ecosystemServicesAnnual).toBeCloseTo(
       expectedForested * 2300,
       0
     );
+  });
+
+  it("unknown-age stands contribute to no value: zero carbon, zero stumpage, zero ecosystem services", () => {
+    // A stand with no PROJ_AGE_1 and no harvest date classifies as "unknown".
+    // The carbon side treats it as age 0 (nothing stored); the financial side
+    // must not then credit it with timber or services (2026-09-02 rule).
+    const stats = calculateSelectionStats([makeFeature({ PROJ_AGE_1: null })]);
+    expect(stats.unknownHa).toBeGreaterThan(0);
+    expect(stats.totalCo2eTonnes).toBe(0);
+    const financials = calculateFinancialValue(stats);
+    expect(financials.stumpageRevenue).toBe(0);
+    expect(financials.ecosystemServicesAnnual).toBe(0);
+    for (const cv of financials.carbonValues) expect(cv.value).toBe(0);
   });
 
   it("returns zero stumpage for all-harvested selection", () => {

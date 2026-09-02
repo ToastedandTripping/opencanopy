@@ -248,8 +248,10 @@ export function calculateFinancialValue(
     stats.youngHa * TIMBER_VOLUME["young"] * STUMPAGE_RATE.perCubicMetre +
     stats.unknownHa * TIMBER_VOLUME["unknown"] * STUMPAGE_RATE.perCubicMetre;
 
-  // Ecosystem services: total forested area * annual rate
-  const forestedHa = stats.totalAreaHa - stats.harvestedHa;
+  // Ecosystem services: forested area * annual rate. Unknown-age stands are
+  // excluded from every value (carbon, timber, services) — we cannot say
+  // what stands there, so we do not price it either way.
+  const forestedHa = stats.totalAreaHa - stats.harvestedHa - stats.unknownHa;
   const ecosystemServicesAnnual = forestedHa * ECOSYSTEM_SERVICES_PER_HA;
 
   return { carbonValues, stumpageRevenue, ecosystemServicesAnnual };

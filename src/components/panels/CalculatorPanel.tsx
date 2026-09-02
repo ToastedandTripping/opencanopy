@@ -588,7 +588,7 @@ function PanelContent({
               <AgeBar label="Mature (80-250 yr)" value={stats.matureHa} total={stats.totalAreaHa} color="#4ade80" />
               <AgeBar label="Young (<80 yr)" value={stats.youngHa} total={stats.totalAreaHa} color="#f97316" />
               <AgeBar label="Harvested" value={stats.harvestedHa} total={stats.totalAreaHa} color="#ef4444" />
-              <AgeBar label="Unknown age" value={stats.unknownHa} total={stats.totalAreaHa} color="#71717a" />
+              <AgeBar label="Unknown age (excluded from all values)" value={stats.unknownHa} total={stats.totalAreaHa} color="#71717a" />
             </div>
           </div>
 

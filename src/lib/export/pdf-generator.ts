@@ -61,7 +61,7 @@ function buildReportHtml(options: ReportOptions): string {
     { label: "Mature (80-250 yr)", ha: stats.matureHa, color: "#4ade80" },
     { label: "Young (<80 yr)", ha: stats.youngHa, color: "#f97316" },
     { label: "Harvested", ha: stats.harvestedHa, color: "#ef4444" },
-    { label: "Unknown age", ha: stats.unknownHa, color: "#71717a" },
+    { label: "Unknown age (excluded from all values)", ha: stats.unknownHa, color: "#71717a" },
   ].filter((c) => c.ha >= 0.01);
 
   const layerNames = enabledLayers

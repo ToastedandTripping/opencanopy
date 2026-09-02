@@ -66,6 +66,7 @@ Forest stands are classified by projected age from VRI data:
 | Mature | 80-250 years | Established forest, significant carbon |
 | Young | <80 years | Regenerating or second-growth forest |
 | Harvested | Any (has harvest date) | Recently logged, minimal standing carbon |
+| Unknown | No projected age | Shown in the area breakdown only; contributes nothing to carbon, timber revenue, or ecosystem-service values |
 
 ## Known Limitations
 
