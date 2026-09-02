@@ -23,12 +23,10 @@ type PipelineStage =
   | "addLayer"
   | "setMapLoaded"
   | "visibility-effect"
-  | "timeline-effect"
   | "timeline-watchdog"
   | "setPaintProperty"
   | "setFilter"
   | "onStepEnter"
-  | "onStepProgress"
   | "updateCamera"
   | "setYearFilter"
   | "wfs-fetch"
@@ -163,9 +161,11 @@ export function pipelineHealthReport(
       }
     }
 
-    // WFS check
+    // WFS check — only for WFS-only layers. Tile-backed layers never mount
+    // WfsLayers (DataLayer D10), so their GeoJSON source is absent by design
+    // and must not be reported as missing.
     let wfsStatus = "-";
-    if (layer.source.type === "wfs") {
+    if (layer.source.type === "wfs" && !layer.tileSource) {
       const sourceId = `source-${layer.id}`;
       const hasSource = !!map.getSource(sourceId);
       if (!hasSource) {

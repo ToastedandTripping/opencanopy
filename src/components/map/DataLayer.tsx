@@ -1209,8 +1209,10 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
     // The "loading" status is also skipped for tile-backed layers to avoid a
     // brief spinner when tiles are already rendered and the WFS is supplemental.
     // Only WFS-only layers reach here (hasTileSource was already guarded above).
+    // Symmetric with the finally-block clear below: both sides of the loading
+    // indicator go through shouldSurfaceWfsLoading.
     setLoading(true);
-    setLayerLoading(layer.id, true);
+    if (shouldSurfaceWfsLoading(hasTileSource)) setLayerLoading(layer.id, true);
     const fetchStart = performance.now();
     try {
       const fc = await fetchLayerData(layer.id, paddedBbox, zoom, layer.fetchPriority);
