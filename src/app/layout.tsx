@@ -78,7 +78,7 @@ export default function RootLayout({
       </head>
       <body className="h-full bg-[#0a0a0c] text-white">{children}</body>
       <Script
-        src="https://ssc-ops.netlify.app/tracker.js"
+        src="/tracker.js"
         data-site-id="opencanopy"
         data-endpoint="https://ssc-ops.netlify.app/.netlify/functions/track"
         strategy="afterInteractive"

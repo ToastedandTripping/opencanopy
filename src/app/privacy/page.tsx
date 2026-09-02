@@ -26,12 +26,15 @@ export default function PrivacyPage() {
               What we collect
             </h2>
             <p>
-              OpenCanopy uses a self-hosted analytics tracker to understand
-              how the map is used. It records page views, scroll depth, time on
-              page, and basic interaction events (clicks, tab switches). Each
-              session is assigned a random ID that resets when you close your
-              browser tab. No cookies are set. No IP addresses are stored.
-              No data is sent to Google, Meta, or any third-party ad network.
+              OpenCanopy uses a small analytics script served from this site
+              to understand how the map is used. It records page views (the
+              page URL, title and referrer), scroll depth, time on page, basic
+              interaction events (clicks, tab switches), and your screen and
+              viewport size. Events are received by a function on
+              ssc-ops.netlify.app, a server we also operate. Each session is
+              assigned a random ID that resets when you close your browser
+              tab. No cookies are set. No IP addresses are stored. No data is
+              sent to Google, Meta, or any third-party ad network.
             </p>
             <p className="mt-3">
               The session ID is stored in{" "}
@@ -76,8 +79,8 @@ export default function PrivacyPage() {
               Open source
             </h2>
             <p>
-              The full source code — including the analytics tracker — is
-              available on{" "}
+              The full source code — including the analytics tracker
+              (public/tracker.js) — is available on{" "}
               <a
                 href="https://github.com/ToastedandTripping/opencanopy"
                 target="_blank"

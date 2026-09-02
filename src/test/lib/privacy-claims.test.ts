@@ -15,7 +15,8 @@ import { resolve } from "path";
 
 const root = resolve(__dirname, "../../..");
 const layout = readFileSync(resolve(root, "src/app/layout.tsx"), "utf-8");
-const privacy = readFileSync(resolve(root, "src/app/privacy/page.tsx"), "utf-8");
+// JSX wraps prose across lines; collapse whitespace so phrases match as read.
+const privacy = readFileSync(resolve(root, "src/app/privacy/page.tsx"), "utf-8").replace(/\s+/g, " ");
 const trackerPath = resolve(root, "public/tracker.js");
 
 describe("privacy page claims are true of the code", () => {
