@@ -119,10 +119,10 @@ export function HeroSection() {
             className="text-5xl md:text-7xl lg:text-8xl font-bold text-[#ef4444] tracking-tight"
             style={{ fontFamily: "var(--font-display)", fontVariantNumeric: "lining-nums" }}
           >
-            8 million hectares
+            5.8 million hectares
           </p>
           <p className="mt-6 text-lg md:text-xl text-zinc-400" style={{ fontVariantNumeric: "lining-nums" }}>
-            Logged since 1950. An area larger than Ireland.
+            Logged since 1950. An area larger than Nova Scotia.
           </p>
           <p className="mt-2 text-base text-zinc-400">
             Most of it will never be old growth again.

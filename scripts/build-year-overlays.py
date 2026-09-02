@@ -74,6 +74,12 @@ DATASETS = {
         "year_kind": "date",          # take [:4] of an ISO date string
         "start": 1950,
         "end": 2025,
+        # Same exclusion as the /map cutblocks layer (CUTBLOCK_AREA_CAP_HA in
+        # src/lib/layers/registry.ts) and build-scrub-tables.py: polygons at or
+        # above 2,000 ha are tenure boundaries, not cutblocks. Before 2026-09-02
+        # the overlays painted 2.45M ha of them red/maroon.
+        "area_field": "PLANNED_GROSS_BLOCK_AREA",
+        "max_area": 2000,
         "age_stops": [
             (0, (239, 68, 68, 220)),   # #ef4444 bright red
             (25, (185, 28, 28, 200)),  # #b91c1c darker red
@@ -386,6 +392,8 @@ def main():
     age_stops = cfg["age_stops"]
     undated_proxy_year = cfg["undated_proxy_year"]
     undated_color = cfg["undated_color"]
+    max_area = cfg.get("max_area")
+    area_field = cfg.get("area_field")
 
     input_path = _data_path(cfg["filename"])
     output_dir = _PROJECT_ROOT / "public" / "raster" / cfg["output_subdir"]
@@ -423,6 +431,7 @@ def main():
     by_year: dict[int, list] = defaultdict(list)
     count = 0
     undated_count = 0
+    capped_count = 0
 
     with open(input_path) as f:
         for line in f:
@@ -431,7 +440,17 @@ def main():
                 geom = feat.get("geometry")
                 if not geom:
                     continue
-                yr = parse_year(feat.get("properties", {}))
+                props = feat.get("properties", {})
+                if max_area is not None:
+                    raw_area = props.get(area_field)
+                    try:
+                        area = float(raw_area) if raw_area is not None else 0.0
+                    except (TypeError, ValueError):
+                        area = 0.0
+                    if area >= max_area:
+                        capped_count += 1
+                        continue
+                yr = parse_year(props)
 
                 if yr is None or yr < start_year:
                     # Undated or pre-start: bucket as baseline if the dataset
@@ -451,7 +470,7 @@ def main():
             except Exception:
                 pass
 
-    print(f"  Loaded {count:,} features ({undated_count:,} undated/pre-{start_year})")
+    print(f"  Loaded {count:,} features ({undated_count:,} undated/pre-{start_year}; {capped_count:,} skipped at/over the {max_area} ha cap)")
     dated_years = [y for y in sorted(by_year.keys()) if y != undated_proxy_year]
     if dated_years:
         print(f"  Dated range: {dated_years[0]}-{dated_years[-1]}")

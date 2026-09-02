@@ -139,7 +139,7 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "logging-timeline",
     heading: "75 years of logging.",
-    body: "British Columbia has logged over 8 million hectares of forest since 1950. Each red mark is a cutblock — an area where every tree was removed.",
+    body: "British Columbia has logged nearly 6 million hectares of forest since 1950. Each red mark is a cutblock — an area where every tree was removed.",
     camera: FLAT_BC_CAMERA,
     layers: [{ id: "forest-age", opacity: 0.4 }],
     timelineScrub: { start: 1950, end: 2025 },

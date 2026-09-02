@@ -12,7 +12,7 @@ Emits one JSON per dataset:
   src/data/scrub/fire-scrub.json        cumulative FIRE_SIZE_HECTARES by FIRE_YEAR (1917-2025)
 
 Shape:
-  { "start": 1950, "end": 2025, "cumulativeNorm": [ ... one float per year, monotonic 0..1 ... ], "total": 1234567.89 }
+  { "start": 1950, "end": 2025, "cumulativeNorm": [ ... one float per year, monotonic 0..1 ... ], "total": 1234567.89, "areaCap": 2000 }
 
 `cumulativeNorm[i]` is the fraction of total area disturbed by year `start+i`,
 inclusive. `cumulativeNorm[0]` is pinned to 0.0 and `[last]` to 1.0 so the
@@ -59,6 +59,10 @@ DATASETS = {
         "area_field": "PLANNED_GROSS_BLOCK_AREA",
         "start": 1950,
         "end": 2025,
+        # Polygons at or above this are tenure boundaries, not cutblocks (230 of
+        # them, 2,000-92,000 ha each, no client). Mirrors CUTBLOCK_AREA_CAP_HA in
+        # src/lib/layers/registry.ts; hero-figure.test.ts pins the two together.
+        "max_area": 2000,
     },
     "fire": {
         "filename": "fire-history.ndjson",
@@ -89,6 +93,7 @@ def build(dataset: str) -> dict:
 
     start, end = cfg["start"], cfg["end"]
     year_field, year_kind, area_field = cfg["year_field"], cfg["year_kind"], cfg["area_field"]
+    max_area = cfg.get("max_area")
 
     # Annual area drives the pacing. UNDATED features (no parseable year) are
     # EXCLUDED — their timing is unknown, so they can't inform when the scrub
@@ -100,6 +105,7 @@ def build(dataset: str) -> dict:
     rows = 0
     folded = 0
     undated_skipped = 0
+    capped_skipped = 0
 
     print(f"=== scrub table: {dataset} ===")
     print(f"  input: {path}")
@@ -112,6 +118,9 @@ def build(dataset: str) -> dict:
                 area = props.get(area_field)
                 area = float(area) if area is not None else 0.0
                 if area <= 0:
+                    continue
+                if max_area is not None and area >= max_area:
+                    capped_skipped += 1
                     continue
                 if yr is None:
                     undated_skipped += 1
@@ -150,9 +159,11 @@ def build(dataset: str) -> dict:
             cumulative_norm[i] = cumulative_norm[i - 1]
 
     table = {"start": start, "end": end, "cumulativeNorm": cumulative_norm, "total": round(total, 2)}
+    if max_area is not None:
+        table["areaCap"] = max_area
 
     # Report a few inflection points so the pacing is reviewable.
-    print(f"  features: {rows:,} dated ({folded:,} folded into {start}, {undated_skipped:,} undated skipped)")
+    print(f"  features: {rows:,} dated ({folded:,} folded into {start}, {undated_skipped:,} undated skipped, {capped_skipped:,} at/over the {max_area} ha cap skipped)")
     print(f"  total area: {total:,.0f}")
     for probe in (start, start + 30, start + 50, end - 8, end):
         if start <= probe <= end:
