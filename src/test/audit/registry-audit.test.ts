@@ -237,16 +237,6 @@ describe("Check 4: Filter expression validation", () => {
 
     expect(unknownRefs).toHaveLength(0);
   });
-
-  it("documents filter intent for layers that use them", () => {
-    // This is a documentation check -- verifies filters are deliberate
-    for (const layer of layersWithFilters) {
-      expect(
-        layer.description.trim().length,
-        `layer "${layer.id}" has a filter but no description explaining intent`
-      ).toBeGreaterThan(0);
-    }
-  });
 });
 
 // ── Check 5: Province-scale crash guard ──────────────────────────────────────

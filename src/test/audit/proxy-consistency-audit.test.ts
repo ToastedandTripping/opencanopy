@@ -18,7 +18,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { LAYER_REGISTRY } from "@/lib/layers/registry";
+import { LAYER_REGISTRY, CUTBLOCK_AREA_CAP_HA } from "@/lib/layers/registry";
 import {
   FOREST_AGE_CLASSES,
   AGE_THRESHOLDS,
@@ -499,5 +499,27 @@ describe("Check 10: Company Map Consistency", () => {
     // Extractors should import from companies.ts, not maintain a local COMPANY_MAP
     expect(extractorsSource).toContain("lookupCompany");
     expect(extractorsSource).not.toMatch(/^export const COMPANY_MAP/m);
+  });
+});
+
+// ── Check 11: the cutblock area cap is the same number in the registry filter and the proxy CQL ──
+//
+// The registry `cutblocks` entry has no source.cqlFilter (the cap is a MapLibre
+// style.filter), so the "CQL filters match" check above never visits it, and
+// the proxy's `PLANNED_GROSS_BLOCK_AREA < 2000` was guarded by nothing. Both
+// sides now read CUTBLOCK_AREA_CAP_HA; this pins the proxy literal to it.
+//
+// Mutation-verified: changing the proxy CQL to `< 1500` fails this.
+
+describe("Check 11: cutblock area cap (registry filter == proxy CQL)", () => {
+  it("proxy LAYER_CONFIG.cutblocks.cqlFilter uses CUTBLOCK_AREA_CAP_HA", () => {
+    const config = parseProxyLayerConfig(proxySource).get("cutblocks");
+    expect(config, "proxy has no LAYER_CONFIG entry for cutblocks").toBeDefined();
+    expect(config!.cqlFilter).toBe(`PLANNED_GROSS_BLOCK_AREA < ${CUTBLOCK_AREA_CAP_HA}`);
+  });
+
+  it("registry cutblocks style.filter embeds CUTBLOCK_AREA_CAP_HA", () => {
+    const cutblocks = LAYER_REGISTRY.find((l) => l.id === "cutblocks")!;
+    expect(JSON.stringify(cutblocks.style.filter)).toContain(`,${CUTBLOCK_AREA_CAP_HA}]`);
   });
 });

@@ -14,7 +14,11 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
+import { POPUP_PRIORITY_KEYS } from "@/lib/map/popup-keys";
+import { LAYER_PROPERTIES } from "../../../scripts/lib/property-schema";
 import { derivePropertySchemas } from "./schema-helpers";
 
 // ── Canonical property schemas per source layer ──────────────────────────────
@@ -168,17 +172,12 @@ describe("Check 7: Property schema — timelineField values", () => {
     expect(violations).toHaveLength(0);
   });
 
-  it("documents all layers with timelineField", () => {
-    // This test serves as a registry of layers using timeline filtering.
-    // If a new layer is added with timelineField, this count should increase.
-    const timelineLayers = LAYER_REGISTRY.filter((l) => l.timelineField);
-    expect(timelineLayers.length).toBeGreaterThan(0);
-
-    // Document them
-    for (const layer of timelineLayers) {
-      expect(layer.timelineField).toBeTruthy();
-      expect(typeof layer.timelineField).toBe("string");
-    }
+  it("exactly these layers carry timelineField (pinned; edit deliberately when timeline support changes)", () => {
+    // The timeline UI, the scented track, and the story scrub tables all
+    // assume this set. Adding or dropping timeline support on a layer is a
+    // product change, so it must show up here, not slip through.
+    const timelineLayers = LAYER_REGISTRY.filter((l) => l.timelineField).map((l) => l.id).sort();
+    expect(timelineLayers).toEqual(["cutblocks", "fire-history", "tenure-cutblocks"]);
   });
 });
 
@@ -258,132 +257,97 @@ describe("Check 12: Popup property references", () => {
    * but PRIORITY_KEYS determines display order. A key that exists nowhere
    * in any schema AND nowhere in WFS whitelists is dead weight.
    *
-   * Source of PRIORITY_KEYS: MapPopup.tsx (read and documented here).
-   * This avoids importing a React component into vitest.
+   * Source of PRIORITY_KEYS: src/lib/map/popup-keys.ts — the SAME list
+   * MapPopup renders from (a hand-copy here drifted silently before 2026-09).
+   * The WFS-side set is parsed from the proxy's PROPERTY_WHITELIST rather
+   * than hand-listed; the only hand-list left is for layers the proxy does
+   * not whitelist at all (their WFS properties pass through unfiltered).
    */
-  const POPUP_PRIORITY_KEYS = [
-    // Forest / VRI
-    "class",
-    "PROJ_AGE_1",
-    "SPECIES_CD_1",
-    "PROJ_HEIGHT_1",
-    "POLYGON_AREA",
-    "BEC_ZONE_CODE",
-    "HARVEST_DATE",
-    // Parks / conservancies
-    "PROTECTED_LANDS_NAME",
-    "PARK_CLASS",
-    "CONSERVANCY_AREA_NAME",
-    // Species at risk (WFS-only)
-    "SCIENTIFIC_NAME",
-    "ENGLISH_NAME",
-    "BC_LIST",
-    "COSEWIC_STATUS",
-    // Fire history
-    "FIRE_YEAR",
-    "FIRE_SIZE_HECTARES",
-    "FIRE_CAUSE",
-    // OGMA
-    "OGMA_TYPE",
-    "LANDSCAPE_UNIT_NAME",
-    // Wildlife
-    "COMMON_SPECIES_NAME",
-    "SCIENTIFIC_SPECIES_NAME",
-    // Ungulate
-    "SPECIES_1",
-    "SPECIES_2",
-    // Watersheds
-    "CW_NAME",
-    "AREA_HA",
-    // Mining
-    "CLAIM_NAME",
-    "OWNER_NAME",
-    "TENURE_STATUS",
-    "TENURE_AREA_IN_HECTARE",
-    // Roads
-    "ROAD_SECTION_NAME",
-    "ROAD_CLASS",
-    // Conservation priority
-    "TAP_CLASSIFICATION_LABEL",
-    "ANCIENT_FOREST_IND",
-    "BGC_LABEL",
-    "REGION_NAME",
-    "DISTRICT_NAME",
-    "FEATURE_AREA_SQM",
-  ] as const;
+  // Every property the proxy can return for any layer: parsed from the
+  // PROPERTY_WHITELIST literal in wfs-proxy.ts (Deno, not importable here).
+  const proxySource = readFileSync(
+    resolve(__dirname, "../../../netlify/edge-functions/wfs-proxy.ts"),
+    "utf-8"
+  );
+  const whitelistStart = proxySource.indexOf("const PROPERTY_WHITELIST");
+  const whitelistBlock = proxySource.slice(
+    whitelistStart,
+    proxySource.indexOf("\n};", whitelistStart)
+  );
+  const PROXY_WHITELISTED_PROPERTIES = new Set(
+    [...whitelistBlock.matchAll(/"([A-Za-z0-9_]+)"/g)].map((m) => m[1])
+  );
+  const PROXY_WHITELISTED_LAYERS = new Set(
+    [...whitelistBlock.matchAll(/^\s{2}"?([a-z0-9-]+)"?:/gm)].map((m) => m[1])
+  );
 
-  // Build the union of all schema properties, plus WFS-only properties known
-  // to be returned by the proxy PROPERTY_WHITELIST for non-tile layers.
-  const WFS_ONLY_PROPERTIES = new Set([
-    // forest-age / logging-risk / old-growth-250 (VRI WFS response)
-    "PROJ_AGE_1",
-    "SPECIES_CD_1",
-    "PROJ_HEIGHT_1",
-    "POLYGON_AREA",
-    "BEC_ZONE_CODE",
-    "HARVEST_DATE",
-    // species-at-risk (WFS-only layer)
-    "SCIENTIFIC_NAME",
-    "ENGLISH_NAME",
-    "BC_LIST",
-    "COSEWIC_STATUS",
-    // parks: extractor remaps to name/designation; WFS serves original keys too
-    "PROTECTED_LANDS_NAME",
-    "PROTECTED_LANDS_DESIGNATION",
-    "PARK_CLASS",
-    // wildlife-habitat-areas WFS has more fields
-    "SCIENTIFIC_SPECIES_NAME",
-    // conservancies: extractor remaps to name; WFS serves original key too
-    "CONSERVANCY_AREA_NAME",
-    // ungulate WFS has secondary species
-    "SPECIES_2",
-    // mining claims WFS has more fields
-    "CLAIM_NAME",
-    "TENURE_AREA_IN_HECTARE",
-    // forestry roads WFS has more fields
-    "ROAD_CLASS",
-    // conservation priority WFS has more fields
-    "REGION_NAME",
-    "DISTRICT_NAME",
-  ]);
+  // Layers with NO whitelist entry return every upstream property. Popup keys
+  // that only exist there cannot be derived from anything in the repo, so
+  // they are listed by hand — and the test below checks that each such layer
+  // really has no whitelist (if one is added, this list must be revisited).
+  const PASS_THROUGH_LAYER_KEYS: Record<string, string[]> = {
+    parks: ["PROTECTED_LANDS_NAME", "PARK_CLASS"],
+    conservancies: ["CONSERVANCY_AREA_NAME"],
+  };
 
   const allSchemaProperties = new Set<string>();
   for (const props of Object.values(LAYER_PROPERTY_SCHEMAS)) {
-    for (const p of props) {
-      allSchemaProperties.add(p);
-    }
+    for (const p of props) allSchemaProperties.add(p);
   }
 
-  it("every PRIORITY_KEY is covered by a schema property or a known WFS property", () => {
-    const unmatched: string[] = [];
+  it("the proxy whitelist parsed from source is non-trivial", () => {
+    expect(whitelistStart).toBeGreaterThan(0);
+    expect(PROXY_WHITELISTED_PROPERTIES.size).toBeGreaterThan(20);
+    expect(PROXY_WHITELISTED_LAYERS.has("forest-age")).toBe(true);
+  });
 
-    for (const key of POPUP_PRIORITY_KEYS) {
-      if (!allSchemaProperties.has(key) && !WFS_ONLY_PROPERTIES.has(key)) {
-        unmatched.push(key);
-      }
+  it("pass-through layers really have no proxy whitelist entry", () => {
+    for (const layerId of Object.keys(PASS_THROUGH_LAYER_KEYS)) {
+      expect(
+        PROXY_WHITELISTED_LAYERS.has(layerId),
+        `layer "${layerId}" now has a PROPERTY_WHITELIST entry — move its popup keys out of PASS_THROUGH_LAYER_KEYS`
+      ).toBe(false);
     }
-
-    if (unmatched.length > 0) {
-      throw new Error(
-        `MapPopup PRIORITY_KEYS reference properties not found in any schema or WFS whitelist:\n` +
-          unmatched.join("\n") +
-          "\n\nThese keys will never render meaningful data. " +
-          "Either update the schema, add them to WFS_ONLY_PROPERTIES, or remove them from PRIORITY_KEYS."
-      );
-    }
-
-    expect(unmatched).toHaveLength(0);
   });
 
-  it("MapPopup has non-empty PRIORITY_KEYS list", () => {
-    expect(POPUP_PRIORITY_KEYS.length).toBeGreaterThan(0);
+  it("every popup PRIORITY_KEY is a tile schema property, a proxy-whitelisted property, or a documented pass-through key", () => {
+    const passThrough = new Set(Object.values(PASS_THROUGH_LAYER_KEYS).flat());
+    const unmatched = POPUP_PRIORITY_KEYS.filter(
+      (key) =>
+        !allSchemaProperties.has(key) &&
+        !PROXY_WHITELISTED_PROPERTIES.has(key) &&
+        !passThrough.has(key)
+    );
+    expect(
+      unmatched,
+      `MapPopup PRIORITY_KEYS reference properties no tile schema, proxy whitelist, or pass-through layer provides:\n` +
+        unmatched.join("\n") +
+        "\nThese keys will never render meaningful data."
+    ).toHaveLength(0);
   });
 
-  it("documents that MapPopup is generic (dumps feature.properties, uses PRIORITY_KEYS for order)", () => {
-    // MapPopup.tsx renders all feature.properties entries, sorted by PRIORITY_KEYS index.
-    // It does NOT crash on unknown keys -- it just renders them after the priority list.
-    // This test documents that behavior; the real risk is keys that ARE listed but
-    // are never populated (dead labels that take up space in the popup).
-    expect(true).toBe(true);
+  it("no PRIORITY_KEY is duplicated", () => {
+    expect(new Set(POPUP_PRIORITY_KEYS).size).toBe(POPUP_PRIORITY_KEYS.length);
   });
+});
+
+// ── Check 13: scripts/lib/property-schema.ts keys are a subset of what the extractors emit ──
+
+describe("Check 13: tile-audit property rules name properties the extractors actually emit", () => {
+  // scripts/lib/property-schema.ts is the hand-maintained VALUE-rule set used by
+  // the tile audits (audit-tiles A3, audit-property-deep P1). Its keys must be a
+  // subset of the extractor output (schema-helpers derives that), or the tile
+  // audit validates a property that no longer exists — loudly as 'missing' if
+  // required, silently as 'not required' otherwise.
+  for (const [layerName, rules] of Object.entries(LAYER_PROPERTIES)) {
+    it(`${layerName}: every rule key is emitted by the extractor`, () => {
+      const emitted = LAYER_PROPERTY_SCHEMAS[layerName];
+      expect(emitted, `no derived schema for source layer "${layerName}"`).toBeDefined();
+      const stale = Object.keys(rules).filter((k) => !emitted.has(k));
+      expect(
+        stale,
+        `property-schema.ts rules for "${layerName}" name keys the extractor does not emit: ${stale.join(", ")}`
+      ).toHaveLength(0);
+    });
+  }
 });

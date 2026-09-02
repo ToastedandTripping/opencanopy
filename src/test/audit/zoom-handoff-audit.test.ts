@@ -1,74 +1,82 @@
 /**
  * Part B — Check 6: Zoom Handoff Continuity
  *
- * Replicates DataLayer.tsx's tier logic to verify no zoom gaps exist
- * between raster overview, PMTiles vector, and WFS layers.
+ * Every registry layer declares a `zoomRange` — the zooms at which it claims
+ * to render. This audit checks that claim against what DataLayer.tsx will
+ * actually put on the map, using the registry fields DataLayer reads:
  *
- * Tier logic from DataLayer.tsx:
- *   - Raster overview: rasterOverview.minZoom to rasterOverview.maxZoom
- *   - PMTiles: tileMinZoom (= rasterMaxZoom + 1 if raster exists, else 0)
- *              to tileMaxZoom + 1 (MapLibre maxzoom is exclusive)
- *   - WFS: wfsMinZoom (= tileMaxZoom + 1 if has tiles, else zoomRange[0])
- *          to zoomRange[1]
+ *   - raster overview:  [rasterOverview.minZoom, rasterOverview.maxZoom]
+ *                       (DataLayer passes maxzoom = maxZoom + 1, exclusive)
+ *   - PMTiles fill:     [effectiveTileMin, 22] — overzoom to z22. The fill's
+ *                       minzoom is `rasterOverview.maxZoom + 1` when an
+ *                       overview exists, else `tileSource.minZoom` (the
+ *                       province-scale crash gate), else 0
+ *                       (DataLayer.tsx: `tileMinZoom={hasRasterOverview ?
+ *                       rasterMaxZoom + 1 : layer.tileSource.minZoom}` and
+ *                       `minzoom = tileMinZoom ?? 0`).
+ *   - WFS-only:         [zoomRange[0], zoomRange[1]] — WfsLayers fetches on
+ *                       every moveend inside zoomRange; tile-backed layers
+ *                       never mount WfsLayers (D10).
  *
- * Known exception: forest-age PMTiles dead zone (minzoom=maxzoom=11 in tile
- * metadata) is documented here but not tested directly since the dead zone
- * is a data artifact, not a registry configuration issue.
+ * The invariants are stated against registry VALUES, not against each other:
+ * the pre-2026-09 version of this file derived each tier's minZoom from the
+ * previous tier's maxZoom, so its "no gaps" check could not fail for any
+ * registry input. Now:
+ *
+ *   1. Every integer zoom in zoomRange is covered by some tier
+ *      (a layer must not claim a zoom at which nothing renders).
+ *   2. zoomRange[0] is not below the layer's own lowest tier minimum
+ *      (a gated layer must not advertise the zooms its crash-gate hides).
+ *   3. The raster overview ends before the tileset's native max zoom, so the
+ *      fill takes over on real vector tiles, not on overzoomed ones; and the
+ *      overview starts no later than the layer claims to render.
+ *
+ * Deliberately NOT asserted: raster→fill adjacency (fill minzoom ==
+ * rasterOverview.maxZoom + 1). DataLayer constructs it that way, so no
+ * registry value can break it and a test of it cannot fail.
+ *
+ * Mutation-verified 2026-09-01: setting logging-risk zoomRange to [5, 18]
+ * (gate at 9) fails invariant 2; setting forest-age rasterOverview.maxZoom to
+ * 12 (== PMTILES max) fails invariant 3.
  */
 
 import { describe, it, expect } from "vitest";
 import { LAYER_REGISTRY } from "@/lib/layers/registry";
 import type { LayerDefinition } from "@/types/layers";
 
-// ── Tier range calculator (mirrors DataLayer.tsx logic) ──────────────────────
+const PMTILES_OVERZOOM_MAX = 22; // DataLayer.addLayersToMap: `const maxzoom = 22`
 
 interface ZoomTier {
-  name: string;
+  name: "raster" | "pmtiles" | "wfs";
   minZoom: number;
   maxZoom: number; // inclusive
 }
 
-/**
- * Compute the zoom tiers for a layer as DataLayer.tsx would render them.
- * Returns an array of tiers in order: raster (optional), pmtiles (optional), wfs.
- */
-function computeZoomTiers(layer: LayerDefinition): ZoomTier[] {
+/** Tiers from registry fields, with DataLayer's minzoom rule applied verbatim. */
+export function computeZoomTiers(layer: LayerDefinition): ZoomTier[] {
   const tiers: ZoomTier[] = [];
 
-  const hasTileSource = !!layer.tileSource;
-  const tileMaxZoom = layer.tileSource?.maxZoom ?? 0;
-  const hasRasterOverview = !!layer.rasterOverview;
-  const rasterMaxZoom = layer.rasterOverview?.maxZoom ?? 0;
-  const rasterMinZoom = layer.rasterOverview?.minZoom ?? 0;
-
-  // WFS min zoom: above PMTiles max, or from zoomRange if no tiles
-  const wfsMinZoom = hasTileSource ? tileMaxZoom + 1 : layer.zoomRange[0];
-
-  if (hasRasterOverview) {
+  if (layer.rasterOverview) {
     tiers.push({
       name: "raster",
-      minZoom: rasterMinZoom,
-      maxZoom: rasterMaxZoom,
+      minZoom: layer.rasterOverview.minZoom,
+      maxZoom: layer.rasterOverview.maxZoom,
     });
   }
 
-  if (hasTileSource) {
-    // PMTiles minZoom: above raster max if raster exists, else 0
-    const pmtilesMinZoom = hasRasterOverview ? rasterMaxZoom + 1 : 0;
+  if (layer.tileSource) {
+    const effectiveTileMin = layer.rasterOverview
+      ? layer.rasterOverview.maxZoom + 1
+      : (layer.tileSource.minZoom ?? 0);
     tiers.push({
       name: "pmtiles",
-      minZoom: pmtilesMinZoom,
-      // MapLibre's maxzoom is exclusive (we pass tileMaxZoom + 1 to MapLibre),
-      // but for continuity checking we use the inclusive value
-      maxZoom: tileMaxZoom,
+      minZoom: effectiveTileMin,
+      maxZoom: PMTILES_OVERZOOM_MAX,
     });
-  }
-
-  // WFS tier always present for wfs-source layers
-  if (layer.source.type === "wfs") {
+  } else if (layer.source.type === "wfs") {
     tiers.push({
       name: "wfs",
-      minZoom: wfsMinZoom,
+      minZoom: layer.zoomRange[0],
       maxZoom: layer.zoomRange[1],
     });
   }
@@ -76,128 +84,102 @@ function computeZoomTiers(layer: LayerDefinition): ZoomTier[] {
   return tiers;
 }
 
-/**
- * Check for gaps between consecutive tiers.
- * A gap is when tier[n].maxZoom + 1 < tier[n+1].minZoom.
- * Returns a list of gap descriptions (empty = no gaps).
- */
-function findGaps(tiers: ZoomTier[]): string[] {
-  const gaps: string[] = [];
-  for (let i = 0; i < tiers.length - 1; i++) {
-    const current = tiers[i];
-    const next = tiers[i + 1];
-    if (current.maxZoom + 1 < next.minZoom) {
-      gaps.push(
-        `Gap between ${current.name} (max z${current.maxZoom}) ` +
-          `and ${next.name} (min z${next.minZoom}): ` +
-          `z${current.maxZoom + 1} to z${next.minZoom - 1} is uncovered`
-      );
-    }
+/** Integer zooms in [zoomRange[0], zoomRange[1]] not covered by any tier. */
+export function uncoveredZooms(layer: LayerDefinition, tiers: ZoomTier[]): number[] {
+  const missing: number[] = [];
+  for (let z = layer.zoomRange[0]; z <= layer.zoomRange[1]; z++) {
+    if (!tiers.some((t) => z >= t.minZoom && z <= t.maxZoom)) missing.push(z);
   }
-  return gaps;
+  return missing;
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// satellite is a raster basemap with neither a tileSource nor a WFS source.
+const auditLayers = LAYER_REGISTRY.filter((l) => l.id !== "satellite");
 
 describe("Check 6: Zoom handoff continuity", () => {
-  describe("tier logic", () => {
-    it("WFS-only layer has a single wfs tier", () => {
-      const layer = LAYER_REGISTRY.find((l) => l.id === "fish-streams");
-      expect(layer).toBeDefined();
-      const tiers = computeZoomTiers(layer!);
-      expect(tiers).toHaveLength(1);
-      expect(tiers[0].name).toBe("wfs");
-    });
-
-    it("PMTiles + WFS layer has two tiers starting at z0", () => {
-      const layer = LAYER_REGISTRY.find((l) => l.id === "parks");
-      expect(layer).toBeDefined();
-      const tiers = computeZoomTiers(layer!);
-      expect(tiers).toHaveLength(2);
-      expect(tiers[0].name).toBe("pmtiles");
-      expect(tiers[0].minZoom).toBe(0);
-      expect(tiers[1].name).toBe("wfs");
-    });
-
-    it("raster + PMTiles + WFS layer (forest-age) has three tiers", () => {
-      const layer = LAYER_REGISTRY.find((l) => l.id === "forest-age");
-      expect(layer).toBeDefined();
-      const tiers = computeZoomTiers(layer!);
-      expect(tiers).toHaveLength(3);
-      expect(tiers[0].name).toBe("raster");
-      expect(tiers[1].name).toBe("pmtiles");
-      expect(tiers[2].name).toBe("wfs");
-    });
-
-    it("raster to pmtiles handoff has no gap (pmtiles starts at rasterMaxZoom + 1)", () => {
-      const layer = LAYER_REGISTRY.find((l) => l.id === "forest-age");
-      const tiers = computeZoomTiers(layer!);
-      const raster = tiers.find((t) => t.name === "raster")!;
-      const pmtiles = tiers.find((t) => t.name === "pmtiles")!;
-      expect(pmtiles.minZoom).toBe(raster.maxZoom + 1);
-    });
-
-    it("pmtiles to wfs handoff has no gap (wfs starts at tileMaxZoom + 1)", () => {
-      const layer = LAYER_REGISTRY.find((l) => l.id === "forest-age");
-      const tiers = computeZoomTiers(layer!);
-      const pmtiles = tiers.find((t) => t.name === "pmtiles")!;
-      const wfs = tiers.find((t) => t.name === "wfs")!;
-      expect(wfs.minZoom).toBe(pmtiles.maxZoom + 1);
-    });
+  it("audits every non-satellite registry layer", () => {
+    expect(auditLayers.length).toBe(LAYER_REGISTRY.length - 1);
+    for (const layer of auditLayers) {
+      expect(computeZoomTiers(layer).length, `${layer.id} produced no tiers`).toBeGreaterThan(0);
+    }
   });
 
-  describe("per-layer zoom continuity", () => {
-    // satellite is a raster-only layer -- it has no WFS or PMTiles tiers,
-    // so computeZoomTiers returns [] for it. Skip it to avoid trivial pass.
-    const auditLayers = LAYER_REGISTRY.filter((l) => l.id !== "satellite");
-
+  describe("1. every zoom in zoomRange is rendered by some tier", () => {
     for (const layer of auditLayers) {
-      it(`${layer.id}: no zoom gaps between tiers`, () => {
+      it(`${layer.id}: zoomRange [${layer.zoomRange.join(", ")}] fully covered`, () => {
         const tiers = computeZoomTiers(layer);
-
+        const missing = uncoveredZooms(layer, tiers);
         expect(
-          tiers.length,
-          `Layer "${layer.id}" returned no zoom tiers from computeZoomTiers(). ` +
-          "Either the layer has no source type, or it should be excluded from this audit (like satellite)."
-        ).toBeGreaterThan(0);
-
-        const gaps = findGaps(tiers);
-
-        expect(
-          gaps,
-          `Layer "${layer.id}" has zoom gaps:\n${gaps.join("\n")}`
+          missing,
+          `layer "${layer.id}" claims zooms ${missing.join(", ")} but no tier renders there ` +
+            `(tiers: ${tiers.map((t) => `${t.name} z${t.minZoom}-${t.maxZoom}`).join(", ")})`
         ).toHaveLength(0);
       });
     }
   });
 
-  it("forest-age raster overview hands off to PMTiles without a gap", () => {
-    const forestAge = LAYER_REGISTRY.find((l) => l.id === "forest-age");
-    expect(forestAge).toBeDefined();
-    expect(forestAge!.rasterOverview).toBeDefined();
-    expect(forestAge!.tileSource).toBeDefined();
-    expect(
-      forestAge!.rasterOverview!.maxZoom + 1,
-      "raster overview maxZoom+1 should equal or overlap with the PMTiles " +
-        "vector render start — a gap means empty tiles at that zoom"
-    ).toBeLessThanOrEqual(forestAge!.tileSource!.maxZoom);
-  });
-
-  describe("zoom range consistency", () => {
-    for (const layer of LAYER_REGISTRY.filter((l) => l.id !== "satellite")) {
-      it(`${layer.id}: WFS tier does not extend below layer zoomRange[0]`, () => {
+  describe("2. zoomRange does not start below the layer's lowest tier", () => {
+    for (const layer of auditLayers) {
+      it(`${layer.id}: zoomRange[0] >= lowest tier minZoom`, () => {
         const tiers = computeZoomTiers(layer);
-        const wfsTier = tiers.find((t) => t.name === "wfs");
-        if (!wfsTier) return; // no WFS tier (shouldn't happen for wfs source layers)
-
-        // WFS min zoom should be >= layer's declared zoomRange[0]
-        // Exception: layers with PMTiles start WFS above tiles (which may be below zoomRange[0])
-        // The important check is that WFS doesn't start ABOVE zoomRange[1]
+        const lowest = Math.min(...tiers.map((t) => t.minZoom));
         expect(
-          wfsTier.minZoom,
-          `layer "${layer.id}" WFS tier starts above zoomRange[1] -- layer would never render`
-        ).toBeLessThanOrEqual(layer.zoomRange[1]);
+          layer.zoomRange[0],
+          `layer "${layer.id}" advertises z${layer.zoomRange[0]} but nothing renders below z${lowest} ` +
+            "(a tileSource.minZoom crash-gate or rasterOverview.minZoom hides those zooms)"
+        ).toBeGreaterThanOrEqual(lowest);
       });
     }
+  });
+
+  describe("3. raster overview hands off onto native vector tiles", () => {
+    const rasterLayers = auditLayers.filter((l) => l.rasterOverview && l.tileSource);
+
+    it("at least one layer has both a raster overview and a tileSource (forest-age)", () => {
+      expect(rasterLayers.map((l) => l.id)).toContain("forest-age");
+    });
+
+    for (const layer of rasterLayers) {
+      it(`${layer.id}: fill begins (rasterOverview.maxZoom + 1) at or below tileSource.maxZoom`, () => {
+        expect(
+          layer.rasterOverview!.maxZoom + 1,
+          `layer "${layer.id}" overview runs to z${layer.rasterOverview!.maxZoom} but native vector ` +
+            `tiles stop at z${layer.tileSource!.maxZoom}: the fill would take over on overzoomed tiles only`
+        ).toBeLessThanOrEqual(layer.tileSource!.maxZoom);
+      });
+
+      it(`${layer.id}: overview starts no later than zoomRange[0]`, () => {
+        expect(layer.rasterOverview!.minZoom).toBeLessThanOrEqual(layer.zoomRange[0]);
+      });
+    }
+  });
+
+  describe("tier shape (documents the three rendering families)", () => {
+    it("WFS-only layer (fish-streams) has a single wfs tier spanning its zoomRange", () => {
+      const layer = LAYER_REGISTRY.find((l) => l.id === "fish-streams")!;
+      const tiers = computeZoomTiers(layer);
+      expect(tiers.map((t) => t.name)).toEqual(["wfs"]);
+      expect([tiers[0].minZoom, tiers[0].maxZoom]).toEqual(layer.zoomRange);
+    });
+
+    it("tile-backed layer without overview (parks) has one pmtiles tier from its gate (or z0) to z22", () => {
+      const layer = LAYER_REGISTRY.find((l) => l.id === "parks")!;
+      const tiers = computeZoomTiers(layer);
+      expect(tiers.map((t) => t.name)).toEqual(["pmtiles"]);
+      expect(tiers[0].minZoom).toBe(layer.tileSource!.minZoom ?? 0);
+      expect(tiers[0].maxZoom).toBe(PMTILES_OVERZOOM_MAX);
+    });
+
+    it("gated layer (logging-risk) starts its pmtiles tier at tileSource.minZoom", () => {
+      const layer = LAYER_REGISTRY.find((l) => l.id === "logging-risk")!;
+      expect(layer.tileSource!.minZoom).toBeDefined();
+      const tiers = computeZoomTiers(layer);
+      expect(tiers[0].minZoom).toBe(layer.tileSource!.minZoom);
+    });
+
+    it("raster + tiles layer (forest-age) has raster then pmtiles", () => {
+      const layer = LAYER_REGISTRY.find((l) => l.id === "forest-age")!;
+      expect(computeZoomTiers(layer).map((t) => t.name)).toEqual(["raster", "pmtiles"]);
+    });
   });
 });

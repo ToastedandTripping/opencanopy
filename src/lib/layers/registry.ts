@@ -12,6 +12,16 @@ export const PMTILES_SOURCE_ID = "opencanopy";
 export const PMTILES_MAX_ZOOM = 12;
 
 /**
+ * Cutblock polygons at or above this area are tenure boundaries, not real
+ * cutblocks (real ones rarely exceed 1000 ha). Applied as a MapLibre filter
+ * here and mirrored as the proxy's CQL filter for `cutblocks`
+ * (netlify/edge-functions/wfs-proxy.ts); proxy-consistency-audit pins the two
+ * to the same number. It is also a public-figure hazard: any hectare total
+ * shown for cutblocks must apply the same cap (see lib/timeline/scented-track).
+ */
+export const CUTBLOCK_AREA_CAP_HA = 2000;
+
+/**
  * WFS endpoint base URLs for BC Open Maps data.
  * All use the OGC WFS 2.0.0 protocol.
  */
@@ -106,10 +116,10 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     defaultEnabled: false,
     interactive: true,
     legendItems: [
-      { color: "#0d5c2a", label: "Stands 250+ yr (VRI)", classSlug: "old-growth", note: "VRI counts all stands modelled at 250+ yr. The story's 0.3% (Price/Holt/Daust) counts large old-growth trees only." },
-      { color: "#4ade80", label: "Mature (80-250 yr)", classSlug: "mature" },
-      { color: "#f97316", label: "Young (<80 yr)", classSlug: "young" },
-      { color: "#ef4444", label: "Harvested", classSlug: "harvested" },
+      { color: FOREST_AGE_PALETTE["old-growth"], label: "Stands 250+ yr (VRI)", classSlug: "old-growth", note: "VRI counts all stands modelled at 250+ yr. The story's 0.3% (Price/Holt/Daust) counts large old-growth trees only." },
+      { color: FOREST_AGE_PALETTE["mature"], label: "Mature (80-250 yr)", classSlug: "mature" },
+      { color: FOREST_AGE_PALETTE["young"], label: "Young (<80 yr)", classSlug: "young" },
+      { color: FOREST_AGE_PALETTE["harvested"], label: "Harvested", classSlug: "harvested" },
     ],
     fetchPriority: 0,
   },
@@ -225,11 +235,12 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
         opacity: 0.9,
       },
       opacity: 0.7,
-      // Exclude tenure boundaries (>2000 ha) — real cutblocks rarely exceed 1000 ha
+      // Exclude tenure boundaries (>= CUTBLOCK_AREA_CAP_HA) — real cutblocks
+      // rarely exceed 1000 ha. Mirrored in the proxy CQL; audit-pinned.
       filter: [
         "any",
         ["!", ["has", "PLANNED_GROSS_BLOCK_AREA"]],
-        ["<", ["to-number", ["get", "PLANNED_GROSS_BLOCK_AREA"]], 2000],
+        ["<", ["to-number", ["get", "PLANNED_GROSS_BLOCK_AREA"]], CUTBLOCK_AREA_CAP_HA],
       ],
     },
     zoomRange: [5, 18],

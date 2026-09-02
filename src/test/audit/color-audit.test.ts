@@ -507,3 +507,41 @@ describe("Check 11: Raster-to-vector color consistency (forest-age)", () => {
     );
   });
 });
+
+// ── Check 11b: legend swatches match the vector paint for every classSlug ─────
+//
+// ARCHITECTURE.md invariant 3 says class colours match across legend, vector
+// paint and raster tiles. Parts 1-5 above cover paint <-> palette <-> raster;
+// nothing covered the legend leg until 2026-09-01 (the forest-age legend
+// carried literal hexes that merely happened to equal the palette).
+//
+// Mutation-verified: changing one forest-age legendItems colour fails this.
+
+describe("Check 11b: legend swatch colours match the fill-color match expression", () => {
+  const layersWithClassLegend = LAYER_REGISTRY.filter(
+    (l) => l.legendItems.some((item) => item.classSlug) && "fill-color" in l.style.paint
+  );
+
+  it("covers forest-age (the layer whose legend drives class filtering)", () => {
+    expect(layersWithClassLegend.map((l) => l.id)).toContain("forest-age");
+  });
+
+  for (const layer of layersWithClassLegend) {
+    const paintColors = extractMatchColors(layer.style.paint["fill-color"]);
+    if (!paintColors) continue; // fill-color is not a match expression — nothing to compare
+
+    for (const item of layer.legendItems) {
+      if (!item.classSlug || !(item.classSlug in paintColors)) continue;
+      it(`${layer.id} legend "${item.label}" swatch equals the paint colour for class "${item.classSlug}"`, () => {
+        expect(item.color.toLowerCase()).toBe(paintColors[item.classSlug!].toLowerCase());
+      });
+    }
+  }
+
+  it("forest-age legend swatches come from the palette JSON, not literals", () => {
+    const forestAge = LAYER_REGISTRY.find((l) => l.id === "forest-age")!;
+    for (const item of forestAge.legendItems) {
+      expect(item.color).toBe(PALETTE[item.classSlug as PaletteClass]);
+    }
+  });
+});
