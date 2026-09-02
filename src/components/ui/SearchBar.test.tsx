@@ -53,6 +53,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();

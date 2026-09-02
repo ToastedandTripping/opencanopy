@@ -5,7 +5,7 @@
  * v1 scope (plan critic must-fix #2, X3 gating): scent `fire-history` ONLY.
  * `fire-history` has no registry base filter, so its scrub table (built from
  * ALL dated features) matches exactly what the map paints. `cutblocks` DOES
- * carry a base filter excluding features >= 2000ha ("tenure boundaries --
+ * carry a base filter excluding features >= CUTBLOCK_AREA_CAP_HA (2000 ha, registry.ts) ("tenure boundaries --
  * real cutblocks rarely exceed 1000ha", registry.ts) while its scrub table
  * sums every dated feature -- scenting that layer would put a public figure
  * on screen that the map's own filter contradicts. That mismatch is deferred

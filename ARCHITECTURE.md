@@ -90,8 +90,9 @@ error`, surfaced by `StatusToast`. **Dual-source rule:** tile-backed layers
 report status only from the PMTiles path; WFS fetch results set status only
 for WFS-only layers (a WFS hiccup must not claim "data unavailable" while
 tiles render fine). `DataLayer` instances are always mounted (CanopyMap
-mounts every registry layer once; the P1a memo redesign), so a status is
-cleared when its layer is toggled off, not on unmount.
+mounts every registry layer once; the P1a memo redesign), so the unmount
+cleanup that clears status never runs in practice; a status must therefore
+also be cleared when its layer is toggled off.
 
 ## The WFS proxy
 
