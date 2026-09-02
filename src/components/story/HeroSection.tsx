@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { prefetchYearOverlays } from "@/lib/story/prefetch";
+import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
 
 function useRevealOnScroll() {
   const refs = useRef<(HTMLDivElement | null)[]>([]);
@@ -10,11 +11,7 @@ function useRevealOnScroll() {
     const elements = refs.current.filter(Boolean) as HTMLDivElement[];
     if (!elements.length) return;
 
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    if (reducedMotion) {
+    if (prefersReducedMotion()) {
       elements.forEach((el) => el.classList.add("hero-visible"));
       return;
     }

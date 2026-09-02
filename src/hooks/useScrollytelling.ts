@@ -1,5 +1,7 @@
 "use client";
 
+import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CHAPTERS, type ChapterCamera } from "@/data/chapters";
 import { computeBinaryRevealOpacity } from "@/lib/story/binary-opacity";
@@ -25,20 +27,6 @@ function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 
-/**
- * Check if user prefers reduced motion.
- *
- * Caches the MediaQueryList so repeated per-rAF-frame calls don't re-invoke
- * `window.matchMedia` (a real query against the browser's media-feature
- * evaluator, not a cheap property read). The cache is keyed on the current
- * `window.matchMedia` function reference rather than fixed at module-load
- * time: in production that reference never changes across a page's
- * lifetime, so the query still runs exactly once per session (the intent of
- * the original "cached per session" comment); in tests that swap
- * `window.matchMedia` for a new mock per-suite, the identity check detects
- * the swap and re-queries, so mocked reduced-motion states are still honored.
- */
-import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
 
 /** Field-compare two cameras -- avoids treating a same-value re-render as a change. */
 function camerasEqual(a: ChapterCamera, b: ChapterCamera): boolean {

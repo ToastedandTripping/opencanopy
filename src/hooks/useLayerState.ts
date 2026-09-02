@@ -98,9 +98,7 @@ function readFromStorage(): string[] | null {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
     const typed = parsed.filter((id: unknown) => typeof id === "string") as string[];
-    const resolved = resolveAliases(typed);
-    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
-    const filtered = resolved.filter((id) => validIds.has(id));
+    const filtered = validateLayerIds(resolveAliases(typed));
     return filtered.length > 0 ? filtered : null;
   } catch {
     return null;
@@ -212,9 +210,7 @@ export function useLayerState(): LayerStateReturn {
   const applyPreset = useCallback((presetId: string) => {
     const preset = LAYER_PRESETS.find((p) => p.id === presetId);
     if (!preset) return;
-    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
-    const filtered = preset.layers.filter((id) => validIds.has(id));
-    setEnabledLayers(deconflictExclusivePairs(filtered));
+    setEnabledLayers(deconflictExclusivePairs(validateLayerIds(preset.layers)));
   }, []);
 
   const resetToDefaults = useCallback(() => {
@@ -222,8 +218,7 @@ export function useLayerState(): LayerStateReturn {
   }, []);
 
   const setLayers = useCallback((ids: string[]) => {
-    const validIds = new Set(LAYER_REGISTRY_AVAILABLE.map((l) => l.id));
-    const filtered = ids.filter((id) => validIds.has(id));
+    const filtered = validateLayerIds(ids);
     // Apply the same mutual-exclusivity de-confliction used by toggleLayer so
     // preset/URL-hydration paths can't silently enable conflicting pairs.
     setEnabledLayers(deconflictExclusivePairs(filtered));

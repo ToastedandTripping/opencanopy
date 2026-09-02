@@ -1,5 +1,7 @@
 "use client";
 
+import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
+
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { CanopyMap } from "@/components/map";
@@ -57,9 +59,6 @@ function logCalc(payload: Record<string, unknown>): void {
   console.info("[opencanopy:calc]", payload);
 }
 
-// Injectable-matchMedia reduced-motion check for the timeline scheduler,
-// mirroring the pattern in useScrollytelling.ts (cached MediaQueryList,
-import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
 
 export default function Home() {
   const mapRef = useRef<MapRef>(null);

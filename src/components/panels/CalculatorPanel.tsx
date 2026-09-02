@@ -1,5 +1,7 @@
 "use client";
 
+import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
+
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   calculateEquivalences,
@@ -73,7 +75,6 @@ function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
-import { prefersReducedMotion } from "@/lib/a11y/reduced-motion";
 
 function useAnimatedNumber(target: number, duration = 2000, active = true): number {
   const [display, setDisplay] = useState(0);

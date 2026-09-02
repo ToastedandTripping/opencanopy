@@ -273,17 +273,10 @@ export function SearchBar({ onLocationSelect }: SearchBarProps) {
 
   const handleSelect = useCallback(
     (result: SearchResult) => {
-      // Use the original geocoding feature's place_type for zoom estimation
-      // Since we've already mapped it, use a default zoom of 12
-      // unless the result is coordinate-based
-      let zoom = 12;
-      if (result.id === "coords") {
-        zoom = 12;
-      } else if (result.region.startsWith("Region")) {
-        zoom = 8;
-      } else if (result.region.startsWith("Place") || result.region.startsWith("Locality")) {
-        zoom = 12;
-      }
+      // Region-scale results (buildRegion capitalises the geocoder place_type
+      // into `region`) get a wide view; places, localities and raw coordinates
+      // all land at z12.
+      const zoom = result.region.startsWith("Region") ? 8 : 12;
 
       onLocationSelect(result.center[0], result.center[1], zoom);
       setQuery(result.placeName);

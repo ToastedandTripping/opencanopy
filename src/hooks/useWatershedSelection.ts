@@ -53,12 +53,8 @@ export function useWatershedSelection(): WatershedSelectionState {
     setError(null);
   }, []);
 
-  const clear = useCallback(() => {
-    setMode("off");
-    setWatershed(null);
-    setLoading(false);
-    setError(null);
-  }, []);
+  // Same semantics as disableMode (see the hook doc comment); one body.
+  const clear = disableMode;
 
   const selectAtPoint = useCallback(async (lng: number, lat: number) => {
     if (loadingRef.current) return;
