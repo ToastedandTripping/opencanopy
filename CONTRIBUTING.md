@@ -14,7 +14,7 @@ Each layer is a single configuration object in `src/lib/layers/registry.ts`. To 
 {
   id: "your-layer-id",
   label: "Human-Readable Name",
-  category: "forest",  // forest | water | species | protection | context
+  category: "forest",  // forest | accountability | disturbance | water | species | protection | context
   description: "One-line description for tooltips",
   source: {
     type: "wfs",
@@ -38,8 +38,20 @@ Each layer is a single configuration object in `src/lib/layers/registry.ts`. To 
 }
 ```
 
-4. Add the layer ID to the edge function's `LAYER_CONFIG` in `netlify/edge-functions/wfs-proxy.ts`.
-5. Test at multiple zoom levels to verify the data loads and renders.
+4. Add the id to `PUBLIC_LAYER_IDS` in the same file. The UI, URL hydration
+   and rendering only ever see `LAYER_REGISTRY_AVAILABLE` (the registry
+   filtered by that set); without this step the layer exists but is invisible.
+5. Mirror the layer in the edge function's `LAYER_CONFIG` in
+   `netlify/edge-functions/wfs-proxy.ts` (URL, typeName, cqlFilter). The proxy
+   cannot import from `src/`, so this is a hand-mirror; `npm test` fails on
+   drift (`proxy-consistency-audit`).
+6. Run `npm test`. The audit suites enforce, per layer: registry ↔ proxy
+   mirror; legend swatch colour == paint colour for every `classSlug`;
+   effective opacity ≥ 0.15 inside `zoomRange`; every zoom in `zoomRange`
+   actually rendered by some tier; and, for any fill on the shared forest-age
+   PMTiles source, a `tileSource.minZoom` crash-gate or a raster overview.
+7. Test at multiple zoom levels on a deploy — the map cannot render from a
+   keyless sandbox (R2 serves no CORS to localhost).
 
 ## Adding a Hot Spot
 

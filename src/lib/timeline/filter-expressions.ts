@@ -1,9 +1,12 @@
 /**
  * Pure MapLibre expression builders for timeline year filtering.
  *
- * These functions compose GPU-side filter expressions applied directly to
- * PMTiles vector tile layers, eliminating the need to hide tiles and fall
- * back to WFS fetching during timeline animation.
+ * These functions compose GPU-side expressions installed once on the PMTiles
+ * vector layers. The year itself is a MapLibre global-state property
+ * (`currentYear`) that the expressions read, so a timeline tick is a single
+ * `map.setGlobalStateProperty` call rather than a per-layer `setFilter`
+ * (switched 2026-08-27). No tiles are hidden and no WFS fallback fires
+ * during animation.
  *
  * Field type inference:
  * - Fields with "DATE" in the name (e.g. DISTURBANCE_START_DATE) are string

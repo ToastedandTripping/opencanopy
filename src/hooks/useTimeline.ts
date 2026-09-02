@@ -38,7 +38,7 @@ function sleep(ms: number): Promise<void> {
 
 export interface UseTimelineOptions {
   /** Resolves once the map has settled (no pending tiles, no running
-   *  transitions) after the current year's setFilter has been applied.
+   *  transitions) after the current year's global-state update has been applied.
    *  Injected so this hook stays maplibre-free and fully unit-testable --
    *  the hook never imports maplibre or reads a map ref directly. Defaults
    *  to an immediately-resolving promise, which degrades gracefully to
@@ -100,7 +100,7 @@ const defaultPrefersReducedMotion = () => false;
  *     to false before this one noticed (runIdRef) -- and bail without
  *     scheduling further work.
  *   - The idle listener is registered SYNCHRONOUSLY, in the same tick as the
- *     `setCurrentYear` call that will trigger the next setFilter (no `await`
+ *     `setCurrentYear` call that will trigger the next global-state year update (no `await`
  *     in between). This ordering is load-bearing: if the listener attached
  *     AFTER React had a chance to flush and DataLayer's effect had already
  *     kicked off (and possibly finished) a fast repaint, the idle event
@@ -246,7 +246,7 @@ export function useTimeline(
 
     async function runContinuousLoop() {
       // Razor W1: the FIRST iteration of a run has not issued any
-      // setCurrentYear/setFilter yet -- there is nothing painting for this
+      // setCurrentYear/global-state update yet -- there is nothing painting for this
       // run to wait on. On an already-settled map (the common case: every
       // pause -> resume re-enters this effect and re-runs from iteration 1)
       // `map.once('idle')` never fires because nothing is dirtying the map,
@@ -255,7 +255,7 @@ export function useTimeline(
       // "rendering..." chip the whole time. Skip the render-gate (and its
       // debounce) on iteration 1; go straight to dwell, then advance.
       // Iteration 2+ gate normally, once this run has actually issued a
-      // setFilter to wait on.
+      // year update to wait on.
       let isFirstIteration = true;
       while (true) {
         if (cancelledRef.current || runIdRef.current !== runId) return;

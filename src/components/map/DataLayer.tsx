@@ -1018,10 +1018,10 @@ function RasterMountLogger({ layerId }: { layerId: string }) {
  * Renders any layer from the registry using the appropriate
  * react-map-gl Source + Layer combination.
  *
- * Dual-source support: when a layer has both `tileSource` and WFS `source`,
- * PMTiles render at low zoom (0 to tileSource.maxZoom) and WFS GeoJSON
- * renders at high zoom (tileSource.maxZoom+1 and up). This avoids
- * redundant data at the transition point.
+ * Dual-source layers (a `tileSource` plus a WFS `source`): PMTiles, with
+ * overzoom, are the only rendered source at every zoom; WfsLayers is never
+ * mounted for them and loadData() returns before fetching (D10). Only
+ * WFS-only layers fetch GeoJSON per viewport through the proxy.
  *
  * For WFS sources: loads GeoJSON from the proxy edge function.
  * For raster sources: uses MapLibre raster source directly.
@@ -1046,7 +1046,7 @@ function classFilterArraysEqual(a: string[] | undefined, b: string[] | undefined
  * MapReadout fix addresses the source of that), which re-rendered all 18-19
  * <DataLayer> instances even though DataLayer/PmtilesLayers/WfsLayers only
  * ever read a scoped slice of props: layer.id, visible, yearFilter, and
- * classFilters?.[layer.id] (see :1245, :509, :989). DataLayer's internal
+ * classFilters?.[layer.id]. DataLayer's internal
  * state/effects are keyed off map/layer.id/visible/yearFilter, so skipping a
  * re-render when none of that scoped slice changed is safe by construction.
  *
@@ -1107,7 +1107,8 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
 
   const hasTileSource = !!layer.tileSource;
   const tileMaxZoom = layer.tileSource?.maxZoom ?? 0;
-  // WFS kicks in above the tile maxZoom
+  // Only the WFS-only arm is reachable: loadData() returns early for
+  // tile-backed layers (D10), so the tileMaxZoom + 1 arm never fires.
   const wfsMinZoom = hasTileSource ? tileMaxZoom + 1 : layer.zoomRange[0];
 
   // When timeline is active, filter WFS features client-side by year.

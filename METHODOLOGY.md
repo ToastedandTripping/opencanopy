@@ -71,7 +71,7 @@ Forest stands are classified by projected age from VRI data:
 
 1. **Upper-range density values.** C_max values represent total ecosystem carbon including soil organic carbon and deadwood. Published ranges for above-ground biomass alone are typically 10-20% lower. This means estimates lean toward the high end.
 
-2. **Tile clipping.** At lower zoom levels, forest polygons at tile boundaries are clipped by the rendering engine. The calculator only counts features visible on screen, so polygons split across tiles may be partially counted. This effect decreases at higher zoom levels.
+2. **Selection fetch, not screen sampling.** The calculator fetches the VRI polygons intersecting the drawn area through the WFS proxy and clips each to the selection (`@turf/intersect`), so the result does not depend on zoom level or on what is currently rendered. Selections over 500 km² are refused before any fetch. A stand with a negative or missing projected age (`PROJ_AGE_1`) is clamped to age 0 before the density formula, contributing no carbon. Displayed figures are rounded and carry a one-sided band (the model's own overestimate bias); shared and exported numbers use the rounded figure.
 
 3. **VRI age estimation.** The PROJ_AGE_1 field is a modeled projection, not a direct measurement. Accuracy varies by region and stand type. Some stands lack age data entirely and are classified as "unknown."
 

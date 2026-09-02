@@ -1,15 +1,15 @@
 # OpenCanopy
 
-Open-source conservation mapping for British Columbia. Visualize old-growth forests, logging activity, species at risk, and carbon value using real-time BC government data.
+Open-source conservation mapping for British Columbia. Visualize old-growth forests, logging activity, fire history, and carbon value using BC government data.
 
-**Live:** [opencanopy.ca](https://opencanopy.ca) (coming soon)
+**Live:** [opencanopy.ca](https://opencanopy.ca)
 
 ## What It Does
 
-- Interactive map with 17 BC government data layers (forest age, cutblocks, logging companies, fire history, old growth, parks, conservancies, OGMAs, fish streams, species at risk, wildlife habitat, mining claims, forestry roads, and more) plus a satellite basemap
+- Interactive map with six BC government data layers on the public surface (forest age, stands 250+ years, cutblocks, fire history, parks, conservation priority areas) plus a satellite basemap. A further 11 layers (logging companies, conservancies, OGMAs, fish streams, species at risk, wildlife habitat, mining claims, forestry roads, and more) live in the registry behind `PUBLIC_LAYER_IDS`, kept for audit coverage and surfaced only after a layer-by-layer check
 - Draw-a-box carbon calculator: select any area to see tonnes of CO2 stored, equivalent cars/homes/flights
 - Shareable URLs: every view is a link
-- Layer presets: Overview, Threats, Ecology, Protection
+- Layer presets: Overview, Logging, Old Growth + Parks, Fire + Logging
 - Curated hot spots: Eldred Valley, Fairy Creek, Inland Rainforest, and more
 
 ## Data Sources
@@ -48,13 +48,13 @@ npm run build
 
 See [METHODOLOGY.md](METHODOLOGY.md) for details on the carbon estimation model, species density tables, and data sources.
 
-**Important:** Carbon estimates are approximate and intended for comparative purposes. They are not audited carbon accounting. Accuracy improves at higher zoom levels.
+**Important:** Carbon estimates are approximate and intended for comparative purposes. They are not audited carbon accounting. The calculator fetches the VRI polygons for the drawn area and clips them to it, so the same selection gives the same figure at any zoom; selections over 500 km² are refused.
 
 ## Contributing
 
 Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-The easiest way to contribute is adding new data layers -- each layer is a single TypeScript configuration object in `src/lib/layers/registry.ts`.
+The easiest way to contribute is adding new data layers -- each layer is a single TypeScript configuration object in `src/lib/layers/registry.ts` (plus its id in `PUBLIC_LAYER_IDS` to make it visible, and a mirror entry in the WFS proxy; the audit suite enforces both).
 
 ## License
 

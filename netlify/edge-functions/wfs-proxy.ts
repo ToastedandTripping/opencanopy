@@ -393,8 +393,9 @@ const PROPERTY_WHITELIST: Record<string, string[]> = {
 };
 
 // ── Company normalization (tenure-cutblocks) ──────────────────
-// Maps CLIENT_NUMBER -> company_id slug. Must stay in sync with
-// src/data/companies.ts (both generated from data/company-registry.json).
+// Maps CLIENT_NUMBER -> company_id slug. Hand-mirrored from
+// src/data/companies.ts (Deno cannot import @/ paths); Check 10 in
+// src/test/audit/proxy-consistency-audit.test.ts fails on drift.
 const COMPANY_MAP: Record<string, string> = {
   "00001271": "canfor",
   "00142662": "west-fraser",

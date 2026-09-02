@@ -89,7 +89,9 @@ Invariants (enforced by `src/test/audit/*`):
 error`, surfaced by `StatusToast`. **Dual-source rule:** tile-backed layers
 report status only from the PMTiles path; WFS fetch results set status only
 for WFS-only layers (a WFS hiccup must not claim "data unavailable" while
-tiles render fine). Statuses clear on layer unmount.
+tiles render fine). `DataLayer` instances are always mounted (CanopyMap
+mounts every registry layer once; the P1a memo redesign), so a status is
+cleared when its layer is toggled off, not on unmount.
 
 ## The WFS proxy
 
@@ -110,18 +112,34 @@ abort-on-supersede, and a 50-entry LRU cache.
 
 ## State
 
-Seven hooks own UI state; URL is the shareable source of truth:
+Hooks own UI state; URL is the shareable source of truth. On `/map`:
 
-- `useLayerState` — enabled layers; hydrates URL → localStorage → defaults
+- `useLayerState` — enabled layers; hydrates URL → localStorage → defaults.
+  Renamed layer ids (2026-08-26: `tap-deferrals → old-growth-250`,
+  `conservation-priority → tap-priority`) keep aliases on every input path
+  (URL hash, localStorage, popstate).
 - `useMapState` — viewport ↔ URL, history push only on genuine user changes
-- `useTimeline` — year filter; PMTiles filter on GPU via `setFilter`
-- `useScrollytelling` / story — the `/` landing scrollytelling map
-  (`src/lib/story/`) is a deliberately separate, deterministic layer setup;
-  it shares constants with the registry via audits, not imports. Do not
-  merge the two paths (decided 2026-06-02).
+- `useTimeline` — the year. Since 2026-08-27 the year is a MapLibre
+  global-state uniform: the registry's filter/opacity expressions read
+  `["global-state", "currentYear"]` on the GPU and each tick is one
+  `map.setGlobalStateProperty("currentYear", …)` call from `map/page.tsx`
+  (`setFilter` remains only for legend class filters and WFS layers). The
+  playhead is render-gated: it advances only after `map.once("idle")` (Phase
+  A "honest timeline"), via a `waitForRender` injected into the hook.
 - `useWatershedSelection` — watershed click/selection lifecycle
-- `useDeviceCapability` — device performance detection (SSR-safe lazy init)
 - `useDialogA11y` — dialog focus management (focus-in, restore, Tab trap)
+
+On `/` (the landing story):
+
+- `useScrollytelling` / story — the scrollytelling map (`src/lib/story/`) is a
+  deliberately separate, deterministic layer setup; it shares constants with
+  the registry via audits, not imports. Do not merge the two paths (decided
+  2026-06-02). The one deliberate shared *data* dependency is
+  `src/data/scrub/*.json` (cumulative-area pacing tables built by
+  `scripts/build-scrub-tables.py`): the story scrubs by them and the `/map`
+  timeline's scented track reads the fire table's per-year shares.
+- `useDeviceCapability` — device performance detection (SSR-safe lazy init);
+  its only consumer is `ScrollytellingContainer`.
 
 Presets (`src/lib/layers/presets.ts`) are named layer combinations the map
 shell activates.
@@ -143,9 +161,19 @@ fidelity). Output ships to R2 under versioned dirs (`raster/v2/...`):
 upload new dirs, flip the client URL in `r2-config.ts`, keep old dirs one
 verified release.
 
-Quality net: the 11-audit suite (`scripts/audit-*.ts`, `npm run audit:all`)
-traces source→tile fidelity, geometry precision, spatial/temporal/cross-source
-consistency; `e2e/` adds screenshot regression and live monitoring.
+Story overlays come from the same preprocessed checkpoint:
+`scripts/build-year-overlays.py` (per-year cutblock and fire PNGs) and
+`scripts/build-scrub-tables.py` (pacing curves + absolute totals).
+`scripts/generate-tile-manifest.py` emits the optional binary-tile manifest
+the story's `ocbin://` protocol consults (fail-open when absent).
+
+Quality net: the audit suite (`scripts/audit-*.ts`) traces source→tile
+fidelity, geometry precision, spatial/temporal/cross-source consistency.
+`npm run audit:all` runs eight of them; `audit:trend` (archived reports),
+`audit:viewport` (needs a prior `next build`) and the Python
+`audit:crosssource` (live WFS) run separately. `e2e/` adds screenshot
+regression (`audit:visual`, needs a dev server) and the production monitor
+(`audit:live`, its own Playwright config so `test:e2e` never hits prod).
 
 ## Layout
 
@@ -154,11 +182,18 @@ src/app/            routes (map shell at /map, story at /, privacy, OG images)
 src/components/     map/ (CanopyMap, DataLayer, legend, popup, draw, timeline)
                     panels/ (layers, calculator, hotspots), story/, landing/, ui/
 src/hooks/          state hooks + useDragDismiss
-src/lib/            layers/ (registry, presets), data/ (wfs-client), story/,
-                    carbon/ (calculator — must match METHODOLOGY.md exactly),
-                    timeline/, export/, debug/, r2-config, mapConfig,
-                    a11y/ (reduced-motion), map/ (shared GeoJSON/layer utils),
-                    keyboard/ (map shortcuts), math/ (interpolation), react/ (merge-refs)
+src/contexts/       LoadingContext (per-layer status model)
+src/data/           chapters (story), companies (licensee SSOT), hotspots,
+                    scrub/ (pacing tables shared by story + timeline)
+src/types/          LayerDefinition and friends
+src/lib/            layers/ (registry, presets, forest-age-palette.json),
+                    taxonomy/ (forest-age class SSOT), data/ (wfs-client,
+                    forest-carbon-client, watershed-client, DataFetchError),
+                    story/, carbon/ (calculator — must match METHODOLOGY.md
+                    exactly), timeline/, export/, debug/, r2-config, mapConfig,
+                    a11y/ (reduced-motion), map/ (shared GeoJSON/layer utils,
+                    popup-keys), keyboard/ (map shortcuts), math/ (interpolation),
+                    react/ (merge-refs)
 src/test/           unit + audit suites (vitest), mocks/maplibre
 netlify/            edge functions (wfs-proxy)
 scripts/            pipeline v2, raster builder, audit suite
