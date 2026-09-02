@@ -209,3 +209,19 @@ describe("Check 9: Story page ↔ Registry consistency", () => {
     });
   });
 });
+
+// ── Chapter roster pin ────────────────────────────────────────────────────────
+// Moved here from NarrativePanel.test.tsx (2026-09-01), where it sat under an
+// a11y title it did not guard. This is a data pin: the story has exactly five
+// chapters since the ending dolly (`remains`) was docked on 2026-08-21
+// (tag dock/dolly-live-scrub, ruling in .claude/DECISIONS.md). Change it on
+// purpose, with the ruling, not by accident.
+
+describe("chapter roster (pinned)", () => {
+  it("exactly five chapters, each with a non-empty heading", () => {
+    expect(CHAPTERS.map((c) => c.id)).toHaveLength(5);
+    for (const chapter of CHAPTERS) {
+      expect(chapter.heading.trim().length, `chapter "${chapter.id}" has no heading`).toBeGreaterThan(0);
+    }
+  });
+});

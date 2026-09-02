@@ -21,7 +21,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { NarrativePanel } from "./NarrativePanel";
-import { CHAPTERS } from "@/data/chapters";
 
 afterEach(cleanup);
 
@@ -55,14 +54,6 @@ describe("NarrativePanel a11y", () => {
     const wrapper = container.firstElementChild;
     expect(wrapper!.hasAttribute("aria-hidden")).toBe(false);
     expect(getByRole("heading", { name: "See what's left." })).toBeTruthy();
-  });
-
-  it("all 5 story chapters have a non-empty heading (completeness guard for the panel a11y fix)", () => {
-    // 5 since the ending dolly (`remains`) was docked 2026-08-21 — tag dock/dolly-live-scrub.
-    expect(CHAPTERS.length).toBe(5);
-    for (const chapter of CHAPTERS) {
-      expect(chapter.heading.length).toBeGreaterThan(0);
-    }
   });
 
   it("the decorative gradient veil (ScrollytellingContainer) is untouched — separate concern", () => {

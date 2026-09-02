@@ -163,18 +163,28 @@ describe("visibility lifecycle", () => {
       expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
     });
 
-    it("visibility does nothing when isStyleLoaded returns false", () => {
+    it("style not loaded: paints nothing now, defers via map.once('idle'), and applies on that idle", () => {
+      // Guards the deferral branch in visibility.ts. Before 2026-09-01 the
+      // test only asserted "no paint" and then re-called the function by hand,
+      // so deleting the map.once registration left every test green while
+      // production silently never re-applied after a late style load.
       simulateOnLoad();
       map._setStyleLoaded(false);
 
       const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.6 }];
-      // Clear setPaintProperty tracking from setup
       map._getCalls().setPaintProperty.length = 0;
 
       applyLayerVisibility(map, layers);
 
-      // No setPaintProperty calls should have been made
       expect(map._getCalls().setPaintProperty.length).toBe(0);
+      expect(map.once).toHaveBeenCalledWith("idle", expect.any(Function));
+
+      // The style finishes loading and MapLibre fires idle: the deferred
+      // call must apply the paint with no further call from the component.
+      map._setStyleLoaded(true);
+      map._emit("idle");
+
+      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
     });
 
     it("visibility does nothing when layers not yet registered", () => {
@@ -206,59 +216,4 @@ describe("visibility lifecycle", () => {
     });
   });
 
-  // ── Bug hypothesis testing (retained from the pre-Phase-1 suite) ────
-
-  describe("bug hypothesis: visibility effect fires before layers registered", () => {
-    it("HYPOTHESIS A: if visibility fires before onLoad, no paint calls happen", () => {
-      // Simulate: visibility effect fires but onLoad hasn't run yet
-      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.6 }];
-      applyLayerVisibility(map, layers);
-
-      // No layers registered, so getLayer returns undefined, no setPaintProperty calls
-      const paintCalls = map._getCalls().setPaintProperty;
-      expect(paintCalls.length).toBe(0);
-
-      // NOW onLoad runs
-      simulateOnLoad();
-
-      // Layers are at opacity 0 (their initial paint values)
-      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0);
-    });
-
-    it("HYPOTHESIS B: mapLoaded re-triggers visibility after onLoad", () => {
-      // 1. Component mounts with mapLoaded=false
-      // 2. Visibility effect fires (no-op, layers not registered)
-      applyLayerVisibility(map, [{ id: "forest-age", opacity: 0.6 }]);
-      expect(map._getCalls().setPaintProperty.length).toBe(0);
-
-      // 3. onLoad fires, registers layers, sets mapLoaded=true
-      simulateOnLoad();
-
-      // 4. mapLoaded change triggers visibility effect re-fire
-      applyLayerVisibility(map, [{ id: "forest-age", opacity: 0.6 }]);
-
-      // NOW the effect has fired and applied paint
-      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
-    });
-
-    it("HYPOTHESIS D: isStyleLoaded gate prevents paint when style not ready", () => {
-      simulateOnLoad();
-      map._setStyleLoaded(false);
-
-      const layers: ChapterLayer[] = [{ id: "forest-age", opacity: 0.6 }];
-      map._getCalls().setPaintProperty.length = 0;
-
-      applyLayerVisibility(map, layers);
-
-      // isStyleLoaded returned false, so no paint calls
-      expect(map._getCalls().setPaintProperty.length).toBe(0);
-
-      // After style loads
-      map._setStyleLoaded(true);
-      applyLayerVisibility(map, layers);
-
-      // Paint applied once style is ready
-      expect(map.getPaintProperty("story-forest-base", "raster-opacity")).toBe(0.7);
-    });
-  });
 });

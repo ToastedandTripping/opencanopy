@@ -69,7 +69,12 @@ async function search(input: HTMLElement, query: string) {
   });
 }
 
-describe("SearchBar (keyless environment -- this worktree's actual default)", () => {
+describe("SearchBar (keyless environment -- stubbed empty, so a developer's exported key cannot flip these)", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "");
+    vi.resetModules();
+  });
+
   it('renders the "ok" listbox for a valid coordinate query (parseCoordinates fallback)', async () => {
     const { SearchBar } = await import("./SearchBar");
     const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);
@@ -289,6 +294,13 @@ describe("SearchBar (keyed environment -- fetch-based geocoding, mocked)", () =>
 });
 
 describe("SearchBar accessibility (D1)", () => {
+  beforeEach(() => {
+    // Keyless by construction: the outcome assertions below rely on the
+    // no-key "error" branch.
+    vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "");
+    vi.resetModules();
+  });
+
   it("the input carries an aria-label", async () => {
     const { SearchBar } = await import("./SearchBar");
     const { container } = render(<SearchBar onLocationSelect={vi.fn()} />);

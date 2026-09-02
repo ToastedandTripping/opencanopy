@@ -1,4 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+// The static imports below read NEXT_PUBLIC_MAPTILER_KEY at module load. Pin
+// it empty BEFORE they run so these "no key" tests describe the code, not the
+// developer's shell (the keyed branch is exercised further down with
+// vi.stubEnv + a fresh import).
+vi.hoisted(() => {
+  vi.stubEnv("NEXT_PUBLIC_MAPTILER_KEY", "");
+});
+
 import { createMockMap } from "../mocks/maplibre";
 import {
   setupStoryLayers,
