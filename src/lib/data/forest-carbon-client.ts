@@ -77,8 +77,6 @@ import { DataFetchError } from "./fetch-errors";
 
 /** @deprecated Use DataFetchError directly. Kept as a re-export for backward compat. */
 export const ForestCarbonFetchError = DataFetchError;
-/** @deprecated Use FetchErrorKind directly. */
-export type ForestCarbonErrorKind = "network" | "http" | "rate-limit" | "timeout" | "abort";
 
 export interface ForestCarbonFetchResult {
   features: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];

@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   lerp,
   lerpAngle,
-  normalizeAngle,
   interpolateCamera,
 } from "@/lib/math/interpolation";
 import type { ChapterCamera } from "@/data/chapters";
@@ -57,42 +56,6 @@ describe("lerpAngle", () => {
 
   it("handles zero-delta", () => {
     expect(lerpAngle(45, 45, 0.5)).toBe(45);
-  });
-});
-
-describe("normalizeAngle", () => {
-  it("keeps angle within [-180, 180] for 0", () => {
-    expect(normalizeAngle(0)).toBe(0);
-  });
-
-  it("normalizes 360 to 0", () => {
-    expect(normalizeAngle(360)).toBe(0);
-  });
-
-  it("normalizes 270 to -90", () => {
-    expect(normalizeAngle(270)).toBe(-90);
-  });
-
-  it("normalizes -270 to 90", () => {
-    expect(normalizeAngle(-270)).toBe(90);
-  });
-
-  it("normalizes 540 to -180 (boundary case)", () => {
-    // The formula ((deg + 540) % 360) - 180 yields -180 for multiples of 180
-    // Both -180 and 180 represent the same angle; the function normalizes to -180
-    expect(normalizeAngle(540)).toBe(-180);
-  });
-
-  it("normalizes 180 to -180 (boundary case)", () => {
-    expect(normalizeAngle(180)).toBe(-180);
-  });
-
-  it("normalizes -180 to -180", () => {
-    expect(normalizeAngle(-180)).toBe(-180);
-  });
-
-  it("normalizes large positive angle", () => {
-    expect(normalizeAngle(720)).toBe(0);
   });
 });
 

@@ -27,7 +27,7 @@ import { addProtocol } from "maplibre-gl";
 import { BINARY_RASTER_URL } from "@/lib/r2-config";
 
 /** Custom scheme used for story-binary-reveal tile URLs (see setup-layers.ts). */
-export const BINARY_TILE_PROTOCOL = "ocbin";
+const BINARY_TILE_PROTOCOL = "ocbin";
 export const BINARY_TILE_URL = `${BINARY_TILE_PROTOCOL}://{z}/{x}/{y}`;
 
 /** Same-origin manifest path (public/, deployed with the static export -- no R2 CORS issue). */

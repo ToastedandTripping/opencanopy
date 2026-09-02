@@ -60,11 +60,3 @@ export const CLASS_DISPLAY_NAMES: Record<ForestAgeClass, string> = {
   "young": "Young Forest",
   "harvested": "Harvested",
 };
-
-/** Legend labels with parenthetical age ranges. */
-export const CLASS_LEGEND_LABELS: Record<ForestAgeClass, string> = {
-  "old-growth": "Old Growth (250+ yr)",
-  "mature": "Mature (80-250 yr)",
-  "young": "Young (<80 yr)",
-  "harvested": "Harvested",
-};

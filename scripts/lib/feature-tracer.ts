@@ -92,11 +92,6 @@ function tileCacheKey(z: number, x: number, y: number): string {
   return `${z}/${x}/${y}`;
 }
 
-/** Clear the tile cache (call between independent audit runs if needed). */
-export function clearTileCache(): void {
-  tileCache.clear();
-}
-
 /**
  * Fetch a tile from PMTiles with caching. Returns null if the tile doesn't exist or errors.
  */
@@ -246,23 +241,3 @@ export async function traceFeature(
   };
 }
 
-/**
- * Trace multiple features. Thin wrapper around traceFeature for convenience.
- *
- * @param pmtiles     Open PMTiles instance
- * @param features    Array of GeoJSON Features from source NDJSON
- * @param sourceLayer MVT layer name to search
- * @param zoom        Zoom level (default 10)
- */
-export async function traceFeatures(
-  pmtiles: PMTiles,
-  features: GeoJSON.Feature[],
-  sourceLayer: string,
-  zoom = 10
-): Promise<TraceResult[]> {
-  const results: TraceResult[] = [];
-  for (const feature of features) {
-    results.push(await traceFeature(pmtiles, feature, sourceLayer, zoom));
-  }
-  return results;
-}

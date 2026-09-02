@@ -87,7 +87,7 @@ export interface Chapter {
 }
 
 /** The accumulation sequence is flat, top-down, province-scale throughout. */
-export const FLAT_BC_CAMERA: ChapterCamera = {
+const FLAT_BC_CAMERA: ChapterCamera = {
   center: [-125.5, 54.0],
   zoom: 5,
   pitch: 0,

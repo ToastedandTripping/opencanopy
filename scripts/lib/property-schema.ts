@@ -6,7 +6,6 @@
  *   2. TILE_PROPERTY_RULES in property-validators.ts (deep validation for P1)
  *
  * One schema, two access patterns:
- *   - checkPresence(layer, feature) — fast: does the feature have its key properties?
  *   - validateDeep(layer, feature, index) — thorough: are property values valid?
  *
  * Adding a layer or property: edit LAYER_PROPERTIES below. Both A3 and P1 pick
@@ -152,23 +151,6 @@ export function getSignatureProperties(layer: string): string[] {
   return Object.entries(rules)
     .filter(([, r]) => r.required)
     .map(([k]) => k);
-}
-
-/**
- * Quick check: does the feature have its key (signature) properties?
- * Returns true if at least one signature property is present and non-null.
- * Used by audit-tiles A3 for fast sanity checks.
- */
-export function checkPresence(
-  layer: string,
-   
-  feature: any
-): boolean {
-  const sigProps = getSignatureProperties(layer);
-  if (sigProps.length === 0) return true; // no rules for this layer
-
-  const props = feature?.properties ?? {};
-  return sigProps.some((key) => props[key] != null);
 }
 
 // ── Deep validation (P1) ─────────────────────────────────────────────────────

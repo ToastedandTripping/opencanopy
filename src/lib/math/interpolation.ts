@@ -16,11 +16,6 @@ export function lerpAngle(a: number, b: number, t: number): number {
   return a + delta * t;
 }
 
-/** Normalize an angle to [-180, 180]. */
-export function normalizeAngle(deg: number): number {
-  return ((deg + 540) % 360) - 180;
-}
-
 export function interpolateCamera(
   from: ChapterCamera,
   to: ChapterCamera,

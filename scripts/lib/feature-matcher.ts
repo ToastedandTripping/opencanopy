@@ -23,14 +23,12 @@ import { THRESHOLDS } from "./audit-config";
  *   - same value (===) → match
  *   - different types but same String() → match (handles 2021 vs "2021")
  */
-export function propsMatch(a: unknown, b: unknown): boolean {
+function propsMatch(a: unknown, b: unknown): boolean {
   if (a == null && b == null) return true;
   if (a == null || b == null) return false;
   if (a === b) return true;
   return String(a) === String(b);
 }
-
-// ── Fingerprint scoring ──────────────────────────────────────────────────────
 
 /**
  * Compute property fingerprint overlap between a source feature's properties
@@ -38,12 +36,9 @@ export function propsMatch(a: unknown, b: unknown): boolean {
  *
  * Returns a score in [0, 1]: fraction of source property keys whose values
  * match the candidate. Only keys present in the source are scored.
- *
- * Uses propsMatch() for type-coercion-aware comparison.
  */
-export function fingerprintScore(
+function fingerprintScore(
   sourceProps: Record<string, unknown>,
-   
   tileFeature: any
 ): number {
   const tileProps: Record<string, unknown> = tileFeature.properties ?? {};
