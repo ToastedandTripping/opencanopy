@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchWatershedAtPoint, WatershedFetchError } from "@/lib/data/watershed-client";
+import { fetchWatershedAtPoint } from "@/lib/data/watershed-client";
 import { DataFetchError } from "@/lib/data/fetch-errors";
 
 function mockFetchOnce(response: Partial<Response> & { json?: () => Promise<unknown> }) {

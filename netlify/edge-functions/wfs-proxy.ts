@@ -14,13 +14,6 @@
  * Query: GET /api/wfs?layer={id}&bbox={west,south,east,north}&zoom={z}
  */
 
-// Netlify Edge Functions run on Deno. The Context type is available at runtime
-// via https://edge.netlify.com but we define a minimal interface here to avoid
-// requiring Deno's type resolution in the main project.
-interface NetlifyContext {
-  geo?: { city?: string; country?: { code?: string } };
-}
-
 // ── EPSG:4326 (WGS84 lat/lng) → EPSG:3005 (BC Albers) conversion ──
 //
 // Full Albers Equal Area Conic projection for BC.
@@ -572,10 +565,9 @@ import { buildBboxWfsUrl } from "./lib/wfs-bbox-url.ts";
 
 // ── Main handler ────────────────────────────────────────────────
 
-export default async function handler(
-  request: Request,
-  _context: NetlifyContext
-): Promise<Response> {
+// Netlify invokes handler(request, context); the context argument is unused
+// here, so it is not declared (extra arguments are simply not bound).
+export default async function handler(request: Request): Promise<Response> {
   // Handle CORS preflight
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(request) });

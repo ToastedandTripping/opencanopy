@@ -22,11 +22,6 @@ const MOCK_FC: GeoJSON.FeatureCollection = {
   ],
 };
 
-const EMPTY_FC: GeoJSON.FeatureCollection = {
-  type: "FeatureCollection",
-  features: [],
-};
-
 const TEST_BBOX: BBox = [-126, 48, -124, 50];
 
 function mockFetchSuccess(data: GeoJSON.FeatureCollection = MOCK_FC) {

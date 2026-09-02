@@ -572,7 +572,7 @@ function PmtilesLayers({
 
       pipelineLog("setFilter", layer.id, { type: "pmtiles-class", filter: activeClassFilter ?? "none" });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- timelineActive (boolean) replaces yearFilter (number):
+    // timelineActive (boolean) replaces yearFilter (number):
     // expressions embed ["global-state", "currentYear"] and self-update on the GPU, so the effect
     // only needs to re-run on timeline on/off transitions, not every year tick.
   }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.filter, layer.style.paint, layer.style.outline, layer.style.opacity, layer.timelineField, classFilters, timelineActive]);
