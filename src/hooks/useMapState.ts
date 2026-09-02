@@ -7,13 +7,10 @@ import {
   DEFAULT_ZOOM,
   DEFAULT_PITCH,
   DEFAULT_BEARING,
-  MAP_STYLES,
 } from "@/lib/mapConfig";
 import { resolveInitialLayers, computeActivePreset, validateLayerIds, resolveAliases } from "@/hooks/useLayerState";
 
 // ─── Types ───────────────────────────────────────────────────
-
-export type BaseMapStyleName = keyof typeof MAP_STYLES;
 
 export interface ParsedMapState {
   lat: number;
@@ -23,14 +20,12 @@ export interface ParsedMapState {
   bearing: number;
   layers: string[] | null;
   preset: string | null;
-  style: BaseMapStyleName | null;
 }
 
 interface UseMapStateOptions {
   mapRef: React.RefObject<MapRef | null>;
   enabledLayers: string[];
   activePreset: string | null;
-  style?: BaseMapStyleName;
   onLayerRestore?: (layers: string[], preset: string | null) => void;
 }
 
@@ -46,7 +41,6 @@ export function parseHash(): ParsedMapState {
     bearing: DEFAULT_BEARING,
     layers: null,
     preset: null,
-    style: null,
   };
 
   if (typeof window === "undefined") return defaults;
@@ -70,10 +64,6 @@ export function parseHash(): ParsedMapState {
 
     const preset = params.get("preset") || null;
 
-    const styleRaw = params.get("style") as BaseMapStyleName | null;
-    const validStyles = new Set(Object.keys(MAP_STYLES));
-    const style = styleRaw && validStyles.has(styleRaw) ? styleRaw : null;
-
     return {
       lat: isFinite(lat) ? lat : defaults.lat,
       lng: isFinite(lng) ? lng : defaults.lng,
@@ -82,7 +72,6 @@ export function parseHash(): ParsedMapState {
       bearing: isFinite(bearing) ? bearing : defaults.bearing,
       layers,
       preset,
-      style,
     };
   } catch {
     return defaults;
@@ -99,8 +88,7 @@ function buildHash(
   pitch: number,
   bearing: number,
   layers: string[],
-  preset: string | null,
-  style?: BaseMapStyleName
+  preset: string | null
 ): string {
   const parts: string[] = [
     `lat=${lat.toFixed(4)}`,
@@ -125,10 +113,6 @@ function buildHash(
     parts.push(`preset=${preset}`);
   }
 
-  if (style && style !== "dark") {
-    parts.push(`style=${style}`);
-  }
-
   return parts.join("&");
 }
 
@@ -149,7 +133,6 @@ export function useMapState({
   mapRef,
   enabledLayers,
   activePreset,
-  style = "dark",
   onLayerRestore,
 }: UseMapStateOptions) {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -232,8 +215,7 @@ export function useMapState({
           pitch,
           bearing,
           enabledLayers,
-          activePreset,
-          style
+          activePreset
         );
 
         window.history.replaceState(null, "", `#${hash}`);
@@ -248,7 +230,7 @@ export function useMapState({
         clearTimeout(debounceTimer.current);
       }
     };
-  }, [mapRef, enabledLayers, activePreset, style]);
+  }, [mapRef, enabledLayers, activePreset]);
 
   // Restore map + layer state when browser back/forward is used
   useEffect(() => {
@@ -312,12 +294,11 @@ export function useMapState({
       pitch,
       bearing,
       enabledLayers,
-      activePreset,
-      style
+      activePreset
     );
 
     window.history.pushState(null, "", `#${hash}`);
-  }, [enabledLayers, activePreset, mapRef, style]);
+  }, [enabledLayers, activePreset, mapRef]);
 
   /** Get the full shareable URL with current state */
   const getShareUrl = useCallback((): string => {
@@ -338,12 +319,11 @@ export function useMapState({
       pitch,
       bearing,
       enabledLayers,
-      activePreset,
-      style
+      activePreset
     );
 
     return `${window.location.origin}${window.location.pathname}#${hash}`;
-  }, [mapRef, enabledLayers, activePreset, style]);
+  }, [mapRef, enabledLayers, activePreset]);
 
   return { getShareUrl };
 }
