@@ -14,12 +14,20 @@ fi
 
 LOCAL_FILE="data/tiles/opencanopy.pmtiles"
 R2_BUCKET="opencanopy-tiles"
-PUBLIC_URL="https://pub-b5568be386ef4e638b4e49af41395600.r2.dev/${PMTILES_FILE}"
+
+# R2 origin comes from the single source of truth (src/lib/r2-config.ts) so a
+# bucket move is one edit, per ARCHITECTURE.md ("never inline an R2 URL").
+R2_PUBLIC_BASE=$(grep '^export const R2_PUBLIC_BASE' src/lib/r2-config.ts | grep -oP 'https://[^"]+')
+if [[ -z "$R2_PUBLIC_BASE" ]]; then
+  echo "ERROR: Could not parse R2_PUBLIC_BASE from src/lib/r2-config.ts"
+  exit 1
+fi
+PUBLIC_URL="${R2_PUBLIC_BASE}/${PMTILES_FILE}"
 
 # 2. Verify local file exists
 if [[ ! -f "$LOCAL_FILE" ]]; then
   echo "ERROR: Local PMTiles not found at $LOCAL_FILE"
-  echo "Run 'npm run build-tiles' first."
+  echo "Run 'npm run build-tiles:v2' first."
   exit 1
 fi
 

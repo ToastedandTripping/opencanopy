@@ -89,6 +89,8 @@ function archiveCurrentTiles(): void {
  * would ship un-water-subtracted tiles.
  */
 function buildLayerInputs(): { name: string; path: string }[] {
+  // Producer-side list. The checker-side copy is EXPECTED_SOURCE_LAYERS in
+  // scripts/lib/bc-sample-grid.ts; verify.ts (Check 8) fails if they drift.
   const layers = [
     "forest-age",
     "parks",

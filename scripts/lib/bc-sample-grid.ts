@@ -38,7 +38,9 @@ export const AUDIT_ZOOM_LEVELS: number[] = [5, 7, 9, 10];
 
 /**
  * The 12 PMTiles source layer names expected in the OpenCanopy archive.
- * Keep in sync with EXPECTED_SOURCE_LAYERS in audit-tiles.ts.
+ * Canonical list for the audit suite and scripts/pipeline/verify.ts (both
+ * import it). The producer side is the `layers` array in
+ * scripts/pipeline/build-tiles.ts; verify.ts fails the build if the two drift.
  */
 export const EXPECTED_SOURCE_LAYERS = [
   "forest-age",
@@ -63,6 +65,11 @@ export type SourceLayerName = typeof EXPECTED_SOURCE_LAYERS[number];
  * Convention from src/components/map/DataLayer.tsx:
  *   layer-{registryId}-tiles-{fill|line|outline}
  *
+ * The registry id is NOT always the source-layer name: `tenure-cutblocks` is
+ * rendered by the public `cutblocks` entry, and `conservation-priority` by
+ * `tap-priority` (renamed 2026-08-26; the tileset keeps the old name). Map to
+ * the PUBLIC registry id, since only public layers exist on the live map.
+ *
  * The suffix comes from style.type in src/lib/layers/registry.ts:
  *   fill → -tiles-fill (also creates -tiles-outline)
  *   line → -tiles-line
@@ -72,7 +79,7 @@ export type SourceLayerName = typeof EXPECTED_SOURCE_LAYERS[number];
  */
 export const SOURCE_TO_MAPLIBRE: Record<SourceLayerName, string> = {
   "forest-age": "layer-forest-age-tiles-fill",
-  "tenure-cutblocks": "layer-tenure-cutblocks-tiles-fill",
+  "tenure-cutblocks": "layer-cutblocks-tiles-fill",
   "fire-history": "layer-fire-history-tiles-fill",
   "parks": "layer-parks-tiles-fill",
   "conservancies": "layer-conservancies-tiles-line",
@@ -82,7 +89,7 @@ export const SOURCE_TO_MAPLIBRE: Record<SourceLayerName, string> = {
   "community-watersheds": "layer-community-watersheds-tiles-fill",
   "mining-claims": "layer-mining-claims-tiles-fill",
   "forestry-roads": "layer-forestry-roads-tiles-line",
-  "conservation-priority": "layer-conservation-priority-tiles-fill",
+  "conservation-priority": "layer-tap-priority-tiles-fill",
 };
 
 /**

@@ -1,7 +1,11 @@
 /**
  * OpenCanopy Unified Audit Runner
  *
- * Runs all 7 audits in sequence, streaming output in real time.
+ * Runs 8 audits in sequence, streaming output in real time.
+ *
+ * Deliberately outside this runner: audit:trend (reads archived reports),
+ * audit:viewport (needs a prior `next build`), audit:crosssource (Python,
+ * live WFS), audit:visual and audit:live (Playwright, need a server/prod).
  *
  * Audit sequence:
  *   1. audit:tiles         — tile presence and layer coverage
@@ -11,6 +15,7 @@
  *   5. audit:property-deep — deep per-layer property validation
  *   6. audit:precision     — geometry precision
  *   7. audit:temporal      — temporal consistency
+ *   8. audit:crosssource-lite — cross-source consistency (lite)
  *
  * Flags:
  *   --ci              Exit non-zero if any audit exits with FAIL.

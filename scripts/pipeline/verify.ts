@@ -20,6 +20,7 @@ import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { PMTiles } from "pmtiles";
 import { NodeFileSource } from "../lib/node-file-source.js";
+import { EXPECTED_SOURCE_LAYERS } from "../lib/bc-sample-grid.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -220,20 +221,8 @@ async function main(): Promise<void> {
   // ── Check 8: vector_layers metadata ──
   // Use PMTiles library to read tippecanoe-written metadata JSON and verify
   // all expected layers are present by name.
-  const EXPECTED_LAYERS = [
-    "forest-age",
-    "tenure-cutblocks",
-    "fire-history",
-    "parks",
-    "conservancies",
-    "ogma",
-    "wildlife-habitat-areas",
-    "ungulate-winter-range",
-    "community-watersheds",
-    "mining-claims",
-    "forestry-roads",
-    "conservation-priority",
-  ];
+  // Single list shared with the audit suite (scripts/lib/bc-sample-grid.ts).
+  const EXPECTED_LAYERS = EXPECTED_SOURCE_LAYERS;
 
   try {
     console.log("  Checking vector_layers metadata...");

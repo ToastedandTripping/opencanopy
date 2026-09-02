@@ -20,7 +20,7 @@
     "audit:crosssource": "python3 scripts/audit-crosssource.py",
     "audit:visual": "npx playwright test e2e/screenshots/",
     "audit:visual:update": "npx playwright test e2e/screenshots/ --update-snapshots",
-    "audit:live": "npx playwright test e2e/monitoring/",
+    "audit:live": "npx playwright test --config=playwright.live.config.ts",
     "audit:download-reference": "npx tsx scripts/download-reference-data.ts",
     "audit:viewport": "npx tsx scripts/audit-viewport.ts",
     "audit:v2": "npm run audit && npm run audit:spatial",
