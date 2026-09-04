@@ -16,11 +16,15 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Owed right now
 
-- **Merge + deploy two stacked relays** on `marvin/opencanopy-charter`: Batch 1 COPY+CHROME (13 items, Razor 0 CRITICAL) + global-state year uniform (Razor PASS). Merge to main + push = deploy. Lee's call.
-
 - **Live browser QA** on six deployed relays the keyless sandbox could not verify: Phase A "honest timeline", a11y P2 cluster, CO2 calculator redesign, audit P0+P1 remediation, **Batch 1 COPY+CHROME** (preset chips, attribution, parks swatch, legend labels, preset renames), **global-state year** (play 1917→2025 with 3+ layers, confirm bar-map lockstep preserved — this is the render-gate contract test that can't be unit-tested). Checklist: `~/marvin/state/opencanopy-a11y-p2-live-qa-2026-07-17.md` + the 07-15 hand-off.
 
-- **Live QA on the docked-dolly landing page** (Lee, after deploy): scroll the whole story — the '35,000 hectares' red reveal lands with its panel, the page proceeds to the CTA with no dead stretch, 'Explore the Map' opens /map at the Clayoquot/Strathcona pocket with forest-age on. Mobile once.
+- **Live QA on the 2026-09-02 deploy** (Lee, phone once): the hero now reads '5.8 million hectares ... larger than Nova Scotia' (verify the Nova Scotia comparison, ~5.5M ha, was from memory); the story's red overlay lost the large grey/maroon tenure blocks (Haida Gwaii, Kootenays, the northeast) — cutblock texture otherwise unchanged; the CO2 panel's 'Unknown age' bar reads 'excluded from all values'; /privacy names ssc-ops.netlify.app and screen size. This deploy also carried Batch 1 COPY+CHROME, the global-state year uniform and the docked-dolly landing — the earlier live-QA lists still apply.
+
+- **One relay for the three DataLayer public-path bugs** before Batch 2 (paint re-spine) edits the same effects: R1-02 timeline ticks dropped behind `isStyleLoaded()` (page.tsx:326), R1-03 stale-status clear below the tile-backed early return (DataLayer:1143), R1-05 PmtilesLayers stale-closure visibility (SatelliteLayers' `visibleRef` pattern). Ship with the rendered PmtilesLayers tests that do not exist yet (d10 harness + mock `_emit`; add `calls.setGlobalState` to the mock). Findings: `.refresh/2026-09-01-findings/findings-R1.jsonl`.
+
+- **Small routed fixes** (any session): PDF footer 'see methodology at opencanopy.ca' points at no route (pdf-generator.ts:287); `audit:live` asserts tenure-cutblocks and fish-streams, both non-public, so two monitor tests fail by construction (live-health.spec.ts:170-266); wfs-client finally-block bookkeeping race (wfs-client.ts:137-143, non-public layers only). `npm i -D @mapbox/vector-tile pbf @types/geojson` (transitive today via maplibre-gl; a MapLibre 6 bump breaks the tile audits otherwise) — classifier blocks installs from a session.
+
+- **Local checkout**: `~/Projects/opencanopy` main is behind origin (fce8c84); `git pull` there before the next worktree spawns, or it forks off stale history again (this session started on the docked dolly branch).
 
 ## Open questions awaiting Lee
 
@@ -44,6 +48,14 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-09-02 -- Code refresh merged + live; three charter fixes on Lee's rulings
+
+Second-generation `/code-refresh` (report `.refresh/2026-09-01.md`, raw findings `.refresh/2026-09-01-findings/`): four Fable readers, 74 findings, 16 commits fast-forwarded to main (`fce8c84`) and live 2026-09-02. Applied: dead code (-424 lines), dedups the 08-05 pass left half-done, six hollow audit tests replaced with mutation-proven guards (popup keys had drifted from MapPopup while green; zoom-handoff could not fail; legend colours and the 2,000 ha cutblock cap now single-sourced and cross-pinned to the proxy), a CSS guard for the June reduced-motion crash, docs reconciled (README claimed 17 public layers against CHARTER non-goal 2; CONTRIBUTING's recipe produced an invisible layer; METHODOLOGY described the dead queryRenderedFeatures path; the dolly restore recipe already conflicted). Razor equivalence review PASS-WITH-WARNINGS, all ten mutation claims reproduced. CI on main had been red since 08-22 on `npm audit` alone; lockfile patched, green again.
+
+Lee's rulings (2026-09-02), applied with guards: (1) hero figure 8M -> 5.8M ha — recomputed from the FTEN checkpoint; the 230 polygons at 2,000-92,000 ha are tenure boundaries the /map layer already excludes but the story never did (the scrub table summed 7.06M, the overlays painted 2.45M ha of tenure polygons red/maroon); cap now applied in build-scrub-tables.py + build-year-overlays.py, scrub JSON + 76 PNGs regenerated; 'larger than Nova Scotia' replaces Ireland. Rule: underestimate rather than state a number we cannot source. (2) Unknown-age stands contribute to no value (were: zero carbon, full stumpage, full services). (3) tracker.js vendored into public/ so the privacy page's 'source is in this repo' is true; page names the receiving host and the fields it sends.
+
+Routed, not done: three DataLayer public-path bugs (one relay, before Batch 2), PDF methodology pointer, two hollow live-monitor tests, wfs-client race, ten relay-sized refactors (see the report's bucket B). Session traps recorded in memory: the worktree had forked from `dolly/phase2-video`; the classifier blocks `git push :main` and `npm audit fix` from a session (Lee pushed with the `!` prefix); the overlay build needs ~35 min and 12 GB, detached.
 
 ### 2026-08-27 -- Phase B reconciliation: rebase-and-adjust, not a rebuild
 
