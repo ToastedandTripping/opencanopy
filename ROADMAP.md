@@ -128,6 +128,7 @@ where a routine hand-off rewrite could have dropped it). Rulings and constraints
 - **CSP is report-only, not enforcing.** The enforce-flip is gated behind a cold-cache/incognito/mobile console watch that hasn't happened yet.
 - **GFW decode-shader endgame** (year-encoded raster + custom WebGL shader for the scroll-story) -- feasibility study done, encoding spec frozen, held behind the pre-committed scroll-story Phase-3 gate (ruling in `.claude/DECISIONS.md`).
 - **The /map improvement program** is fully designed but not started: a small-win MapLibre `global-state` batch, then Phases B (harvest consolidation + accountability), C (color/threat re-spine), D (proposed-logging FOM layer, probed and GO), E (layer architecture). Research lives at `~/marvin/research/opencanopy-map-layering-comms-20260717/` (PLAN.md + 4 lens files + probe outputs). Each phase needs its own plan-mode + Fable critic + relay, on Lee's go. Sequencing is an open question in `.claude/handoff.md`.
+- **FOM watch: the comment-period alert persona (2026-09-11).** Lee, 2026-09-11: OpenCanopy is allowed to advocate ("I don't mind that it becomes a tool of change"). Watch every open Forest Operations Map comment period in the province through the FOM public API (no scraping needed), publish plain-language alerts with the deadline, the hectares and a comment scaffold, and hand Lee a reviewed post for Facebook groups and Reddit, semi-automated with one review step. Phase D of the /map program (the proposed-logging layer, probed GO) grows a time axis here. Detail: `### Deferred from 2026-09-11 — FOM watch` below. Grill before planning; the charter needs Lee's amendment first (advocacy is not in it).
 
 ### Deferred — known, unscheduled
 
@@ -136,6 +137,59 @@ where a routine hand-off rewrite could have dropped it). Rulings and constraints
 - **a11y deferred notes** (non-blocking): Dvorak physical-key shortcut nuance, Escape-should-own-the-modal-first ordering, an ellipsis (U+2026 vs `...`) sweep.
 - **CO2 calculator follow-ups:** k/C_max yield-curve data sourcing, an Option C watershed fast-path, a Web Worker for the turf-clip wait if live QA finds it slow, the PDF financial-compliance/voluntary caveat (currently panel-only).
 - **Preset opacity overrides** (Wave 3 item 3.8, `styleOverrides`/`opacityScale`) -- deferred 2026-06-19; its own relay batch after the styling pass, touches `DataLayer.tsx` at 4 wiring points.
+
+### Deferred from 2026-09-11 — FOM watch (the comment-period alert persona)
+
+**Origin.** Lee found Interfor's Wilson Lake map (FOM 3406, Selkirk district, 142.7 ha in 12
+cutblocks plus 7.3 km of road) through a Facebook post a fortnight into a 30-day comment window,
+and asked whether OpenCanopy could watch the portal and tell people. His words: "a lot of times
+people don't realize these things are happening or that they have a period they can make comments."
+Ruling the same day: **OpenCanopy is allowed to advocate.** The charter says "conservation
+reference"; this is the first thing the project would do that speaks rather than shows, so the
+charter needs his amendment before code (proposed, not yet written).
+
+**Probe (2026-09-11, live, from a marvin session).** The portal at `fom.nrs.gov.bc.ca/public` is an
+Angular app over a public JSON API; the whole system is open source, Apache 2.0, at
+`github.com/bcgov/nr-fom`. No scraping and no key:
+
+- `GET /api/project/publicSummary?includeCommentOpen=true&includePostCommentOpen=false` — every
+  open comment period in the province: 55 records, 14 KB, each with id, name, a point, FSP id,
+  licensee and state.
+- `GET /api/project/{id}` — `commentingOpenDate`, `commentingClosedDate`, `validityEndDate` (the
+  three-year permit reliance), district, licensee, operation years, `publicNoticeId`.
+- `GET /api/spatial-feature?projectId={id}` — the polygons: `cut_block` features with
+  `plannedAreaHa`, `road_section` with `plannedLengthKm`, `plannedDevelopmentDate`.
+- Locked (403): `/api/public-notice/*` (the notice text) and `/api/project/metrics/{id}` (comment
+  counts). The persona cannot say "only four people have commented", which is the most motivating
+  line there is; the newspaper legal notice remains the only source of the licensee's contact.
+- Caught in passing: the newspaper notice said comments close Sep 25, the API says Sep 26. A
+  watcher sees that; a person does not.
+
+**Shape (the 110% version; scope down from here).**
+1. *Watcher.* Poll the summary daily, diff against the last snapshot, emit events: newly opened,
+   closing in 7 days, closing in 48 hours, moved to finalized. Enrich with detail, polygons,
+   hectares, road km, district and nearest named place. Cost is negligible.
+2. *A feed people can subscribe to.* A page on opencanopy.ca per district and province-wide, RSS,
+   an email digest. The reliable channel; nobody can ban it.
+3. *The persona.* An OpenCanopy-owned Facebook page posts through the Pages API. Groups and Reddit
+   are the real audience and both treat automation as spam (Reddit allows flagged bots only where a
+   subreddit permits). So: the persona drafts, a human (Lee) reviews and crossposts, one tap a day.
+   Lee, 2026-09-11: human in the loop "for sure", but "something that I don't have to overly
+   manipulate ... semi-automated with just a review would be ideal."
+4. *The how-to-comment kit.* Every alert links the portal record and carries a short guide plus a
+   comment scaffold adapted to the block (the Wilson Lake one exists in the 2026-09-11 marvin
+   session log). The scaffold is what turns a reader into a commenter.
+5. *The map.* Phase D's FOM polygons coloured by days remaining, so /map itself becomes the alert.
+
+**Constraints already ruled that bind here.** Neutral proponent language (Phase D honest-framing
+spec: some proponents are First Nations forestry partnerships); a public number must be
+reproducible from the shipped data (DECISIONS, 2026-09-02) — hectares come from the API's own
+`plannedAreaHa`, never from a post.
+
+**Open before planning.** (a) The charter amendment wording. (b) Whether the feed lives in this
+repo (Next.js on Netlify, scheduled function) or beside it. (c) Which groups and subreddits, and
+under whose account. (d) Whether the weak version — a bot that spams groups and is banned in a week
+— is fenced by design, not by hoping.
 
 ## Reference
 
