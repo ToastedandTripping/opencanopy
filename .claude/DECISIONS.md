@@ -44,6 +44,11 @@ The FTEN cut-block layer carries 230 polygons of 2,000-92,000 ha with no client 
 
 VRI polygons with no PROJ_AGE_1 and no harvest date classify as "unknown". Until 2026-09-02 they got zero carbon (age clamped to 0) but full stumpage (200 m³/ha) and full ecosystem-services credit, so every unknown-age hectare tilted the protect-versus-log chart toward logging. If we do not know what stands there we do not price it either way; the area stays visible in the breakdown, labelled as excluded. Estimating one side with a mid-class assumption was rejected as inventing data.
 
+### OpenCanopy may advocate: it tells the public when and how to act on what the data shows, not only what the data shows
+*2026-09-11, Lee*
+
+Lee found Interfor's Wilson Lake logging map through a Facebook post, a fortnight into a thirty-day comment window, and said a lot of people never learn these windows exist. Asked whether the project should speak rather than only show, he ruled yes: I don't mind that it becomes a tool of change. The charter was amended the same day with his approval, because the drift tripwires read the charter and a session judging the alert work against the old text would have flagged it as off-purpose. What does not change is the honesty regime: an alert's hectares come from the portal's own API and never from a post, a proponent is named and never characterized, and the does-not-dramatize non-goal binds a sentence exactly as it binds a visual. Some proponents are First Nations forestry partnerships, which is why neutral naming is a constraint and not a courtesy. The first application is the FOM watch in the Parking Lot; the human review step is part of the design, not a safeguard bolted on, because Lee is the reviewer and asked for semi-automated with just a review.
+
 ## Engineering pins
 
 ### Do not merge the Phase 2 dolly-video branch until real video assets exist.
