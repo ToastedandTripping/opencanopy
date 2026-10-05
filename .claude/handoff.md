@@ -26,12 +26,16 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Local checkout**: `~/Projects/opencanopy` main is behind origin (fce8c84); `git pull` there before the next worktree spawns, or it forks off stale history again (this session started on the docked dolly branch).
 
+- 2026-10 audit remediation program plan is WRITTEN, not approved: .claude/plans/audit-remediation-2026-10/glowing-dazzling-brooks.md, with critic rounds 1-8 beside it (round 8: one blocking privacy defect, fix folded, not re-reviewed). It folds Lee's four story answers of 2026-10-05: end on map plus a live count of open logging comment periods (FOM API); quiet documentary register; plays like a 60-90 s short film with pause/scrub/skip and a still reduced-motion version; prototype both concepts (province animated, data as form) and Lee picks on his phone. Next session: read the plan, get Lee's two open answers, then ExitPlanMode and run the relay.
+
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |
 |---|---|---|
 | Live visual sign-off on Phase A "honest timeline": does a full 1917->2025 sweep finish in lockstep with the last fire patch painting? Also: mobile readout legibility, reduced-motion jump-to-end, histogram scent at a glance. | This is the exact honesty judgment the mechanism can't self-certify -- everything mechanical is already verified | 2026-07-18 |
 | Live browser QA still owed on five deployed relays (a11y P2, CO2 calc, audit P0+P1, honest timeline, Batch 1) | Confirms the deployed changes work for a human on a real device | a11y P2: 2026-07-17; CO2 calc: 2026-07-16; audit P0+P1: 2026-07-11; Batch 1: 2026-08-26 |
+| Amend your 2026-07-17 rule that all visual and map QA is done by you on the live site? The audit disproved its premise (agents rendered production in headless Chromium). Recommended: automated live guards with pixel checks become the gate, and you eyeball only visual relays (story, paint, phone chrome) from a short checklist. Alternative: keep your phone check on every map-changing relay (about 22 releases), plus the guards. | Gates how many phone sessions the 2026-10 remediation program costs you; the plan currently keeps your QA by default. | 2026-10-05 |
+| Approve the 2026-10 remediation program with critic round 8's privacy fix (the crash-report email link) folded in but not re-reviewed, or run a 9th critic round first? Recommended: approve; every other dimension passed or raised concerns only, and each child plan gets its own critic. Round 9 costs about 10 minutes and about 12% of the 5-hour Codex window (80% used at the time). | The plan gate has not had a clean pass; nothing in the program can start until you choose. | 2026-10-05 |
 
 ### Resolved (2026-08-26, per Lee via coordinator)
 
@@ -48,6 +52,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-10-05 -- session-f8d7c3 closed for a context reset (saved by marvin session-d09d2c)
+
+Lee closed every window to reset context. This session was in plan mode (no writes), so marvin session-d09d2c saved it: the plan and its eight critic reviews copied from ~/.claude/plans into .claude/plans/audit-remediation-2026-10/, Lee's two pending AskUserQuestion items recorded as open questions, and the branch's four unpushed commits (charter advocacy amendment 2026-09-11, FOM watch parked, four 2026-09-02 rulings, refresh ROADMAP/hand-off) pushed. The calculator findings noted on 2026-10-01 (frozen day-one prices, discarded per-polygon biomass, 4-14% of polygons dropped in drawn boxes) are in the calculator phase plan, per the session's own report.
 
 ### 2026-09-02 -- Code refresh merged + live; three charter fixes on Lee's rulings
 
