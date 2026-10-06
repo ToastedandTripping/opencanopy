@@ -76,9 +76,11 @@ The sandbox is keyless and R2 serves no CORS headers to localhost, so MapLibre c
 The Phase 2 play-on-scroll dolly video needs ffmpeg for the encode step and the sandbox does not have it. Do not attempt to work around it in a relay; the whole render -> encode -> upload chain runs from Lee's terminal.
 
 ### Deploy is git-triggered: pushing to main auto-builds and deploys via Netlify's GitHub integration.
-*2026-07-17, corrected per Lee, migrated from handoff.md 2026-08-21*
+*2026-07-17, corrected per Lee, migrated from handoff.md 2026-08-21, amended 2026-10-05*
 
 Two earlier sessions logged the opposite (CLI-driven deploy) and were wrong; the Netlify build env holds the key. Standard deploy = merge to main + push, then watch `netlify api listSiteDeploys` for `state:ready` and HTTP-verify. Deploys remain human-in-the-loop by choice because they are outward-facing.
+
+**Amended, Lee, 2026-10-05:** Lee, in the marvin portfolio grill (round 2): the session pushes a release to main after Lee's yes in conversation, with green checks and a named rollback; Lee no longer pushes from his terminal. Deploys stay human-in-the-loop through that yes, and stay outward-facing. This resolves the conflict between the line above and MARVIN's 2026-09-01 Tier 3 rule, and Lee's 2026-09-02 "I don't want to repeat the auto classifier issue where I need to manually push everything". The same grill approved the full seven-wave 2026-10 remediation program.
 
 ### The analytics script is served from opencanopy.ca itself and its source lives in this repository.
 *2026-09-02, per Lee*
