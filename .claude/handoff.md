@@ -26,9 +26,9 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Agent checks on production** (headless, per the 2026-10-07 amendment): a11y P2 cluster (contrast, keyboard shortcuts, focus/dialog, pinch-zoom) and audit P0+P1 (CSP report-only, re-render cascade, CI gates). Timeline lockstep (Phase A, global-state year) is an acceptance condition of M1a's timeline guard, not a separate check. The CO2 calculator check is retired: K rebuilds it.
 
-- **email_click hotfix** (approved 2026-10-07, ahead of the program): `public/tracker.js` sends only the recipient address, nothing from `?` onward, so the crash-report mailto body (page URL) never reaches analytics. Session pushes after Lee's yes, with green checks and a named rollback. S0a keeps the decoded-payload tests and historical-record discovery.
-
 - **2026-10 remediation program APPROVED 2026-10-07** (Lee, grill; no round 9): .claude/plans/audit-remediation-2026-10/glowing-dazzling-brooks.md. Next: Phase 0. Every child plan gets at most three critic rounds, round one at xhigh effort (Lee 2026-10-07: max has diminishing returns) and briefed to report every finding (DECISIONS, 2026-10-07).
+
+- **MapLibre 5 -> 6** (critical advisory: XSS sanitizer bypass in DOM.sanitize, fixed in 6.13.0). Its own relay: the major bump breaks the tile audits unless @mapbox/vector-tile, pbf and @types/geojson become direct dev deps first. CI's npm audit step stays red until this and the dev-only eslint-config-next chain clear; eslint-config-next is held at 16.3.0 because a fresh resolve pulls eslint-plugin-react-hooks 7.1.1 (seven set-state-in-effect errors).
 
 ## Open questions awaiting Lee
 
@@ -50,6 +50,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-10-07 -- email_click leak fixed live; Next 16.4
+
+Pushed after Lee's yes. `16dc5e9`: email_click sends the recipient only (behavioural test red before, green after; live tracker.js verified), plus the plan, the 10-05 ruling and today's grill rulings now on main. `08659d5`: next 16.3.0 -> 16.4.0, sharp 0.35.5 with it; neither Next critical reached production (static export, images.unoptimized). Both deploys ready, /, /map, /privacy, /tracker.js 200. Rollback for either: republish 6aa4c2c6ff58fc000868e97f (3db5823). CI audit still red on MapLibre's critical and dev-only highs.
 
 ### 2026-10-07 -- Grill: program approved, phone checks cut to visual releases
 
