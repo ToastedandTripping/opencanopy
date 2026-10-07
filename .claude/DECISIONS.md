@@ -90,8 +90,10 @@ Two earlier sessions logged the opposite (CLI-driven deploy) and were wrong; the
 The privacy page promises that the full source, tracker included, is in the public repo. That was false while the script loaded from ssc-ops.netlify.app. `public/tracker.js` is now the shipped copy (sessionStorage only, no cookies; events still go to the ssc-ops track function, which the page names). `src/test/lib/privacy-claims.test.ts` pins the same-origin script, the absence of cookies and localStorage in it, and that every field it sends is disclosed. Changing the tracker means changing the copy here first, and vice versa.
 
 ### Each child plan of the 2026-10 remediation program gets at most three critic rounds, and the first runs at the critic's highest effort.
-*2026-10-07, Lee*
+*2026-10-07, Lee, amended 2026-10-07*
 
 The program plan itself took eight critic rounds, every one a FAIL, each finding something the previous round could have found. Lee: "Three rounds but be sure to deploy adequately high level plan critics to avoid repeated critics for things that could have been caught right away." Round one is briefed to report every finding, not stop at the first blocker. A child plan still failing after round three goes to Lee in plain words, never to a fourth round by default.
+
+**Amended, Lee, 2026-10-07:** Lee, same day: "Let's set critic to xhigh instead as I think max actually has diminishing returns." Round one dispatches with `--effort xhigh`, not max. `codex-agent.mjs` runs the plan critic at astra's own default (low) unless told otherwise, which is how all eight rounds of the program plan ran, so the flag is passed explicitly at every child-plan dispatch.
 
 ## Evidence corrections

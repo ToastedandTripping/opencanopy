@@ -12,7 +12,7 @@
 - Lee checks visual releases only (story, film, colours, phone layout, new layers; about 13 of 22); the live guards gate the rest. The 2026-07-17 constraint is amended accordingly. (R1, recommended taken)
 - An owed phone check never blocks a release, and the backlog has no cap. (R1, Lee overrode: "Owed, no limit")
 - The July backlog shrinks to two phone checks (Batch 1 labels and colours; the 2026-09-02 story changes). Agents verify a11y P2 and audit P0+P1 on production; the timeline lockstep check (Phase A, global-state year) becomes M1a's timeline guard; the CO2 calculator check is retired because K rebuilds it. (R2, recommended taken)
-- Each child plan gets at most three critic rounds; a plan still failing after round three goes to Lee in plain words. Critics run at a high enough level to catch everything on the first pass, so later rounds are not spent on what round one should have found. (R2, Lee overrode: "Three rounds but be sure to deploy adequately high level plan critics to avoid repeated critics for things that could have been caught right away")
+- Each child plan gets at most three critic rounds; a plan still failing after round three goes to Lee in plain words. Round one runs at xhigh effort (corrected after the gate: Lee, "Let's set critic to xhigh instead as I think max actually has diminishing returns") and is briefed to catch everything on the first pass, so later rounds are not spent on what round one should have found. (R2, Lee overrode: "Three rounds but be sure to deploy adequately high level plan critics to avoid repeated critics for things that could have been caught right away")
 
 ## Facts established
 <!-- looked up, never asked -->
@@ -38,6 +38,9 @@
 ### Round 2
 - Q5: Apply visual-only to the July backlog? | Rec: Shrink it to two | Answered: Shrink it to two | Flags: none
 - Q6: Critic rounds per child plan? | Rec: Three rounds | Answered: Other: "Three rounds but be sure to deploy adequately high level plan critics to avoid repeated critics for things that could have been caught right away" | Flags: overrode-rec (extends it)
+
+### Post-gate correction
+- Critic effort: summary said highest effort; Lee set it to xhigh, not max. | Flags: overrode-rec
 
 ## Open flags -> owner
 | Flag | Owner | Route |

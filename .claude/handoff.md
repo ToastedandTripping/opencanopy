@@ -28,7 +28,7 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **email_click hotfix** (approved 2026-10-07, ahead of the program): `public/tracker.js` sends only the recipient address, nothing from `?` onward, so the crash-report mailto body (page URL) never reaches analytics. Session pushes after Lee's yes, with green checks and a named rollback. S0a keeps the decoded-payload tests and historical-record discovery.
 
-- **2026-10 remediation program APPROVED 2026-10-07** (Lee, grill; no round 9): .claude/plans/audit-remediation-2026-10/glowing-dazzling-brooks.md. Next: Phase 0. Every child plan gets at most three critic rounds, round one at the critic's highest effort and briefed to report every finding (DECISIONS, 2026-10-07).
+- **2026-10 remediation program APPROVED 2026-10-07** (Lee, grill; no round 9): .claude/plans/audit-remediation-2026-10/glowing-dazzling-brooks.md. Next: Phase 0. Every child plan gets at most three critic rounds, round one at xhigh effort (Lee 2026-10-07: max has diminishing returns) and briefed to report every finding (DECISIONS, 2026-10-07).
 
 ## Open questions awaiting Lee
 

@@ -94,7 +94,7 @@ Rejected alternatives:
 | Cross-reviewer | inherits the session (Opus 5.5) | integrations.md |
 | Behavioral evaluator | Opus, low effort | relay-post-review |
 | Specialists (Charity for deploy/CDN, Dao for data) | Opus, medium effort | — |
-| Plan critic | astra by rule, Fable on fallback | rubric; Lee 2026-09-11. The only non-Opus seat, by standing ruling |
+| Plan critic | astra by rule, Fable on fallback; `--effort xhigh` on every child plan (Lee 2026-10-07) | rubric; Lee 2026-09-11. The only non-Opus seat, by standing ruling. At most three rounds per child plan |
 
 **Precondition checked at every relay load:** `scripts/worker-tier.sh status` must read
 `anthropic`. If it reads `on` (proxy) or `codex`, the relay stops; it does not silently run a
@@ -1434,10 +1434,10 @@ The remaining r8 CONCERNs become acceptance conditions of the named child plans:
 - The live `email_click` leak ships as a one-line hotfix ahead of the program; S0a keeps the
   decoded-payload tests and the historical-record discovery.
 - The 2026-07-17 QA constraint is amended: Lee checks visual relays only, owed checks never block.
-- **Child-plan critic contract:** at most three rounds per child plan; round one runs at the
-  critic's highest effort and is briefed to report every finding, not stop at the first blocker;
+- **Child-plan critic contract:** at most three rounds per child plan; round one runs at xhigh
+  effort and is briefed to report every finding, not stop at the first blocker;
   a plan still failing after round three goes to Lee in plain words.
-  - "Highest effort" is a dispatch flag, not a default: `codex-agent.mjs` runs the plan critic
-    at astra's own default effort (low) unless told otherwise, and all eight rounds of this plan
-    ran that way. Child-plan critics dispatch with `--effort max`. This costs more of the Codex
-    window per run; the cap of three is what bounds it.
+  - The effort is a dispatch flag, not a default: `codex-agent.mjs` runs the plan critic at
+    astra's own default effort (low) unless told otherwise, and all eight rounds of this plan ran
+    that way. Child-plan critics dispatch with `--effort xhigh` (Lee, 2026-10-07: "max actually has
+    diminishing returns"). This costs more of the Codex window per run; the cap of three bounds it.
