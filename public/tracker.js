@@ -159,10 +159,10 @@
                 trackEvent('social_click', { platform: platform });
             }
 
-            // Track email clicks
+            // Track email clicks. Recipient only: the crash-report mailto carries the page URL in its body.
             const emailLink = e.target.closest('a[href^="mailto:"]');
             if (emailLink) {
-                trackEvent('email_click', { email: emailLink.href.replace('mailto:', '') });
+                trackEvent('email_click', { email: emailLink.href.replace('mailto:', '').split('?')[0] });
             }
 
             // Track model card clicks
