@@ -16,26 +16,24 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Owed right now
 
-- **Live browser QA** on six deployed relays the keyless sandbox could not verify: Phase A "honest timeline", a11y P2 cluster, CO2 calculator redesign, audit P0+P1 remediation, **Batch 1 COPY+CHROME** (preset chips, attribution, parks swatch, legend labels, preset renames), **global-state year** (play 1917→2025 with 3+ layers, confirm bar-map lockstep preserved — this is the render-gate contract test that can't be unit-tested). Checklist: `~/marvin/state/opencanopy-a11y-p2-live-qa-2026-07-17.md` + the 07-15 hand-off.
-
-- **Live QA on the 2026-09-02 deploy** (Lee, phone once): the hero now reads '5.8 million hectares ... larger than Nova Scotia' (verify the Nova Scotia comparison, ~5.5M ha, was from memory); the story's red overlay lost the large grey/maroon tenure blocks (Haida Gwaii, Kootenays, the northeast) — cutblock texture otherwise unchanged; the CO2 panel's 'Unknown age' bar reads 'excluded from all values'; /privacy names ssc-ops.netlify.app and screen size. This deploy also carried Batch 1 COPY+CHROME, the global-state year uniform and the docked-dolly landing — the earlier live-QA lists still apply.
-
 - **One relay for the three DataLayer public-path bugs** before Batch 2 (paint re-spine) edits the same effects: R1-02 timeline ticks dropped behind `isStyleLoaded()` (page.tsx:326), R1-03 stale-status clear below the tile-backed early return (DataLayer:1143), R1-05 PmtilesLayers stale-closure visibility (SatelliteLayers' `visibleRef` pattern). Ship with the rendered PmtilesLayers tests that do not exist yet (d10 harness + mock `_emit`; add `calls.setGlobalState` to the mock). Findings: `.refresh/2026-09-01-findings/findings-R1.jsonl`.
 
 - **Small routed fixes** (any session): PDF footer 'see methodology at opencanopy.ca' points at no route (pdf-generator.ts:287); `audit:live` asserts tenure-cutblocks and fish-streams, both non-public, so two monitor tests fail by construction (live-health.spec.ts:170-266); wfs-client finally-block bookkeeping race (wfs-client.ts:137-143, non-public layers only). `npm i -D @mapbox/vector-tile pbf @types/geojson` (transitive today via maplibre-gl; a MapLibre 6 bump breaks the tile audits otherwise) — classifier blocks installs from a session.
 
 - **Local checkout**: `~/Projects/opencanopy` main is behind origin (fce8c84); `git pull` there before the next worktree spawns, or it forks off stale history again (this session started on the docked dolly branch).
 
-- 2026-10 audit remediation program plan is WRITTEN, not approved: .claude/plans/audit-remediation-2026-10/glowing-dazzling-brooks.md, with critic rounds 1-8 beside it (round 8: one blocking privacy defect, fix folded, not re-reviewed). It folds Lee's four story answers of 2026-10-05: end on map plus a live count of open logging comment periods (FOM API); quiet documentary register; plays like a 60-90 s short film with pause/scrub/skip and a still reduced-motion version; prototype both concepts (province animated, data as form) and Lee picks on his phone. Next session: read the plan, get Lee's two open answers, then ExitPlanMode and run the relay.
+- **Lee's phone checks (two, the July backlog cut per the 2026-10-07 grill):** (1) Batch 1 COPY+CHROME: preset chips, attribution, parks swatch, legend labels, preset renames; (2) the 2026-09-02 story changes: hero reads '5.8 million hectares ... larger than Nova Scotia' (the ~5.5M ha comparison was from memory), the large tenure blocks are gone from the red overlay, the CO2 panel's 'Unknown age' bar, /privacy names ssc-ops.netlify.app. Owed, never blocking.
+
+- **Agent checks on production** (headless, per the 2026-10-07 amendment): a11y P2 cluster (contrast, keyboard shortcuts, focus/dialog, pinch-zoom) and audit P0+P1 (CSP report-only, re-render cascade, CI gates). Timeline lockstep (Phase A, global-state year) is an acceptance condition of M1a's timeline guard, not a separate check. The CO2 calculator check is retired: K rebuilds it.
+
+- **email_click hotfix** (approved 2026-10-07, ahead of the program): `public/tracker.js` sends only the recipient address, nothing from `?` onward, so the crash-report mailto body (page URL) never reaches analytics. Session pushes after Lee's yes, with green checks and a named rollback. S0a keeps the decoded-payload tests and historical-record discovery.
+
+- **2026-10 remediation program APPROVED 2026-10-07** (Lee, grill; no round 9): .claude/plans/audit-remediation-2026-10/glowing-dazzling-brooks.md. Next: Phase 0. Every child plan gets at most three critic rounds, round one at the critic's highest effort and briefed to report every finding (DECISIONS, 2026-10-07).
 
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |
 |---|---|---|
-| Live visual sign-off on Phase A "honest timeline": does a full 1917->2025 sweep finish in lockstep with the last fire patch painting? Also: mobile readout legibility, reduced-motion jump-to-end, histogram scent at a glance. | This is the exact honesty judgment the mechanism can't self-certify -- everything mechanical is already verified | 2026-07-18 |
-| Live browser QA still owed on five deployed relays (a11y P2, CO2 calc, audit P0+P1, honest timeline, Batch 1) | Confirms the deployed changes work for a human on a real device | a11y P2: 2026-07-17; CO2 calc: 2026-07-16; audit P0+P1: 2026-07-11; Batch 1: 2026-08-26 |
-| Amend your 2026-07-17 rule that all visual and map QA is done by you on the live site? The audit disproved its premise (agents rendered production in headless Chromium). Recommended: automated live guards with pixel checks become the gate, and you eyeball only visual relays (story, paint, phone chrome) from a short checklist. Alternative: keep your phone check on every map-changing relay (about 22 releases), plus the guards. | Gates how many phone sessions the 2026-10 remediation program costs you; the plan currently keeps your QA by default. | 2026-10-05 |
-| Approve the 2026-10 remediation program with critic round 8's privacy fix (the crash-report email link) folded in but not re-reviewed, or run a 9th critic round first? Recommended: approve; every other dimension passed or raised concerns only, and each child plan gets its own critic. Round 9 costs about 10 minutes and about 12% of the 5-hour Codex window (80% used at the time). | The plan gate has not had a clean pass; nothing in the program can start until you choose. | 2026-10-05 |
 
 ### Resolved (2026-08-26, per Lee via coordinator)
 
@@ -52,6 +50,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-10-07 -- Grill: program approved, phone checks cut to visual releases
+
+Lee's two open questions of 2026-10-05 went through a grill (`.claude/grills/2026-10-07-remediation-approval-and-phone-qa.md`, confirmed). Facts that moved the answers: all eight critic rounds were FAIL, round 8 on one gating dimension only; the X2 leak is live on main (`tracker.js:165` sends the whole crash-report mailto, page URL included); Lee's phone check was already non-blocking in the plan, which is how seven checks piled up since July. Decided: program approved with round 8's fix folded, no round 9; one-line email_click hotfix today; Lee checks visual releases only (about 13 of 22), live guards gate the rest; owed checks never block, no cap (Lee overrode a three-owed pause); July backlog cut to two phone checks; at most three critic rounds per child plan, round one at the critic's highest effort (Lee: "be sure to deploy adequately high level plan critics to avoid repeated critics for things that could have been caught right away"). DECISIONS: the 2026-07-17 constraint amended, the critic cap added. The session worktree had forked from `dolly/phase2-video` again; reset onto `refresh/2026-09-01`, old tip tagged `keep/canopy-pre-reset-2026-10-07`.
 
 ### 2026-10-05 -- session-f8d7c3 closed for a context reset (saved by marvin session-d09d2c)
 

@@ -1154,7 +1154,10 @@ Lee performs every push and rollback (C2). A session never rolls back production
      what to look at, written by the relay.
    - Its premise ("the sandbox cannot render the map") was disproved by the 2026-10 audit, whose
      headless Chromium rendered production. Whether to amend it is **Lee's decision**, put to him
-     with this plan. The plan assumes no amendment.
+     with this plan. **Amended by Lee, 2026-10-07 (grill):** Lee's phone check covers visual
+     relays only (story, film, colours, phone layout, new layers; about 13 of 22); the live guards
+     gate the rest; an owed check never blocks a push and the owed list has no cap. See
+     `.claude/DECISIONS.md` and `.claude/grills/2026-10-07-remediation-approval-and-phone-qa.md`.
 10. **The animation dramatizes.** A film is the format most tempted to outrun its data, and the
     June dolly was docked for "trying too hard". Guards:
     - quiet-documentary register (X3);
@@ -1300,8 +1303,8 @@ accepted after steelmanning; none rejected.
    - FOM freshness from server-stamped `fetchedAt`, re-checked on resume, with a completeness
      probe and fixtures; numberless otherwise.
 5. **Contracts.**
-   - Lee's 2026-07-17 live-QA constraint is preserved, not replaced. A possible amendment is
-     offered to him separately.
+   - Lee's 2026-07-17 live-QA constraint, as amended 2026-10-07: phone checks on visual relays
+     only, live guards gate the rest, owed checks never block.
    - One revisitable status state machine with generation-bound results.
    - URL compatibility fixtures.
    - Content-versioned Netlify assets with an open-page upgrade-and-rollback test.
@@ -1425,3 +1428,16 @@ The remaining r8 CONCERNs become acceptance conditions of the named child plans:
 - M3a: error-to-recovery transitions;
 - P0b: atomic reclaim, crash-safe tokens, pre-launch heavy-build classification, process-tree
   ownership.
+
+**2026-10-07, APPROVED by Lee (grill, no round 9)** (`.claude/grills/2026-10-07-remediation-approval-and-phone-qa.md`).
+- The r8 X2 fix stands as folded; S0a's child critic reviews it in detail.
+- The live `email_click` leak ships as a one-line hotfix ahead of the program; S0a keeps the
+  decoded-payload tests and the historical-record discovery.
+- The 2026-07-17 QA constraint is amended: Lee checks visual relays only, owed checks never block.
+- **Child-plan critic contract:** at most three rounds per child plan; round one runs at the
+  critic's highest effort and is briefed to report every finding, not stop at the first blocker;
+  a plan still failing after round three goes to Lee in plain words.
+  - "Highest effort" is a dispatch flag, not a default: `codex-agent.mjs` runs the plan critic
+    at astra's own default effort (low) unless told otherwise, and all eight rounds of this plan
+    ran that way. Child-plan critics dispatch with `--effort max`. This costs more of the Codex
+    window per run; the cap of three is what bounds it.

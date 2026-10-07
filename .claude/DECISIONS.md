@@ -66,9 +66,11 @@ Feasibility study done and the encoding spec is frozen in the memo, but every su
 ## Operating constraints
 
 ### The agent sandbox cannot render the map; all visual and map QA happens on the live deploy, by Lee.
-*2026-07-17, standing constraint, migrated from handoff.md 2026-08-21*
+*2026-07-17, standing constraint, migrated from handoff.md 2026-08-21, amended 2026-10-07*
 
 The sandbox is keyless and R2 serves no CORS headers to localhost, so MapLibre cannot load tiles in-browser from a worktree. Any relay that changes what the map looks like ships with a live-QA item owed, not a self-certified screenshot. Only Lee can eyeball the live site.
+
+**Amended, Lee, 2026-10-07:** Lee, in the 2026-10-07 grill: Lee's phone check applies to visual releases only (story, film, colours, phone layout, new layers; about 13 of the program's 22), and the live production guards gate everything else. An owed phone check never blocks a release and the owed list has no cap. The premise above is half true: a worktree still cannot render tiles on localhost, but the 2026-10 audit rendered production in headless Chromium, so agents verify non-visual behaviour on the live site. The July backlog is cut to two phone checks (Batch 1 labels and colours; the 2026-09-02 story changes).
 
 ### ffmpeg is not in the agent sandbox; the dolly-video render, encode and upload chain is a Lee-terminal job end to end.
 *2026-07-10, standing constraint, migrated from handoff.md 2026-08-21*
@@ -86,5 +88,10 @@ Two earlier sessions logged the opposite (CLI-driven deploy) and were wrong; the
 *2026-09-02, per Lee*
 
 The privacy page promises that the full source, tracker included, is in the public repo. That was false while the script loaded from ssc-ops.netlify.app. `public/tracker.js` is now the shipped copy (sessionStorage only, no cookies; events still go to the ssc-ops track function, which the page names). `src/test/lib/privacy-claims.test.ts` pins the same-origin script, the absence of cookies and localStorage in it, and that every field it sends is disclosed. Changing the tracker means changing the copy here first, and vice versa.
+
+### Each child plan of the 2026-10 remediation program gets at most three critic rounds, and the first runs at the critic's highest effort.
+*2026-10-07, Lee*
+
+The program plan itself took eight critic rounds, every one a FAIL, each finding something the previous round could have found. Lee: "Three rounds but be sure to deploy adequately high level plan critics to avoid repeated critics for things that could have been caught right away." Round one is briefed to report every finding, not stop at the first blocker. A child plan still failing after round three goes to Lee in plain words, never to a fourth round by default.
 
 ## Evidence corrections
