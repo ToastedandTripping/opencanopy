@@ -30,6 +30,8 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **MapLibre 5 -> 6** (critical advisory: XSS sanitizer bypass in DOM.sanitize, fixed in 6.13.0). Its own relay: the major bump breaks the tile audits unless @mapbox/vector-tile, pbf and @types/geojson become direct dev deps first. CI's npm audit step stays red until this and the dev-only eslint-config-next chain clear; eslint-config-next is held at 16.3.0 because a fresh resolve pulls eslint-plugin-react-hooks 7.1.1 (seven set-state-in-effect errors).
 
+- **Ending-video review (2026-10-07, in progress):** all three docked versions rendered for the first time, in throwaway worktrees under `/tmp/claude-1000/-home-leesalo--local-share-marvin-worktrees-opencanopy-canopy/38525f5e-10fe-44aa-916f-99970f16ebe9/scratchpad/renders/` (v1 = dock/dolly-live-scrub, v2 = dock/dolly-phase2-video, v3 = relay/story-video-phase2-render-spec). Sent to Lee: v1 phone + desktop recordings, v2 desktop + mobile video, today's live site. v3 (whole story, ~1-2 h) was rendering when the session paused; output lands in `renders/v3/.render-scratch/story-video/out/`. v2 shipped a real bug: StoryMap's binary-reveal effect drops its write when the style is not loaded and never retries, so a constant-opacity render page renders the reveal at 0 (patched in the throwaway copy only). The worktrees are throwaway; remove with git worktree remove once Lee has seen v3. Concept B spike sketch: https://claude.ai/artifact/VEMwA8EADqLbKQcCzw8A3j (sample comment count; the dated-record curve is ~89% after 2000, a pacing question for S1-lite).
+
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |
