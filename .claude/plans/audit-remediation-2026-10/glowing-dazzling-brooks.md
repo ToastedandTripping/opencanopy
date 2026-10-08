@@ -896,6 +896,11 @@ nothing merged. Steps:
 Cost: the spike's agents (Jen spec and review, two Ted builds, one research agent) run on Opus
 per the model table. They write no production code.
 
+**Sequencing change, Lee, 2026-10-08 ("Go for it"):** X runs now, ahead of Phase 0 and S0, as its own
+lane. It is a throwaway spike that ships nothing, so the release foundations it skips guard nothing it
+touches. It uses the 2026-09-02-corrected scrub tables and overlays, labelled interim; frames are redrawn
+on S1-lite's products when they land. Beats, pacing, camera and hand-off carry over unchanged.
+
 **Amended by Lee, 2026-10-08 (after reviewing the first renders of all three docked ending versions).**
 The concept stands; the execution must change. Binding on X and S1′:
 - **Shape:** the current hero (photo + text) stays. The first scroll starts the film. The film ends on the map.
