@@ -25,9 +25,11 @@ does. The convention is documented in `.claude/rules/project-docs.md`.
 ## Product rulings
 
 ### The landing page ends on the province-wide red reveal; the zoom into the old-growth pocket is /map's job, via the CTA deep-link.
-*2026-08-21, per Lee*
+*2026-08-21, per Lee, amended 2026-10-07*
 
 The in-story ending zoom (the dolly) went through three relays and never shipped smooth: the live scroll-scrub lags and drops tiles, and the pre-rendered video needs an ffmpeg -> R2 chain that only runs from Lee's terminal. Lee's call: the landing page was trying too hard and absorbing effort that belongs to /map, which is the product. So the story closes on `ending` ('35,000 hectares') and the CTA's 'Explore the Map' carries the reader to STORY_END_CAMERA on /map, where the zoom is interactive and free. The dolly is docked, not deleted (tags `dock/dolly-live-scrub`, `dock/dolly-phase2-video`); an in-story zoom comes back only by a deliberate decision to un-dock it, never by drift — `cameraTo` was removed from the `Chapter` type for exactly that reason.
+
+**Amended, Lee, 2026-10-07:** Lee corrected the reason given above: "I don't think that I meant to imply that the page was trying too hard. I think that maybe the scroll effect wasn't really working." The dock stands; its cause is a working-quality problem with the effect, not a judgement that the page should not zoom. None of the three versions had been rendered or assessed when it was docked: the live scrub was judged on the live site in June, and the 2026-10-07 recording on a GPU showed it scrolling at 60 fps with soft tiles mid-zoom; the play-on-scroll video's render page had a bug that left the reveal at opacity 0, so its video would have been blank; the whole-story video (branch relay/story-video-phase2-render-spec) was never recorded anywhere. Any new ending is judged against rendered output, not memory.
 
 ### A public number must be reproducible from the shipped data; when in doubt, understate.
 *2026-09-02, per Lee*
@@ -73,9 +75,11 @@ The sandbox is keyless and R2 serves no CORS headers to localhost, so MapLibre c
 **Amended, Lee, 2026-10-07:** Lee, in the 2026-10-07 grill: Lee's phone check applies to visual releases only (story, film, colours, phone layout, new layers; about 13 of the program's 22), and the live production guards gate everything else. An owed phone check never blocks a release and the owed list has no cap. The premise above is half true: a worktree still cannot render tiles on localhost, but the 2026-10 audit rendered production in headless Chromium, so agents verify non-visual behaviour on the live site. The July backlog is cut to two phone checks (Batch 1 labels and colours; the 2026-09-02 story changes).
 
 ### ffmpeg is not in the agent sandbox; the dolly-video render, encode and upload chain is a Lee-terminal job end to end.
-*2026-07-10, standing constraint, migrated from handoff.md 2026-08-21*
+*2026-07-10, standing constraint, migrated from handoff.md 2026-08-21, amended 2026-10-07*
 
 The Phase 2 play-on-scroll dolly video needs ffmpeg for the encode step and the sandbox does not have it. Do not attempt to work around it in a relay; the whole render -> encode -> upload chain runs from Lee's terminal.
+
+**Amended, Lee, 2026-10-07:** Lee approved the correction: ffmpeg is installed on the build machine (/usr/bin/ffmpeg, verified 2026-10-07), and the render route now runs headless on its GPU (GTX 1060, ANGLE). Render and encode can run in a session; upload to R2 and deploy still wait on Lee's yes, like any release.
 
 ### Deploy is git-triggered: pushing to main auto-builds and deploys via Netlify's GitHub integration.
 *2026-07-17, corrected per Lee, migrated from handoff.md 2026-08-21, amended 2026-10-05*
