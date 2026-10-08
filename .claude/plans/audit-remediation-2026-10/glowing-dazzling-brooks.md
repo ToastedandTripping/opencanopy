@@ -896,6 +896,17 @@ nothing merged. Steps:
 Cost: the spike's agents (Jen spec and review, two Ted builds, one research agent) run on Opus
 per the model table. They write no production code.
 
+**Amended by Lee, 2026-10-08 (after reviewing the first renders of all three docked ending versions).**
+The concept stands; the execution must change. Binding on X and S1′:
+- **Shape:** the current hero (photo + text) stays. The first scroll starts the film. The film ends on the map.
+- **Control:** beat-paced. Each beat plays on its own; a further scroll, swipe or tap advances to the next beat. Scroll never drives the camera. Pause, scrub and skip stay.
+- **Hand-off:** the same map wakes up in place. The film's last frame becomes the live map (controls fade in, no route change); the URL updates to the matching /map deep link.
+- **Clock:** render-gated, reusing Phase A's honest-timeline contract (film time advances only after the frame has painted). The hero doubles as the prefetch window for the film's tiles.
+- **Early years:** even pacing per year, plus one plain on-screen line about when the dated record begins (about 89% of dated cutblock area is after 2000, from `cutblocks-scrub.json`). No pacing curve.
+- **Prototypes:** the map-only film (A) versus the blend (map where place matters, squares where scale is invisible on the map: one square = 10,000 ha, 588 logged vs 3.5 large old growth). Concept B on its own is dropped. Sketch of the squares: https://claude.ai/artifact/VEMwA8EADqLbKQcCzw8A3j
+- **Bookends (proposed, not ruled):** open by dissolving the hero photo into the map at its location (needs the photo's provenance); end descending to STORY_END_CAMERA (Clayoquot Sound) with the live FOM comment-period chip opening those plans on the map.
+- **Lessons from the renders:** a reader-driven camera outran tile loads (v1); a pre-render pipeline went stale and shipped a blank-reveal bug unnoticed (v2); a map with no captions or scale reads as a slideshow (v3).
+
 ### S1. Story honesty (SUPERSEDED by S1-lite; its content is S1-lite's scope)
 
 - **Undated blocks out of the story (B).** Drop or rewrite the "Before the records began" chapter
