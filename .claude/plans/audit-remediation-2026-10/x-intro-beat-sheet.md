@@ -1,4 +1,6 @@
-# X spike: intro film beat sheet (draft for Lee's copy approval)
+# X spike: intro film beat sheet
+
+**Status:** copy APPROVED by Lee as written, 2026-10-08. Captions may be tuned after the prototypes.
 
 Binding rulings: DECISIONS 2026-10-08 (beat-paced film, starts on first scroll, map wakes up in place,
 even pacing with an on-screen note about the record, opens at Echo Lake); plan X amendment of
