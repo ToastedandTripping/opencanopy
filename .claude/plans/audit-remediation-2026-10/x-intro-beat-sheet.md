@@ -1,6 +1,6 @@
 # X spike: intro film beat sheet
 
-**Status:** copy APPROVED by Lee as written, 2026-10-08; beats 3-4 rewritten the same day for the 1900-2025 splice (Lee: condense 1900-1959, splice now and merge later), keys added to beat 6, the hero keeps both panels, hand-off opens cutblocks + old-growth-250. Captions may be tuned after the prototypes.
+**Status:** copy APPROVED by Lee as written, 2026-10-08; beats 3-4 rewritten the same day for the 1900-2025 splice (Lee: condense 1900-1959, splice now and merge later), keys added to beat 6, the hero keeps both panels, hand-off: the last beat resolves into forest age as /map draws it, and the map wakes up on forest age (Lee, 2026-10-08). Captions may be tuned after the prototypes.
 
 Binding rulings: DECISIONS 2026-10-08 (beat-paced film, starts on first scroll, map wakes up in place,
 even pacing with an on-screen note about the record, opens at Echo Lake); plan X amendment of
@@ -21,7 +21,7 @@ map-only film holds on the map with the same caption.
 | 6 | What remains (key: map-only 'Stands 250+ yr (VRI)'; blend '■ 10,000 ha') | 56-66 s | **[blend]** the map recedes to 588 red squares beside 3.5 green. Map-only: red dims, the green pockets hold. | 35,000 hectares of BC's largest old-growth trees remain. *(Price, Holt & Daust, 2020)* | as cited on the live site today |
 | 7a | Ending: Echo Lake | 66-76 s | Camera descends back to Echo Lake. | Back where we started. Find your own corner of it. | — |
 | 7b | Ending: Clayoquot | 66-76 s | Camera descends to STORY_END_CAMERA. | Clayoquot Sound. | STORY_END_CAMERA (49.38, -125.86) |
-| 8 | Hand-off | 76-80 s | Controls fade in; the map is live. Chip opens the comment-period plans. | {N} logging plans are open for public comment right now. | FOM public API (spike: labelled sample) |
+| 8 | Hand-off | 76-84 s | The film's palette resolves into /map's forest-age layer during the descent's final seconds; then controls fade in on that same picture; the map is live. Chip opens the comment-period plans. | {N} logging plans are open for public comment right now. | FOM public API (spike: labelled sample) |
 
 ## Copy notes for Lee
 
