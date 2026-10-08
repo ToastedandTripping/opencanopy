@@ -51,6 +51,11 @@ VRI polygons with no PROJ_AGE_1 and no harvest date classify as "unknown". Until
 
 Lee found Interfor's Wilson Lake logging map through a Facebook post, a fortnight into a thirty-day comment window, and said a lot of people never learn these windows exist. Asked whether the project should speak rather than only show, he ruled yes: I don't mind that it becomes a tool of change. The charter was amended the same day with his approval, because the drift tripwires read the charter and a session judging the alert work against the old text would have flagged it as off-purpose. What does not change is the honesty regime: an alert's hectares come from the portal's own API and never from a post, a proponent is named and never characterized, and the does-not-dramatize non-goal binds a sentence exactly as it binds a visual. Some proponents are First Nations forestry partnerships, which is why neutral naming is a constraint and not a courtesy. The first application is the FOM watch in the Parking Lot; the human review step is part of the design, not a safeguard bolted on, because Lee is the reviewer and asked for semi-automated with just a review.
 
+### The landing intro is a beat-paced film that starts on the first scroll and hands over to the live map in place.
+*2026-10-08, Lee*
+
+The hero (photo and text) stays. Each beat plays on its own and a scroll or swipe advances it; scrolling never drives the camera, because the 2026-06 live scroll-zoom showed a reader-driven camera outruns tile loads. The film's clock waits for each frame to paint (Phase A's honest-timeline contract). Its last frame becomes the explorable map with no route change, and the URL updates to the matching /map deep link. Early years keep even pacing per year and say on screen when the dated record begins, rather than being stretched. It opens by dissolving the hero photo into the map near Echo Lake, Squamish, where it was taken; the spike prototypes both endings (return to Echo Lake, or descend to Clayoquot Sound) and Lee picks on his phone. Decided after reviewing the first-ever renders of all three docked ending versions; amends the 2026-08-21 ending ruling's scope only for the intro, which is a new film, not an un-dock.
+
 ## Engineering pins
 
 ### Do not merge the Phase 2 dolly-video branch until real video assets exist.
