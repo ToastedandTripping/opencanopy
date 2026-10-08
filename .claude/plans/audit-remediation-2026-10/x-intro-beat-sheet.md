@@ -1,6 +1,6 @@
 # X spike: intro film beat sheet
 
-**Status:** copy APPROVED by Lee as written, 2026-10-08. Captions may be tuned after the prototypes.
+**Status:** copy APPROVED by Lee as written, 2026-10-08; beats 3-4 rewritten the same day for the 1900-2025 splice (Lee: condense 1900-1959, splice now and merge later), keys added to beat 6, the hero keeps both panels, hand-off opens cutblocks + old-growth-250. Captions may be tuned after the prototypes.
 
 Binding rulings: DECISIONS 2026-10-08 (beat-paced film, starts on first scroll, map wakes up in place,
 even pacing with an on-screen note about the record, opens at Echo Lake); plan X amendment of
@@ -15,10 +15,10 @@ map-only film holds on the map with the same caption.
 | 0 | Hero | until first scroll | Unchanged hero photo + headline. Film tiles prefetch here. | (current hero copy, unchanged) | — |
 | 1 | Echo Lake | 0-7 s | Photo dissolves into the map where it was taken; camera holds, then begins to rise. | Echo Lake, near Squamish. | BCGNIS 1699 (49.7139, -123.2142); Lee 2026-10-08 |
 | 2 | Scale | 7-14 s | **[blend]** a square drawn at true size around the lake. Map-only: the rise continues to the province. | **[blend]** This square is 10,000 hectares. / Map-only: British Columbia's cutblock record, year by year. | geometry (100 km²) |
-| 3 | The record begins | 14-30 s | 1950-1989 tick past at even pace; almost nothing paints. | The provincial cutblock record starts thin. By 1990 it holds less than 80,000 hectares. | cutblocks-scrub.json: 78,488 ha through 1989 |
-| 4 | Logging | 30-46 s | 1990-2025 paints red; year + running total in the strip. | {N} hectares by {year}. → closing hold: 5.8 million hectares of dated cutblocks since 1950. | cutblocks-scrub.json: 5,888,477 ha, 2,000 ha cap |
+| 3 | Early decades (condensed) | 14-19 s | 1900-1959 pass condensed; the year readout visibly runs fast. | 1900 to 1959, condensed. The forest inventory dates 166,000 hectares of harvest in these years. It keeps only each stand's latest harvest, so early logging is undercounted. | research/vri-harvest-by-year-2026-10-08.json: 166,144 ha, 1900-1959 |
+| 4 | Logging | 19-46 s | 1960-2025 at even pace per year; red builds; year + running total in the strip. | {N} hectares by {year}. → closing hold: 10 million hectares since 1900. *Interim: forest inventory to 1999, cutblock record from 2000.* | splice: VRI 1900-1999 4,693,975 ha + FTEN 2000-2025 5,402,566 ha = 10,096,541 ha |
 | 5 | Fire | 46-56 s | 2017-2025 burns amber over the red. | Since 2017, fire has covered more than six times the area of the cutblocks dated in those same years. | fire-scrub.json 9,254,192 ha vs cutblocks-scrub.json 1,479,845 ha, 2017-2025 (ratio 6.25, floored) |
-| 6 | What remains | 56-66 s | **[blend]** the map recedes to 588 red squares beside 3.5 green. Map-only: red dims, the green pockets hold. | 35,000 hectares of BC's largest old-growth trees remain. *(Price, Holt & Daust, 2020)* | as cited on the live site today |
+| 6 | What remains (key: map-only 'Stands 250+ yr (VRI)'; blend '■ 10,000 ha') | 56-66 s | **[blend]** the map recedes to 588 red squares beside 3.5 green. Map-only: red dims, the green pockets hold. | 35,000 hectares of BC's largest old-growth trees remain. *(Price, Holt & Daust, 2020)* | as cited on the live site today |
 | 7a | Ending: Echo Lake | 66-76 s | Camera descends back to Echo Lake. | Back where we started. Find your own corner of it. | — |
 | 7b | Ending: Clayoquot | 66-76 s | Camera descends to STORY_END_CAMERA. | Clayoquot Sound. | STORY_END_CAMERA (49.38, -125.86) |
 | 8 | Hand-off | 76-80 s | Controls fade in; the map is live. Chip opens the comment-period plans. | {N} logging plans are open for public comment right now. | FOM public API (spike: labelled sample) |

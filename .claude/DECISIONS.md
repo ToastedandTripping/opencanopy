@@ -37,9 +37,11 @@ The in-story ending zoom (the dolly) went through three relays and never shipped
 The landing page said "8 million hectares" from 2026-06-18 to 2026-09-02 on a count nobody could rerun; the repo's own scrub table said 7.06M, and once the /map layer's 2,000 ha tenure-boundary cap was applied to the story pipeline the supportable figure was 5.89M. Lee's ruling: better to underestimate than to provide a higher number we can't source. So every figure shown to the public (hero stats, chapter copy, calculator values, the PDF) is derived from a file in the repo by a rerunnable script, pinned by a test that reads that file (`src/test/lib/hero-figure.test.ts` is the pattern), and floored when rounded for copy. A figure that cannot be derived is not shown.
 
 ### Logged hectares means dated 1950-2025 FTEN cutblocks under the 2,000 ha cap, in the story and on the map alike.
-*2026-09-02, per Lee*
+*2026-09-02, per Lee, amended 2026-10-08*
 
 The FTEN cut-block layer carries 230 polygons of 2,000-92,000 ha with no client and repeated areas under different dates: tenure boundaries, not cutblocks. The /map cutblocks layer has always excluded them (`CUTBLOCK_AREA_CAP_HA`); the story's scrub table and year overlays did not, so the red picture and its caption included 2.45M ha that the map itself refuses to call logging. Both pipelines now apply the same cap and the scrub JSON declares it. Undated blocks (1.12M ha under the cap) are painted as the muted pre-record baseline but never counted in a "since 1950" figure, because their timing is unknown. Phase B's harvest leaderboard must use the same definition or its public totals will diverge from the map.
+
+**Amended, Lee, 2026-10-08:** Lee, 2026-10-08: the FTEN record alone hides early logging (78,488 ha dated before 1990, against 3,136,257 ha by the forest inventory's HARVEST_DATE; research/vri-harvest-by-year-2026-10-08.json), while the inventory lags recent years (6,733 ha for 2023 against FTEN's 115,143). Logged area becomes a merge of both records with no stand counted twice, built and reconciled before any public number changes. Until then the public figure stays 5.8 million ha (FTEN). The intro spike may use a labelled interim splice (inventory to 1999, FTEN from 2000: 10,096,541 ha).
 
 ### A stand we cannot age contributes to no value: not carbon, not timber, not ecosystem services.
 *2026-09-02, per Lee*
@@ -52,9 +54,11 @@ VRI polygons with no PROJ_AGE_1 and no harvest date classify as "unknown". Until
 Lee found Interfor's Wilson Lake logging map through a Facebook post, a fortnight into a thirty-day comment window, and said a lot of people never learn these windows exist. Asked whether the project should speak rather than only show, he ruled yes: I don't mind that it becomes a tool of change. The charter was amended the same day with his approval, because the drift tripwires read the charter and a session judging the alert work against the old text would have flagged it as off-purpose. What does not change is the honesty regime: an alert's hectares come from the portal's own API and never from a post, a proponent is named and never characterized, and the does-not-dramatize non-goal binds a sentence exactly as it binds a visual. Some proponents are First Nations forestry partnerships, which is why neutral naming is a constraint and not a courtesy. The first application is the FOM watch in the Parking Lot; the human review step is part of the design, not a safeguard bolted on, because Lee is the reviewer and asked for semi-automated with just a review.
 
 ### The landing intro is a beat-paced film that starts on the first scroll and hands over to the live map in place.
-*2026-10-08, Lee*
+*2026-10-08, Lee, amended 2026-10-08*
 
 The hero (photo and text) stays. Each beat plays on its own and a scroll or swipe advances it; scrolling never drives the camera, because the 2026-06 live scroll-zoom showed a reader-driven camera outruns tile loads. The film's clock waits for each frame to paint (Phase A's honest-timeline contract). Its last frame becomes the explorable map with no route change, and the URL updates to the matching /map deep link. Early years keep even pacing per year and say on screen when the dated record begins, rather than being stretched. It opens by dissolving the hero photo into the map near Echo Lake, Squamish, where it was taken; the spike prototypes both endings (return to Echo Lake, or descend to Clayoquot Sound) and Lee picks on his phone. Decided after reviewing the first-ever renders of all three docked ending versions; amends the 2026-08-21 ending ruling's scope only for the intro, which is a new film, not an un-dock.
+
+**Amended, Lee, 2026-10-08:** Lee, same day: the film runs 1900 to 2025; 1900-1959 (166,144 ha, 2% of the spliced total) passes condensed in a few seconds, labelled as condensed on screen, with even pacing per year from 1960. The hero keeps both panels (photo, then the number panel). The map wakes up with cutblocks and old-growth-250 on, matching the film's last frame. Beat 6 carries a key: 'Stands 250+ yr (VRI)' in the map-only film, '■ 10,000 ha' in the blend.
 
 ## Engineering pins
 
