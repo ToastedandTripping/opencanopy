@@ -62,6 +62,11 @@ The hero (photo and text) stays. Each beat plays on its own and a scroll or swip
 
 **Amended, Lee, 2026-10-08:** Lee changed the hand-off layers the same day: "maybe it should end on forest ages so as to not make the map seem like a change of graphics." The film's final beat resolves into the forest-age layer as /map draws it, and the map wakes up on forest age, so the reader takes over a picture that is already the live map. This replaces 'cutblocks and old-growth-250 on' above. The change of look happens inside the film, as a deliberate last beat, not at the hand-off.
 
+### At province scale, logging and fire are drawn as area-true dots, never as cells painted wherever a polygon touches.
+*2026-10-09, Lee*
+
+The shipped story frames painted 5.66x the logged area in 2025 (32.75M ha painted for 5.79M ha of blocks), almost all from rasterizing with all_touched on a ~494 ha cell when the median cutblock is 16 ha, plus an undated baseline that was nearly all the red in the 1950 and 1990 frames (research/overpaint-2026-10-08/). A picture that overstates the data breaks the reproducible-number rule in spirit. Each dot stands for about 500 ha, placed within one cell of the logging, and the dots sum to the stated hectares (measured within 1.25% for every year since 2001). The whole record ships as one first-year-encoded file per dataset, decoded on the CPU (not a shader, so the Phase-3 pin is untouched) and served same-origin. From zoom 8 inward the picture hands over to /map's vector shapes. The film says what a dot is: "Each dot is about 500 hectares of logged forest, placed where the logging was."
+
 ## Engineering pins
 
 ### Do not merge the Phase 2 dolly-video branch until real video assets exist.

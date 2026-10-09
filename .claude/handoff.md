@@ -34,6 +34,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Intro-film spike in flight (2026-10-08):** Ted is building /intro-lab on branch `spike/intro-animation` (worktree ~/.local/share/marvin/worktrees/opencanopy/intro-spike): inventory-year overlays 1900-1999, cutblocks without the undated baseline, fire since 2017, a generated splice.json, both prototypes (?v=a map-only, ?v=b blend) and both endings (&end=echo|clayoquot), render-gated beat clock, forest-age hand-off. Contract: x-intro-beat-sheet.md + x-intro-jen-spec.md + DECISIONS 2026-10-08. Next: verify Ted's recordings, send to Lee, Lee picks on his phone. Jen's open risks: interim frames paint more area than the captions state; 2 MB budget tight on throttled phones.
 
+- **Dot layer for the intro spike (Lee, 2026-10-09: swap in after Ted's mechanics land):** build first-year-encoded blue-noise dot images per dataset (VRI 1900-1999, FTEN 2000-2025, fire 2017-2025) from research/overpaint-2026-10-08/scripts (yearencode.py / province.py), decode on the CPU into a MapLibre canvas source, hand over to /map's vector cutblocks from z8. Load during the hero (~21 kB cutblocks). Disclosure line in the beat sheet.
+
+- **Measure-merge defects found 2026-10-08 (fold into the inventory+FTEN merge, before any public number changes):** (1) the 2,000 ha cap checks the area attribute, not the drawn shape: nine polygons (82,920 ha) slip under it, pushing 1991-2003 up to 15% high; cap on max(attribute, geometry). (2) the scrub total sums block areas, so overlapping blocks count twice: +1.7% in 2025. (3) /raster/* is served max-age=0; versioned paths + immutable belong to S2-pages (C1).
+
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |

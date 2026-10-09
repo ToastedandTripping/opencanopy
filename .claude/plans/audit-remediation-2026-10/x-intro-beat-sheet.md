@@ -1,6 +1,6 @@
 # X spike: intro film beat sheet
 
-**Status:** copy APPROVED by Lee as written, 2026-10-08; beats 3-4 rewritten the same day for the 1900-2025 splice (Lee: condense 1900-1959, splice now and merge later), keys added to beat 6, the hero keeps both panels, hand-off: the last beat resolves into forest age as /map draws it, and the map wakes up on forest age (Lee, 2026-10-08). Captions may be tuned after the prototypes.
+**Status:** copy APPROVED by Lee as written, 2026-10-08; beats 3-4 rewritten the same day for the 1900-2025 splice (Lee: condense 1900-1959, splice now and merge later), keys added to beat 6, the hero keeps both panels, hand-off: the last beat resolves into forest age as /map draws it, and the map wakes up on forest age (Lee, 2026-10-08). Logging and fire are drawn as area-true dots (DECISIONS 2026-10-09); the dot line "Each dot is about 500 hectares of logged forest, placed where the logging was." appears with the first dots (beat 3). Captions may be tuned after the prototypes.
 
 Binding rulings: DECISIONS 2026-10-08 (beat-paced film, starts on first scroll, map wakes up in place,
 even pacing with an on-screen note about the record, opens at Echo Lake); plan X amendment of
