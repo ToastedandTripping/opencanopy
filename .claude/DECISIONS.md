@@ -67,6 +67,11 @@ The hero (photo and text) stays. Each beat plays on its own and a scroll or swip
 
 The shipped story frames painted 5.66x the logged area in 2025 (32.75M ha painted for 5.79M ha of blocks), almost all from rasterizing with all_touched on a ~494 ha cell when the median cutblock is 16 ha, plus an undated baseline that was nearly all the red in the 1950 and 1990 frames (research/overpaint-2026-10-08/). A picture that overstates the data breaks the reproducible-number rule in spirit. Each dot stands for about 500 ha, placed within one cell of the logging, and the dots sum to the stated hectares (measured within 1.25% for every year since 2001). The whole record ships as one first-year-encoded file per dataset, decoded on the CPU (not a shader, so the Phase-3 pin is untouched) and served same-origin. From zoom 8 inward the picture hands over to /map's vector shapes. The film says what a dot is: "Each dot is about 500 hectares of logged forest, placed where the logging was."
 
+### The map and the intro film share the Canopy palette: old growth and logging are the only loud colours, everything else recedes.
+*2026-10-11, Lee*
+
+Lee picked Canopy from three candidates in his 'two loud, rest quiet' direction, after seeing them recoloured on live /map views and on the film's ending. Forest age: old growth #80e691 at 0.85 (seen #72c980), logged #ff3a26 at 0.85 (seen #de3726), mature #586156 and young #97a195 at 0.60 (one sage-grey hue at two lightness steps, seen #434842 / #696f67). Fire is ash (#e1dcd5 fill 0.55, #f0eeea edge), so it never competes with logging's red; cutblocks are scarlet edges with a light fill; parks are edges only; the film's land is the mature token, so the hand-off adds only young and the loud classes. Full token set and the colour-blind checks: research/palette-2026-10-11/ (palettes.json, checks.csv; no failing pair, three marginal). Replaces palette E (ruling E, 2026-10-05), which was never applied. Applying it means an area-true rebuild of the z4-9 forest-age tiles, not only a recolour.
+
 ## Engineering pins
 
 ### Do not merge the Phase 2 dolly-video branch until real video assets exist.

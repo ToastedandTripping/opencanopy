@@ -1,0 +1,694 @@
+{
+ "current": {
+  "id": "current",
+  "name": "Current (shipped)",
+  "idea": "forest-age-palette.json today: dark-green old growth, bright green mature, orange young, red harvested; cutblock red edge, amber fire.",
+  "forestAge": {
+   "old-growth": {
+    "hex": "#0d5c2a",
+    "raster": 0.667,
+    "vector": 0.617
+   },
+   "mature": {
+    "hex": "#4ade80",
+    "raster": 0.667,
+    "vector": 0.617
+   },
+   "young": {
+    "hex": "#f97316",
+    "raster": 0.667,
+    "vector": 0.617
+   },
+   "harvested": {
+    "hex": "#ef4444",
+    "raster": 0.667,
+    "vector": 0.617
+   },
+   "unknown": {
+    "hex": "#6b7280",
+    "raster": 0.0,
+    "vector": 0.617
+   }
+  },
+  "cutblocks": {
+   "fill": {
+    "hex": "#dc2626",
+    "opacity": 0.04
+   },
+   "edge": {
+    "hex": "#dc2626",
+    "opacity": 0.9
+   }
+  },
+  "fire": {
+   "fill": {
+    "hex": "#f59e0b",
+    "opacity": 0.55
+   },
+   "edge": {
+    "hex": "#f59e0b",
+    "opacity": 0.4
+   }
+  },
+  "og250": {
+   "hex": "#0d5c2a",
+   "raster": 0.667,
+   "vector": 0.62,
+   "edge": {
+    "hex": "#fbbf24",
+    "opacity": 0.9,
+    "width": 1.5
+   }
+  },
+  "parks": {
+   "fill": {
+    "hex": "#34d399",
+    "opacity": 0.26
+   },
+   "edge": {
+    "hex": "#ffffff",
+    "opacity": 0.4
+   }
+  },
+  "tapPriority": {
+   "fill": {
+    "hex": "#eab308",
+    "opacity": 0.45
+   },
+   "edge": {
+    "hex": "#eab308",
+    "opacity": 0.45
+   }
+  },
+  "film": {
+   "ground": "#0a0a0c",
+   "land": {
+    "hex": "#15803d",
+    "opacity": 0.28,
+    "saturation": -0.5
+   },
+   "dots": "#f87171",
+   "dotsEnd": 0.3,
+   "fireDots": "#f59e0b",
+   "og": "#0d5c2a",
+   "ogRaster": 0.72,
+   "ogEdge": "#4fae72",
+   "redSquare": "#f87171"
+  },
+  "accent": "#34d399"
+ },
+ "c1": {
+  "id": "c1",
+  "name": "Canopy",
+  "idea": "A natural forest map. Old growth is the only vivid green and the brightest data on the map; mature and young are one sage-grey hue at two lightness steps; logging is scarlet. Fire is pale ash, so no third colour competes.",
+  "forestAge": {
+   "old-growth": {
+    "hex": "#80e691",
+    "raster": 0.85,
+    "vector": 0.85,
+    "seen": "#72c980",
+    "targetLCh": [
+     74,
+     50,
+     146
+    ]
+   },
+   "mature": {
+    "hex": "#586156",
+    "raster": 0.6,
+    "vector": 0.6,
+    "seen": "#434842",
+    "targetLCh": [
+     30,
+     5,
+     140
+    ]
+   },
+   "young": {
+    "hex": "#97a195",
+    "raster": 0.6,
+    "vector": 0.6,
+    "seen": "#696f67",
+    "targetLCh": [
+     46,
+     5,
+     140
+    ]
+   },
+   "harvested": {
+    "hex": "#ff3a26",
+    "raster": 0.85,
+    "vector": 0.85,
+    "seen": "#de3726",
+    "targetLCh": [
+     50,
+     80,
+     38
+    ]
+   },
+   "unknown": {
+    "hex": "#000000",
+    "raster": 0.0,
+    "vector": 0.0,
+    "note": "unaged stands: no fill at any zoom, matching the raster overview (today the vector draws them #6b7280 from z10)"
+   }
+  },
+  "cutblocks": {
+   "fill": {
+    "hex": "#ff3a26",
+    "opacity": 0.06
+   },
+   "edge": {
+    "hex": "#ff3a26",
+    "opacity": 0.9,
+    "widthNote": "unchanged from today (1 at z5, 1.6 at z8.5, 2.2 at z12) in these renders"
+   },
+   "recency": {
+    "field": "DISTURBANCE_START_DATE",
+    "fillOpacity": [
+     [
+      1950,
+      0.06
+     ],
+     [
+      2000,
+      0.16
+     ],
+     [
+      2025,
+      0.4
+     ]
+    ],
+    "note": "proposed static default (2026-08 audit C1), same hue, brightness = recency; not rendered (flat 0.06 here)"
+   }
+  },
+  "fire": {
+   "fill": {
+    "hex": "#e1dcd5",
+    "opacity": 0.55
+   },
+   "edge": {
+    "hex": "#f0eeea",
+    "opacity": 0.85,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     5,
+     0.6,
+     8,
+     0.9,
+     10,
+     1.3,
+     12,
+     1.8
+    ]
+   },
+   "seenOverLand": "#8c8985"
+  },
+  "og250": {
+   "hex": "#80e691",
+   "raster": 0.85,
+   "vector": 0.85,
+   "edge": {
+    "hex": "#b9f1c2",
+    "opacity": 0.7,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     8,
+     0,
+     10,
+     0.6,
+     13,
+     1.2
+    ]
+   }
+  },
+  "parks": {
+   "fill": {
+    "hex": "#e5e7eb",
+    "opacity": 0.05
+   },
+   "edge": {
+    "hex": "#e5e7eb",
+    "opacity": 0.85,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     5,
+     0.8,
+     10,
+     1.4,
+     13,
+     2.0
+    ]
+   }
+  },
+  "tapPriority": {
+   "fill": {
+    "hex": "#a78bfa",
+    "opacity": 0.14
+   },
+   "edge": {
+    "hex": "#c4b5fd",
+    "opacity": 0.8
+   }
+  },
+  "film": {
+   "ground": "#0a0a0c",
+   "land": {
+    "hex": "#586156",
+    "opacity": 0.6,
+    "saturation": 0,
+    "note": "forest-base.png recoloured to the mature token, so the film's land is /map's mature class and the resolve only adds young and the loud classes"
+   },
+   "dots": "#ff3a26",
+   "dotsEnd": 0.5,
+   "fireDots": "#e1dcd5",
+   "og": "#80e691",
+   "ogRaster": 0.85,
+   "ogEdge": "#b9f1c2",
+   "redSquare": "#ff3a26"
+  },
+  "accent": "#72c980",
+  "swatchSwap": {
+   "rgb(13,92,42)": "rgb(114,201,128)",
+   "rgb(74,222,128)": "rgb(67,72,66)",
+   "rgb(249,115,22)": "rgb(105,111,103)",
+   "rgb(239,68,68)": "rgb(222,55,38)",
+   "rgb(220,38,38)": "rgb(233,56,38)",
+   "rgb(245,158,11)": "rgb(240,238,234)"
+  }
+ },
+ "c2": {
+  "id": "c2",
+  "name": "Slate",
+  "idea": "Green means old growth and nothing else. Old growth is a cool emerald-teal, the brightest data; mature and young recede into blue-slate greys; logging is vermilion. Fire is pale gold. Built for colour-blind readers first: every loud pair also splits on the blue-yellow axis that red-green colour blindness keeps.",
+  "forestAge": {
+   "old-growth": {
+    "hex": "#3ed4a4",
+    "raster": 0.85,
+    "vector": 0.85,
+    "seen": "#3ab991",
+    "targetLCh": [
+     68,
+     46,
+     166
+    ]
+   },
+   "mature": {
+    "hex": "#565f6b",
+    "raster": 0.6,
+    "vector": 0.6,
+    "seen": "#42474e",
+    "targetLCh": [
+     30,
+     5,
+     262
+    ]
+   },
+   "young": {
+    "hex": "#959fac",
+    "raster": 0.6,
+    "vector": 0.6,
+    "seen": "#676d75",
+    "targetLCh": [
+     46,
+     5,
+     262
+    ]
+   },
+   "harvested": {
+    "hex": "#fd5028",
+    "raster": 0.85,
+    "vector": 0.85,
+    "seen": "#dc4927",
+    "targetLCh": [
+     52,
+     75,
+     42
+    ]
+   },
+   "unknown": {
+    "hex": "#000000",
+    "raster": 0.0,
+    "vector": 0.0,
+    "note": "unaged stands: no fill at any zoom, matching the raster overview (today the vector draws them #6b7280 from z10)"
+   }
+  },
+  "cutblocks": {
+   "fill": {
+    "hex": "#fd5028",
+    "opacity": 0.06
+   },
+   "edge": {
+    "hex": "#fd5028",
+    "opacity": 0.9,
+    "widthNote": "unchanged from today (1 at z5, 1.6 at z8.5, 2.2 at z12) in these renders"
+   },
+   "recency": {
+    "field": "DISTURBANCE_START_DATE",
+    "fillOpacity": [
+     [
+      1950,
+      0.06
+     ],
+     [
+      2000,
+      0.16
+     ],
+     [
+      2025,
+      0.4
+     ]
+    ],
+    "note": "proposed static default (2026-08 audit C1), same hue, brightness = recency; not rendered (flat 0.06 here)"
+   }
+  },
+  "fire": {
+   "fill": {
+    "hex": "#f7e6c6",
+    "opacity": 0.6
+   },
+   "edge": {
+    "hex": "#fbf2e2",
+    "opacity": 0.85,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     5,
+     0.6,
+     8,
+     0.9,
+     10,
+     1.3,
+     12,
+     1.8
+    ]
+   },
+   "seenOverLand": "#a29885"
+  },
+  "og250": {
+   "hex": "#3ed4a4",
+   "raster": 0.85,
+   "vector": 0.85,
+   "edge": {
+    "hex": "#95e7cd",
+    "opacity": 0.7,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     8,
+     0,
+     10,
+     0.6,
+     13,
+     1.2
+    ]
+   }
+  },
+  "parks": {
+   "fill": {
+    "hex": "#e5e7eb",
+    "opacity": 0.05
+   },
+   "edge": {
+    "hex": "#e5e7eb",
+    "opacity": 0.85,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     5,
+     0.8,
+     10,
+     1.4,
+     13,
+     2.0
+    ]
+   }
+  },
+  "tapPriority": {
+   "fill": {
+    "hex": "#a78bfa",
+    "opacity": 0.14
+   },
+   "edge": {
+    "hex": "#c4b5fd",
+    "opacity": 0.8
+   }
+  },
+  "film": {
+   "ground": "#0a0a0c",
+   "land": {
+    "hex": "#565f6b",
+    "opacity": 0.6,
+    "saturation": 0,
+    "note": "forest-base.png recoloured to the mature token, so the film's land is /map's mature class and the resolve only adds young and the loud classes"
+   },
+   "dots": "#fd5028",
+   "dotsEnd": 0.4,
+   "fireDots": "#f7e6c6",
+   "og": "#3ed4a4",
+   "ogRaster": 0.85,
+   "ogEdge": "#95e7cd",
+   "redSquare": "#fd5028"
+  },
+  "accent": "#3ab991",
+  "swatchSwap": {
+   "rgb(13,92,42)": "rgb(58,185,145)",
+   "rgb(74,222,128)": "rgb(66,71,78)",
+   "rgb(249,115,22)": "rgb(103,109,117)",
+   "rgb(239,68,68)": "rgb(220,73,39)",
+   "rgb(220,38,38)": "rgb(231,76,40)",
+   "rgb(245,158,11)": "rgb(251,242,226)"
+  }
+ },
+ "c3": {
+  "id": "c3",
+  "name": "Deep",
+  "idea": "Palette E's pair made loud and the rest made quiet: a deep, saturated old-growth green that sits darker than a coral-rose logging red, so the eye lands on what is gone. Mature and young are warm stone greys below both. Fire is drawn mostly as its perimeter, because coral already holds the light end. Closest to the film as it stands.",
+  "forestAge": {
+   "old-growth": {
+    "hex": "#0a8131",
+    "raster": 0.85,
+    "vector": 0.85,
+    "seen": "#0e732f",
+    "targetLCh": [
+     42,
+     52,
+     145
+    ]
+   },
+   "mature": {
+    "hex": "#5b564f",
+    "raster": 0.6,
+    "vector": 0.6,
+    "seen": "#45423d",
+    "targetLCh": [
+     28,
+     3,
+     80
+    ]
+   },
+   "young": {
+    "hex": "#8f8982",
+    "raster": 0.6,
+    "vector": 0.6,
+    "seen": "#64605c",
+    "targetLCh": [
+     41,
+     3,
+     80
+    ]
+   },
+   "harvested": {
+    "hex": "#fe919f",
+    "raster": 0.85,
+    "vector": 0.85,
+    "seen": "#dd808c",
+    "targetLCh": [
+     64,
+     38,
+     14
+    ]
+   },
+   "unknown": {
+    "hex": "#000000",
+    "raster": 0.0,
+    "vector": 0.0,
+    "note": "unaged stands: no fill at any zoom, matching the raster overview (today the vector draws them #6b7280 from z10)"
+   }
+  },
+  "cutblocks": {
+   "fill": {
+    "hex": "#fe919f",
+    "opacity": 0.06
+   },
+   "edge": {
+    "hex": "#fe919f",
+    "opacity": 0.9,
+    "widthNote": "unchanged from today (1 at z5, 1.6 at z8.5, 2.2 at z12) in these renders"
+   },
+   "recency": {
+    "field": "DISTURBANCE_START_DATE",
+    "fillOpacity": [
+     [
+      1950,
+      0.06
+     ],
+     [
+      2000,
+      0.16
+     ],
+     [
+      2025,
+      0.4
+     ]
+    ],
+    "note": "proposed static default (2026-08 audit C1), same hue, brightness = recency; not rendered (flat 0.06 here)"
+   }
+  },
+  "fire": {
+   "fill": {
+    "hex": "#eee7dd",
+    "opacity": 0.12
+   },
+   "edge": {
+    "hex": "#f8f5f1",
+    "opacity": 0.95,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     5,
+     0.6,
+     8,
+     0.9,
+     10,
+     1.3,
+     12,
+     1.8
+    ]
+   },
+   "seenOverLand": "#3b3b39"
+  },
+  "og250": {
+   "hex": "#0a8131",
+   "raster": 0.85,
+   "vector": 0.85,
+   "edge": {
+    "hex": "#78ba8e",
+    "opacity": 0.7,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     8,
+     0,
+     10,
+     0.6,
+     13,
+     1.2
+    ]
+   }
+  },
+  "parks": {
+   "fill": {
+    "hex": "#e5e7eb",
+    "opacity": 0.05
+   },
+   "edge": {
+    "hex": "#e5e7eb",
+    "opacity": 0.85,
+    "width": [
+     "interpolate",
+     [
+      "linear"
+     ],
+     [
+      "zoom"
+     ],
+     5,
+     0.8,
+     10,
+     1.4,
+     13,
+     2.0
+    ]
+   }
+  },
+  "tapPriority": {
+   "fill": {
+    "hex": "#a78bfa",
+    "opacity": 0.14
+   },
+   "edge": {
+    "hex": "#c4b5fd",
+    "opacity": 0.8
+   }
+  },
+  "film": {
+   "ground": "#0a0a0c",
+   "land": {
+    "hex": "#5b564f",
+    "opacity": 0.6,
+    "saturation": 0,
+    "note": "forest-base.png recoloured to the mature token, so the film's land is /map's mature class and the resolve only adds young and the loud classes"
+   },
+   "dots": "#fe919f",
+   "dotsEnd": 0.4,
+   "fireDots": "#eee7dd",
+   "og": "#0a8131",
+   "ogRaster": 0.85,
+   "ogEdge": "#78ba8e",
+   "redSquare": "#fe919f"
+  },
+  "accent": "#34d399",
+  "swatchSwap": {
+   "rgb(13,92,42)": "rgb(14,115,47)",
+   "rgb(74,222,128)": "rgb(69,66,61)",
+   "rgb(249,115,22)": "rgb(100,96,92)",
+   "rgb(239,68,68)": "rgb(221,128,140)",
+   "rgb(220,38,38)": "rgb(232,134,147)",
+   "rgb(245,158,11)": "rgb(248,245,241)"
+  }
+ }
+}
