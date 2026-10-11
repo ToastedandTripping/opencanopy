@@ -63,6 +63,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Log (newest first)
 
+### 2026-10-11 -- Canopy palette picked; intro spike on a Netlify draft
+
+Lee picked Canopy (DECISIONS 2026-10-11; tokens and checks in research/palette-2026-10-11/; Jen's checks reproduce: no failing pair, three marginal). The jitter fix landed (clock holds 38% -> 0% in beat 3, 19% -> 0% in the descent; films 89-92 s), but recordings here are software-rendered (NVIDIA driver/library mismatch, reboot needed), so Lee judges smoothness on his phone: draft deploy 6acbff3cfb5a9c293751ff8d, https://6acbff3cfb5a9c293751ff8d--merry-queijadas-27cd31.netlify.app/intro-lab (built from spike/intro-animation c6be621 with the MapTiler key blanked; production unchanged at 50ab18d, /intro-lab 404 there). The spike still draws the old palette; Canopy is not yet applied to it.
+
 ### 2026-10-07 -- All three docked ending versions rendered and sent to Lee
 
 First renders ever of the docked ending work, sent to Lee for review before any new iteration. v1 (live scrub) recorded at phone and desktop on the build machine's GPU: 60 fps scroll, soft tiles mid-zoom. v2 (play-on-scroll video) rendered and encoded after two throwaway fixes: StoryMap's binary-reveal write drops when the style is not loaded and never retries (the video would have been blank), and the dev badge (still visible bottom-left). v3 (whole story as video) stopped at frame 551/634 on both tiers: the render spec treats the expected missing-ocean-tile 404s as fatal; the 23 s partials are in `/tmp/claude-1000/-home-leesalo--local-share-marvin-worktrees-opencanopy-canopy/38525f5e-10fe-44aa-916f-99970f16ebe9/scratchpad/renders/v3-out/`. encode-dolly.sh exits 141 (SIGPIPE) at the poster step after writing the videos. All three predate the 2026-09-02 data corrections. Throwaway worktrees under `/tmp/claude-1000/-home-leesalo--local-share-marvin-worktrees-opencanopy-canopy/38525f5e-10fe-44aa-916f-99970f16ebe9/scratchpad/renders/` stay until Lee has reviewed. Lee's verdict on the three is the open question before the intro spike iterates.
