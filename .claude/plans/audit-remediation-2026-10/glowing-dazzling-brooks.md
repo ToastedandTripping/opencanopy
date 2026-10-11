@@ -896,6 +896,14 @@ nothing merged. Steps:
 Cost: the spike's agents (Jen spec and review, two Ted builds, one research agent) run on Opus
 per the model table. They write no production code.
 
+**Palette reopened, Lee, 2026-10-09 ("maybe the entire palette could do with a tweak"):** ruling E (palette
+E: #0d5c2a / #5eead4 / #facc15 / #f87171) is under review, not yet applied anywhere. Direction chosen:
+"two loud, rest quiet": old growth and logging are the only saturated colours; mature and young forest
+recede into muted tones ordered by lightness (colour-blind safe by lightness), shared by /map and the
+film so the hand-off is the same picture by design. Jen designs two or three candidates, rendered on
+real /map views and the film's ending; Lee picks on his phone; the pick becomes a DECISIONS entry and
+amends E. The spike's dimmed hand-off fade is dropped in favour of this.
+
 **Sequencing change, Lee, 2026-10-08 ("Go for it"):** X runs now, ahead of Phase 0 and S0, as its own
 lane. It is a throwaway spike that ships nothing, so the release foundations it skips guard nothing it
 touches. It uses the 2026-09-02-corrected scrub tables and overlays, labelled interim; frames are redrawn
