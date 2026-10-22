@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef, memo } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
-import maplibregl, { GeoJSONSource, type FilterSpecification } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import { GeoJSONSource, type FilterSpecification } from "maplibre-gl";
 import type { LayerDefinition, BBox } from "@/types/layers";
 import { fetchLayerData } from "@/lib/data/wfs-client";
 import { resolveWfsStatus, shouldSurfaceWfsLoading } from "@/lib/data/wfs-status";
@@ -522,7 +523,7 @@ function PmtilesLayers({
 
       // Age-graded fill opacity: bright at 0yr, fade to 0.15 at 50yr+
       const ageOpacity = buildAgeGradedOpacity(layer.timelineField);
-      mapInstance.setPaintProperty(fillId, "fill-opacity", ageOpacity);
+      mapInstance.setPaintProperty(fillId, "fill-opacity", ageOpacity as maplibregl.DataDrivenPropertyValueSpecification<number>);
 
       // Outline opacity: scale proportionally to fill so rings disappear
       // when fill is nearly invisible (avoids Razor W4 ghost rings).
@@ -535,7 +536,7 @@ function PmtilesLayers({
           0, 0.3,
           20, 0.15,
           50, 0.05,
-        ]);
+        ] as unknown as maplibregl.ExpressionSpecification);
       }
 
       pipelineLog("setFilter", layer.id, { type: "pmtiles-year", classFilter: activeClassFilter ?? "none" });
@@ -552,7 +553,7 @@ function PmtilesLayers({
       // Always call setPaintProperty even when registry value is null/undefined
       // so any age-graded interpolation expression from the active phase is cleared.
       const restoreOpacity = layer.style.paint["fill-opacity"] ?? layer.style.opacity ?? 0.7;
-      mapInstance.setPaintProperty(fillId, "fill-opacity", restoreOpacity);
+      mapInstance.setPaintProperty(fillId, "fill-opacity", restoreOpacity as maplibregl.DataDrivenPropertyValueSpecification<number>);
       // Restore outline line-opacity: an explicit registry outline keeps its
       // solid value; otherwise the faint default ramp.
       if (mapInstance.getLayer(outlineId)) {

@@ -13,7 +13,7 @@
  *   pipelineLog('setPaintProperty', 'story-forest-age-raster', { property: 'raster-opacity', value: 0.6 });
  */
 
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import type { LayerDefinition } from "@/types/layers";
 import { PMTILES_SOURCE_ID } from "@/lib/layers/registry";
 

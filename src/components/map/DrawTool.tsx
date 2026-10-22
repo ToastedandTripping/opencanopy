@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
+import type * as maplibregl from "maplibre-gl";
 import type {
   MapLayerMouseEvent,
   MapLayerTouchEvent,
