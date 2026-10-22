@@ -28,8 +28,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **2026-10 remediation program APPROVED 2026-10-07** (Lee, grill; no round 9): .claude/plans/audit-remediation-2026-10/glowing-dazzling-brooks.md. Next: Phase 0. Every child plan gets at most three critic rounds, round one at xhigh effort (Lee 2026-10-07: max has diminishing returns) and briefed to report every finding (DECISIONS, 2026-10-07).
 
-- **MapLibre 5 -> 6** (critical advisory: XSS sanitizer bypass in DOM.sanitize, fixed in 6.13.0). Its own relay: the major bump breaks the tile audits unless @mapbox/vector-tile, pbf and @types/geojson become direct dev deps first. CI's npm audit step stays red until this and the dev-only eslint-config-next chain clear; eslint-config-next is held at 16.3.0 because a fresh resolve pulls eslint-plugin-react-hooks 7.1.1 (seven set-state-in-effect errors).
-
 - **Ending-video review (2026-10-07, in progress):** all three docked versions rendered for the first time, in throwaway worktrees under `/tmp/claude-1000/-home-leesalo--local-share-marvin-worktrees-opencanopy-canopy/38525f5e-10fe-44aa-916f-99970f16ebe9/scratchpad/renders/` (v1 = dock/dolly-live-scrub, v2 = dock/dolly-phase2-video, v3 = relay/story-video-phase2-render-spec). Sent to Lee: v1 phone + desktop recordings, v2 desktop + mobile video, today's live site. v3 (whole story, ~1-2 h) was rendering when the session paused; output lands in `renders/v3/.render-scratch/story-video/out/`. v2 shipped a real bug: StoryMap's binary-reveal effect drops its write when the style is not loaded and never retries, so a constant-opacity render page renders the reveal at 0 (patched in the throwaway copy only). The worktrees are throwaway; remove with git worktree remove once Lee has seen v3. Concept B spike sketch: https://claude.ai/artifact/VEMwA8EADqLbKQcCzw8A3j (sample comment count; the dated-record curve is ~89% after 2000, a pacing question for S1-lite).
 
 - **Dot layer for the intro spike (Lee, 2026-10-09: swap in after Ted's mechanics land):** build first-year-encoded blue-noise dot images per dataset (VRI 1900-1999, FTEN 2000-2025, fire 2017-2025) from research/overpaint-2026-10-08/scripts (yearencode.py / province.py), decode on the CPU into a MapLibre canvas source, hand over to /map's vector cutblocks from z8. Load during the hero (~21 kB cutblocks). Disclosure line in the beat sheet.
@@ -41,6 +39,8 @@ in this project has already been ruled on, usually for a reason that is not obvi
 - **/map defects found by the palette work (2026-10-11, Jen, recoloured-capture measurements, not yet re-verified):** (1) the z4-9 forest-age raster tiles overstate logging ~1.7x (49.5% of painted pixels harvested at z6 vs 28.6% at z9), so they need an area-true rebuild along with any new palette; (2) those tiles draw above every fire and cutblock shape, so fire is invisible at z<=9 in any palette (z-order); (3) the intro's hand-off jump is the film's own doing: land and old growth fade to black below z8.8 and forest age drops from 0.82 to 0.64 opacity when /map wakes. Jen's report cites palettes.json, checks.csv and film-recolour-report.json; none exist on disk, so her colour-blind pass/fail claims are unverified.
 
 - **GPU rendering is broken on the build machine (2026-10-11):** nvidia-smi reports 'Driver/library version mismatch' (NVML 580.178 userspace vs an older loaded kernel module), so headless Chromium falls back to llvmpipe. On 2026-10-07 the same flags gave the GTX 1060. A reboot should fix it; until then every recording is software-rendered and choppy, and is no evidence of how smooth the film is.
+
+- - **MapLibre 6 follow-through (shipped 2026-10-22 by session-d09d2c, main 120cc10):** (1) eyes owed on /map: data overlays at zoom, v6's deeper default overscale (queryRenderedFeatures popups), overlapping semi-transparent lines in registry.ts. (2) The intro spike branch (spike/intro-animation) is still on MapLibre 5: merge main into it, switch its maplibre imports to namespace form, and re-verify the dot canvas source, the offscreen warm-up map and the film clock's idle gates under v6 before any further draft. Ship note: ~/marvin/state/security-2026-10-22/opencanopy-shipped.md.
 
 ## Open questions awaiting Lee
 
@@ -62,6 +62,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-10-22: main merged into marvin/canopy after the MapLibre 6 security ship
+
+session-d09d2c fast-forwarded main 50ab18d -> 120cc10 (next 16.4.2, source-map-js, fflate; maplibre-gl 6.15.0 with setWorkerUrl; live deploy 6ada8fe82bdc8d8f12f11918, rollback 6acbff0931a9180009704260; Lee approved 2026-10-22). Merged here clean, npm ci, vitest 59 files / 867 passed. MapLibre 6 owed item replaced by the follow-through item (eyes on /map, spike branch port). The intro-lab draft (6acbff3cfb5a9c293751ff8d) was built on MapLibre 5 and is unaffected.
 
 ### 2026-10-11 -- Canopy palette picked; intro spike on a Netlify draft
 
