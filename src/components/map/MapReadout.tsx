@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMap } from "react-map-gl/maplibre";
+import type * as maplibregl from "maplibre-gl";
 import { INITIAL_VIEW_STATE } from "@/lib/mapConfig";
 
 /**

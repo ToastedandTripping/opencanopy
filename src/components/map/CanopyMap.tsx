@@ -16,6 +16,7 @@ import Map, {
   type MapRef,
   type MapLayerMouseEvent,
 } from "react-map-gl/maplibre";
+import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLES, INITIAL_VIEW_STATE, TERRAIN_SOURCE } from "@/lib/mapConfig";
 import { DEFAULT_RANGE } from "@/hooks/useTimeline";
@@ -29,6 +30,15 @@ import { MapReadout } from "./MapReadout";
 // rendered null for every tiled layer and never fired. PMTiles errors are now
 // reported via setLayerStatus in DataLayer → LoadingContext → StatusToast.
 import { pipelineLog, pipelineHealthReport, isEnabled } from "@/lib/debug/pipeline-logger";
+
+// maplibre-gl 6 locates its worker via import.meta.url, which the Next bundle
+// rewrites to the page URL ("Worker failed to load", blank map). Hand the
+// bundler a static asset reference instead so it emits and links the worker.
+if (typeof window !== "undefined") {
+  setWorkerUrl(
+    new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href,
+  );
+}
 
 // Register PMTiles protocol globally (idempotent, runs once)
 initPMTiles();
