@@ -78,14 +78,18 @@ Lee picked Canopy from three candidates in his 'two loud, rest quiet' direction,
 Lee: "I guess I would like to satisfy all of the primary goals before taking this into beta, whereby people will poke around and inevitably find further issue." Before beta: goal (1), a correct and honest core map, and goal (3), a landing page and calculator that never overstate. Goal (2), the watershed report card, accountability view and priority analysis, is built during the beta and shaped by what testers find. The beta is open to the public at opencanopy.ca with a visible beta label, not an invited group (Lee overrode the invited-group recommendation). The label is a small, persistent "Beta" tag with a one-line note linking to the report form and the known-issues note. The two failures this guards against, in Lee's ranking: a wrong number spreads (someone screenshots a figure the data does not support), and testers hit bugs we already knew about. Capture: marvin session-d09d2c, .claude/grills/2026-10-22-opencanopy-path-to-beta.md.
 
 ### The beta label goes up only when the beta-day bar is met, and a layer that cannot meet it is hidden rather than holding the beta back.
-*2026-10-23, Lee (path-to-beta grill)*
+*2026-10-23, Lee (path-to-beta grill), amended 2026-10-23*
 
 The bar, all of it: (a) zero known serious bugs on current iPhone Safari, current Android Chrome, and desktop Chrome, Firefox and Safari, where serious means it breaks a feature, shows wrong or missing data, or overstates, and everything else is cosmetic and listed on a short public known-issues note; (b) every public figure on the landing page, the calculator and the map popups traced to a script and a test under the reproducible-or-not-shown ruling, with outside figures shown only as cited, with a visible source link; (c) map data visible within about 10 seconds on an ordinary phone on 4G (the Oct 2 audit measured 37-42 s on Slow 4G; the worst connections come later); (d) tiles freshly rebuilt from current government data just before the label goes up; (e) error monitoring and uptime alerting live, on free tiers, tool choice the session's (the only two FAILs in the 2026-08-27 production audit); (f) CI green, with lint running again and the fidelity suite either in CI or run on each tile rebuild with a recorded result. A layer or feature that cannot clear the bar in time is hidden for the beta and returns when fixed. Any figure questioned during the beta is checked and corrected in public.
 
+**Amended, attribution note, plan critic r1, 2026-10-23:** Who decided which part: Lee chose the gate (goals 1 and 3), the serious-bug bar with a known-issues note, the number bar, the 10-second speed bar, the fresh rebuild and hide-don't-block. The device list, error monitoring and uptime alerting, and green CI are MARVIN's calls in the grill capture, part of what Lee confirmed at its gate; he can change them without reopening the rest.
+
 ### The beta ends after four weeks with no open serious bug and no unverified number, and only once goal (2) has shipped.
-*2026-10-23, Lee (path-to-beta grill)*
+*2026-10-23, Lee (path-to-beta grill), amended 2026-10-23*
 
 The four weeks run from the day the beta label goes up. A serious bug found during the beta pauses the clock until it is fixed; it does not reset it, so one late bug cannot keep the beta open forever ("beta never ends" was offered as a risk and the pause rule is the answer). The label comes off only when both halves hold: the quiet four weeks, and goal (2) live.
+
+**Amended, attribution note, plan critic r1, 2026-10-23:** Lee chose the quiet stretch and goal (2) shipped; "four weeks" and pause-not-reset are MARVIN's calls in the grill capture, confirmed at its gate.
 
 ### The beta launches quietly; after a clean first week, a short note goes to a few conservation groups and a local journalist.
 *2026-10-23, Lee (path-to-beta grill)*

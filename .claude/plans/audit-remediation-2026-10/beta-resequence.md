@@ -3,244 +3,325 @@
 **Amends** `glowing-dazzling-brooks.md` (approved 2026-10-07): its **Lanes and waves** table and
 the *order* in its **Dependency graph** are replaced by the order below. Relay specs, the program
 contracts (C1-C7), the agents-and-models table, the critic contract and the release rules stand
-unless a section here names a change. Nothing here is built until Lee has seen this order.
+unless a section here names a change. It is less a re-ordering than an insertion: Waves 1-3 keep
+their internal order (M1a, M1b, M2, M3a; S0a, S0b, S1-lite, S1′), ten relays are inserted, and
+four are deferred into the beta. Lee sees this order before G0 starts.
 
 ## Intent (grilled)
 
 Grill: marvin session-d09d2c, `.claude/grills/2026-10-22-opencanopy-path-to-beta.md`, confirmed
-2026-10-23 ("Yes, this is it"). Relayed by that session; the rulings are in DECISIONS (2026-10-23,
-six entries).
+2026-10-23 ("Yes, this is it"), relayed by that session. Rulings: DECISIONS, six entries dated
+2026-10-23, with attribution notes.
 
 **Anchor.** Lee: "dig into Open Canopy a little bit more and see if we can't create a cohesive
 framework or definition of how we get ourselves to proper beta testing with it." And: "I guess I
 would like to satisfy all of the primary goals before taking this into beta, whereby people will
 poke around and inevitably find further issue."
 
-**Lee's decisions (summary).**
-- Charter goals (1) and (3) before beta; goal (2) is built during beta.
-- An open public beta at opencanopy.ca with a visible beta label (Lee overrode "invited group").
-- Beta-day bar: zero known serious bugs on current iPhone Safari, Android Chrome, desktop Chrome,
-  Firefox, Safari; every public figure traced to a script and a test; about 10 s to first map data
-  on an ordinary phone on 4G; tiles freshly rebuilt; error monitoring and uptime alerting; green CI.
-- A layer or feature that cannot meet the bar in time is hidden, not allowed to hold the beta.
-- Exit: four weeks with no open serious bug and no unverified number (a serious bug pauses the
-  clock), and goal (2) shipped.
-- Feedback through an in-map report form; cosmetic issues on a public known-issues note.
-- Tiles rebuilt right before beta, then quarterly by Lee's one command.
+**Lee's decisions.**
+- Charter goals (1) and (3) before beta; goal (2) built during beta.
+- An open public beta with a visible label (Lee overrode "invited group").
+- Beta-day bar: no known serious bug, cosmetic ones on a public known-issues note; every public
+  figure traced to a script and a test; map data in about 10 s on an ordinary phone on 4G; tiles
+  rebuilt with current government data just before.
+- A layer or feature that cannot meet the bar is hidden, not allowed to hold the beta.
+- Exit: a quiet stretch with no open serious bug and no unverified number, and goal (2) shipped.
+- Feedback through an in-map report form, no accounts.
+- Tiles quarterly by Lee's one command after the pre-beta rebuild.
 - Launch quiet; after a clean week, a note to a few conservation groups and a local journalist.
+
+**MARVIN's calls in the grill, confirmed at its gate (Lee can change any without reopening the
+rest).** The device list (current iPhone Safari, Android Chrome; desktop Chrome, Firefox,
+Safari). Error monitoring and uptime alerting, free tiers, tool chosen by the session. Green CI,
+lint running, the fidelity suite in CI or run per rebuild. "Serious" = breaks a feature, shows
+wrong or missing data, or overstates. "A month" = four weeks from the label; a serious bug pauses
+the clock, never resets it. Netlify Forms, optional email, named on /privacy. The label's form.
+The vehicle is this program.
 
 **Anti-goals (Lee's ranking).** A wrong number spreads. Testers hit bugs we already knew about.
 
-**MARVIN's calls in the grill (not Lee's; open to his correction).** "Serious" = breaks a
-feature, shows wrong or missing data, or overstates. The vehicle is this program, re-sequenced.
-Monitoring on free tiers, tool chosen by the session. Netlify Forms for the report form. The
-device list. Pause-not-reset. The label's form.
+**MARVIN's calls in this plan** are marked *(call)*.
 
-**MARVIN's calls in this plan** are marked *(call)* where they appear.
+## Where the program stands (2026-10-23)
 
-## Where the program stands today (2026-10-23)
-
-- Phase 0 has not started. No Wave 1 child plan is written.
-- Shipped outside the program: the `email_click` hotfix (16dc5e9), Next 16.4.2, and MapLibre 6.15
+- Phase 0 has not started; no Wave 1 child plan is written.
+- Shipped outside the program: the `email_click` hotfix (16dc5e9), Next 16.4.2, MapLibre 6.15
   (main 120cc10, 2026-10-22).
-- **CI is still red.** The MapLibre 6 ship did not clear it: `npm audit --audit-level=high` now
-  fails on dev-only highs (vite 8.0.0-8.1.5, launch-editor; 3 high, 4 moderate), so Lint never
-  runs (`ci.yml:38-41`; run 39866175520).
-- The X spike (`spike/intro-animation`) is on MapLibre 5 and awaiting Lee's smoothness check on a
-  Netlify draft.
+- **CI is red** at `npm audit --audit-level=high`, so Lint never runs (`ci.yml:38-41`, run
+  39866175520). The three high groups are all dev-chain: brace-expansion (via eslint and
+  eslint-config-next, minimatch), js-yaml (via @eslint/eslintrc), vite (with the launch-editor
+  advisories).
+- `@mapbox/vector-tile` and `pbf`, which the fidelity suite's MVT reader imports, are still
+  transitive under MapLibre 6 (`npm ls`: maplibre-gl 6.15.0 → @mapbox/vector-tile 3.0.0, pbf
+  5.1.2), unpinned.
+- `scripts/pipeline/rebuild.sh` is five vector phases into **one** archive, then manual steps
+  (edit `PMTILES_URL`, run `deploy-tiles.sh`); no raster, no story products, no fidelity run.
+- The X spike (`spike/intro-animation`) is on MapLibre 5, on a Netlify draft awaiting Lee's
+  smoothness check.
 
 ## The bar, mapped to work
 
-| Bar item | Cleared by | What the gate checks |
+| Bar item | Cleared by | Gate condition |
 |---|---|---|
-| No known serious bug: core map | M1a, M1b (with the three DataLayer public-path bugs), M2, M3a, MAPFIX, T-pre | MATRIX sweep clean; M1a/M3a live guards green |
-| No known serious bug: landing | S0a, S0b, S1-lite, then the landing decision (L) | MATRIX sweep; S0/S1-lite truth checks |
-| No known serious bug: calculator | the calculator decision (K) | K.4 guards, or the calculator hidden |
-| Every public figure traced | NUM, with S0a (copy), M2 (share card, Discover 1,131 ha, popups), MERGE (if L = film), K | NUM ledger: every figure on the landing, calculator and popups has a script, a test and a value match on the live build |
-| ~10 s to first map data, 4G phone | SPEED (guard), M1b (raster visibility, terrain), T-pre (per-layer archives), S1′ weight budget (if L = film) | SPEED guard green on the gate build |
-| Tiles freshly rebuilt | PIPE (one command), then REBUILD (Lee runs it) | fidelity suite result recorded for the rebuild |
-| Error monitoring, uptime alerting | OPS | a test error and a test outage each reach Lee |
+| No known serious bug | M1a (R1-02, R1-05), M1b (R1-03), M2, M3a, MAPFIX, T-pre, S0a, S0b, S1-lite, L, K; MapLibre 6 follow-through (popups under v6's overscale, overlapping line opacity) in M1b | MATRIX sweep clean **and** TRACEABILITY's serious set closed: every item fixed with a guard or hidden with a test |
+| Every public figure traced | NUM, with S0a, M2, S1-lite, MERGE/S1′ (if L = film), K | NUM's generated ledger complete; its gate check passes on the gate build after REBUILD |
+| ~10 s to map data, 4G phone | SPEED (guard), M1b (raster visibility, terrain), T-pre (per-layer archives), S1′ weight budget or S2 story half (per L) | SPEED guard green on the gate build, on the profile Lee rules (decision S) |
+| Tiles freshly rebuilt | PIPE, then REBUILD | fidelity suite **green** on the rebuild; a red layer is hidden (hide-don't-block) and listed |
+| Monitoring, uptime | OPS | a test error (client and edge) and a test outage each reach Lee |
 | Green CI | CI | three consecutive green runs on main, lint included |
-| Feedback, known issues, beta label | BETA | a test report lands in the triage list with place, zoom, layers |
+| Feedback, known issues, label | BETA | a test report lands with place, zoom and layers; known-issues note published |
 
-## New relays (gaps the approved program did not cover)
+**TRACEABILITY's serious set** (Phase 0 builds it): the Oct 2 synthesis findings and the 09-20
+program items already in its scope, **plus** the 08-22 visual audit's open findings, the
+handoff's owed defects and the MapLibre 6 follow-through, each classified serious or cosmetic by
+the definition above. Re-classified at each wave close.
+
+## New relays
 
 Each gets its own child plan, critic (three rounds max, round one at xhigh) and relay, written
-just in time like every other relay.
+just in time. Public copy in any of them (label note, known-issues page, form text) is shown to
+Lee before merge, as story copy is.
 
-- **CI (Simple, this session, first).** Clear the dev-only highs (vite and launch-editor bumps,
-  or `--omit=dev` on the audit step with the dev chain tracked; the child plan picks and states
-  why); lint runs; the fidelity suite (`scripts/audit-*.ts`, `audit-all.ts`) either joins CI or runs
-  inside PIPE with its result written to a dated file. Done when main is green three runs running.
-- **OPS (Simple, this session, early).** Error capture for client-side exceptions and edge-function
-  failures, and uptime monitors on `/`, `/map`, the WFS proxy and one PMTiles range request.
-  Free tiers. *(call)* UptimeRobot for uptime (already connected); the error tool is chosen in
-  the child plan against the privacy rule: no IP retention, no session replay, URL scrubbed to
-  origin + path as C6 does for the tracker. /privacy names both. Probe the tool's free-tier limits
-  before writing the plan. Early because every later relay benefits from seeing its errors.
-- **NUM (Standard, Lane S with a Lane M batch).** A ledger, `research/beta-gate/numbers.md`, of
-  every figure the public sees: landing copy, hero, film captions (if L = film), calculator
-  outputs, popups, share card, Discover panel, legend notes. Per figure: the string, where it
-  shows, the script that derives it, the test that pins it, floored per the 2026-09-02 ruling, or
-  "cited" with a visible source link. Figures with no derivation are cut or sourced; "larger than
-  Nova Scotia" is the known open one. The ledger is checked against the live build at the gate.
-- **MERGE (Standard, Lane S; only if L = film).** The inventory + FTEN measure merge, with the
-  three defects found 2026-10-08: the cap on max(attribute, geometry), overlap de-duplication, and
-  versioned immutable `/raster` paths (the third already belongs to S2-pages, C1). Required
-  because the hero (5.8M since 1950) and the film (10M since 1900) cannot both stand on one page.
-  The 2026-10-08 "Logged hectares means..." amendment already holds the public figure at 5.8M
-  until this merge.
-- **MAPFIX (Standard, Lane M, after M1b; pulled forward from C′ and T).** The two /map defects
-  the palette work found (2026-10-11): the z4-9 forest-age raster overstates logging about 1.7x
-  (area-true rebuild) and draws above fire, so fire is invisible at z9 and below (z-order). The
-  Canopy palette (DECISIONS 2026-10-11) is applied in the same rebuild, since the ruling says
-  applying it needs that rebuild. Re-verify both defects on the live build before the plan is
-  written: they are recoloured-capture measurements, not yet confirmed.
-- **T-pre (Complex, Lane M; pulled forward from T).** Per-layer PMTiles archives in place of the
-  single archive that carries all 12 vector layers in every tile (median 26.5 MB per z7 view;
-  `research/map-visual-audit-2026-08-22.md` P3), and the tippecanoe flag change that closes the z10+ straight-line holes
-  (missing data). Release under C1 (versioned path, old version kept). The rest of T stays in beta.
-- **PIPE (Standard).** `rebuild.sh` becomes one command from government sources to versioned
-  tiles on R2, with the fidelity suite run and its result written. Run on Lee's machine (the
-  sandbox cannot render tiles; DECISIONS). The charter wording for this is with Lee via
-  session-d09d2c; this relay does not touch CHARTER.md.
-- **SPEED (Simple, Lane M).** A throttled guard: cold `/map` and a cold deep link on a pinned
-  mid-range-phone CPU and 4G network profile, first data layer painted (probe count > 0 and
-  layer pixels) within 10 s. **This amends the M1a rule** "throttled-profile timings are recorded
-  as measurements, never acceptance": for beta, this one throttled budget is acceptance, by Lee's
-  speed bar. The profile is pinned in the child plan; the audit's Slow 4G figure (37-42 s) is
-  recorded beside it for comparison. *(call)* On the landing, the bar applies to the first frame
-  of map data the reader is shown, not to the hero photo.
-- **BETA (Standard, Lane M, after M3a).** The beta tag and its one-line note; the known-issues page;
-  the in-map report form on Netlify Forms capturing place, zoom and visible layers, optional
-  email; /privacy names the form; the form registered in the static export so Netlify detects it
-  (probe this first: `output: "export"` with Netlify Forms). M3a already moves the bug-report
-  button into the layer sheet, so BETA follows M3a and replaces that button's mailto.
+- **CI (Simple, this session, G0; released with or right after P0's docs commit).** Clear the
+  three dev-chain high groups by bumps, or by `--omit=dev` on the audit step with the dev chain
+  tracked; the child plan picks and says why. Lint runs. Pin `@mapbox/vector-tile` and `pbf` as
+  direct dev deps (the install needs Lee's terminal). Run `npm run audit:ci` once on v10 as a
+  baseline and record the result; if it is red, the failing audits are classified into
+  TRACEABILITY and owned before REBUILD. Done when main is green three runs running.
+- **OPS (Simple, this session, G1).** Client and edge error capture; uptime monitors on `/`,
+  `/map`, the WFS proxy and one PMTiles range request; free tiers. *(call)* UptimeRobot for uptime;
+  the error tool chosen in the child plan under C6: page URL, request URL and breadcrumbs scrubbed
+  to origin + path, default PII capture off, no IP retention, no replay; C6's sentinel-coordinate
+  payload test extended to one captured client error and one edge error. Sampling or rate limits,
+  and an alert at 80% of the free quota, so one bug on every load cannot drain it into silence.
+  /privacy names the tool. Probe the free-tier limits before the plan.
+- **NUM (Standard, Lane S with a Lane M batch, G2 to the gate).** The figure set: static public
+  copy and aggregates (landing, hero, film captions if L = film, calculator outputs, share card,
+  Discover panel, legend notes, the /map timeline's cumulative readout and per-year histogram,
+  the FOM open-comment count, the cited 0.1% / 35,000 ha). Per kind, "traced" means: an
+  aggregate has a derivation script and a test pinning its value, floored; a cited figure has a
+  visible source link and a test pinning the string to the source value; a live figure (the FOM
+  count) follows C4; per-feature popup attributes are raw data, traced by a field-mapping test, as
+  in the 09-02 refresh. The ledger is **generated** from those tests (each registers its figure),
+  never hand-kept. The gate check renders the MATRIX routes and fails on any figure-bearing string
+  in the static copy that the ledger does not register. "Larger than Nova Scotia" is sourced or cut.
+- **MERGE (Standard, Lane S, only if L = film).** The inventory + FTEN splice for 1900-2025, so
+  the hero and the film carry one measure. Defects (1) and (2) of 2026-10-08 are **not** MERGE's:
+  they go to S1-lite (below). Defect (3), versioned immutable `/raster`, stays with S2-pages (C1).
+- **MAPFIX (Standard, Lane M, after M1b; pulled forward from C′).** The z4-9 forest-age raster
+  overstates logging about 1.7x (area-true rebuild) and draws above fire, hiding it at z9 and
+  below (z-order). The Canopy palette is applied in the same rebuild, because the 2026-10-11
+  ruling ties it there; the trade is a Jen spec, a Stage 3 review and a phone look on a
+  bar-critical relay. Re-verify both defects live first; they are recoloured-capture
+  measurements. Release under C1 (versioned raster path).
+- **T-pre (Complex, Lane M, after M1b; pulled forward from T).** All four build-side items of the
+  08-22 P3 fix in one build: per-layer archives (today one archive carries all 12 vector layers in
+  every tile; median 26.5 MB per z7 view, `research/map-visual-audit-2026-08-22.md` P3), forest-age
+  vectors from z10 only, non-public layers out, and the tippecanoe flags that close the z10+ holes.
+  Plus the reader switch (renderer keyed by tile URL) in a deploy of its own with old-link
+  fixtures, per C1. Touches no `netlify.toml` or headers (if it must, it releases after S2-pages).
+  The rest of T (E&N mask, big-tree subset, empty-tile manifest) stays in the beta.
+- **PIPE (Complex, after MAPFIX and T-pre).** `rebuild.sh` becomes one command from one
+  government pull to versioned artifacts: per-layer vector archives (T-pre's layout), the
+  area-true raster (MAPFIX's method), **and the story products** (scrub tables, overlay frames or
+  dots, totals) so the story and the map always share a vintage, as the "story and map alike"
+  ruling requires. Then the fidelity suite, a result file recording layer count and archive sizes
+  against the previous version (fails on a drop), the C1 version constant, and a runbook
+  (`docs/REBUILD.md`) for Lee's quarterly run. MAPFIX and T-pre prove their changes on current
+  data; PIPE packages them; REBUILD re-runs the package on fresh data. Three builds, not four.
+  Does not touch CHARTER.md (the wording is with Lee via session-d09d2c).
+- **SPEED (Simple, Lane M, after M1a).** A throttled guard: cold `/map` and a cold deep link, cache
+  disabled, first data layer painted (probe count > 0 and layer pixels) within 10 s, on the profile
+  Lee rules (decision S). The guard records the WebGL renderer string and refuses to report on
+  llvmpipe or SwiftShader; the build machine's GPU needs the driver fix (reboot) or the guard runs
+  on another host. **This amends M1a's rule** that throttled timings are measurements, never
+  acceptance: for beta, this one budget is acceptance, by Lee's speed bar.
+- **BETA (Standard, Lane M, after M3a).** The tag and its one-line note; the known-issues page;
+  the in-map report form on Netlify Forms capturing place, zoom and visible layers, saying on the
+  form that the view is sent, optional email, a honeypot field; the bug-report button opens the
+  form, and **the mailto stays as the fallback link on the form and on /privacy** (DECISIONS
+  2026-10-23). /privacy names the form, where submissions are held (Netlify, under Lee's account)
+  and how long they are kept after triage. Probe first: Netlify Forms with `output: "export"`, the
+  plan's submission cap and what happens past it. Also pulled in from M3b: C6's two-decimal
+  rounding of geolocated coordinates written to the hash (one call), so no public launch carries
+  exact locations in shared links.
 - **MATRIX (gate sweep, this session).** Headless Playwright on Chromium, Firefox and WebKit, phone
   and desktop viewports, over a fixed route list (`/`, `/map` cold, deep links, search, share,
-  every public layer at z5, z9, z12, the calculator or its absence, /privacy, the report form).
-  Folds in the owed agent checks (a11y P2 cluster, audit P0+P1). Then Lee's phone look on iPhone
-  Safari and Android Chrome, plus his two owed phone checks. Per DECISIONS his checks never block
-  a release; at the gate, a serious bug he finds is by definition known, so it is fixed or hidden
-  before the label goes up.
-- **REBUILD (Lee's terminal, at the gate).** The fresh rebuild with PIPE's command, its fidelity
-  result recorded, released under C1 like any data change.
+  every public layer at z5, z9, z12, the calculator or its absence and every route to it, /privacy,
+  the form). Folds in the owed agent checks (a11y P2 cluster, audit P0+P1). Then Lee's phone look
+  on iPhone Safari and Android Chrome, with his two owed checks. His checks never block a release
+  (DECISIONS); at the gate, a serious bug he finds is by definition known, so it is fixed or hidden
+  before the label.
+- **REBUILD (Lee's terminal, at the gate).** PIPE's command on fresh data, under the 2026-10-23
+  ruling (by Lee, one command) and because the R2 upload needs his yes. Released under C1. NUM and
+  MATRIX run after it, on the gate build.
 
-## Moved out of the gate: built during the beta
+**S1-lite, scope added:** measure-merge defects (1) and (2) of 2026-10-08 go into its area
+contract unconditionally: the 2,000 ha cap on max(attribute, geometry), which today lets nine
+polygons (82,920 ha) through and puts 1991-2003 up to 15% high, and overlap dissolved before
+summing (+1.7% in 2025). They overstate, so they are serious whatever L is.
 
-- **Goal (2):** B′ (the accountability view: Phase B rebase plus tenure attribution, Ruling H).
-  **Two of goal (2)'s three items have no plan anywhere in the program:** the watershed report
-  card and the conservation priority analysis. They become **W** and **P**, each needing a grill
-  and a plan, during beta. The beta cannot exit until all three ship.
+**Phase 0.2, record list reconciled.** Before writing, reconcile against the entries written since
+Phase 0 was specified (2026-10-08 film, amended twice; 10-09 dots; 10-11 Canopy; 10-23 beta).
+Ruling E is not recorded (Canopy replaced it). X1-X3 are recorded as the film entry already
+states them. **Ruling D is recorded bounded:** the dollar bar stays "until the redesign ships or
+the beta label goes up, whichever is first" (decision K settles which).
+
+## Built during the beta
+
+- **Goal (2):** B′, the accountability view (Phase B rebase plus tenure attribution, Ruling H).
+  **The watershed report card and the conservation priority analysis have no plan anywhere in the
+  program;** they become **W** and **P**, each with a grill and a plan, during the beta. The beta
+  cannot exit until all three ship.
 - C′ (the rest of the Phase C re-spine), D′ (FOM layer), E′ (E2-E5), the rest of T.
-- **M3b** *(call)*: timeline chrome, search clear of zoom, inactive-chip contrast, the shared view-state
-  parser, geolocate cap, phone polish. All cosmetic under the "serious" definition except shared
-  links dropping the year and class filters; that one is listed on known-issues. If Lee counts a
-  shared link that loses its year as broken, M3b moves back into the gate.
-- The calculator, if K = hide. The film, if L = scroll story.
+- **M3b**, less the coordinate rounding (now in BETA) and, if Lee says so, the shared view-state
+  parser (decision V).
+- The calculator if K = hide; the film if L = scroll story.
+
+Each is indexed in the ROADMAP Parking Lot when this plan is approved.
 
 ## The order
 
 Lanes as before: Lane M (map), Lane S (story and pages), and this session (orchestrator, ops,
-calculator design). Each wave's relays may run in parallel across lanes; releases stay serialized
-under C2.
+calculator design). Releases stay serialized under C2; C7's heavy-build lock covers G4-G5, where
+both lanes build heavy.
 
 | Wave | This session | Lane M | Lane S |
 |---|---|---|---|
-| G0 | Phase 0 (records, audit import, TRACEABILITY now also mapping every bar item), **CI**, P0b | — | — |
+| G0 | Phase 0 (records reconciled; TRACEABILITY with the serious set), **CI**, P0b | — | — |
 | G1 | **OPS** | M1a (probe release, then core) | S0a (copy, privacy) |
-| G2 | **NUM** ledger drafted (inventory only) | M1b + the three DataLayer bugs | S0b (dated-only overlays) |
-| G3 | K.2 grill, K.3 design (if K = build) | M2 | S1-lite; X spike closes on Lee's verdict |
-| G4 | **PIPE**; **SPEED** guard | M3a; then **MAPFIX** | **MERGE**, then S1′ film (if L = film); S2-pages |
-| G5 | K.4 (if K = build; after M3a, shared panel slot) | **T-pre**; **BETA** | NUM closes: every figure traced |
-| Gate | **REBUILD** (Lee), **MATRIX**, Lee's phone look, known-issues note written | — | — |
-| Beta | triage of reports; exit clock | B′, W, P (goal 2); C′, D′, E′, rest of T, M3b | film or calculator if deferred |
+| G2 | **NUM** figure set and test registry started | M1b (+ MapLibre 6 follow-through); **SPEED** guard | S0b (dated-only overlays) |
+| G3 | K.2 grill, K.3 design (if K = build) | M2; **MAPFIX** | S1-lite (+ defects 1, 2); X closes on Lee's verdict |
+| G4 | **PIPE** | M3a; **T-pre** | **MERGE** then S1′ (if L = film), or S2 story half (if L = scroll story); S2-pages |
+| G5 | K.4 (if K = build; after M3a) | **BETA** | — |
+| Gate | **REBUILD** (Lee); NUM check; **MATRIX**; Lee's phone look; known-issues note | — | — |
+| Beta | report triage; exit clock | B′, W, P; C′, D′, E′, rest of T, M3b | film or calculator if deferred |
+
+**Critical path per branch.** No relay here has been sized yet, so no calendar duration is
+claimed; the child plans size them. What the graph does say:
+- Lane M is the spine on every branch: M1a → M1b → (MAPFIX, T-pre) → PIPE → REBUILD, with M2 →
+  M3a → BETA beside it.
+- **K = build lengthens it**: K.4 cannot start until M3a releases, so the calculator relays run in
+  series after the map spine's middle.
+- **L = film runs in parallel** in Lane S (S0a → S0b → S1-lite → MERGE → S1′) and lengthens the
+  road only if S1′ (Complex) outlasts Lane M's remaining chain, or if the spike fails Lee's check.
+- **The shortest road** is L = scroll story, K = hide: no MERGE, no S1′, no K.4; S2 story half in
+  their place.
 
 ### Dependency graph (additions and changes)
 
-The original graph's rows stand except as changed here. Build edges first, then release edges.
+The original rows stand except as changed here.
 
 | ID | Build after | Release after (plus C2) |
 |---|---|---|
-| CI | — | — (docs and config only; first release) |
+| CI | — | with or right after P0 |
 | OPS | P0b | CI |
-| NUM (ledger) | S0a | closes after S0b, M2, S1-lite, MERGE/S1′, K.4 or hide |
-| MERGE | S1-lite | S1-lite |
-| S1′ | X verdict, MERGE | MERGE |
-| MAPFIX | M1b | M2 |
-| PIPE | P0b | — (tooling; its first real run is REBUILD) |
-| T-pre | M1b, PIPE | MAPFIX (both change raster or vector data; C1 versioned) |
-| SPEED | M1a | M1b (the guard needs M1a's probe) |
+| NUM | S0a | its gate check runs after REBUILD |
+| SPEED | M1a | M1b |
+| MAPFIX | M1b | M2 (C1 versioned raster) |
+| T-pre | M1b | MAPFIX (C1 versioned; reader switch its own deploy) |
+| PIPE | MAPFIX, T-pre | — (tooling; first real run is REBUILD) |
+| MERGE | S1-lite (L = film) | S1-lite |
+| S1′ | X verdict = pass, MERGE | MERGE |
+| S2 story half | L = scroll story, or X verdict = fail | S1-lite |
+| K.4 | K.3, M3a released | **M3a** (was M3b) |
 | BETA | M3a | M3a, OPS |
-| REBUILD | PIPE, T-pre, MAPFIX | all G-wave releases green |
+| REBUILD | PIPE | every G-wave release green |
 | MATRIX | REBUILD released | — |
-| Beta label | MATRIX clean, Lee's look, NUM closed, CI green, OPS live, SPEED green | — |
-| B′ | label up (was M3b) | M3a, S1-lite (Ruling A unchanged) |
+| Beta label | MATRIX clean, Lee's look, NUM check, TRACEABILITY serious set closed, CI green, OPS live, SPEED green | — |
+| B′ | label up | M3a, S1-lite (Ruling A unchanged) |
 | M3b | label up | — |
 
-## Two decisions for Lee before any build
+**If the spike fails Lee's smoothness check under L = film,** L reverts to scroll story: S2 story
+half enters the gate in G4, MERGE and S1′ move into the beta.
 
-Both change the length of the road to beta. They are brought to him in conversation in the
-seven-part shape; this file records the outcome.
+## Four decisions for Lee
 
-- **L. The landing at beta: the film, or the corrected scroll story?** Pending.
-  - *Film:* S1′ (with MERGE) is inside the gate. One landing build, nothing thrown away; the
-    longest pole with K. Depends on the spike passing his smoothness check.
-  - *Scroll story:* S0a, S0b and S1-lite correct it and it opens the beta. The film ships during
-    the beta. The scroll story's own speed work (S2 story half) would then be needed for the speed
-    bar and thrown away when the film lands.
-- **K. The calculator at beta: redesigned, or hidden?** Pending.
-  - *Redesign first:* K.2-K.4 inside the gate. The teardown (every constant unsourced, 67% of area
-    on a default species, a corner clip dropping 4-14% of polygons) means no small patch meets the
-    number bar.
-  - *Hidden:* off for beta under the hide-don't-block rule, rebuilt during beta.
-  - **Either way, Ruling D ends at the gate.** Lee ruled 2026-10-02 that the live "$570M" dollar
-    bar stays until the redesign ships, recorded as an accepted known overstatement. A known
-    overstatement cannot be live on beta day, so D is amended in DECISIONS once Lee chooses.
+Brought to him in conversation in the seven-part shape. **None is needed before G3**; G0-G2 can
+start on his look at this order. The outcomes are recorded here and in DECISIONS.
+
+- **L. The landing at beta: the film, or the corrected scroll story?** His 2026-10-08 ruling is
+  that the landing *is* the film; scroll story at beta means opening on a page he has ruled is to
+  be replaced, and its speed work (S2 story half) is thrown away when the film lands.
+- **K. The calculator at beta: redesigned, or hidden?** The teardown (every constant unsourced,
+  67% of area on a default species, a corner clip dropping 4-14% of polygons) means no small patch
+  meets the number bar. Hidden means every route to it goes: the landing and nav references, the
+  CO2 panel in the layer sheet, the PDF route, old share links. Either way ruling D ends at the gate.
+- **S. Which 4G?** The program's own milestone is "within 10 s on Slow 4G" (Lighthouse's mobile
+  profile: 150 ms round trip, about 1.6 Mbps down, 4x CPU slowdown); Chrome's faster 4G preset is
+  easier. And on the landing, does the bar mean the first frame of map data the reader is shown
+  *(call, read back to him)*, not the hero photo?
+- **V. Shared links that drop the year and the class filters:** fix before beta (pull M3b's
+  view-state parser into the gate), or list it as known? A journalist's shared link is the
+  outreach path.
 
 ## Pre-mortem
 
-1. **The gate never arrives.** K, the film, T-pre and goal (2)'s unplanned W and P stack up and
-   the beta drifts for months. Guard: the two decisions above are the levers, named before
-   building; hide-don't-block applies at every wave, and the orchestrator reports the critical path
-   (longest remaining pole) at each wave close.
-2. **A wrong number ships on beta day anyway.** A figure appears that NUM never inventoried
-   (a popup field, a share card, a film caption added late). Guard: NUM's final check runs on the
-   gate build, extracting rendered text from the MATRIX route list and failing on any digit string
-   not in the ledger.
-3. **Beta opens on a broken map nobody tested on a real phone.** Headless WebKit is not iPhone
-   Safari. Guard: Lee's phone look is a step of the gate, not an owed check; the speed guard runs
-   throttled; known-issues is written before the label.
+1. **The gate never arrives.** K, the film, T-pre and goal (2)'s unplanned W and P stack up.
+   Guard: L and K are named before G3; hide-don't-block at every wave; the orchestrator reports
+   the critical path at each wave close.
+2. **The story and the map disagree on beta day.** REBUILD refreshes the tiles but not the hero.
+   Guard: PIPE rebuilds the story products from the same pull; NUM checks after REBUILD.
+3. **The form goes quiet and quiet reads as clean.** Spam fills the free cap. Guard: the honeypot,
+   the cap probe, and OPS's uptime check extended to a weekly test submission.
 
 ## Load-bearing assumptions
 
-- The CI fix is a dev-dependency bump with no runtime change. If vite 8.1.6+ breaks vitest, CI
-  takes a real relay. Check before the CI plan.
-- Netlify Forms works with this static export. If not, BETA needs a different form path that
-  still has no backend of ours; probe first.
-- An error-monitoring free tier exists that meets the privacy rule. If not, OPS falls back to an
-  edge-logged error beacon; the plan states which.
-- MAPFIX's two defects are real. They were measured on recoloured captures; if either does not
-  reproduce live, MAPFIX shrinks to the palette.
+- The fidelity suite runs on v10. Unverified; CI's baseline run resolves it in G0.
+- The CI fix has no runtime change. All three high groups are dev-chain (verified); residual
+  risk is a vite bump breaking vitest.
+- Netlify Forms works with this static export and its cap suffices. BETA's probe resolves both.
+- A free error tool meets C6. If none does, OPS falls back to an edge-logged error beacon.
+- MAPFIX's defects reproduce live; if not, MAPFIX shrinks to the palette.
 
 ## Inversion
 
-The rejected alternative is the approved order: finish Waves 1-6 as written, then open the beta.
-It wins only if goal (2) were a beta precondition, which Lee ruled it is not; and it would keep
-B′, C′, D′ and E′ ahead of the monitoring, CI, feedback and speed work the beta needs.
+The approved order (Waves 1-6, then beta) wins only if goal (2) were a precondition, which Lee
+ruled it is not; it would keep B′, C′, D′ and E′ ahead of the monitoring, CI, feedback and speed
+work the beta needs. The minimal gate (scroll story, calculator hidden, per-layer archives only
+if SPEED stays red after M1b) is the shortest road; it is on the table through L and K, and per-
+layer archives stay in because the same build closes the z10+ holes, which are missing data.
 
 ## Review Focus
 
-1. A figure added after NUM's inventory reaches the gate build. Owner: NUM's rendered-text check.
-2. The speed guard passes on a warm cache. Owner: SPEED (cold context, cache disabled, both
-   asserted in the test).
-3. A hidden layer or calculator is still reachable by deep link or preset. Owner: BETA (hide means
-   unreachable, tested on the URL paths).
-4. A test report from the form loses its place or layers on a phone. Owner: BETA.
-5. The rebuild's fidelity result is green on a partial build. Owner: PIPE (the result records
-   layer count and archive sizes against the previous version and fails on a drop).
+1. A figure added after NUM's inventory reaches the gate build. Owner: NUM's gate check.
+2. The speed guard passes on a warm cache or software rendering. Owner: SPEED.
+3. A hidden layer or calculator is still reachable by deep link, preset or old share link. Owner:
+   BETA (hide means unreachable, tested on the URL paths) and K = hide.
+4. A report from the form loses its place or layers on a phone. Owner: BETA.
+5. The rebuild's fidelity result is green on a partial build. Owner: PIPE.
+
+## Durable state
+
+- The exit clock (label date, pauses, resumes, the four-week date) and the known-issues list:
+  `research/beta-gate/clock.md` and the public known-issues page, written by the project session;
+  the coordinator's daily pass reads the form submissions when no project session is live.
+- Files this amendment touches: this file; the blockquote in `glowing-dazzling-brooks.md`;
+  `BETA.md`; ROADMAP `current`/`next` and, on approval, the Parking Lot; handoff owed items;
+  DECISIONS (the 2026-10-23 entries; D and the four decisions as they land).
 
 ## Revision log
 
-**2026-10-23, written.** Re-sequenced from the path-to-beta grill (marvin session-d09d2c,
-confirmed 2026-10-23), relayed to this session. Critic round 1 pending.
+**2026-10-23, written.** Re-sequenced from the path-to-beta grill.
+
+**2026-10-23, Fable critic r1 (xhigh): FAIL** (`beta-resequence-critic.md`, 2 FAIL, 13 CONCERN).
+Codex weekly window at 100%, so the critic ran on Fable (fallback). Folded:
+1. Graph: K.4 releases after M3a; S2 story half placed; the film fallback stated; T-pre's header
+   edge disclaimed; MAPFIX and T-pre marked C1.
+2. Defects (1) and (2) moved to S1-lite unconditionally.
+3. PIPE rebuilds the story products too; NUM checks after REBUILD.
+4. PIPE after MAPFIX and T-pre, Complex; T-pre takes all four P3 items and the reader switch.
+5. The mailto stays as fallback; the four grill calls re-attributed (here and in DECISIONS); the
+   REBUILD reason corrected; Phase 0.2 reconciled with D bounded; coordinate rounding into BETA.
+6. NUM: figure set, "traced" per kind, generated ledger, a static-copy check.
+7. CI: all three high groups; the vector-tile/pbf pin; the `audit:ci` baseline; red fidelity hides.
+8. SPEED: profile made decision S; renderer check.
+9. BETA/OPS: cap, honeypot, retention, quota alert, request scrub with sentinel test; durable
+   clock.
+10. Parking Lot on approval; file list; the bug split; the CI wording; M3b's parser as decision V.
+
+Rejected in part:
+- **Durations per wave.** No relay is sized, and a guessed calendar would be invented data. The
+  critical path is stated per branch instead.
+- **"MapLibre 6 no longer carries the MVT packages."** `npm ls` shows it still does (verified).
+  The pin is kept as hygiene, with no urgency claimed.
