@@ -26,8 +26,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Agent checks on production** (headless, per the 2026-10-07 amendment): a11y P2 cluster (contrast, keyboard shortcuts, focus/dialog, pinch-zoom) and audit P0+P1 (CSP report-only, re-render cascade, CI gates). Timeline lockstep (Phase A, global-state year) is an acceptance condition of M1a's timeline guard, not a separate check. The CO2 calculator check is retired: K rebuilds it.
 
-- **2026-10 remediation program APPROVED 2026-10-07** (Lee, grill; no round 9): .claude/plans/audit-remediation-2026-10/glowing-dazzling-brooks.md. Next: Phase 0. Every child plan gets at most three critic rounds, round one at xhigh effort (Lee 2026-10-07: max has diminishing returns) and briefed to report every finding (DECISIONS, 2026-10-07).
-
 - **Ending-video review (2026-10-07, in progress):** all three docked versions rendered for the first time, in throwaway worktrees under `/tmp/claude-1000/-home-leesalo--local-share-marvin-worktrees-opencanopy-canopy/38525f5e-10fe-44aa-916f-99970f16ebe9/scratchpad/renders/` (v1 = dock/dolly-live-scrub, v2 = dock/dolly-phase2-video, v3 = relay/story-video-phase2-render-spec). Sent to Lee: v1 phone + desktop recordings, v2 desktop + mobile video, today's live site. v3 (whole story, ~1-2 h) was rendering when the session paused; output lands in `renders/v3/.render-scratch/story-video/out/`. v2 shipped a real bug: StoryMap's binary-reveal effect drops its write when the style is not loaded and never retries, so a constant-opacity render page renders the reveal at 0 (patched in the throwaway copy only). The worktrees are throwaway; remove with git worktree remove once Lee has seen v3. Concept B spike sketch: https://claude.ai/artifact/VEMwA8EADqLbKQcCzw8A3j (sample comment count; the dated-record curve is ~89% after 2000, a pacing question for S1-lite).
 
 - **Dot layer for the intro spike (Lee, 2026-10-09: swap in after Ted's mechanics land):** build first-year-encoded blue-noise dot images per dataset (VRI 1900-1999, FTEN 2000-2025, fire 2017-2025) from research/overpaint-2026-10-08/scripts (yearencode.py / province.py), decode on the CPU into a MapLibre canvas source, hand over to /map's vector cutblocks from z8. Load during the hero (~21 kB cutblocks). Disclosure line in the beat sheet.
@@ -41,6 +39,8 @@ in this project has already been ruled on, usually for a reason that is not obvi
 - **GPU rendering is broken on the build machine (2026-10-11):** nvidia-smi reports 'Driver/library version mismatch' (NVML 580.178 userspace vs an older loaded kernel module), so headless Chromium falls back to llvmpipe. On 2026-10-07 the same flags gave the GTX 1060. A reboot should fix it; until then every recording is software-rendered and choppy, and is no evidence of how smooth the film is.
 
 - - **MapLibre 6 follow-through (shipped 2026-10-22 by session-d09d2c, main 120cc10):** (1) eyes owed on /map: data overlays at zoom, v6's deeper default overscale (queryRenderedFeatures popups), overlapping semi-transparent lines in registry.ts. (2) The intro spike branch (spike/intro-animation) is still on MapLibre 5: merge main into it, switch its maplibre imports to namespace form, and re-verify the dot canvas source, the offscreen warm-up map and the film clock's idle gates under v6 before any further draft. Ship note: ~/marvin/state/security-2026-10-22/opencanopy-shipped.md.
+
+- - **Path to beta (Lee, 2026-10-23; BETA.md; DECISIONS 2026-10-23):** the 2026-10 remediation program is re-sequenced so the beta gate comes first: .claude/plans/audit-remediation-2026-10/beta-resequence.md (critic r1 FAIL, r2 CONCERN, r3 PASS, Fable at xhigh because the Codex weekly window was at 100%). Lee's four answers: the film opens the beta, with the figure corrected now; the calculator is redesigned first; the speed bar is on faster 4G; shared links are fixed before beta. Next: G0 (Phase 0 with its record list reconciled, CI, P0b), on Lee's go. Every child plan gets three critic rounds at most, round one at xhigh. Waiting on Lee: keep or strike the two attribution notes on the 2026-10-23 bar and exit entries; a terminal install of @mapbox/vector-tile and pbf as dev deps (CI, G0); a reboot to fix the GPU driver before SPEED (G2).
 
 ## Open questions awaiting Lee
 
@@ -62,6 +62,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-10-23: path-to-beta rulings recorded, program re-sequenced, Lee's four beta decisions
+
+Relayed from marvin session-d09d2c (grill confirmed 2026-10-23). Six DECISIONS entries plus attribution notes; BETA.md; ROADMAP current/next refreshed (dated Sep 2 until now). beta-resequence.md amends glowing-dazzling-brooks.md: ten relays inserted (CI, OPS, NUM, MERGE, MAPFIX, T-pre, PIPE, SPEED, BETA, MATRIX), plus REBUILD, HIDE-K and VIEWSTATE; B′, C′, D′, E′, M3b and the rest of T deferred into the beta; W (watershed report card) and P (priority analysis) named as unplanned goal-(2) work. Critic: three rounds. Lee ruled: L = film, figure corrected now (amends the 2026-10-08 hold: the hero very likely floors at 5.7M against the shipped 5,888,477 ha once the cap and overlap fixes land); K = redesign first; S = faster 4G (against the Slow 4G recommendation); V = fix shared links before beta. CI is still red on dev-chain highs (brace-expansion, js-yaml, vite/launch-editor).
 
 ### 2026-10-22: main merged into marvin/canopy after the MapLibre 6 security ship
 

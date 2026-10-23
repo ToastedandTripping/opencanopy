@@ -37,11 +37,13 @@ The in-story ending zoom (the dolly) went through three relays and never shipped
 The landing page said "8 million hectares" from 2026-06-18 to 2026-09-02 on a count nobody could rerun; the repo's own scrub table said 7.06M, and once the /map layer's 2,000 ha tenure-boundary cap was applied to the story pipeline the supportable figure was 5.89M. Lee's ruling: better to underestimate than to provide a higher number we can't source. So every figure shown to the public (hero stats, chapter copy, calculator values, the PDF) is derived from a file in the repo by a rerunnable script, pinned by a test that reads that file (`src/test/lib/hero-figure.test.ts` is the pattern), and floored when rounded for copy. A figure that cannot be derived is not shown.
 
 ### Logged hectares means dated 1950-2025 FTEN cutblocks under the 2,000 ha cap, in the story and on the map alike.
-*2026-09-02, per Lee, amended 2026-10-08*
+*2026-09-02, per Lee, amended 2026-10-08, amended 2026-10-23*
 
 The FTEN cut-block layer carries 230 polygons of 2,000-92,000 ha with no client and repeated areas under different dates: tenure boundaries, not cutblocks. The /map cutblocks layer has always excluded them (`CUTBLOCK_AREA_CAP_HA`); the story's scrub table and year overlays did not, so the red picture and its caption included 2.45M ha that the map itself refuses to call logging. Both pipelines now apply the same cap and the scrub JSON declares it. Undated blocks (1.12M ha under the cap) are painted as the muted pre-record baseline but never counted in a "since 1950" figure, because their timing is unknown. Phase B's harvest leaderboard must use the same definition or its public totals will diverge from the map.
 
 **Amended, Lee, 2026-10-08:** Lee, 2026-10-08: the FTEN record alone hides early logging (78,488 ha dated before 1990, against 3,136,257 ha by the forest inventory's HARVEST_DATE; research/vri-harvest-by-year-2026-10-08.json), while the inventory lags recent years (6,733 ha for 2023 against FTEN's 115,143). Logged area becomes a merge of both records with no stand counted twice, built and reconciled before any public number changes. Until then the public figure stays 5.8 million ha (FTEN). The intro spike may use a labelled interim splice (inventory to 1999, FTEN from 2000: 10,096,541 ha).
+
+**Amended, Lee, 2026-10-23:** Lee, 2026-10-23 (beta decisions, "Film, correct now"): a downward correction may ship before the merge. The cap fix (on max(attribute, geometry); nine polygons, 82,920 ha) and the overlap dissolve go out with S1-lite as soon as they are built, and the headline takes the corrected, floored figure (very likely 5.7 million against the shipped 5,888,477 ha); the merge then changes it once more. The hold "until then the public figure stays 5.8 million" no longer applies to a figure that would overstate.
 
 ### A stand we cannot age contributes to no value: not carbon, not timber, not ecosystem services.
 *2026-09-02, per Lee*
@@ -100,6 +102,26 @@ An open beta with no announcement still has visitors, so the first week is a soa
 *2026-10-23, Lee (path-to-beta grill)*
 
 The form captures place, zoom and visible layers automatically, so a report points at what the tester saw. Reports land in one list the session triages for Lee. Netlify's built-in forms mean no new database or backend; the email field is optional; /privacy names the form and what it stores, keeping the no-accounts promise and the privacy page true. The existing mailto address stays as a fallback. Cosmetic issues found this way go on the public known-issues note; serious ones pause the exit clock.
+
+### The beta opens on the intro film, not the scroll story.
+*2026-10-23, Lee (beta decisions)*
+
+Lee chose the film over opening on the corrected scroll story. The film (S1′) and the inventory + FTEN merge are inside the beta gate, under the film's weight budget (under 2 MB before interaction). If the film fails Lee's smoothness check on his phone, the corrected scroll story opens the beta instead and the film follows during it. Plan: .claude/plans/audit-remediation-2026-10/beta-resequence.md.
+
+### The carbon calculator is redesigned before the beta opens, not hidden for it.
+*2026-10-23, Lee (beta decisions)*
+
+Lee chose the redesign (K.2 grill, K.3 design plan, K.4 relays) inside the gate over hiding the calculator for beta. The teardown shows no small patch meets the number bar. The live dollar bar, kept by Lee's choice on 2026-10-02 until the redesign ships, therefore ends with K.4, before the label goes up; no known overstatement is live on beta day. He can still switch to hiding it if the road to beta grows too long; hide-don't-block stands.
+
+### The beta speed bar is measured on Chrome's faster 4G profile, not Slow 4G.
+*2026-10-23, Lee (beta decisions)*
+
+Lee chose the faster 4G preset over the program's Slow 4G milestone (recommended) for the 10-second first-map-data bar. The SPEED guard states the raw network and CPU values it passes to Chrome, and records the Slow 4G figure beside it as a measurement, not acceptance. On the landing, the bar applies to the first frame of map data the reader is shown, not the hero photo (MARVIN's reading, put to Lee with the question).
+
+### Shared /map links keep the timeline year and class filters before the beta opens.
+*2026-10-23, Lee (beta decisions)*
+
+A shared link is how the beta spreads (a journalist's link opening on a different picture is close to a broken feature). M3b's view-state parser is pulled into the gate as its own small relay; the rest of M3b stays in the beta.
 
 ## Engineering pins
 

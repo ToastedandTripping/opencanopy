@@ -276,6 +276,14 @@ half enters the gate in G4, MERGE and S1′ move into the beta.
 
 ## Four decisions for Lee
 
+> **Ruled by Lee, 2026-10-23** (DECISIONS, four entries plus an amendment to "Logged hectares
+> means..."): **L = film, figure corrected now** (option (i): S1-lite ships the downward
+> correction, MERGE changes it again); **K = redesign first** (K.2-K.4 in the gate; HIDE-K
+> dropped unless he switches); **S = Chrome's faster 4G** (against the recommendation; Slow 4G
+> recorded as a measurement); **V = fix before beta** (VIEWSTATE in G5). The critical path is
+> therefore the long branch: the film in Lane S and K.4 after M3a. The two attribution notes
+> still wait on his nod.
+
 Brought to him in conversation in the seven-part shape. **S is needed before SPEED's child plan
 (G2); L, K and V before G3.** G0 and G1 can start on his look at this order. The outcomes are
 recorded here and in DECISIONS, together with his nod or strike on the two attribution notes
