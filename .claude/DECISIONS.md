@@ -72,6 +72,31 @@ The shipped story frames painted 5.66x the logged area in 2025 (32.75M ha painte
 
 Lee picked Canopy from three candidates in his 'two loud, rest quiet' direction, after seeing them recoloured on live /map views and on the film's ending. Forest age: old growth #80e691 at 0.85 (seen #72c980), logged #ff3a26 at 0.85 (seen #de3726), mature #586156 and young #97a195 at 0.60 (one sage-grey hue at two lightness steps, seen #434842 / #696f67). Fire is ash (#e1dcd5 fill 0.55, #f0eeea edge), so it never competes with logging's red; cutblocks are scarlet edges with a light fill; parks are edges only; the film's land is the mature token, so the hand-off adds only young and the loud classes. Full token set and the colour-blind checks: research/palette-2026-10-11/ (palettes.json, checks.csv; no failing pair, three marginal). Replaces palette E (ruling E, 2026-10-05), which was never applied. Applying it means an area-true rebuild of the z4-9 forest-age tiles, not only a recolour.
 
+### OpenCanopy opens an open public beta once charter goals (1) and (3) are met; goal (2) is built during the beta.
+*2026-10-23, Lee (path-to-beta grill)*
+
+Lee: "I guess I would like to satisfy all of the primary goals before taking this into beta, whereby people will poke around and inevitably find further issue." Before beta: goal (1), a correct and honest core map, and goal (3), a landing page and calculator that never overstate. Goal (2), the watershed report card, accountability view and priority analysis, is built during the beta and shaped by what testers find. The beta is open to the public at opencanopy.ca with a visible beta label, not an invited group (Lee overrode the invited-group recommendation). The label is a small, persistent "Beta" tag with a one-line note linking to the report form and the known-issues note. The two failures this guards against, in Lee's ranking: a wrong number spreads (someone screenshots a figure the data does not support), and testers hit bugs we already knew about. Capture: marvin session-d09d2c, .claude/grills/2026-10-22-opencanopy-path-to-beta.md.
+
+### The beta label goes up only when the beta-day bar is met, and a layer that cannot meet it is hidden rather than holding the beta back.
+*2026-10-23, Lee (path-to-beta grill)*
+
+The bar, all of it: (a) zero known serious bugs on current iPhone Safari, current Android Chrome, and desktop Chrome, Firefox and Safari, where serious means it breaks a feature, shows wrong or missing data, or overstates, and everything else is cosmetic and listed on a short public known-issues note; (b) every public figure on the landing page, the calculator and the map popups traced to a script and a test under the reproducible-or-not-shown ruling, with outside figures shown only as cited, with a visible source link; (c) map data visible within about 10 seconds on an ordinary phone on 4G (the Oct 2 audit measured 37-42 s on Slow 4G; the worst connections come later); (d) tiles freshly rebuilt from current government data just before the label goes up; (e) error monitoring and uptime alerting live, on free tiers, tool choice the session's (the only two FAILs in the 2026-08-27 production audit); (f) CI green, with lint running again and the fidelity suite either in CI or run on each tile rebuild with a recorded result. A layer or feature that cannot clear the bar in time is hidden for the beta and returns when fixed. Any figure questioned during the beta is checked and corrected in public.
+
+### The beta ends after four weeks with no open serious bug and no unverified number, and only once goal (2) has shipped.
+*2026-10-23, Lee (path-to-beta grill)*
+
+The four weeks run from the day the beta label goes up. A serious bug found during the beta pauses the clock until it is fixed; it does not reset it, so one late bug cannot keep the beta open forever ("beta never ends" was offered as a risk and the pause rule is the answer). The label comes off only when both halves hold: the quiet four weeks, and goal (2) live.
+
+### The beta launches quietly; after a clean first week, a short note goes to a few conservation groups and a local journalist.
+*2026-10-23, Lee (path-to-beta grill)*
+
+An open beta with no announcement still has visitors, so the first week is a soak with real traffic and nobody pointed at it. If that week is clean (no serious bug open), a short targeted note goes out to a handful of conservation groups and one local journalist. No broad launch during the beta. Outreach has been dormant since March and there is no mailing or tester list, so the note is written fresh.
+
+### Beta feedback comes through an in-map report form on Netlify Forms, with no accounts and an optional email, named on the privacy page.
+*2026-10-23, Lee (path-to-beta grill)*
+
+The form captures place, zoom and visible layers automatically, so a report points at what the tester saw. Reports land in one list the session triages for Lee. Netlify's built-in forms mean no new database or backend; the email field is optional; /privacy names the form and what it stores, keeping the no-accounts promise and the privacy page true. The existing mailto address stays as a fallback. Cosmetic issues found this way go on the public known-issues note; serious ones pause the exit clock.
+
 ## Engineering pins
 
 ### Do not merge the Phase 2 dolly-video branch until real video assets exist.
@@ -120,5 +145,10 @@ The privacy page promises that the full source, tracker included, is in the publ
 The program plan itself took eight critic rounds, every one a FAIL, each finding something the previous round could have found. Lee: "Three rounds but be sure to deploy adequately high level plan critics to avoid repeated critics for things that could have been caught right away." Round one is briefed to report every finding, not stop at the first blocker. A child plan still failing after round three goes to Lee in plain words, never to a fourth round by default.
 
 **Amended, Lee, 2026-10-07:** Lee, same day: "Let's set critic to xhigh instead as I think max actually has diminishing returns." Round one dispatches with `--effort xhigh`, not max. `codex-agent.mjs` runs the plan critic at astra's own default (low) unless told otherwise, which is how all eight rounds of the program plan ran, so the flag is passed explicitly at every child-plan dispatch.
+
+### Tiles are rebuilt from current government data right before the beta, and then every quarter by Lee with one command.
+*2026-10-23, Lee (path-to-beta grill)*
+
+The live tiles are v10 of 2026-05-09, built by a manual local rebuild.sh. Lee's 2026-09-25 call, confirmed in the grill: the pipeline bar is one command run by Lee on a set rhythm, not an unattended rebuild, and the rhythm is quarterly. The matching wording change to the charter's goal (1) is with Lee for approval through marvin session-d09d2c; until he approves it the charter is not edited, and this entry is the operative rule.
 
 ## Evidence corrections

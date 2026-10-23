@@ -503,6 +503,10 @@ be decided sensibly before the inventory exists. No session deletes analytics da
 
 ## Lanes and waves
 
+> **Re-sequenced for beta, 2026-10-23** (path-to-beta grill, DECISIONS 2026-10-23): the wave
+> table below and the order of the dependency graph are superseded by
+> `beta-resequence.md` in this directory. Relay specs and contracts here still bind.
+
 Two worktree sessions, spawned from `~/Projects/opencanopy` **on main**.
 - **Lane M** (map): `src/components/map/`, `src/hooks/`, `src/app/map/`, `src/lib/layers/`,
   `src/test/`, `playwright*`.
