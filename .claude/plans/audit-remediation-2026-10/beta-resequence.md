@@ -184,10 +184,12 @@ summing (+1.7% in 2025). They overstate, so they are serious whatever L is.
 ruling says the merge is "built and reconciled before any public number changes. Until then the
 public figure stays 5.8 million ha (FTEN)." The shipped total is 5,888,477 ha
 (`cutblocks-scrub.json`); the cap correction alone takes it to about 5,805,557, and the overlap
-correction (about 1.7%) very likely takes the floored figure to 5.7 million. Under L = film,
-MERGE is in the gate and the hero changes once, to the merged measure. Under L = scroll story,
-either MERGE runs anyway (one change, to the merged figure) or the ruling is amended to allow a
-downward correction first. The 2026-09-02 ruling ("when in doubt, understate") favours letting
+correction (about 1.7%) very likely takes the floored figure to 5.7 million. S1-lite (G3)
+releases before MERGE (G4), so there are two ways through: (i) amend the ruling to allow a
+downward correction, so S1-lite ships the corrected FTEN figure and MERGE later changes it again
+(two public changes, never overstated); or (ii) hold S1-lite's measure corrections to release with
+MERGE, so the hero changes once but the overstated 5.8M stays live until G4. Under L = scroll
+story without MERGE, only (i) is available. Recommended: (i). The 2026-09-02 ruling ("when in doubt, understate") favours letting
 a figure fall; holding an overstated 5.8M through beta day is not available under the bar.
 
 **Phase 0.2, record list reconciled.** Before writing, reconcile against the entries written since
@@ -290,13 +292,14 @@ added to the 2026-10-23 entries (written by this session on the critic's finding
   CO2 panel in the layer sheet, the PDF route, old share links. Either way ruling D ends at the gate.
 - **S. Which 4G?** The program's own milestone is "within 10 s on Slow 4G". Lighthouse's mobile
   profile is nominally 150 ms round trip, about 1.6 Mbps down, 750 kbps up, 4x CPU; applied
-  through Chrome's network emulation it becomes about 562.5 ms round trip and about 1.47 Mbps
+  through Chrome's network emulation it becomes about 562.5 ms round trip and about 1.5 Mbps
   down, which at a 10 s bar can decide pass or fail. Chrome's faster 4G preset is easier. Put to
   Lee with the applied numbers; SPEED's plan states the raw values it passes. And on the landing, does the bar mean the first frame of map data the reader is shown
   *(call, read back to him)*, not the hero photo?
 - **V. Shared links that drop the year and the class filters:** fix before beta (pull M3b's
   view-state parser into the gate), or list it as known? A journalist's shared link is the
-  outreach path.
+  outreach path. If fixed: a small Lane M relay (VIEWSTATE, Simple, G5, after M3a) takes M3b's
+  view-state parser alone.
 
 ## Pre-mortem
 
@@ -372,6 +375,10 @@ REBUILD runs the story truth checks; the hide floor; HIDE-K; decision timing (S 
 at 5.7M); the attribution notes go to Lee; definitions (test outage, NUM sources and tokens, S's
 applied numbers); residuals (M3a reason, weight budgets, tier chains, GPU reboot owed, clock holds
 no reporter data, tagged test submission, known-issues writer).
+
+**2026-10-23, Fable critic r3: PASS, one CONCERN folded** (the hero-change sequencing under L,
+now (i)/(ii) with (i) recommended). Advisory folds: V's fix slot, the 1.5 Mbps figure. Critic
+contract closed at three rounds; the plan goes to Lee.
 
 Rejected in part (round 1):
 - **Durations per wave.** No relay is sized, and a guessed calendar would be invented data. The
