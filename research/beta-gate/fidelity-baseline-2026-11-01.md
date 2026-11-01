@@ -13,7 +13,6 @@ file (`data/reports/*`; Tiles writes elsewhere and is summarised here only).
 - Live tiles: `opencanopy-v10.pmtiles`, 3,831,441,244 bytes, R2 last modified 2026-05-09, downloaded locally.
 - Build inputs: the NDJSON at `~/Projects/opencanopy/data/checkpoint/preprocessed/`, manifest dated
   2026-05-06. That they are v10's exact inputs is inferred from the dates and the A2 counts, not proven.
-- `data/geojson/reference`: not present, so anything needing it did not measure.
 - **Nothing here was re-measured against current government data; that is REBUILD's job.**
 
 | Audit | Result | Measured or no input | What it says |

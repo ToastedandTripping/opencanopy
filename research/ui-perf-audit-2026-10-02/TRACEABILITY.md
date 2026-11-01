@@ -352,8 +352,10 @@ MapLibre 6.15 is live (2ba3280, 120cc10). Nobody has looked at the three v6 item
 |---|---|---|---|---|---|
 | FB-1 | tenure-cutblocks: 772 of 4,511 features (17.1%) miss a required property; may show as missing popup data | SERIOUS until diagnosed | PIPE (diagnose); M2 (popups) | G3-G5 | open |
 | FB-2 | CrossSource lite: 11 of 17 checked tiles conflict | SERIOUS until diagnosed | PIPE | G5 | open |
-| FB-3 | Precision: 15 layer-zoom pairs over the ±10% area tolerance, up to 4,333% on mining claims | SERIOUS until diagnosed | PIPE | G5 | open |
+| FB-3 | Precision: 15 layer-zoom pairs over the ±10% area tolerance, up to 4,366% on mining claims | SERIOUS until diagnosed | PIPE | G5 | open |
 | FB-4 | Spatial: fire-history and mining-claims water overlap at two grid points (2 of 84, 1 of 97) | COSMETIC unless it shows on the map | PIPE | G5 | open |
+| FB-6 | F4: forest age found 15/20 near WFS seams against 98% interior: possible loss along seams | SERIOUS until diagnosed | PIPE | G5 | open |
+| FB-7 | A7: null `DISTURBANCE_START_DATE` in 2 of 20 sampled cutblocks; these fall outside the timeline (Ruling B subject) | SERIOUS until diagnosed | S1-lite (status check), M2 | G3 | open |
 | FB-5 | The suite's own defects: empty runs pass, a swallowed parse error, summary and exit disagree, hardwired paths, no prior archive | PROCESS | PIPE (pbf reader fix in CI) | G0, G5 | open |
 
 ## Orchestrator assignments, 2026-11-01 (supersedes the proposals above; Lee shown, no objection)

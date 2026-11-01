@@ -138,7 +138,7 @@ Lee before merge, as story copy is.
   against the previous version (fails on a drop), the C1 version constant, and a runbook
   (`docs/REBUILD.md`) for Lee's quarterly run. MAPFIX and T-pre prove their changes on current
   data; PIPE packages them; REBUILD re-runs the package on fresh data. Three builds, not four.
-  Does not touch CHARTER.md (the wording is with Lee via session-d09d2c).
+  Does not touch CHARTER.md (the wording is with Lee via session-d09d2c). **Fixes the suite first:** the seven defects in `research/beta-gate/fidelity-baseline-2026-11-01.md`, chiefly the fail-open in `audit-all.ts`, the swallowed parse error and passes on zero input, and defines per audit what green means at REBUILD.
 - **SPEED (Simple, Lane M, after M1a).** A throttled guard: cold `/map` and a cold deep link, cache
   disabled, first data layer painted (probe count > 0 and layer pixels) within 10 s, on the profile
   Lee rules (decision S). The guard records the WebGL renderer string and refuses to report on
