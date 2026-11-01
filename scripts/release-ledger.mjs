@@ -428,8 +428,11 @@ function cmdClaim(flags) {
     if (state.openHalts.length > 0 && !ackedSha && !liveDeploy && kind !== "corrective") {
       throw halted(state);
     }
+    // A claim that died before lease.json never gave its holder a token, so its SHA may retry.
+    const deadClaim = state.held && fs.existsSync(leaseDir()) && ctx.lease === null;
     const registered = flags.sha ? state.registrations[flags.sha] : null;
-    if (registered && !registered.abandoned && !ackedSha) {
+    const ownResidue = deadClaim && state.holder?.sha === flags.sha;
+    if (registered && !registered.abandoned && !ackedSha && !ownResidue) {
       throw refuse(`${flags.sha} is already registered`);
     }
     let madeDir = true;
@@ -440,12 +443,10 @@ function cmdClaim(flags) {
       madeDir = false;
     }
     if (!madeDir) {
-      const noFile = readLease() === null;
-      if (!noFile && state.held) {
+      if (state.held && !deadClaim) {
         throw refuse(`lease is held at token ${state.token} by lane ${state.holder?.lane}`);
       }
-      // A claim that died before lease.json never gave its holder a token; close it so its SHA can retry.
-      if (noFile && state.held) append(ctx, { type: "release", abandon: true, residue: true });
+      if (deadClaim) append(ctx, { type: "release", abandon: true, residue: true });
     }
     crashAt("claim-after-mkdir");
     const live = ackedSha || liveDeploy;
