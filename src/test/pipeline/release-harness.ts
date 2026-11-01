@@ -41,6 +41,9 @@ function scrubbedBase(): Record<string, string> {
   return base;
 }
 
+/** Next's types make NODE_ENV required on ProcessEnv; these maps are complete environments. */
+const asEnv = (env: Record<string, string>) => env as unknown as NodeJS.ProcessEnv;
+
 function toResult(status: number | null, stdout: string, stderr: string): RunResult {
   return { code: status ?? 137, stdout, stderr, out: `${stdout}\n${stderr}` };
 }
@@ -120,7 +123,7 @@ export class Universe {
 
   run(args: string[], opts: RunOptions = {}): RunResult {
     const res = spawnSync(process.execPath, [CLI, ...args], {
-      env: this.env(opts),
+      env: asEnv(this.env(opts)),
       cwd: opts.cwd ?? this.root,
       encoding: "utf8",
     });
@@ -131,7 +134,7 @@ export class Universe {
   runAsync(args: string[], opts: RunOptions = {}): Promise<RunResult> {
     return collect(
       spawn(process.execPath, [CLI, ...args], {
-        env: this.env(opts),
+        env: asEnv(this.env(opts)),
         cwd: opts.cwd ?? this.root,
         stdio: ["ignore", "pipe", "pipe"],
       }),
@@ -255,7 +258,7 @@ export class Universe {
   repo(): Git {
     const origin = path.join(this.root, "origin.git");
     const dir = path.join(this.root, "work");
-    const env = { ...scrubbedBase(), HOME: this.home };
+    const env = asEnv({ ...scrubbedBase(), HOME: this.home });
     const git = (...args: string[]): string => {
       const res = spawnSync("git", ["-c", "user.name=Fixture", "-c", "user.email=f@example.invalid", ...args], {
         cwd: fs.existsSync(dir) ? dir : this.root,
@@ -288,7 +291,7 @@ export class Universe {
 export function runModule(source: string, env: Record<string, string> = {}): Promise<RunResult> {
   return collect(
     spawn(process.execPath, ["--input-type=module", "-e", source], {
-      env: { ...scrubbedBase(), ...env },
+      env: asEnv({ ...scrubbedBase(), ...env }),
       stdio: ["ignore", "pipe", "pipe"],
     }),
   );
