@@ -10,7 +10,7 @@ with a recorded result." In the grill, green CI is a MARVIN call confirmed at th
 
 ## Problem
 
-Main has been red since at least 2026-10-07. `npm audit --audit-level=high` fails, and because
+Main has been red since 2026-09-11. `npm audit --audit-level=high` fails, and because
 that step sits before Lint, lint never runs (`.github/workflows/ci.yml:37-41`). Today's four high
 groups are all dev-chain: brace-expansion, js-yaml, vite (with launch-editor), happy-dom.
 `npm audit --omit=dev` finds 0 today.
@@ -28,11 +28,11 @@ responded. Lint stayed dark throughout.
 - Lint moves above Audit, so a red audit can never hide it.
 - Blocking: `npm audit --omit=dev --audit-level=high` (anything non-dev in the lock), plus
   `npm audit --audit-level=critical` across the whole tree.
-- A dev-chain **high** prints a `::warning` in the run without blocking, read at each wave close.
+- A dev-chain **high** warns without blocking: `npm audit --audit-level=high || echo "::warning title=Dev-chain high::run npm audit"`. Measured: quiet on the new lock, fires with exit 0 on a dev high, and a registry failure also warns (errs loud). `jq` and `$(...)` forms go permanently red on the 17 moderates.
 - A weekly `schedule:` run and `workflow_dispatch`, so a new advisory turns CI red without waiting
   for a push. GitHub disables schedules after 60 days without repository activity; the wave-close
   read below would notice.
-- **Response to a red runtime audit:** the session opens a bump pull request for Lee's yes. Before
+- **Response to a red runtime audit:** the session opens a bump pull request for Lee's yes, using `npm audit fix --package-lock-only` (it moves the package and exits 1 on the moderates, without crashing) or `npm install <pkg>@<fixed> --package-lock-only`, both measured on the new lock. With no patched version, the session brings Lee the choice, and any exception is recorded with its advisory id. Before
   OPS, the reader is the session's `gh run list` at each wave close, since GitHub's failure email
   has not been shown to reach Lee. OPS's spec gains this route. A red with no reader is the defect
   this ends.
@@ -41,12 +41,10 @@ responded. Lint stayed dark throughout.
 still have been red. What it does is **separate signal:** a critical in the browser reads differently
 from a denial-of-service in js-yaml on our own machines, and a red means someone acts. Given up: a
 dev-chain high no longer blocks. Netlify installs the whole tree and runs our build on its machines,
-so dev-chain code does run there, on our own source; the full-tree critical step bounds that. Lee is
-told this corrected version in conversation. The moderates (17 today, eslint core included) go to
+so dev-chain code does run there, on our own source; the full-tree critical step bounds that. Netlify's build env holds only a public key (`NEXT_PUBLIC_MAPTILER_KEY`, `NODE_VERSION`), so dev-chain code there sees no private secret, the strongest support for this trade. Lee was told this corrected version in conversation on 2026-11-01, before the merge. The moderates (17 today, eslint core included) go to
 the Parking Lot, held by the eslint-config-next pin.
 
-**Dependencies (package.json + lock):** the probe's two files, copied, then `npm ci` under npm
-10.9.4 (CI's npm).
+**Dependencies (package.json + lock):** the relay's first act copies `scratchpad/ci-probe/package.json` (sha256 `059c677477f4f6982678e01becd94648ac0d8085d00b018c06f63d41129d2d49`) and `package-lock.json` (sha256 `fda420850409788657252c6b722a4c3cd11dcec5556b5d0286c7e03d2c844c31`), full path under this session's scratchpad, then `npm ci` under npm 10.9.4 (CI's npm). If the files are gone, stop and tell Lee; do not reconstruct them, since the old route cannot regenerate this lock.
 
 | Package | From | To | Why |
 |---|---|---|---|
@@ -61,7 +59,7 @@ current.
 
 Verified on the probe's lock: a re-install under npm 10 gives zero diff, `--omit=dev` exits 0, full
 high exits 0. On main's lock under npm 10.9.4, `npm update` and `npm audit fix` crash on `edgesOut`,
-as does this bump set under `npm install`. On the new lock `npm audit fix` runs. A bump recipe goes in
+as does this bump set under `npm install`. On the new lock `npm audit fix` runs, and `npm update` still crashes. A bump recipe goes in
 CONTRIBUTING only after being re-run from scratch with exact flags. The session does the copy; C7's
 "Lee runs the installs" exists because the classifier blocked them, and its line is updated at close.
 
@@ -69,11 +67,11 @@ CONTRIBUTING only after being re-run from scratch with exact flags. The session 
 and maplibre-gl 6.15.0 are unchanged.
 
 **`scripts/lib/mvt-reader.ts`:** MapLibre 6 brought pbf 5, which exports only `PbfReader`; the reader's
-`new Pbf(...)` has thrown ever since (main 120cc10), and `tile-reader.ts` swallows it as "tile doesn't
+`new Pbf(...)` has thrown ever since (`2ba3280`), and `tile-reader.ts` swallows it as "tile doesn't
 exist". One-line fix: `PbfLib.PbfReader ?? default ?? PbfLib`, already committed on this branch
 (b45f191). It ships here because this relay pins pbf 5. A fixture test under `src/test/` parses one
 real MVT tile through the reader and asserts a layer and a feature count, mutation-proven through
-`scripts/mutation-battery.mjs`.
+`~/marvin/scripts/mutation-battery.mjs`.
 
 ## The fidelity suite stays out of CI
 
@@ -86,14 +84,15 @@ fail-open in `audit-all.ts`, and the per-audit definition of green.
 ## Verification
 
 - On the PR branch: `npm ci` (npm 10), lint, `npm test`, build, the audit steps.
-- **Negative controls:**
-  - Runtime audit: a throwaway commit adding `lodash@4.17.20` (a runtime high) turns the blocking step
-    red, exit 1, read from the run.
-  - Lint: a deliberate lint error on a throwaway commit turns the PR red with Audit not reached.
+- **Negative controls,** on a separate branch and draft PR off the PR's head, closed unmerged, read from its run:
+  - runtime high (`lodash@4.17.20`): the blocking step goes red, exit 1;
+  - lint error: red with Audit not reached;
+  - dev high (`lodash@4.17.20 --save-dev`): both blocking steps exit 0, the warning fires;
+  - dev critical (`minimist@1.2.5 --save-dev`): red at the critical step.
   - Reader: the fixture test fails on the unpatched line.
 - 59 files and 867 tests pass on happy-dom 21, plus the fixture test, with the same test names as main
   (compared by name, not count) and no new skips; one DOM test mutated to confirm it can still fail.
-- **Done when** main is green **three runs running** with Lint executed, read from `gh run view`. An owed
+- **Done when** main is green **three runs running** with Lint executed, read from `gh run view`. Dispatches do not count, and at least one of the three is `event: schedule`, which proves the cron. An owed
   item stays open until the third. At the gate the bar reads "green at the label", not "was green once".
 
 ## Change safety and release
@@ -106,10 +105,10 @@ a session does not roll back production alone, it brings Lee the choice (C2).
 ## Review Focus
 
 1. A lock Netlify's build rejects though CI accepts it. Owner: this relay (the deploy preview on the PR
-   builds green).
+   builds green, or the first production deploy's log is read before the HTTP checks).
 2. happy-dom 21 making a test vacuous. Owner: this relay (by-name comparison, one mutation).
 3. `--omit=dev` hiding a dependency wrongly marked dev. Owner: this relay (nothing under `src/` or
-   `netlify/` imports a dev-only package, except `@types/*` and the test tree).
+   `netlify/` imports a dev-only package, except `@types/*`, the test tree, and `tailwindcss`, a build input that shapes shipped CSS).
 4. The reader fix proving the wrong layer shape. Owner: this relay's fixture test.
 
 ## Close
@@ -118,4 +117,4 @@ Hand-off and ROADMAP through the writers: the "still red" note goes after the th
 item stays until then. Parking Lot: the moderates, eslint core included; `tsx` (the audit scripts use
 `npx tsx` unpinned; pin in PIPE). Strike the hand-off's terminal-install clause, M1a's dev-dep line and
 C7's line; refresh the reader's comments; update `beta-resequence.md`'s CI paragraph; add `.netlify/**`
-to the lint ignores.
+to the lint ignores; add the red-CI route to OPS's spec and the recipe to CONTRIBUTING (re-run from scratch first); correct `beta-resequence.md`'s two stale lines on CI and the suite.

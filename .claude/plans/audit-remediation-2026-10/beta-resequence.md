@@ -5,7 +5,7 @@ the *order* in its **Dependency graph** are replaced by the order below. Relay s
 contracts (C1-C7), the agents-and-models table, the critic contract and the release rules stand
 unless a section here names a change. It is less a re-ordering than an insertion: Waves 1-3 keep
 their internal order (M1a, M1b, M2, M3a; S0a, S0b, S1-lite, S1′), ten relays are inserted, and
-four are deferred into the beta. Lee sees this order before G0 starts.
+four are deferred into the beta. Lee sees this order before G0 starts. **Wave-close duty:** at each wave close the session reads CI on main (`gh run view`, annotations, a scheduled run under 8 days old) and acts on a red.
 
 ## Intent (grilled)
 
@@ -138,7 +138,7 @@ Lee before merge, as story copy is.
   against the previous version (fails on a drop), the C1 version constant, and a runbook
   (`docs/REBUILD.md`) for Lee's quarterly run. MAPFIX and T-pre prove their changes on current
   data; PIPE packages them; REBUILD re-runs the package on fresh data. Three builds, not four.
-  Does not touch CHARTER.md (the wording is with Lee via session-d09d2c). **Fixes the suite first:** the seven defects in `research/beta-gate/fidelity-baseline-2026-11-01.md`, chiefly the fail-open in `audit-all.ts`, the swallowed parse error and passes on zero input, and defines per audit what green means at REBUILD.
+  Does not touch CHARTER.md (the wording is with Lee via session-d09d2c). **Fixes the suite first:** the seven defects in `research/beta-gate/fidelity-baseline-2026-11-01.md`, chiefly the fail-open in `audit-all.ts`, the swallowed parse error and passes on zero input, and defines per audit what green means at REBUILD. It diagnoses TRACEABILITY's FB rows assigned to it; a finding leaves by diagnosis, never by a definition of green.
 - **SPEED (Simple, Lane M, after M1a).** A throttled guard: cold `/map` and a cold deep link, cache
   disabled, first data layer painted (probe count > 0 and layer pixels) within 10 s, on the profile
   Lee rules (decision S). The guard records the WebGL renderer string and refuses to report on

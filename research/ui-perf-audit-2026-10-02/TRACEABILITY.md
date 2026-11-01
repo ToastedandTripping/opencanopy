@@ -6,16 +6,16 @@ Built 2026-11-01 at `bdf0d2b`, for G0. Re-classified at each wave close (`beta-r
 
 ## Summary
 
-**54 distinct SERIOUS defects are open; 8 of them are owned only in the Beta wave and 1 has no owner, so the program as sequenced cannot meet the bar.** The tables hold 203 rows: 75 SERIOUS, 79 COSMETIC, 49 PROCESS. One SERIOUS row is fixed (P8). 20 more SERIOUS rows repeat a defect from another source and are not counted again below.
+**59 distinct SERIOUS defects are open (54 from the audits, 5 FB rows serious until diagnosed); 8 of them are owned only in the Beta wave and 1 has no owner, so the program as sequenced cannot meet the bar.** The tables hold 203 rows: 75 SERIOUS, 79 COSMETIC, 49 PROCESS. One SERIOUS row is fixed (P8). 20 more SERIOUS rows repeat a defect from another source and are not counted again below.
 
 | Closes in wave | SERIOUS open | Which |
 |---|---|---|
 | G0 | 0 | |
 | G1 | 10 | Cold-load plumbing (F-17, F-16, U-11, F-18); S0a copy and privacy (pF-03, pF-02 copy, pF-01, pF-13, pF-10, C6-client) |
 | G2 | 3 | Back/Forward (F-21); MapLibre 6 popups and overlays, unverified (ML6-a, ML6-c) |
-| G3 | 17 | S1-lite (pF-02 picture, pF-05, pF-04, pF-12, SPD-02(e), pF-14, Merge 1, Merge 2); M2 (F-09, F-10, F-20, U-07, F-11, U-19); M1b + MAPFIX (F-02, RAST-1, RAST-2) |
+| G3 | 18 | S1-lite (pF-02 picture, pF-05, pF-04, pF-12, SPD-02(e), pF-14, Merge 1, Merge 2); M2 (F-09, F-10, F-20, U-07, F-11, U-19); M1b + MAPFIX (F-02, RAST-1, RAST-2) |
 | G4 | 9 | M3a (F-08, F-14, F-03, U-03); T-pre (Z10-HOLES); S1′ and MERGE (pF-24, Ending v2 bug, two measures); S2-pages (pF-09) |
-| G5 | 6 | VIEWSTATE (U-21); K.4 (pF-20, pF-06, SPD-08, U-17 twice) |
+| G5 | 10 | VIEWSTATE (U-21); K.4 (pF-20, pF-06, SPD-08, U-17 twice) |
 | Gate | 0 | MATRIX and REBUILD will add to this |
 | **Beta** | **8** | Contradict the bar; see Serious but deferred |
 | No owner | 1 | pF-16; see Unowned |
@@ -356,7 +356,7 @@ MapLibre 6.15 is live (2ba3280, 120cc10). Nobody has looked at the three v6 item
 | FB-4 | Spatial: fire-history and mining-claims water overlap at two grid points (2 of 84, 1 of 97) | COSMETIC unless it shows on the map | PIPE | G5 | open |
 | FB-6 | F4: forest age found 15/20 near WFS seams against 98% interior: possible loss along seams | SERIOUS until diagnosed | PIPE | G5 | open |
 | FB-7 | A7: null `DISTURBANCE_START_DATE` in 2 of 20 sampled cutblocks; these fall outside the timeline (Ruling B subject) | SERIOUS until diagnosed | S1-lite (status check), M2 | G3 | open |
-| FB-5 | The suite's own defects: empty runs pass, a swallowed parse error, summary and exit disagree, hardwired paths, no prior archive | PROCESS | PIPE (pbf reader fix in CI) | G0, G5 | open |
+| FB-5 | The suite's own defects: empty runs pass, a swallowed parse error, the gate failing open in `audit-all.ts`, hardwired paths, no prior archive | PROCESS | PIPE (pbf reader fix in CI) | G0, G5 | open |
 
 ## Orchestrator assignments, 2026-11-01 (supersedes the proposals above; Lee shown, no objection)
 
