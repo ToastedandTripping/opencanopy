@@ -3,10 +3,11 @@
  * a spawn helper with a scrubbed environment, a bare-origin fixture and a fake
  * netlify bin. Nothing here may ever reach the real ledger or the real .git config.
  */
-import { spawn, spawnSync } from "node:child_process";
+import { ChildProcessByStdio, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { Readable } from "node:stream";
 
 export const CLI = path.resolve(__dirname, "../../../scripts/release-ledger.mjs");
 export const MUTEX_LIB = path.resolve(__dirname, "../../../scripts/lib/dir-mutex.mjs");
@@ -42,6 +43,17 @@ function scrubbedBase(): Record<string, string> {
 
 function toResult(status: number | null, stdout: string, stderr: string): RunResult {
   return { code: status ?? 137, stdout, stderr, out: `${stdout}\n${stderr}` };
+}
+
+function collect(child: ChildProcessByStdio<null, Readable, Readable>): Promise<RunResult> {
+  return new Promise((resolve, reject) => {
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => (stdout += d));
+    child.stderr.on("data", (d) => (stderr += d));
+    child.on("error", reject);
+    child.on("close", (status) => resolve(toResult(status, stdout, stderr)));
+  });
 }
 
 const roots: string[] = [];
@@ -117,19 +129,13 @@ export class Universe {
   }
 
   runAsync(args: string[], opts: RunOptions = {}): Promise<RunResult> {
-    return new Promise((resolve, reject) => {
-      const child = spawn(process.execPath, [CLI, ...args], {
+    return collect(
+      spawn(process.execPath, [CLI, ...args], {
         env: this.env(opts),
         cwd: opts.cwd ?? this.root,
         stdio: ["ignore", "pipe", "pipe"],
-      });
-      let stdout = "";
-      let stderr = "";
-      child.stdout.on("data", (d) => (stdout += d));
-      child.stderr.on("data", (d) => (stderr += d));
-      child.on("error", reject);
-      child.on("close", (status) => resolve(toResult(status, stdout, stderr)));
-    });
+      }),
+    );
   }
 
   /** What the fake netlify bin answers as the published deploy. */
@@ -280,16 +286,10 @@ export class Universe {
 
 /** Spawns a node ES module body, for driving a library the way a caller would. */
 export function runModule(source: string, env: Record<string, string> = {}): Promise<RunResult> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ["--input-type=module", "-e", source], {
+  return collect(
+    spawn(process.execPath, ["--input-type=module", "-e", source], {
       env: { ...scrubbedBase(), ...env },
       stdio: ["ignore", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (d) => (stdout += d));
-    child.stderr.on("data", (d) => (stderr += d));
-    child.on("error", reject);
-    child.on("close", (status) => resolve(toResult(status, stdout, stderr)));
-  });
+    }),
+  );
 }
