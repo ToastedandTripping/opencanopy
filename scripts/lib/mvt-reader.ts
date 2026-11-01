@@ -1,8 +1,8 @@
 /**
  * MVT (Mapbox Vector Tile) parsing utilities.
  *
- * Uses @mapbox/vector-tile + pbf, which are transitive dependencies
- * of maplibre-gl and verified to be importable in this environment.
+ * Uses @mapbox/vector-tile + pbf, pinned as direct dev dependencies at the
+ * versions maplibre-gl carries. Guarded by src/test/lib/mvt-reader.test.ts.
  *
  * Handles gzip-compressed tiles transparently.
  */
@@ -16,7 +16,8 @@ const PbfLib = require("pbf");
 // @mapbox/vector-tile uses CommonJS exports
 const { VectorTile } = VectorTileLib;
 
-// pbf is transpiled ESM -- use .default if available
+// pbf 5 (via MapLibre 6) exports only PbfReader and PbfWriter; older pbf exported
+// the class as default or as the module itself.
  
 const Pbf: new (buf: Uint8Array) => unknown = (PbfLib as any).PbfReader ?? (PbfLib as any).default ?? PbfLib;
 

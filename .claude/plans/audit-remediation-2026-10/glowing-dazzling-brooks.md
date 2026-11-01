@@ -490,7 +490,7 @@ be decided sensibly before the inventory exists. No session deletes analytics da
 **C7. Dependencies and budgets.**
 - New packages (`@mapbox/vector-tile`, `pbf`, `@types/geojson`; `regl` if X uses it; `libcbm` in
   K) are verified against the registry for typosquats, licence-checked, and pinned in the lockfile
-  by the plan that introduces them. Lee runs the installs.
+  by the plan that introduces them. ~~Lee runs the installs.~~ **Amended, relay CI, 2026-11-01:** the session runs them; the classifier block behind this line did not recur.
 - Overlay and raster builds run detached with recorded peak memory; 12 GB is the known peak and
   needs 4 GB of headroom. **Only one heavy build (8 GB or more) runs on the host at a time**,
   enforced by `~/marvin/state/heavy-build.lock`, which holds PID, host, start time and job.
@@ -791,8 +791,8 @@ The landing sentences contradicted by the record (synthesis top-10 item 3):
   recorded as measurements, never acceptance.
 - Fix the two hollow `audit:live` assertions on non-public layers (`live-health.spec.ts:170-266`,
   handoff owed).
-- Dev deps `@mapbox/vector-tile pbf @types/geojson`. Lee runs the install; the classifier blocks
-  installs from a session.
+- ~~Dev deps `@mapbox/vector-tile pbf @types/geojson`. Lee runs the install; the classifier blocks
+  installs from a session.~~ **Moved to relay CI, 2026-11-01,** which pinned them.
 
 ### M1b. Map plumbing, the rest (Lane M, after M1a merges)
 
