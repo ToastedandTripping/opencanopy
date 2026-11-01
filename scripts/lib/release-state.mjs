@@ -95,6 +95,15 @@ export function parseLedger(path) {
 const shaKey = (sha) => `sha:${sha}`;
 const deployKey = (id) => `deploy:${id}`;
 
+/**
+ * May a claim come in on the current deploy itself, bypassing a halt? Only for a
+ * door still answering what opened it: not once green, not after a later halt.
+ */
+export function liveDoorOpen(state) {
+  const cur = state.current;
+  return Boolean(cur && (cur.acked || (cur.rollback && cur.worded)) && !cur.spent && cur.doorAt === state.haltSeq);
+}
+
 export function verdictOf(state, sha, deploy) {
   return (sha && state.verdicts[shaKey(sha)]) || (deploy && state.verdicts[deployKey(deploy)]) || null;
 }
@@ -111,6 +120,8 @@ function sameCommit(halt, sha, deploy) {
 export function closesHalt(halt, state, sha, deploy) {
   const current = state.current;
   const onCurrent = current && current.deploy === deploy;
+  // A rollback's words answer the halts open when they were given, never a later one.
+  const worded = Boolean(onCurrent && current.rollback && current.worded && halt.id <= current.doorAt);
   const corrective =
     state.held && state.holder?.kind === "corrective" && Boolean(sha) && state.holder.sha === sha;
   switch (halt.kind) {
@@ -118,13 +129,13 @@ export function closesHalt(halt, state, sha, deploy) {
     case "unverified":
       return (
         sameCommit(halt, sha, deploy) ||
-        Boolean(onCurrent && current.rollback && current.worded) ||
+        worded ||
         corrective
       );
     case "build-failed":
       return corrective;
     case "unclassifiable":
-      return Boolean(onCurrent && current.acked) && halt.deploy === deploy;
+      return Boolean((onCurrent && current.acked) || worded) && halt.deploy === deploy;
     default:
       return false;
   }
@@ -159,6 +170,16 @@ function sameDeployOrCommit(entry, sha, deploy) {
 
 function dropGreen(s, sha, deploy) {
   s.greens = s.greens.filter((g) => !sameDeployOrCommit(g, sha, deploy));
+  s.pendingGreens = s.pendingGreens.filter((g) => !sameDeployOrCommit(g, sha, deploy));
+}
+
+/** A green that waited on another halt becomes known-good when the last halt closes. */
+function promotePending(s) {
+  if (s.openHalts.length > 0) return;
+  for (const g of s.pendingGreens.splice(0)) {
+    s.greens = s.greens.filter((e) => !sameDeployOrCommit(e, g.sha, g.deploy));
+    s.greens.push(g);
+  }
 }
 
 function applyGuard(s, rec) {
@@ -177,10 +198,10 @@ function applyGuard(s, rec) {
   }
   s.openHalts = s.openHalts.filter((h) => !closesHalt(h, s, sha, deploy));
   setVerdict(s, sha, deploy, "green");
-  if (s.openHalts.length === 0) {
-    dropGreen(s, sha, deploy);
-    s.greens.push({ deploy, sha });
-  }
+  if (s.current?.deploy === deploy) s.current.spent = true;
+  s.pendingGreens = s.pendingGreens.filter((g) => !sameDeployOrCommit(g, sha, deploy));
+  s.pendingGreens.push({ deploy, sha });
+  promotePending(s);
 }
 
 export function fold(records) {
@@ -191,6 +212,8 @@ export function fold(records) {
     request: null,
     current: null,
     greens: [],
+    pendingGreens: [],
+    deployedShas: new Set(),
     verdicts: {},
     openHalts: [],
     haltSeq: 0,
@@ -204,6 +227,7 @@ export function fold(records) {
     switch (rec.type) {
       case "genesis":
         s.current = { deploy: rec.deploy, sha: rec.sha ?? null, ts: rec.ts };
+        if (rec.sha) s.deployedShas.add(rec.sha);
         setVerdict(s, rec.sha, rec.deploy, "green");
         s.greens.push({ deploy: rec.deploy, sha: rec.sha ?? null });
         break;
@@ -248,6 +272,7 @@ export function fold(records) {
         break;
       case "deploy":
         s.current = { deploy: rec.deploy, sha: rec.sha ?? null, ts: rec.ts };
+        if (rec.sha) s.deployedShas.add(rec.sha);
         if (s.held && s.holder?.sha && s.holder.sha === rec.sha) s.holder.pushed = true;
         if (rec.sha && s.correctives[rec.sha]) s.correctives[rec.sha].consumed = true;
         break;
@@ -270,16 +295,20 @@ export function fold(records) {
           ts: rec.ts,
           rollback: true,
           worded: Boolean(rec.lee),
+          doorAt: s.haltSeq,
         };
+        if (rec.sha) s.deployedShas.add(rec.sha);
         break;
       case "ack-deploy":
         if (rec.published) {
-          s.current = { deploy: rec.deploy, sha: rec.sha ?? null, ts: rec.ts, acked: true };
+          s.current = { deploy: rec.deploy, sha: rec.sha ?? null, ts: rec.ts, acked: true, doorAt: s.haltSeq };
+          if (rec.sha) s.deployedShas.add(rec.sha);
         } else {
           s.stranded.push(rec.deploy);
           s.openHalts = s.openHalts.filter(
             (h) => !(h.kind === "unclassifiable" && h.deploy === rec.deploy),
           );
+          promotePending(s);
         }
         break;
       case "release":

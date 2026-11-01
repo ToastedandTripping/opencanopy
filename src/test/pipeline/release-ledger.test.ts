@@ -882,6 +882,317 @@ describe("open-halt set", () => {
   });
 });
 
+describe("doors refuse halts they do not own", () => {
+  const OTHER = sha("cc");
+  type Foreign = "red" | "unverified" | "build-failed" | "unclassifiable";
+
+  /** Opens a halt on a commit and deploy nothing else in the test touches. */
+  function openForeign(u: Universe, kind: Foreign): void {
+    const token = u.state().token;
+    if (kind === "red" || kind === "unverified") {
+      u.appendRecord({ type: "guard", token, sha: OTHER, deploy: "dep-other", result: kind, evidence: "e" });
+    } else if (kind === "build-failed") {
+      u.appendRecord({ type: "build-failed", token, sha: OTHER });
+    } else {
+      u.appendRecord({ type: "halt", token, reason: "foreign", deploy: "dep-other", sha: OTHER });
+    }
+  }
+
+  function expectOnly(u: Universe, kind: Foreign, knownGood = "dep-genesis"): void {
+    const st = u.state();
+    expect(st.open_halts.map((h: { kind: string }) => h.kind)).toEqual([kind]);
+    expect(st.known_good.deploy).toBe(knownGood);
+  }
+
+  const ALL: Foreign[] = ["red", "unverified", "build-failed", "unclassifiable"];
+
+  it.each(ALL)("green on an unverified commit leaves a foreign %s", (kind) => {
+    const u = universe();
+    const token = u.deployed(S, "dep-a");
+    u.guard("dep-a", S, "unverified", { token });
+    openForeign(u, kind);
+    expect(u.guard("dep-a", S, "green", { token }).code).toBe(0);
+    expectOnly(u, kind);
+  });
+
+  it.each(ALL)("green with --lee on a red commit leaves a foreign %s", (kind) => {
+    const u = universe();
+    const token = u.deployed(S, "dep-a");
+    u.guard("dep-a", S, "red", { token });
+    openForeign(u, kind);
+    expect(u.guard("dep-a", S, "green", { token, lee: LEE }).code).toBe(0);
+    expectOnly(u, kind);
+  });
+
+  it.each(ALL)("green on an acked published deploy leaves a foreign %s", (kind) => {
+    const u = universe();
+    u.publish("dep-direct", S);
+    u.run(["reconcile"]);
+    u.run(["ack-deploy", "--deploy", "dep-direct", "--lee", LEE]);
+    const held = u.claim(S);
+    openForeign(u, kind);
+    expect(u.guard("dep-direct", S, "green", { token: held }).code).toBe(0);
+    expectOnly(u, kind);
+  });
+
+  it.each(ALL)("a halted claim on an acked SHA is refused once a foreign %s opens after the ack", (kind) => {
+    const u = universe();
+    u.publish("dep-direct", S);
+    u.run(["reconcile"]);
+    u.run(["ack-deploy", "--deploy", "dep-direct", "--lee", LEE]);
+    openForeign(u, kind);
+    expect(u.run(["claim", "--lane", "M", "--sha", S, "--kind", "behaviour"]).code).toBe(3);
+    expect(u.count("claim")).toBe(0);
+  });
+
+  it.each(ALL)("ack-deploy of a stranded deploy leaves a foreign %s", (kind) => {
+    const u = universe();
+    u.appendRecord({ type: "halt", token: 1, reason: "stuck", deploy: "dep-stuck", sha: null });
+    openForeign(u, kind);
+    expect(u.run(["ack-deploy", "--deploy", "dep-stuck", "--lee", LEE]).code).toBe(0);
+    expectOnly(u, kind);
+  });
+
+  it.each<Foreign>(["build-failed", "unclassifiable"])(
+    "green on a worded rollback leaves an earlier foreign %s",
+    (kind) => {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      openForeign(u, kind);
+      u.publish("dep-genesis", G);
+      u.run(["record-rollback", "--token", String(token), "--deploy", "dep-genesis", "--lee", LEE]);
+      expect(u.guard("dep-genesis", G, "green", { token }).code).toBe(0);
+      expectOnly(u, kind);
+    },
+  );
+
+  it("green on a bound corrective leaves a foreign unclassifiable, and closes the rest", () => {
+    const u = universe();
+    const token = u.claim(S);
+    for (const kind of ["red", "unverified", "build-failed", "unclassifiable"] as Foreign[]) openForeign(u, kind);
+    u.run(["authorize-corrective", "--token", String(token), "--sha", S2, "--lee", LEE]);
+    u.run(["release", "--token", String(token)]);
+    const held = u.claim(S2, "corrective");
+    u.land("dep-b", S2);
+    expect(u.guard("dep-b", S2, "green", { token: held }).code).toBe(0);
+    expectOnly(u, "unclassifiable");
+  });
+
+  describe("C1: a corrective is a new commit", () => {
+    function buildFailedAfterRollback(): { u: Universe; token: number } {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      u.run(["release", "--token", String(token)]);
+      u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]);
+      u.publish("dep-genesis", G);
+      u.appendRecord({ type: "build-failed", token: u.state().token, sha: OTHER });
+      return { u, token };
+    }
+
+    it("claim --deploy --kind corrective is refused, with an authorization on another SHA", () => {
+      const { u } = buildFailedAfterRollback();
+      u.run(["authorize-corrective", "--sha", S2, "--lee", LEE]);
+      const before = u.bytes();
+      refused(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "corrective"]));
+      expect(u.bytes()).toBe(before);
+    });
+
+    it("a corrective --deploy is refused on a rollback still answering its own halt", () => {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      u.run(["release", "--token", String(token)]);
+      u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]);
+      u.publish("dep-genesis", G);
+      refused(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "corrective"]));
+      expect(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]).code).toBe(0);
+    });
+
+    it("authorize-corrective refuses a live known-good SHA", () => {
+      const u = universe();
+      u.appendRecord({ type: "build-failed", token: 1, sha: OTHER });
+      const before = u.bytes();
+      refused(u.run(["authorize-corrective", "--sha", G, "--lee", LEE]));
+      expect(u.bytes()).toBe(before);
+      expect(u.state().open_halts).toHaveLength(1);
+    });
+
+    it("an authorization that was deployed afterwards cannot claim as a corrective", () => {
+      const u = universe();
+      u.run(["authorize-corrective", "--sha", S, "--lee", LEE]);
+      u.publish("dep-direct", S);
+      u.run(["reconcile"]);
+      u.run(["ack-deploy", "--deploy", "dep-direct", "--lee", LEE]);
+      refused(u.run(["claim", "--lane", "M", "--sha", S, "--kind", "corrective"]));
+    });
+  });
+
+  describe("C2: a rollback's words do not outlive the halts they answered", () => {
+    function greenedRollback(): { u: Universe } {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      u.run(["release", "--token", String(token)]);
+      u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]);
+      u.publish("dep-genesis", G);
+      u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]);
+      const held = u.state().token;
+      expect(u.guard("dep-genesis", G, "green", { token: held }).code).toBe(0);
+      expect(u.state().open_halts).toEqual([]);
+      u.run(["release", "--token", String(held)]);
+      return { u };
+    }
+
+    it.each<Foreign>(["red", "unverified", "build-failed"])("a later %s stays open through green on the old deploy", (kind) => {
+      const { u } = greenedRollback();
+      const held = u.claim(S2);
+      openForeign(u, kind);
+      expect(u.guard("dep-genesis", G, "green", { token: held }).code).toBe(0);
+      expect(u.state().open_halts.map((h: { kind: string }) => h.kind)).toEqual([kind]);
+    });
+
+    it("an unverified with a null deploy, opened after an unspent rollback, stays open", () => {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      u.run(["record-rollback", "--token", String(token), "--deploy", "dep-genesis", "--lee", LEE]);
+      u.publish("dep-genesis", G);
+      u.appendRecord({ type: "guard", token, sha: S2, deploy: null, result: "unverified", evidence: "timeout" });
+      expect(u.guard("dep-genesis", G, "green", { token }).code).toBe(0);
+      const st = u.state();
+      expect(st.open_halts.map((h: { kind: string; sha: string }) => h.sha)).toEqual([S2]);
+    });
+
+    it("claim --deploy is refused once the rollback was greened", () => {
+      const { u } = greenedRollback();
+      const before = u.bytes();
+      refused(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]));
+      expect(u.bytes()).toBe(before);
+    });
+
+    it("claim --deploy is refused after a later halt, even on a rollback never greened", () => {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      u.run(["release", "--token", String(token)]);
+      u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]);
+      u.publish("dep-genesis", G);
+      openForeign(u, "build-failed");
+      refused(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]));
+    });
+
+    it("an acked SHA's bypass is spent by its green", () => {
+      const u = universe();
+      u.publish("dep-direct", S);
+      u.run(["reconcile"]);
+      u.run(["ack-deploy", "--deploy", "dep-direct", "--lee", LEE]);
+      const held = u.claim(S);
+      u.guard("dep-direct", S, "green", { token: held });
+      u.run(["release", "--token", String(held)]);
+      openForeign(u, "build-failed");
+      const res = u.run(["claim", "--lane", "M", "--sha", S, "--kind", "behaviour"]);
+      expect(res.code).toBe(3);
+    });
+
+    it("an acked null-ref deploy's --deploy door is spent by its green", () => {
+      const u = universe();
+      u.publish("dep-null", null);
+      u.run(["reconcile"]);
+      u.run(["ack-deploy", "--deploy", "dep-null", "--lee", LEE]);
+      u.run(["claim", "--lane", "M", "--deploy", "dep-null", "--kind", "behaviour"]);
+      const held = u.state().token;
+      u.guard("dep-null", null, "green", { token: held });
+      u.run(["release", "--token", String(held)]);
+      refused(u.run(["claim", "--lane", "M", "--deploy", "dep-null", "--kind", "behaviour"]));
+    });
+  });
+
+  describe("W1: rolling back to an older green has a door in either order", () => {
+    function olderGreenUnclassifiable(): Universe {
+      const u = universe();
+      const a = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "green", { token: a });
+      u.run(["release", "--token", String(a)]);
+      const b = u.deployed(S2, "dep-b");
+      u.guard("dep-b", S2, "green", { token: b });
+      u.run(["release", "--token", String(b)]);
+      expect(u.state().known_good.deploy).toBe("dep-b");
+      u.guard("dep-b", S2, "red");
+      expect(u.state().known_good.deploy).toBe("dep-a");
+      return u;
+    }
+
+    it("reconcile, record-rollback, then green closes the red and the unclassifiable", () => {
+      const u = olderGreenUnclassifiable();
+      u.publish("dep-genesis", G); // older than known-good dep-a: reconcile cannot classify it
+      expect(u.run(["reconcile"]).code).toBe(3);
+      expect(u.state().open_halts.map((h: { kind: string }) => h.kind)).toEqual(["red", "unclassifiable"]);
+      expect(u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]).code).toBe(0);
+      expect(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]).code).toBe(0);
+      const held = u.state().token;
+      expect(u.guard("dep-genesis", G, "green", { token: held }).code).toBe(0);
+      expect(u.state().open_halts).toEqual([]);
+      expect(u.state().known_good.deploy).toBe("dep-genesis");
+    });
+
+    it("reconcile, ack-deploy, record-rollback, then green closes both", () => {
+      const u = olderGreenUnclassifiable();
+      u.publish("dep-genesis", G);
+      u.run(["reconcile"]);
+      expect(u.run(["ack-deploy", "--deploy", "dep-genesis", "--lee", LEE]).code).toBe(0);
+      expect(u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]).code).toBe(0);
+      expect(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]).code).toBe(0);
+      const held = u.state().token;
+      expect(u.guard("dep-genesis", G, "green", { token: held }).code).toBe(0);
+      expect(u.state().open_halts).toEqual([]);
+    });
+  });
+
+  it("W2: repair burns past the lease's token too, so it is never issued again", () => {
+    const u = universe();
+    const genesisLine = u.bytes();
+    fs.mkdirSync(u.leaseDir);
+    fs.writeFileSync(u.leaseFile, JSON.stringify({ token: 5, ts: "2026-11-01T12:00:00.000Z" }));
+    expect(u.run(["status"]).code).toBe(3);
+    const aside = path.join(u.root, "aside.jsonl");
+    const fixed = path.join(u.root, "fixed.jsonl");
+    fs.renameSync(u.ledgerPath, aside);
+    fs.writeFileSync(fixed, genesisLine);
+    expect(u.run(["repair-note", "--aside", aside, "--fixed", fixed, "--reason", "lease ahead"]).code).toBe(0);
+    expect(u.state().token).toBe(6);
+    expect(u.claim(S)).toBe(7);
+  });
+
+  describe("W3: a green that waited on another halt", () => {
+    function greenWaiting(): Universe {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.appendRecord({ type: "halt", token, reason: "x", deploy: "dep-stuck", sha: null });
+      expect(u.guard("dep-a", S, "green", { token }).code).toBe(0);
+      expect(u.state().known_good.deploy).toBe("dep-genesis");
+      return u;
+    }
+
+    it("becomes known-good when the last halt closes", () => {
+      const u = greenWaiting();
+      expect(u.run(["ack-deploy", "--deploy", "dep-stuck", "--lee", LEE]).code).toBe(0);
+      const st = u.state();
+      expect(st.open_halts).toEqual([]);
+      expect(st.known_good.deploy).toBe("dep-a");
+    });
+
+    it("does not, if it went red meanwhile", () => {
+      const u = greenWaiting();
+      const token = u.state().token;
+      expect(u.guard("dep-a", S, "red", { token }).code).toBe(0);
+      u.run(["ack-deploy", "--deploy", "dep-stuck", "--lee", LEE]);
+      expect(u.state().known_good.deploy).toBe("dep-genesis");
+    });
+  });
+});
+
 describe("words and notices", () => {
   const notifyLines = (u: Universe) =>
     fs.existsSync(u.notifyLog) ? fs.readFileSync(u.notifyLog, "utf8").trim().split("\n") : [];

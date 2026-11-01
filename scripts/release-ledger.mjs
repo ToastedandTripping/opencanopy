@@ -24,6 +24,7 @@ import {
   closesHalt,
   fold,
   guardTransition,
+  liveDoorOpen,
   parseLedger,
   parseLedgerText,
   reconcileActions,
@@ -404,8 +405,8 @@ function cmdReconcile(flags) {
 
 function eligibleLiveDeploy(state, deploy) {
   const cur = state.current;
-  if (!cur || cur.deploy !== deploy) return false;
-  return Boolean((cur.rollback && cur.worded) || (cur.acked && cur.sha === null));
+  if (!cur || cur.deploy !== deploy || !liveDoorOpen(state)) return false;
+  return Boolean(cur.rollback || cur.sha === null);
 }
 
 function cmdClaim(flags) {
@@ -422,14 +423,19 @@ function cmdClaim(flags) {
     if (newHalt) throw halted(ctx.state);
     const { state } = ctx;
     const cur = state.current;
-    const ackedSha = Boolean(flags.sha && cur?.acked && cur.sha === flags.sha);
+    const ackedSha = Boolean(flags.sha && cur?.acked && cur.sha === flags.sha && liveDoorOpen(state));
     const liveDeploy = Boolean(flags.deploy && eligibleLiveDeploy(state, flags.deploy));
     if (flags.deploy && !liveDeploy) {
-      throw refuse(`--deploy ${flags.deploy} is neither an acked deploy with no commit ref nor one record-rollback made current`);
+      throw refuse(`--deploy ${flags.deploy} is neither an acked deploy with no commit ref nor one record-rollback made current, still answering its halt`);
     }
+    // A corrective is a new commit. What is already live changes nothing and closes nothing.
+    if (kind === "corrective" && flags.deploy) throw refuse("a corrective claims a new --sha, never a live --deploy");
     const auth = kind === "corrective" ? state.correctives[flags.sha] : null;
-    if (kind === "corrective" && !liveDeploy && (!auth || auth.consumed)) {
+    if (kind === "corrective" && (!auth || auth.consumed)) {
       throw refuse(`no unconsumed corrective authorization for ${flags.sha}`);
+    }
+    if (kind === "corrective" && state.deployedShas.has(flags.sha)) {
+      throw refuse(`${flags.sha} has already been deployed, so it cannot be a corrective`);
     }
     if (state.openHalts.length > 0 && !ackedSha && !liveDeploy && kind !== "corrective") {
       throw halted(state);
@@ -638,6 +644,9 @@ function cmdAuthorizeCorrective(flags) {
   const lee = words(flags, "lee");
   locked((ctx) => {
     fenceWhenHeld(ctx, token);
+    if (ctx.state.deployedShas.has(sha)) {
+      throw refuse(`${sha} has already been deployed, so it cannot be a corrective`);
+    }
     const existing = ctx.state.correctives[sha];
     if (existing?.consumed) throw refuse(`the corrective for ${sha} is already consumed`);
     if (existing) {
@@ -673,7 +682,7 @@ function cmdRecordRollback(flags) {
       process.stdout.write("rollback already recorded\n");
       return;
     }
-    if (onCurrent && !cur.rollback) throw refuse(`${deploy} is the current deploy, not a rollback`);
+    if (onCurrent && !cur.rollback && !cur.acked) throw refuse(`${deploy} is the current deploy, not a rollback`);
     const known = knownDeploySha(ctx.records, deploy);
     if (!known) throw refuse(`the ledger has never recorded deploy ${deploy}`);
     append(ctx, { type: "rollback", deploy, sha: known.sha, lee });
@@ -737,7 +746,15 @@ function cmdRepairNote(flags) {
     }
     // Tolerant on purpose: the aside is the file that failed to parse.
     const asideTokens = [...asideText.matchAll(/"token"\s*:\s*(\d+)/g)].map((m) => Number(m[1]));
-    const token = Math.max(0, ...asideTokens, fold(fixedRecords).token) + 1;
+    // The lease may be why it failed to parse, and its holder's token must not come back.
+    let leaseText = "";
+    try {
+      leaseText = fs.readFileSync(leaseFile(), "utf8");
+    } catch (err) {
+      if (err.code !== "ENOENT" && err.code !== "ENOTDIR") throw err;
+    }
+    const leaseTokens = [...leaseText.matchAll(/"token"\s*:\s*(\d+)/g)].map((m) => Number(m[1]));
+    const token = Math.max(0, ...asideTokens, ...leaseTokens, fold(fixedRecords).token) + 1;
     const rec = { v: 1, ts: nowIso(), type: "repair", token, reason, aside };
     const fd = fs.openSync(fixed, "a");
     try {
