@@ -18,7 +18,7 @@ const { VectorTile } = VectorTileLib;
 
 // pbf is transpiled ESM -- use .default if available
  
-const Pbf: new (buf: Uint8Array) => unknown = (PbfLib as any).default ?? PbfLib;
+const Pbf: new (buf: Uint8Array) => unknown = (PbfLib as any).PbfReader ?? (PbfLib as any).default ?? PbfLib;
 
 // Magic bytes for gzip
 const GZIP_MAGIC = 0x1f8b;
