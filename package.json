@@ -70,6 +70,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "happy-dom": "^21.0.4",
+    "lodash": "^4.17.20",
     "pbf": "^5.1.2",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
