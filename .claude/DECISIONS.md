@@ -25,11 +25,13 @@ does. The convention is documented in `.claude/rules/project-docs.md`.
 ## Product rulings
 
 ### The landing page ends on the province-wide red reveal; the zoom into the old-growth pocket is /map's job, via the CTA deep-link.
-*2026-08-21, per Lee, amended 2026-10-07*
+*2026-08-21, per Lee, amended 2026-10-07, amended 2026-10-02*
 
 The in-story ending zoom (the dolly) went through three relays and never shipped smooth: the live scroll-scrub lags and drops tiles, and the pre-rendered video needs an ffmpeg -> R2 chain that only runs from Lee's terminal. Lee's call: the landing page was trying too hard and absorbing effort that belongs to /map, which is the product. So the story closes on `ending` ('35,000 hectares') and the CTA's 'Explore the Map' carries the reader to STORY_END_CAMERA on /map, where the zoom is interactive and free. The dolly is docked, not deleted (tags `dock/dolly-live-scrub`, `dock/dolly-phase2-video`); an in-story zoom comes back only by a deliberate decision to un-dock it, never by drift — `cameraTo` was removed from the `Chapter` type for exactly that reason.
 
 **Amended, Lee, 2026-10-07:** Lee corrected the reason given above: "I don't think that I meant to imply that the page was trying too hard. I think that maybe the scroll effect wasn't really working." The dock stands; its cause is a working-quality problem with the effect, not a judgement that the page should not zoom. None of the three versions had been rendered or assessed when it was docked: the live scrub was judged on the live site in June, and the 2026-10-07 recording on a GPU showed it scrolling at 60 fps with soft tiles mid-zoom; the play-on-scroll video's render page had a bug that left the reveal at opacity 0, so its video would have been blank; the whole-story video (branch relay/story-video-phase2-render-spec) was never recorded anywhere. Any new ending is judged against rendered output, not memory.
+
+**Amended, Lee, recorded 2026-11-01, 2026-10-02:** Ruling C of the 2026-10-02 audit decisions: until the film replaces it, the scroll story's closing reveal has three tones: green for 250+ years, grey for younger forest, red for recorded harvest. The clause that /map's CTA deep-link does the zoom stands. The film entry of 2026-10-08 governs the landing once it ships.
 
 ### A public number must be reproducible from the shipped data; when in doubt, understate.
 *2026-09-02, per Lee*
@@ -37,13 +39,15 @@ The in-story ending zoom (the dolly) went through three relays and never shipped
 The landing page said "8 million hectares" from 2026-06-18 to 2026-09-02 on a count nobody could rerun; the repo's own scrub table said 7.06M, and once the /map layer's 2,000 ha tenure-boundary cap was applied to the story pipeline the supportable figure was 5.89M. Lee's ruling: better to underestimate than to provide a higher number we can't source. So every figure shown to the public (hero stats, chapter copy, calculator values, the PDF) is derived from a file in the repo by a rerunnable script, pinned by a test that reads that file (`src/test/lib/hero-figure.test.ts` is the pattern), and floored when rounded for copy. A figure that cannot be derived is not shown.
 
 ### Logged hectares means dated 1950-2025 FTEN cutblocks under the 2,000 ha cap, in the story and on the map alike.
-*2026-09-02, per Lee, amended 2026-10-08, amended 2026-10-23*
+*2026-09-02, per Lee, amended 2026-10-08, amended 2026-10-23, amended 2026-10-02*
 
 The FTEN cut-block layer carries 230 polygons of 2,000-92,000 ha with no client and repeated areas under different dates: tenure boundaries, not cutblocks. The /map cutblocks layer has always excluded them (`CUTBLOCK_AREA_CAP_HA`); the story's scrub table and year overlays did not, so the red picture and its caption included 2.45M ha that the map itself refuses to call logging. Both pipelines now apply the same cap and the scrub JSON declares it. Undated blocks (1.12M ha under the cap) are painted as the muted pre-record baseline but never counted in a "since 1950" figure, because their timing is unknown. Phase B's harvest leaderboard must use the same definition or its public totals will diverge from the map.
 
 **Amended, Lee, 2026-10-08:** Lee, 2026-10-08: the FTEN record alone hides early logging (78,488 ha dated before 1990, against 3,136,257 ha by the forest inventory's HARVEST_DATE; research/vri-harvest-by-year-2026-10-08.json), while the inventory lags recent years (6,733 ha for 2023 against FTEN's 115,143). Logged area becomes a merge of both records with no stand counted twice, built and reconciled before any public number changes. Until then the public figure stays 5.8 million ha (FTEN). The intro spike may use a labelled interim splice (inventory to 1999, FTEN from 2000: 10,096,541 ha).
 
 **Amended, Lee, 2026-10-23:** Lee, 2026-10-23 (beta decisions, "Film, correct now"): a downward correction may ship before the merge. The cap fix (on max(attribute, geometry); nine polygons, 82,920 ha) and the overlap dissolve go out with S1-lite as soon as they are built, and the headline takes the corrected, floored figure (very likely 5.7 million against the shipped 5,888,477 ha); the merge then changes it once more. The hold "until then the public figure stays 5.8 million" no longer applies to a figure that would overstate.
+
+**Amended, Lee, recorded 2026-11-01, 2026-10-02:** Ruling B of the 2026-10-02 audit decisions: undated cutblocks leave the story picture as well as the count, until their status codes have been checked. The 2026-09-02 ruling removed them from the count only; a picture that paints them at 1950 implies a date the record does not hold.
 
 ### A stand we cannot age contributes to no value: not carbon, not timber, not ecosystem services.
 *2026-09-02, per Lee*
@@ -123,6 +127,21 @@ Lee chose the faster 4G preset over the program's Slow 4G milestone (recommended
 
 A shared link is how the beta spreads (a journalist's link opening on a different picture is close to a broken feature). M3b's view-state parser is pulled into the gate as its own small relay; the rest of M3b stays in the beta.
 
+### Map plumbing and story honesty ship before Phase B.
+*2026-10-02, Lee, recorded 2026-11-01*
+
+Ruling A of the 2026-10-02 audit decisions. The Oct 2 audit found search, share links, deep links and the story's CTA failing on cold load, and landing sentences contradicting the record; the accountability work should not land on top of those. Lee's earlier order (2026-08-26, B then C, D, E) keeps its internal sequence after them. Under the 2026-10-23 path to beta, Phase B itself is built during the beta.
+
+### A first-time visitor's /map opens on the Overview preset, once the plumbing is fixed.
+*2026-10-02, Lee, recorded 2026-11-01*
+
+Ruling F of the 2026-10-02 audit decisions. Ships in M2 with DEFAULT_PRESET_ID = overview, and persists a visitor's choice only when it differs from the default.
+
+### Company attribution comes from tenure data before any leaderboard ships.
+*2026-10-02, Lee, recorded 2026-11-01*
+
+Ruling H of the 2026-10-02 audit decisions. An accountability view that names companies has to rank them from the tenure record, by area, with a visible unattributed row, or it characterizes proponents on a guess. It is a prerequisite of B′.
+
 ## Engineering pins
 
 ### Do not merge the Phase 2 dolly-video branch until real video assets exist.
@@ -176,5 +195,10 @@ The program plan itself took eight critic rounds, every one a FAIL, each finding
 *2026-10-23, Lee (path-to-beta grill)*
 
 The live tiles are v10 of 2026-05-09, built by a manual local rebuild.sh. Lee's 2026-09-25 call, confirmed in the grill: the pipeline bar is one command run by Lee on a set rhythm, not an unattended rebuild, and the rhythm is quarterly. The matching wording change to the charter's goal (1) is with Lee for approval through marvin session-d09d2c; until he approves it the charter is not edited, and this entry is the operative rule.
+
+### Releases go one relay at a time, each followed by live production guards, serialized across lanes.
+*2026-10-02, Lee, recorded 2026-11-01*
+
+Lee chose per-relay deploys in the 2026-10-02 audit decisions; contract C2 of the remediation program makes them serial, because the map and story lanes share files and a deploy. One push is in flight at a time, the next waits for the previous release's guards, and a red guard halts both lanes. The session pushes after Lee's yes (Deploy entry, amended 2026-10-05); where C2 says Lee pushes, this and that amendment supersede it.
 
 ## Evidence corrections

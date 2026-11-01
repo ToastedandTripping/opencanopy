@@ -128,7 +128,24 @@ where a routine hand-off rewrite could have dropped it). Rulings and constraints
 - **CSP is report-only, not enforcing.** The enforce-flip is gated behind a cold-cache/incognito/mobile console watch that hasn't happened yet.
 - **GFW decode-shader endgame** (year-encoded raster + custom WebGL shader for the scroll-story) -- feasibility study done, encoding spec frozen, held behind the pre-committed scroll-story Phase-3 gate (ruling in `.claude/DECISIONS.md`).
 - **The /map improvement program** is fully designed but not started: a small-win MapLibre `global-state` batch, then Phases B (harvest consolidation + accountability), C (color/threat re-spine), D (proposed-logging FOM layer, probed and GO), E (layer architecture). Research lives at `~/marvin/research/opencanopy-map-layering-comms-20260717/` (PLAN.md + 4 lens files + probe outputs). Each phase needs its own plan-mode + Fable critic + relay, on Lee's go. Sequencing is an open question in `.claude/handoff.md`.
-- **FOM watch: the comment-period alert persona (2026-09-11).** Lee, 2026-09-11: OpenCanopy is allowed to advocate ("I don't mind that it becomes a tool of change"). Watch every open Forest Operations Map comment period in the province through the FOM public API (no scraping needed), publish plain-language alerts with the deadline, the hectares and a comment scaffold, and hand Lee a reviewed post for Facebook groups and Reddit, semi-automated with one review step. Phase D of the /map program (the proposed-logging layer, probed GO) grows a time axis here. Detail: `### Deferred from 2026-09-11 — FOM watch` below. Grill before planning; the charter needs Lee's amendment first (advocacy is not in it).
+- **FOM watch: the comment-period alert persona (2026-09-11).** Lee, 2026-09-11: OpenCanopy is allowed to advocate ("I don't mind that it becomes a tool of change"). Watch every open Forest Operations Map comment period in the province through the FOM public API (no scraping needed), publish plain-language alerts with the deadline, the hectares and a comment scaffold, and hand Lee a reviewed post for Facebook groups and Reddit, semi-automated with one review step. Phase D of the /map program (the proposed-logging layer, probed GO) grows a time axis here. Detail: `### Deferred from 2026-10 — path to beta (Lee, 2026-10-23; `.claude/plans/audit-remediation-2026-10/beta-resequence.md`)
+
+Built during the beta, in the order the plan gives:
+- **B′** the accountability view (Phase B rebase plus tenure attribution, ruling H).
+- **W** the watershed report card and **P** the conservation priority analysis: charter goal (2), no plan yet, each needs a grill. The beta cannot exit until these and B′ ship.
+- **C′** the rest of the Phase C re-spine, less whatever the small colour relay takes. Replaces August's 500 ha cap with the rectangle check (Lee, 2026-11-01: check first).
+- **D′** FOM layer; **E′** E2-E5; the rest of **T** (E&N mask, big-tree subset, empty-tile manifest).
+- **M3b** less the coordinate rounding and the view-state parser.
+
+Held or awaiting a check:
+- **G** tile domain: stays on r2.dev (held 2026-10-02).
+- Undated blocks option 2: revisit after the status-code check.
+- iOS Safari bottom-bar check (no owner for a fix if it reproduces).
+- The eslint dev chain's moderates, held by the eslint-config-next pin; `tsx` pinned in PIPE.
+- Heavy-build lock: split from P0b as its own small relay, needed by G2.
+- Five leftover decisions from the 2026-09-20 plan (D4-D8, including branch protection): batched for Lee, see TRACEABILITY.
+
+### Deferred from 2026-09-11 — FOM watch` below. Grill before planning; the charter needs Lee's amendment first (advocacy is not in it).
 
 ### Deferred — known, unscheduled
 
