@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-11-01T22:39:11.631Z",
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "warned": 1,
+    "failed": 0
+  },
+  "results": [
+    {
+      "check": "Temporal audit — archive availability",
+      "status": "WARN",
+      "message": "No archives found in /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/tiles/archive. Temporal comparison requires at least one previous build. Skipping temporal checks."
+    }
+  ]
+}

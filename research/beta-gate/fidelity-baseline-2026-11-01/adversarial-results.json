@@ -1,0 +1,376 @@
+{
+  "timestamp": "2026-11-01T22:36:47.872Z",
+  "auditType": "adversarial",
+  "zoom": 10,
+  "pointsTested": 9,
+  "summary": {
+    "total": 32,
+    "passed": 32,
+    "warned": 0,
+    "failed": 0
+  },
+  "checks": {
+    "v1Presence": 8,
+    "v2Property": 8,
+    "v3Absence": 1,
+    "v4Contradiction": 15
+  },
+  "results": [
+    {
+      "check": "V1:Presence | Garibaldi Provincial Park | parks",
+      "status": "PASS",
+      "message": "4 feature(s) found in 'parks' at Garibaldi Provincial Park",
+      "details": {
+        "lat": 49.92,
+        "lon": -122.73,
+        "featureCount": 4
+      }
+    },
+    {
+      "check": "V2:Property | Garibaldi Provincial Park | parks.name",
+      "status": "PASS",
+      "message": "Property 'name' = \"GARIBALDI PARK\" matches expected",
+      "details": {
+        "lat": 49.92,
+        "lon": -122.73,
+        "actualValue": "GARIBALDI PARK"
+      }
+    },
+    {
+      "check": "V1:Presence | Fairy Creek Watershed | tenure-cutblocks",
+      "status": "PASS",
+      "message": "866 feature(s) found in 'tenure-cutblocks' at Fairy Creek Watershed",
+      "details": {
+        "lat": 48.66,
+        "lon": -124.52,
+        "featureCount": 866
+      }
+    },
+    {
+      "check": "V2:Property | Fairy Creek Watershed | tenure-cutblocks.company_id",
+      "status": "PASS",
+      "message": "Property 'company_id' = \"other\" matches expected",
+      "details": {
+        "lat": 48.66,
+        "lon": -124.52,
+        "actualValue": "other"
+      }
+    },
+    {
+      "check": "V1:Presence | Great Bear Rainforest | conservancies",
+      "status": "PASS",
+      "message": "4 feature(s) found in 'conservancies' at Great Bear Rainforest",
+      "details": {
+        "lat": 52.5,
+        "lon": -128.2,
+        "featureCount": 4
+      }
+    },
+    {
+      "check": "V2:Property | Great Bear Rainforest | conservancies.name",
+      "status": "PASS",
+      "message": "Property 'name' = \"FIORDLAND CONSERVANCY\" matches expected",
+      "details": {
+        "lat": 52.5,
+        "lon": -128.2,
+        "actualValue": "FIORDLAND CONSERVANCY"
+      }
+    },
+    {
+      "check": "V1:Presence | Revelstoke Logging Area | tenure-cutblocks",
+      "status": "PASS",
+      "message": "381 feature(s) found in 'tenure-cutblocks' at Revelstoke Logging Area",
+      "details": {
+        "lat": 51,
+        "lon": -118.2,
+        "featureCount": 381
+      }
+    },
+    {
+      "check": "V2:Property | Revelstoke Logging Area | tenure-cutblocks.company_id",
+      "status": "PASS",
+      "message": "Property 'company_id' = \"other\" matches expected",
+      "details": {
+        "lat": 51,
+        "lon": -118.2,
+        "actualValue": "other"
+      }
+    },
+    {
+      "check": "V3:Absence | Pacific Ocean (West Vancouver Island) | forest-age",
+      "status": "PASS",
+      "message": "Tile missing at z10 -- absence confirmed (no tile = no features)",
+      "details": {
+        "lat": 49.5,
+        "lon": -128.5,
+        "layer": "forest-age"
+      }
+    },
+    {
+      "check": "V1:Presence | Lytton 2021 Fire | fire-history",
+      "status": "PASS",
+      "message": "190 feature(s) found in 'fire-history' at Lytton 2021 Fire",
+      "details": {
+        "lat": 50.23,
+        "lon": -121.58,
+        "featureCount": 190
+      }
+    },
+    {
+      "check": "V2:Property | Lytton 2021 Fire | fire-history.FIRE_YEAR",
+      "status": "PASS",
+      "message": "Property 'FIRE_YEAR' = \"2023\" matches expected",
+      "details": {
+        "lat": 50.23,
+        "lon": -121.58,
+        "actualValue": "2023"
+      }
+    },
+    {
+      "check": "V1:Presence | Highland Valley Mine | mining-claims",
+      "status": "PASS",
+      "message": "1218 feature(s) found in 'mining-claims' at Highland Valley Mine",
+      "details": {
+        "lat": 50.48,
+        "lon": -121.05,
+        "featureCount": 1218
+      }
+    },
+    {
+      "check": "V2:Property | Highland Valley Mine | mining-claims.TENURE_TYPE_DESCRIPTION",
+      "status": "PASS",
+      "message": "Property 'TENURE_TYPE_DESCRIPTION' = \"Mineral\" matches expected",
+      "details": {
+        "lat": 50.48,
+        "lon": -121.05,
+        "actualValue": "Mineral"
+      }
+    },
+    {
+      "check": "V1:Presence | Vancouver Watershed | community-watersheds",
+      "status": "PASS",
+      "message": "7 feature(s) found in 'community-watersheds' at Vancouver Watershed",
+      "details": {
+        "lat": 49.41,
+        "lon": -122.9,
+        "featureCount": 7
+      }
+    },
+    {
+      "check": "V2:Property | Vancouver Watershed | community-watersheds.CW_NAME",
+      "status": "PASS",
+      "message": "Property 'CW_NAME' = \"Capilano Community Watershed\" matches expected",
+      "details": {
+        "lat": 49.41,
+        "lon": -122.9,
+        "actualValue": "Capilano Community Watershed"
+      }
+    },
+    {
+      "check": "V1:Presence | Strathcona Provincial Park | parks",
+      "status": "PASS",
+      "message": "3 feature(s) found in 'parks' at Strathcona Provincial Park",
+      "details": {
+        "lat": 49.63,
+        "lon": -125.75,
+        "featureCount": 3
+      }
+    },
+    {
+      "check": "V2:Property | Strathcona Provincial Park | parks.name",
+      "status": "PASS",
+      "message": "Property 'name' = \"STRATHCONA PARK\" matches expected",
+      "details": {
+        "lat": 49.63,
+        "lon": -125.75,
+        "actualValue": "STRATHCONA PARK"
+      }
+    },
+    {
+      "check": "V4:Contradiction | CutblocksInPark | Garibaldi Provincial Park",
+      "status": "PASS",
+      "message": "Parks (4) and cutblocks (157) coexist in z10 tile at Garibaldi Provincial Park (expected at this resolution)",
+      "details": {
+        "lat": 49.92,
+        "lon": -122.73,
+        "parkFeatureCount": 4,
+        "cutblockFeatureCount": 157
+      }
+    },
+    {
+      "check": "V4:Contradiction | OldGrowthPostFire | Garibaldi Provincial Park",
+      "status": "PASS",
+      "message": "Old-growth and recent fire coexist in tile at Garibaldi Provincial Park (66% mature -- below conflict threshold)",
+      "details": {
+        "lat": 49.92,
+        "lon": -122.73,
+        "totalForestFeatures": 3091,
+        "matureOrOldGrowthCount": 2046,
+        "matureRatio": 66,
+        "recentFireCount": 7,
+        "significant": false
+      }
+    },
+    {
+      "check": "V4:Contradiction | CutblocksInPark | Fairy Creek Watershed",
+      "status": "PASS",
+      "message": "Parks (3) and cutblocks (866) coexist in z10 tile at Fairy Creek Watershed (expected at this resolution)",
+      "details": {
+        "lat": 48.66,
+        "lon": -124.52,
+        "parkFeatureCount": 3,
+        "cutblockFeatureCount": 866
+      }
+    },
+    {
+      "check": "V4:Contradiction | OldGrowthPostFire | Fairy Creek Watershed",
+      "status": "PASS",
+      "message": "Old-growth and recent fire coexist in tile at Fairy Creek Watershed (53% mature -- below conflict threshold)",
+      "details": {
+        "lat": 48.66,
+        "lon": -124.52,
+        "totalForestFeatures": 5094,
+        "matureOrOldGrowthCount": 2678,
+        "matureRatio": 53,
+        "recentFireCount": 4,
+        "significant": false
+      }
+    },
+    {
+      "check": "V4:Contradiction | CutblocksInPark | Great Bear Rainforest",
+      "status": "PASS",
+      "message": "Parks (1) and cutblocks (472) coexist in z10 tile at Great Bear Rainforest (expected at this resolution)",
+      "details": {
+        "lat": 52.5,
+        "lon": -128.2,
+        "parkFeatureCount": 1,
+        "cutblockFeatureCount": 472
+      }
+    },
+    {
+      "check": "V4:Contradiction | CutblocksInPark | Revelstoke Logging Area",
+      "status": "PASS",
+      "message": "Parks (6) and cutblocks (381) coexist in z10 tile at Revelstoke Logging Area (expected at this resolution)",
+      "details": {
+        "lat": 51,
+        "lon": -118.2,
+        "parkFeatureCount": 6,
+        "cutblockFeatureCount": 381
+      }
+    },
+    {
+      "check": "V4:Contradiction | OldGrowthPostFire | Revelstoke Logging Area",
+      "status": "PASS",
+      "message": "Old-growth and recent fire coexist in tile at Revelstoke Logging Area (83% mature -- below conflict threshold)",
+      "details": {
+        "lat": 51,
+        "lon": -118.2,
+        "totalForestFeatures": 9282,
+        "matureOrOldGrowthCount": 7681,
+        "matureRatio": 83,
+        "recentFireCount": 19,
+        "significant": false
+      }
+    },
+    {
+      "check": "V4:Contradiction | CutblocksInPark | Lytton 2021 Fire",
+      "status": "PASS",
+      "message": "Parks (6) and cutblocks (323) coexist in z10 tile at Lytton 2021 Fire (expected at this resolution)",
+      "details": {
+        "lat": 50.23,
+        "lon": -121.58,
+        "parkFeatureCount": 6,
+        "cutblockFeatureCount": 323
+      }
+    },
+    {
+      "check": "V4:Contradiction | OldGrowthPostFire | Lytton 2021 Fire",
+      "status": "PASS",
+      "message": "Old-growth and recent fire coexist in tile at Lytton 2021 Fire (78% mature -- below conflict threshold)",
+      "details": {
+        "lat": 50.23,
+        "lon": -121.58,
+        "totalForestFeatures": 37211,
+        "matureOrOldGrowthCount": 28987,
+        "matureRatio": 78,
+        "recentFireCount": 62,
+        "significant": false
+      }
+    },
+    {
+      "check": "V4:Contradiction | CutblocksInPark | Highland Valley Mine",
+      "status": "PASS",
+      "message": "Parks (3) and cutblocks (1196) coexist in z10 tile at Highland Valley Mine (expected at this resolution)",
+      "details": {
+        "lat": 50.48,
+        "lon": -121.05,
+        "parkFeatureCount": 3,
+        "cutblockFeatureCount": 1196
+      }
+    },
+    {
+      "check": "V4:Contradiction | OldGrowthPostFire | Highland Valley Mine",
+      "status": "PASS",
+      "message": "Old-growth and recent fire coexist in tile at Highland Valley Mine (73% mature -- below conflict threshold)",
+      "details": {
+        "lat": 50.48,
+        "lon": -121.05,
+        "totalForestFeatures": 23426,
+        "matureOrOldGrowthCount": 17054,
+        "matureRatio": 73,
+        "recentFireCount": 50,
+        "significant": false
+      }
+    },
+    {
+      "check": "V4:Contradiction | CutblocksInPark | Vancouver Watershed",
+      "status": "PASS",
+      "message": "Parks (4) and cutblocks (343) coexist in z10 tile at Vancouver Watershed (expected at this resolution)",
+      "details": {
+        "lat": 49.41,
+        "lon": -122.9,
+        "parkFeatureCount": 4,
+        "cutblockFeatureCount": 343
+      }
+    },
+    {
+      "check": "V4:Contradiction | OldGrowthPostFire | Vancouver Watershed",
+      "status": "PASS",
+      "message": "Old-growth and recent fire coexist in tile at Vancouver Watershed (74% mature -- below conflict threshold)",
+      "details": {
+        "lat": 49.41,
+        "lon": -122.9,
+        "totalForestFeatures": 10625,
+        "matureOrOldGrowthCount": 7822,
+        "matureRatio": 74,
+        "recentFireCount": 4,
+        "significant": false
+      }
+    },
+    {
+      "check": "V4:Contradiction | CutblocksInPark | Strathcona Provincial Park",
+      "status": "PASS",
+      "message": "Parks (3) and cutblocks (11) coexist in z10 tile at Strathcona Provincial Park (expected at this resolution)",
+      "details": {
+        "lat": 49.63,
+        "lon": -125.75,
+        "parkFeatureCount": 3,
+        "cutblockFeatureCount": 11
+      }
+    },
+    {
+      "check": "V4:Contradiction | OldGrowthPostFire | Strathcona Provincial Park",
+      "status": "PASS",
+      "message": "Old-growth and recent fire coexist in tile at Strathcona Provincial Park (91% mature -- below conflict threshold)",
+      "details": {
+        "lat": 49.63,
+        "lon": -125.75,
+        "totalForestFeatures": 8150,
+        "matureOrOldGrowthCount": 7406,
+        "matureRatio": 91,
+        "recentFireCount": 12,
+        "significant": false
+      }
+    }
+  ]
+}

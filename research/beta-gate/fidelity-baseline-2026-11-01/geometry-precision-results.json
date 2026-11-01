@@ -1,0 +1,659 @@
+{
+  "timestamp": "2026-11-01T22:39:09.332Z",
+  "config": {
+    "samplesPerLayer": 20,
+    "zooms": [
+      7,
+      10
+    ],
+    "layers": [
+      "forest-age",
+      "tenure-cutblocks",
+      "fire-history",
+      "parks",
+      "conservancies",
+      "ogma",
+      "wildlife-habitat-areas",
+      "ungulate-winter-range",
+      "community-watersheds",
+      "mining-claims"
+    ],
+    "areaWarnThresholdPct": 10
+  },
+  "g1_hausdorff_z10": [
+    {
+      "layer": "forest-age",
+      "zoom": 10,
+      "measuredCount": 19,
+      "skippedCount": 1,
+      "hausdorff": {
+        "mean": 17330.631811094783,
+        "median": 19240.416994651336,
+        "max": 31745.701499063667,
+        "p95": 31745.701499063667,
+        "count": 19
+      }
+    },
+    {
+      "layer": "tenure-cutblocks",
+      "zoom": 10,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 193.34144002639195,
+        "median": 160.5888019570767,
+        "max": 1116.7973220919337,
+        "p95": 1116.7973220919337,
+        "count": 20
+      }
+    },
+    {
+      "layer": "fire-history",
+      "zoom": 10,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 184.96786907656198,
+        "median": 161.71374324496648,
+        "max": 350.95665757963474,
+        "p95": 350.95665757963474,
+        "count": 20
+      }
+    },
+    {
+      "layer": "parks",
+      "zoom": 10,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 1759.8731661057232,
+        "median": 353.80981116777855,
+        "max": 17560.554860001837,
+        "p95": 17560.554860001837,
+        "count": 20
+      }
+    },
+    {
+      "layer": "conservancies",
+      "zoom": 10,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 9172.12024308031,
+        "median": 732.1803326605002,
+        "max": 67856.86307704826,
+        "p95": 67856.86307704826,
+        "count": 20
+      }
+    },
+    {
+      "layer": "ogma",
+      "zoom": 10,
+      "measuredCount": 0,
+      "skippedCount": 20,
+      "hausdorff": {
+        "mean": 0,
+        "median": 0,
+        "max": 0,
+        "p95": 0,
+        "count": 0
+      }
+    },
+    {
+      "layer": "wildlife-habitat-areas",
+      "zoom": 10,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 204.76620286278916,
+        "median": 152.19232246842094,
+        "max": 549.6322576593626,
+        "p95": 549.6322576593626,
+        "count": 20
+      }
+    },
+    {
+      "layer": "ungulate-winter-range",
+      "zoom": 10,
+      "measuredCount": 0,
+      "skippedCount": 20,
+      "hausdorff": {
+        "mean": 0,
+        "median": 0,
+        "max": 0,
+        "p95": 0,
+        "count": 0
+      }
+    },
+    {
+      "layer": "community-watersheds",
+      "zoom": 10,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 562.0070797901551,
+        "median": 534.3658782320081,
+        "max": 1074.3875124873855,
+        "p95": 1074.3875124873855,
+        "count": 20
+      }
+    },
+    {
+      "layer": "mining-claims",
+      "zoom": 10,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 8115.6891504086725,
+        "median": 5654.256629898564,
+        "max": 23080.420396848065,
+        "p95": 23080.420396848065,
+        "count": 20
+      }
+    }
+  ],
+  "g2_hausdorff_z7": [
+    {
+      "layer": "forest-age",
+      "zoom": 7,
+      "measuredCount": 19,
+      "skippedCount": 1,
+      "hausdorff": {
+        "mean": 109594.17015817873,
+        "median": 80307.56709869373,
+        "max": 241632.6544369084,
+        "p95": 241632.6544369084,
+        "count": 19
+      }
+    },
+    {
+      "layer": "tenure-cutblocks",
+      "zoom": 7,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 354.3172913750206,
+        "median": 352.9052803938376,
+        "max": 1071.5144752604385,
+        "p95": 1071.5144752604385,
+        "count": 20
+      }
+    },
+    {
+      "layer": "fire-history",
+      "zoom": 7,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 4328.079338288692,
+        "median": 488.2307085303885,
+        "max": 76926.33392494316,
+        "p95": 76926.33392494316,
+        "count": 20
+      }
+    },
+    {
+      "layer": "parks",
+      "zoom": 7,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 1223.9383174955426,
+        "median": 833.3858214615307,
+        "max": 4189.846934102423,
+        "p95": 4189.846934102423,
+        "count": 20
+      }
+    },
+    {
+      "layer": "conservancies",
+      "zoom": 7,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 1746.7983196126202,
+        "median": 1508.5668237838022,
+        "max": 3974.5696611047574,
+        "p95": 3974.5696611047574,
+        "count": 20
+      }
+    },
+    {
+      "layer": "ogma",
+      "zoom": 7,
+      "measuredCount": 0,
+      "skippedCount": 20,
+      "hausdorff": {
+        "mean": 0,
+        "median": 0,
+        "max": 0,
+        "p95": 0,
+        "count": 0
+      }
+    },
+    {
+      "layer": "wildlife-habitat-areas",
+      "zoom": 7,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 491.53524060964173,
+        "median": 336.2593457151137,
+        "max": 1599.4637697542767,
+        "p95": 1599.4637697542767,
+        "count": 20
+      }
+    },
+    {
+      "layer": "ungulate-winter-range",
+      "zoom": 7,
+      "measuredCount": 0,
+      "skippedCount": 20,
+      "hausdorff": {
+        "mean": 0,
+        "median": 0,
+        "max": 0,
+        "p95": 0,
+        "count": 0
+      }
+    },
+    {
+      "layer": "community-watersheds",
+      "zoom": 7,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 1422.616266137584,
+        "median": 1432.9453870357058,
+        "max": 3296.17589250317,
+        "p95": 3296.17589250317,
+        "count": 20
+      }
+    },
+    {
+      "layer": "mining-claims",
+      "zoom": 7,
+      "measuredCount": 20,
+      "skippedCount": 0,
+      "hausdorff": {
+        "mean": 26739.69071859752,
+        "median": 15771.83247321449,
+        "max": 105480.76336838109,
+        "p95": 105480.76336838109,
+        "count": 20
+      }
+    }
+  ],
+  "g3_area_preservation": [
+    {
+      "layer": "forest-age",
+      "zoom": 7,
+      "status": "WARN",
+      "maxAreaDivergencePct": 1932.6829876968354,
+      "warnCount": 19,
+      "totalMeasured": 19,
+      "message": "19/19 features exceed ±10% area tolerance (max divergence: 1932.7%)"
+    },
+    {
+      "layer": "tenure-cutblocks",
+      "zoom": 7,
+      "status": "WARN",
+      "maxAreaDivergencePct": 76.87038782720899,
+      "warnCount": 17,
+      "totalMeasured": 20,
+      "message": "17/20 features exceed ±10% area tolerance (max divergence: 76.9%)"
+    },
+    {
+      "layer": "fire-history",
+      "zoom": 7,
+      "status": "WARN",
+      "maxAreaDivergencePct": 84.52775656456677,
+      "warnCount": 16,
+      "totalMeasured": 20,
+      "message": "16/20 features exceed ±10% area tolerance (max divergence: 84.5%)"
+    },
+    {
+      "layer": "parks",
+      "zoom": 7,
+      "status": "WARN",
+      "maxAreaDivergencePct": 52.843493379327526,
+      "warnCount": 8,
+      "totalMeasured": 20,
+      "message": "8/20 features exceed ±10% area tolerance (max divergence: 52.8%)"
+    },
+    {
+      "layer": "conservancies",
+      "zoom": 7,
+      "status": "WARN",
+      "maxAreaDivergencePct": 55.232658709875075,
+      "warnCount": 1,
+      "totalMeasured": 20,
+      "message": "1/20 features exceed ±10% area tolerance (max divergence: 55.2%)"
+    },
+    {
+      "layer": "ogma",
+      "zoom": 7,
+      "status": "PASS",
+      "maxAreaDivergencePct": 0,
+      "warnCount": 0,
+      "totalMeasured": 0,
+      "message": "All 0 features within ±10% area tolerance"
+    },
+    {
+      "layer": "wildlife-habitat-areas",
+      "zoom": 7,
+      "status": "WARN",
+      "maxAreaDivergencePct": 71.24393608859717,
+      "warnCount": 14,
+      "totalMeasured": 20,
+      "message": "14/20 features exceed ±10% area tolerance (max divergence: 71.2%)"
+    },
+    {
+      "layer": "ungulate-winter-range",
+      "zoom": 7,
+      "status": "PASS",
+      "maxAreaDivergencePct": 0,
+      "warnCount": 0,
+      "totalMeasured": 0,
+      "message": "All 0 features within ±10% area tolerance"
+    },
+    {
+      "layer": "community-watersheds",
+      "zoom": 7,
+      "status": "WARN",
+      "maxAreaDivergencePct": 55.89040083101073,
+      "warnCount": 3,
+      "totalMeasured": 20,
+      "message": "3/20 features exceed ±10% area tolerance (max divergence: 55.9%)"
+    },
+    {
+      "layer": "mining-claims",
+      "zoom": 7,
+      "status": "WARN",
+      "maxAreaDivergencePct": 4365.999754856653,
+      "warnCount": 18,
+      "totalMeasured": 20,
+      "message": "18/20 features exceed ±10% area tolerance (max divergence: 4366.0%)"
+    },
+    {
+      "layer": "forest-age",
+      "zoom": 10,
+      "status": "WARN",
+      "maxAreaDivergencePct": 548.4840002592377,
+      "warnCount": 18,
+      "totalMeasured": 19,
+      "message": "18/19 features exceed ±10% area tolerance (max divergence: 548.5%)"
+    },
+    {
+      "layer": "tenure-cutblocks",
+      "zoom": 10,
+      "status": "WARN",
+      "maxAreaDivergencePct": 35.57629465158139,
+      "warnCount": 3,
+      "totalMeasured": 20,
+      "message": "3/20 features exceed ±10% area tolerance (max divergence: 35.6%)"
+    },
+    {
+      "layer": "fire-history",
+      "zoom": 10,
+      "status": "WARN",
+      "maxAreaDivergencePct": 31.101819190248662,
+      "warnCount": 2,
+      "totalMeasured": 20,
+      "message": "2/20 features exceed ±10% area tolerance (max divergence: 31.1%)"
+    },
+    {
+      "layer": "parks",
+      "zoom": 10,
+      "status": "WARN",
+      "maxAreaDivergencePct": 65.42180106678617,
+      "warnCount": 2,
+      "totalMeasured": 20,
+      "message": "2/20 features exceed ±10% area tolerance (max divergence: 65.4%)"
+    },
+    {
+      "layer": "conservancies",
+      "zoom": 10,
+      "status": "WARN",
+      "maxAreaDivergencePct": 83.79618306946392,
+      "warnCount": 5,
+      "totalMeasured": 20,
+      "message": "5/20 features exceed ±10% area tolerance (max divergence: 83.8%)"
+    },
+    {
+      "layer": "ogma",
+      "zoom": 10,
+      "status": "PASS",
+      "maxAreaDivergencePct": 0,
+      "warnCount": 0,
+      "totalMeasured": 0,
+      "message": "All 0 features within ±10% area tolerance"
+    },
+    {
+      "layer": "wildlife-habitat-areas",
+      "zoom": 10,
+      "status": "WARN",
+      "maxAreaDivergencePct": 14.629691323773002,
+      "warnCount": 2,
+      "totalMeasured": 20,
+      "message": "2/20 features exceed ±10% area tolerance (max divergence: 14.6%)"
+    },
+    {
+      "layer": "ungulate-winter-range",
+      "zoom": 10,
+      "status": "PASS",
+      "maxAreaDivergencePct": 0,
+      "warnCount": 0,
+      "totalMeasured": 0,
+      "message": "All 0 features within ±10% area tolerance"
+    },
+    {
+      "layer": "community-watersheds",
+      "zoom": 10,
+      "status": "PASS",
+      "maxAreaDivergencePct": 9.49947639872471,
+      "warnCount": 0,
+      "totalMeasured": 20,
+      "message": "All 20 features within ±10% area tolerance"
+    },
+    {
+      "layer": "mining-claims",
+      "zoom": 10,
+      "status": "WARN",
+      "maxAreaDivergencePct": 4333.204754901461,
+      "warnCount": 12,
+      "totalMeasured": 20,
+      "message": "12/20 features exceed ±10% area tolerance (max divergence: 4333.2%)"
+    }
+  ],
+  "g4_vertex_reduction": [
+    {
+      "layer": "forest-age",
+      "zoom": 7,
+      "avgSourceVertices": 62.10526315789474,
+      "avgTileVertices": 7.157894736842105,
+      "reductionRatio": 0.1152542372881356,
+      "totalMeasured": 19
+    },
+    {
+      "layer": "tenure-cutblocks",
+      "zoom": 7,
+      "avgSourceVertices": 239.05,
+      "avgTileVertices": 5.65,
+      "reductionRatio": 0.023635222756745452,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "fire-history",
+      "zoom": 7,
+      "avgSourceVertices": 121.8,
+      "avgTileVertices": 5.6,
+      "reductionRatio": 0.04597701149425287,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "parks",
+      "zoom": 7,
+      "avgSourceVertices": 717.25,
+      "avgTileVertices": 16.15,
+      "reductionRatio": 0.022516556291390728,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "conservancies",
+      "zoom": 7,
+      "avgSourceVertices": 2422.7,
+      "avgTileVertices": 45.75,
+      "reductionRatio": 0.01888388987493293,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "ogma",
+      "zoom": 7,
+      "avgSourceVertices": 0,
+      "avgTileVertices": 0,
+      "reductionRatio": 0,
+      "totalMeasured": 0
+    },
+    {
+      "layer": "wildlife-habitat-areas",
+      "zoom": 7,
+      "avgSourceVertices": 457.1,
+      "avgTileVertices": 7.3,
+      "reductionRatio": 0.015970247210676,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "ungulate-winter-range",
+      "zoom": 7,
+      "avgSourceVertices": 0,
+      "avgTileVertices": 0,
+      "reductionRatio": 0,
+      "totalMeasured": 0
+    },
+    {
+      "layer": "community-watersheds",
+      "zoom": 7,
+      "avgSourceVertices": 498.15,
+      "avgTileVertices": 13.55,
+      "reductionRatio": 0.02720064237679414,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "mining-claims",
+      "zoom": 7,
+      "avgSourceVertices": 14.7,
+      "avgTileVertices": 6.6,
+      "reductionRatio": 0.4489795918367347,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "forest-age",
+      "zoom": 10,
+      "avgSourceVertices": 62.10526315789474,
+      "avgTileVertices": 12.263157894736842,
+      "reductionRatio": 0.19745762711864406,
+      "totalMeasured": 19
+    },
+    {
+      "layer": "tenure-cutblocks",
+      "zoom": 10,
+      "avgSourceVertices": 239.05,
+      "avgTileVertices": 18.25,
+      "reductionRatio": 0.07634386111692114,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "fire-history",
+      "zoom": 10,
+      "avgSourceVertices": 121.8,
+      "avgTileVertices": 18.1,
+      "reductionRatio": 0.14860426929392448,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "parks",
+      "zoom": 10,
+      "avgSourceVertices": 717.25,
+      "avgTileVertices": 43.9,
+      "reductionRatio": 0.061205995120250954,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "conservancies",
+      "zoom": 10,
+      "avgSourceVertices": 2422.7,
+      "avgTileVertices": 113.9,
+      "reductionRatio": 0.04701366244272919,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "ogma",
+      "zoom": 10,
+      "avgSourceVertices": 0,
+      "avgTileVertices": 0,
+      "reductionRatio": 0,
+      "totalMeasured": 0
+    },
+    {
+      "layer": "wildlife-habitat-areas",
+      "zoom": 10,
+      "avgSourceVertices": 457.1,
+      "avgTileVertices": 29.25,
+      "reductionRatio": 0.06399037409757165,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "ungulate-winter-range",
+      "zoom": 10,
+      "avgSourceVertices": 0,
+      "avgTileVertices": 0,
+      "reductionRatio": 0,
+      "totalMeasured": 0
+    },
+    {
+      "layer": "community-watersheds",
+      "zoom": 10,
+      "avgSourceVertices": 498.15,
+      "avgTileVertices": 50.75,
+      "reductionRatio": 0.10187694469537288,
+      "totalMeasured": 20
+    },
+    {
+      "layer": "mining-claims",
+      "zoom": 10,
+      "avgSourceVertices": 14.7,
+      "avgTileVertices": 6.35,
+      "reductionRatio": 0.43197278911564624,
+      "totalMeasured": 20
+    }
+  ],
+  "summary": {
+    "g3_warns": 15,
+    "g3_warn_layers": [
+      "z7/forest-age",
+      "z7/tenure-cutblocks",
+      "z7/fire-history",
+      "z7/parks",
+      "z7/conservancies",
+      "z7/wildlife-habitat-areas",
+      "z7/community-watersheds",
+      "z7/mining-claims",
+      "z10/forest-age",
+      "z10/tenure-cutblocks",
+      "z10/fire-history",
+      "z10/parks",
+      "z10/conservancies",
+      "z10/wildlife-habitat-areas",
+      "z10/mining-claims"
+    ],
+    "toGeoJsonFailures": 0,
+    "lowCardinalitySkips": 4,
+    "lowCardinalityLayers": [
+      "z7/ogma",
+      "z10/ogma",
+      "z7/ungulate-winter-range",
+      "z10/ungulate-winter-range"
+    ]
+  }
+}
