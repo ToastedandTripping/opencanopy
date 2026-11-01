@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Literata, Public_Sans } from "next/font/google";
 import Script from "next/script";
+import { resolveBuildId } from "@/lib/build-id";
 import { R2_PUBLIC_BASE } from "@/lib/r2-config";
 import "./globals.css";
 
@@ -39,6 +40,9 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  other: {
+    "oc-build": resolveBuildId(process.env.COMMIT_REF, process.env.NETLIFY_LOCAL),
   },
 };
 
