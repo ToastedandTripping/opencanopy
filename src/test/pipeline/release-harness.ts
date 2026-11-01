@@ -126,6 +126,8 @@ export class Universe {
       env: asEnv(this.env(opts)),
       cwd: opts.cwd ?? this.root,
       encoding: "utf8",
+      // spawnSync blocks vitest's own timeout, so a hung tool must be killed here.
+      timeout: 25_000,
     });
     this.now += 1000;
     return toResult(res.status, res.stdout, res.stderr);

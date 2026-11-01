@@ -93,8 +93,12 @@ function acquire(dir, timeoutMs) {
     try {
       raw = fs.readFileSync(path.join(dir, "owner"), "utf8");
     } catch (err) {
-      if (err.code === "ENOENT") continue; // released under us: retry the acquire
-      throw err;
+      if (err.code !== "ENOENT") throw err;
+      // Released under us: retry the acquire, within the same deadline.
+      if (Date.now() >= deadline) {
+        throw new MutexError("busy", dir, `mutex still contended past ${timeoutMs} ms`);
+      }
+      continue;
     }
     let held;
     try {

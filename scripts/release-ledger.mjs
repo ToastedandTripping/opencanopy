@@ -177,7 +177,9 @@ function snapshot() {
   const state = fold(records);
   const lease = readLease();
   if (lease && lease.token > state.token) {
-    throw new LedgerError("malformed", `lease token ${lease.token} above ledger maximum ${state.token}`);
+    const err = new LedgerError("malformed", `lease token ${lease.token} above ledger maximum ${state.token}`);
+    err.leaseAhead = true;
+    throw err;
   }
   return { records, state, lease };
 }
@@ -201,13 +203,17 @@ function locked(fn) {
   });
 }
 
-/** The no-mutex read: a torn last line may be a writer mid-line, so re-read once under it. */
+/**
+ * The no-mutex read. A torn last line may be a writer mid-line, and a lease above
+ * the maximum may be a claim landing between our two reads, so either is re-read
+ * once under the mutex before it is declared malformed.
+ */
 function readUnlocked() {
   try {
     return snapshot();
   } catch (err) {
     if (!(err instanceof LedgerError)) throw err;
-    if (err.kind !== "torn") throw ledgerHalt(err);
+    if (err.kind !== "torn" && !err.leaseAhead) throw ledgerHalt(err);
   }
   return locked((ctx) => ctx);
 }

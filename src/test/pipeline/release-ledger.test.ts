@@ -192,10 +192,13 @@ describe("repair", () => {
   });
 
   it("refuses while the ledger is still in place, or on a corrected copy that does not validate", () => {
-    const { u } = brokenWithTokens();
+    const { u, genesisLine } = brokenWithTokens();
     const fixed = path.join(u.root, "fixed.jsonl");
-    fs.writeFileSync(fixed, "{still broken\n");
+    const broken = u.bytes();
+    fs.writeFileSync(fixed, genesisLine);
     refused(u.run(["repair-note", "--aside", u.ledgerPath, "--fixed", fixed, "--reason", "r"]));
+    expect(u.bytes()).toBe(broken);
+    fs.writeFileSync(fixed, "{still broken\n");
     const aside = path.join(u.root, "aside.jsonl");
     fs.renameSync(u.ledgerPath, aside);
     refused(u.run(["repair-note", "--aside", aside, "--fixed", fixed, "--reason", "r"]));
@@ -529,7 +532,8 @@ describe("guard binding", () => {
 
   it("refuses the wrong --deploy", () => {
     const { u, token, before } = setUp();
-    refused(u.guard("dep-other", S, "green", { token, evidence: u.evidence("dep-other") }));
+    // The evidence is good for the current deploy, so only the binding can refuse this.
+    refused(u.guard("dep-other", S, "green", { token, evidence: u.evidence("dep-a") }));
     expectUnchanged(u, before);
   });
 
@@ -1040,7 +1044,9 @@ describe("idempotence", () => {
 describe("reconcile's write rule", () => {
   it("a failed read is nonzero, writes nothing and is not a halt", () => {
     const u = universe();
-    fs.writeFileSync(u.env().OC_RELEASE_NETLIFY_BIN, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+    // Valid JSON naming an unknown deploy: only the exit status marks this read as failed.
+    const body = JSON.stringify({ published_deploy: { id: "dep-unknown", state: "ready", commit_ref: S2 } });
+    fs.writeFileSync(u.env().OC_RELEASE_NETLIFY_BIN, `#!/bin/sh\necho '${body}'\nexit 1\n`, { mode: 0o755 });
     const before = u.bytes();
     const res = u.run(["reconcile"]);
     expect(res.code).toBe(1);
