@@ -345,3 +345,22 @@ MapLibre 6.15 is live (2ba3280, 120cc10). Nobody has looked at the three v6 item
 | S0b sunset | Coarse overlays stay disclosed on screen until S1-lite is live or the 21-day sunset fires | PROCESS | S0b, S1-lite | G2, G3 | not started |
 | Next, MapLibre | Next 16.4.2, MapLibre 6.15.0 (security) | PROCESS | outside the program | — | fixed bc230f5, 2ba3280, 120cc10 |
 | CI | `npm audit --audit-level=high` red, so Lint never runs | PROCESS | CI | G0 | open (`ci.yml:38-41`) |
+
+## Source 6: fidelity baseline, 2026-11-01 (`research/beta-gate/fidelity-baseline-2026-11-01.md`)
+
+| ID | Finding | Class | Owner relay | Wave | Status |
+|---|---|---|---|---|---|
+| FB-1 | tenure-cutblocks: 772 of 4,511 features (17.1%) miss a required property; may show as missing popup data | SERIOUS until diagnosed | PIPE (diagnose); M2 (popups) | G3-G5 | open |
+| FB-2 | CrossSource lite: 11 of 17 checked tiles conflict | SERIOUS until diagnosed | PIPE | G5 | open |
+| FB-3 | Precision: 15 layer-zoom pairs over the ±10% area tolerance, up to 4,333% on mining claims | SERIOUS until diagnosed | PIPE | G5 | open |
+| FB-4 | Spatial: fire-history and mining-claims water overlap at two grid points (2 of 84, 1 of 97) | COSMETIC unless it shows on the map | PIPE | G5 | open |
+| FB-5 | The suite's own defects: empty runs pass, a swallowed parse error, summary and exit disagree, hardwired paths, no prior archive | PROCESS | PIPE (pbf reader fix in CI) | G0, G5 | open |
+
+## Orchestrator assignments, 2026-11-01 (supersedes the proposals above; Lee shown, no objection)
+
+- F-06, U-02 (phone zoom buttons): M3a.
+- U-07, U-15 (company "Other"): M2 labels it "Not attributed" until B′.
+- F3 (E&N private land): M2's legend line; the mask stays in the rest of T.
+- C1, C2/PR1, K1, PR3: a small colour relay (C′-lite) using Canopy's tokens, sized after M1b's re-measure, G3-G4.
+- C3 (tenure rectangles): the attribute check runs first, legend note meanwhile (Lee, 2026-11-01).
+- pF-16 (phone story shows 58% of BC's forest): S1′.
