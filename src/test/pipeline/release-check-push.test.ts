@@ -646,6 +646,69 @@ describe("takeover", () => {
     r.u.now += 3 * HOUR;
     expect(r.u.run(["takeover", "--lane", "S", "--observed-token", String(r.token)]).code).toBe(3);
   });
+
+  describe("a halted deploy that a deploy record then makes current keeps its door", () => {
+    /** Takeover halts on the candidate's own deploy in a state C2 does not name. */
+    function haltedOnOwnDeploy() {
+      const r = ready();
+      const created = new Date(T0 + HOUR).toISOString();
+      r.u.deploys([{ id: "dep-tip", state: "uploading", context: "production", commit_ref: r.tip, created_at: created }]);
+      r.u.now += 3 * HOUR;
+      expect(r.u.run(["takeover", "--lane", "S", "--observed-token", String(r.token)]).code).toBe(3);
+      r.u.deploys([{ id: "dep-tip", state: "ready", context: "production", commit_ref: r.tip, created_at: created }]);
+      r.u.publish("dep-tip", r.tip, { created_at: created });
+      return r;
+    }
+
+    function liftThenNextGo(r: ReturnType<typeof haltedOnOwnDeploy>): void {
+      expect(r.u.state().current.deploy).toBe("dep-tip");
+      const ack = r.u.run(["ack-deploy", "--deploy", "dep-tip", "--lee", LEE]);
+      expect(ack.code, ack.out).toBe(0);
+      expect(fs.readFileSync(r.u.notifyLog, "utf8")).toContain("ack-deploy");
+      expect(r.u.state().open_halts).toHaveLength(1);
+      expect(r.u.guard("dep-tip", r.tip, "green", { token: r.token }).code).toBe(0);
+      expect(r.u.state().open_halts).toEqual([]);
+      expect(r.u.state().known_good.deploy).toBe("dep-tip");
+      expect(r.u.run(["ack-deploy", "--deploy", "dep-tip", "--lee", LEE]).stdout).toContain("already acked");
+      expect(r.u.run(["release", "--token", String(r.token)]).code).toBe(0);
+      r.repo.git("push", "--quiet", "--no-verify", "origin", `${r.tip}:refs/heads/main`);
+      const next = r.repo.commit("next.txt", "next\n");
+      const token = r.u.claim(next);
+      expect(request(r.u, token, next, r.tip).code).toBe(0);
+      go(r.u.run(["check-push", "--token", String(token), "--pushed-sha", next]));
+    }
+
+    it("made current by reconcile: ack, green, and the next release is GO", () => {
+      const r = haltedOnOwnDeploy();
+      expect(r.u.run(["reconcile"]).code).toBe(3);
+      expect(r.u.count("deploy")).toBe(1);
+      liftThenNextGo(r);
+    });
+
+    it("made current by await-live under the old token: ack, green, and the next release is GO", () => {
+      const r = haltedOnOwnDeploy();
+      const live = r.u.run(["await-live", "--token", String(r.token), "--sha", r.tip, "--source", "netlify", "--timeout-min", "0.01"], { env: FAST });
+      expect(live.code, live.out).toBe(0);
+      expect(r.u.count("deploy")).toBe(1);
+      liftThenNextGo(r);
+    });
+
+    it("the door opens only for that deploy's own halt: a current deploy with no halt on it is still refused", () => {
+      const r = haltedOnOwnDeploy();
+      r.u.run(["reconcile"]);
+      r.u.run(["ack-deploy", "--deploy", "dep-tip", "--lee", LEE]);
+      r.u.guard("dep-tip", r.tip, "green", { token: r.token });
+      r.u.run(["release", "--token", String(r.token)]);
+      const next = sha("dd");
+      const token = r.u.deployed(next, "dep-next");
+      r.u.appendRecord({ type: "halt", token, reason: "other", deploy: "dep-unrelated", sha: null });
+      const before = r.u.count("ack-deploy");
+      const res = r.u.run(["ack-deploy", "--deploy", "dep-next", "--lee", LEE]);
+      expect(res.code).toBe(2);
+      expect(res.out).toContain("already current");
+      expect(r.u.count("ack-deploy")).toBe(before);
+    });
+  });
 });
 
 describe("no false rollback", () => {
