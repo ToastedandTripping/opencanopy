@@ -554,9 +554,12 @@ describe("takeover", () => {
     const r = ready();
     r.u.now += 3 * HOUR;
     const inode = fs.statSync(r.u.leaseDir).ino;
+    // Held open so a removed directory's inode cannot be reused by its re-creation.
+    const pinned = fs.openSync(r.u.leaseDir, "r");
     const results = await Promise.all(
       Array.from({ length: 8 }, () => r.u.runAsync(["takeover", "--lane", "S", "--observed-token", String(r.token)])),
     );
+    fs.closeSync(pinned);
     expect(results.filter((x) => x.code === 0)).toHaveLength(1);
     expect(results.every((x) => [0, 2, 4].includes(x.code)), results.map((x) => x.out).join("|")).toBe(true);
     expect(r.u.count("takeover")).toBe(1);
