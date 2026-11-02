@@ -1,0 +1,385 @@
+Opening PMTiles archive...
+  PMTiles version: 3, zoom range: z4-z12
+
+A1: Checking source layers...
+A2: Checking feature counts...
+A3: Checking property preservation...
+A4: Checking large feature detection...
+A5: Checking tile boundary artifacts...
+A6: Checking zoom consistency...
+A7: Checking timeline property format...
+A8: Checking preprocessing comparison...
+
+[1mOpenCanopy Tile Audit Results[0m
+[2m────────────────────────────────────────────────────────────[0m
+[32m[PASS][0m A1: Source layer metadata
+     [2mFound 12 layer(s) in PMTiles metadata: community-watersheds, conservancies, conservation-priority, fire-history, forest-age, forestry-roads, mining-claims, ogma, parks, tenure-cutblocks, ungulate-winter-range, wildlife-habitat-areas[0m
+[32m[PASS][0m A1: All 12 expected source layers present
+     [2mAll 12 expected source layers found in metadata.[0m
+[32m[PASS][0m A1: Source layers present in BC center tile (z8)
+     [2mBC center tile at z8/37/82 contains layers: ogma, conservation-priority, fire-history, conservancies, wildlife-habitat-areas, tenure-cutblocks, parks, ungulate-winter-range, forest-age, mining-claims, forestry-roads[0m
+     [2m{[0m
+     [2m  "tile": "8/37/82"[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [forest-age]
+     [2mNDJSON: 6,201,456 features. Tile at z7: 295024, z10: 10791 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 6201456,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 53.5,[0m
+     [2m    "lon": -122[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 295024,[0m
+     [2m  "z10TileFeatures": 10791[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [tenure-cutblocks]
+     [2mNDJSON: 220,745 features. Tile at z7: 30743, z10: 659 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 220745,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 54,[0m
+     [2m    "lon": -124[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 30743,[0m
+     [2m  "z10TileFeatures": 659[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [fire-history]
+     [2mNDJSON: 24,751 features. Tile at z7: 4196, z10: 58 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 24751,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 52,[0m
+     [2m    "lon": -121[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 4196,[0m
+     [2m  "z10TileFeatures": 58[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [parks]
+     [2mNDJSON: 930 features. Tile at z7: 207, z10: 14 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 930,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 49.5,[0m
+     [2m    "lon": -123.5[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 207,[0m
+     [2m  "z10TileFeatures": 14[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [conservancies]
+     [2mNDJSON: 169 features. Tile at z7: 23, z10: 0 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 169,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 55,[0m
+     [2m    "lon": -128[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 23,[0m
+     [2m  "z10TileFeatures": 0[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [ogma]
+     [2mNDJSON: 22,077 features. Tile at z7: 4937, z10: 153 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 22077,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 52.5,[0m
+     [2m    "lon": -123[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 4937,[0m
+     [2m  "z10TileFeatures": 153[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [wildlife-habitat-areas]
+     [2mNDJSON: 6,987 features. Tile at z7: 80, z10: 1 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 6987,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 53,[0m
+     [2m    "lon": -122.5[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 80,[0m
+     [2m  "z10TileFeatures": 1[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [ungulate-winter-range]
+     [2mNDJSON: 200,605 features. Tile at z7: 409, z10: 5 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 200605,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 54.5,[0m
+     [2m    "lon": -122[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 409,[0m
+     [2m  "z10TileFeatures": 5[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [community-watersheds]
+     [2mNDJSON: 466 features. Tile at z7: 152, z10: 5 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 466,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 49.5,[0m
+     [2m    "lon": -119.5[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 152,[0m
+     [2m  "z10TileFeatures": 5[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [mining-claims]
+     [2mNDJSON: 42,198 features. Tile at z7: 2882, z10: 0 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 42198,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 56,[0m
+     [2m    "lon": -124[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 2882,[0m
+     [2m  "z10TileFeatures": 0[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [forestry-roads]
+     [2mNDJSON: 283,516 features. Tile at z7: 41596, z10: 943 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 283516,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 53.5,[0m
+     [2m    "lon": -123[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 41596,[0m
+     [2m  "z10TileFeatures": 943[0m
+     [2m}[0m
+[32m[PASS][0m A2: Feature count [conservation-priority]
+     [2mNDJSON: 257,921 features. Tile at z7: 31830, z10: 284 features in center tile.[0m
+     [2m{[0m
+     [2m  "ndjsonFeatures": 257921,[0m
+     [2m  "centerPoint": {[0m
+     [2m    "lat": 52,[0m
+     [2m    "lon": -124[0m
+     [2m  },[0m
+     [2m  "z7TileFeatures": 31830,[0m
+     [2m  "z10TileFeatures": 284[0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [forest-age]
+     [2mAll expected properties preserved at z10. Tile has: class, age, species[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "class"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "class",[0m
+     [2m    "age",[0m
+     [2m    "species"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [tenure-cutblocks]
+     [2mAll expected properties preserved at z10. Tile has: company_id, DISTURBANCE_START_DATE, PLANNED_GROSS_BLOCK_AREA[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "company_id",[0m
+     [2m    "PLANNED_GROSS_BLOCK_AREA"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "company_id",[0m
+     [2m    "DISTURBANCE_START_DATE",[0m
+     [2m    "PLANNED_GROSS_BLOCK_AREA"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [fire-history]
+     [2mAll expected properties preserved at z10. Tile has: FIRE_YEAR, FIRE_SIZE_HECTARES, FIRE_CAUSE[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "FIRE_YEAR"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "FIRE_YEAR",[0m
+     [2m    "FIRE_SIZE_HECTARES",[0m
+     [2m    "FIRE_CAUSE"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [parks]
+     [2mAll expected properties preserved at z10. Tile has: name, designation[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "name"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "name",[0m
+     [2m    "designation"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[33m[WARN][0m A3: Property preservation [conservancies]
+     [2mNo features found in z10 tile. Cannot verify property preservation.[0m
+[32m[PASS][0m A3: Property preservation [ogma]
+     [2mAll expected properties preserved at z10. Tile has: OGMA_TYPE[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "OGMA_TYPE"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "OGMA_TYPE"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [wildlife-habitat-areas]
+     [2mAll expected properties preserved at z10. Tile has: COMMON_SPECIES_NAME, HABITAT_AREA_ID[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "COMMON_SPECIES_NAME"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "COMMON_SPECIES_NAME",[0m
+     [2m    "HABITAT_AREA_ID"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [ungulate-winter-range]
+     [2mAll expected properties preserved at z10. Tile has: SPECIES_1[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "SPECIES_1"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "SPECIES_1"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [community-watersheds]
+     [2mAll expected properties preserved at z10. Tile has: CW_NAME[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "CW_NAME"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "CW_NAME"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[33m[WARN][0m A3: Property preservation [mining-claims]
+     [2mNo features found in z10 tile. Cannot verify property preservation.[0m
+[32m[PASS][0m A3: Property preservation [forestry-roads]
+     [2mAll expected properties preserved at z10. Tile has: ROAD_SECTION_NAME, CLIENT_NAME[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "ROAD_SECTION_NAME"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "ROAD_SECTION_NAME",[0m
+     [2m    "CLIENT_NAME"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [conservation-priority]
+     [2mAll expected properties preserved at z10. Tile has: TAP_CLASSIFICATION_LABEL, LANDSCAPE_UNIT_NAME, ANCIENT_FOREST_IND, PRIORITY_BIG_TREED_OG_IND, BGC_LABEL, FIELD_VERIFIED_IND, FEATURE_AREA_SQM[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "TAP_CLASSIFICATION_LABEL"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "TAP_CLASSIFICATION_LABEL",[0m
+     [2m    "LANDSCAPE_UNIT_NAME",[0m
+     [2m    "ANCIENT_FOREST_IND",[0m
+     [2m    "PRIORITY_BIG_TREED_OG_IND",[0m
+     [2m    "BGC_LABEL",[0m
+     [2m    "FIELD_VERIFIED_IND",[0m
+     [2m    "FEATURE_AREA_SQM"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A4: Cutblocks present in BC tiles (z8)
+     [2mFound tenure-cutblocks in 9/9 BC sample tiles. Total: 29147 features across sampled tiles.[0m
+     [2m{[0m
+     [2m  "tilesChecked": 9,[0m
+     [2m  "tilesWithCutblocks": 9,[0m
+     [2m  "totalFeatures": 29147[0m
+     [2m}[0m
+[32m[PASS][0m A4: Large features (>2000 ha) exist in tile data
+     [2mFound 40 feature(s) with PLANNED_GROSS_BLOCK_AREA > 2000 ha in BC tiles at z8. Property preserved in tiles (as expected). Registry filter excludes them from rendering.[0m
+     [2m{[0m
+     [2m  "largeFeatureCount": 40,[0m
+     [2m  "totalFeaturesChecked": 29147,[0m
+     [2m  "threshold": 2000,[0m
+     [2m  "tilesWithLargeArea": 40[0m
+     [2m}[0m
+[32m[PASS][0m A5: Tile boundary artifacts (z7, Revelstoke)
+     [2m0.5% of polygon edges aligned with tile boundaries (9231/1761765 edges). Below 5% threshold -- tile clipping looks normal.[0m
+     [2m{[0m
+     [2m  "tile": "7/21/42",[0m
+     [2m  "features": 269028,[0m
+     [2m  "boundaryEdges": 9231,[0m
+     [2m  "totalEdges": 1761765,[0m
+     [2m  "boundaryPercent": 0.5[0m
+     [2m}[0m
+[32m[PASS][0m A5: Tile boundary artifacts (z9, Revelstoke)
+     [2m0.6% of polygon edges aligned with tile boundaries (1988/358601 edges). Below 5% threshold -- tile clipping looks normal.[0m
+     [2m{[0m
+     [2m  "tile": "9/87/171",[0m
+     [2m  "features": 40262,[0m
+     [2m  "boundaryEdges": 1988,[0m
+     [2m  "totalEdges": 358601,[0m
+     [2m  "boundaryPercent": 0.6[0m
+     [2m}[0m
+[32m[PASS][0m A6: Zoom consistency (z10 -> z6 parent coverage)
+     [2m100.0% of z10 tiles with features have corresponding z6 parent data (28/28 tiles). Above 80% -- zoom coverage looks consistent.[0m
+     [2m{[0m
+     [2m  "tilesChecked": 50,[0m
+     [2m  "tilesWithFeatures": 28,[0m
+     [2m  "parentTilesWithFeatures": 28,[0m
+     [2m  "coveragePercent": 100[0m
+     [2m}[0m
+[33m[WARN][0m A7: Timeline property format [cutblocks] field: DISTURBANCE_START_DATE
+     [2m"DISTURBANCE_START_DATE" has 2/20 values that don't match /^\d{4}/. These features won't match timeline year filters. Example malformed values: ["null","null"][0m
+     [2m{[0m
+     [2m  "field": "DISTURBANCE_START_DATE",[0m
+     [2m  "sourceLayer": "tenure-cutblocks",[0m
+     [2m  "zoom": 10,[0m
+     [2m  "sampled": 20,[0m
+     [2m  "numberCount": 0,[0m
+     [2m  "stringWithYearCount": 18,[0m
+     [2m  "nullCount": 0,[0m
+     [2m  "malformedCount": 2,[0m
+     [2m  "malformedExamples": [[0m
+     [2m    "null",[0m
+     [2m    "null"[0m
+     [2m  ][0m
+     [2m}[0m
+[33m[WARN][0m A7: Timeline property format [tenure-cutblocks] field: DISTURBANCE_START_DATE
+     [2m"DISTURBANCE_START_DATE" has 2/20 values that don't match /^\d{4}/. These features won't match timeline year filters. Example malformed values: ["null","null"][0m
+     [2m{[0m
+     [2m  "field": "DISTURBANCE_START_DATE",[0m
+     [2m  "sourceLayer": "tenure-cutblocks",[0m
+     [2m  "zoom": 10,[0m
+     [2m  "sampled": 20,[0m
+     [2m  "numberCount": 0,[0m
+     [2m  "stringWithYearCount": 18,[0m
+     [2m  "nullCount": 0,[0m
+     [2m  "malformedCount": 2,[0m
+     [2m  "malformedExamples": [[0m
+     [2m    "null",[0m
+     [2m    "null"[0m
+     [2m  ][0m
+     [2m}[0m
+[32m[PASS][0m A7: Timeline property format [fire-history] field: FIRE_YEAR
+     [2m"FIRE_YEAR" format looks correct: 20/20 sampled features have string values starting with a 4-digit year (z10, source: "fire-history"). [0m
+     [2m{[0m
+     [2m  "field": "FIRE_YEAR",[0m
+     [2m  "sourceLayer": "fire-history",[0m
+     [2m  "zoom": 10,[0m
+     [2m  "sampled": 20,[0m
+     [2m  "stringWithYearCount": 20,[0m
+     [2m  "nullCount": 0[0m
+     [2m}[0m
+[32m[PASS][0m A8: Preprocessing report
+     [2mNo preprocessing report found — raw data used (run `npm run preprocess:v2` to generate)[0m
+[2m────────────────────────────────────────────────────────────[0m
+[1mSummary:[0m [32m32 passed[0m, [33m4 warned[0m, [31m0 failed[0m
+
+[33m[1mAUDIT PASSED WITH WARNINGS[0m -- review 4 item(s).
+

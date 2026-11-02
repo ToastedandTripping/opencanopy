@@ -1,0 +1,2193 @@
+{
+  "timestamp": "2026-11-01T22:36:44.950Z",
+  "summary": {
+    "total": 409,
+    "passed": 205,
+    "warned": 202,
+    "failed": 2
+  },
+  "results": [
+    {
+      "check": "Spatial audit — PMTiles availability",
+      "status": "PASS",
+      "message": "PMTiles archive found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/tiles/opencanopy.pmtiles"
+    },
+    {
+      "check": "Spatial audit — lakes reference data",
+      "status": "PASS",
+      "message": "FWA lakes reference data found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/reference/fwa-lakes.ndjson"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R0C3",
+      "status": "WARN",
+      "message": "5 of 6384 features have >50% water body overlap (0.08%)",
+      "details": {
+        "point": "R0C3",
+        "waterOverlaps": 5,
+        "totalFeatures": 6384,
+        "overlapRate": 0.0007832080200501253
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R1C2",
+      "status": "WARN",
+      "message": "1 of 10914 features have >50% water body overlap (0.01%)",
+      "details": {
+        "point": "R1C2",
+        "waterOverlaps": 1,
+        "totalFeatures": 10914,
+        "overlapRate": 0.0000916254352208173
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (4118 features checked)"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R1C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (10561 features checked)"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R1C5",
+      "status": "PASS",
+      "message": "No water body overlap detected (2471 features checked)"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R2C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (5673 features checked)"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R2C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (5232 features checked)"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R2C3",
+      "status": "WARN",
+      "message": "6 of 13734 features have >50% water body overlap (0.04%)",
+      "details": {
+        "point": "R2C3",
+        "waterOverlaps": 6,
+        "totalFeatures": 13734,
+        "overlapRate": 0.00043687199650502403
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R2C4",
+      "status": "WARN",
+      "message": "1 of 6388 features have >50% water body overlap (0.02%)",
+      "details": {
+        "point": "R2C4",
+        "waterOverlaps": 1,
+        "totalFeatures": 6388,
+        "overlapRate": 0.00015654351909830932
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R3C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (8393 features checked)"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R3C3",
+      "status": "WARN",
+      "message": "7 of 10298 features have >50% water body overlap (0.07%)",
+      "details": {
+        "point": "R3C3",
+        "waterOverlaps": 7,
+        "totalFeatures": 10298,
+        "overlapRate": 0.0006797436395416586
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R4C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (1377 features checked)"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R4C2",
+      "status": "WARN",
+      "message": "8 of 4995 features have >50% water body overlap (0.16%)",
+      "details": {
+        "point": "R4C2",
+        "waterOverlaps": 8,
+        "totalFeatures": 4995,
+        "overlapRate": 0.0016016016016016017
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R4C3",
+      "status": "WARN",
+      "message": "2 of 8570 features have >50% water body overlap (0.02%)",
+      "details": {
+        "point": "R4C3",
+        "waterOverlaps": 2,
+        "totalFeatures": 8570,
+        "overlapRate": 0.00023337222870478414
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R5C1",
+      "status": "WARN",
+      "message": "1 of 2546 features have >50% water body overlap (0.04%)",
+      "details": {
+        "point": "R5C1",
+        "waterOverlaps": 1,
+        "totalFeatures": 2546,
+        "overlapRate": 0.00039277297721916735
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R5C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (1427 features checked)"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R5C3",
+      "status": "WARN",
+      "message": "1 of 10477 features have >50% water body overlap (0.01%)",
+      "details": {
+        "point": "R5C3",
+        "waterOverlaps": 1,
+        "totalFeatures": 10477,
+        "overlapRate": 0.00009544716999140975
+      }
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — forest-age z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R0C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (60 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R1C2",
+      "status": "WARN",
+      "message": "1 of 967 features have >50% water body overlap (0.10%)",
+      "details": {
+        "point": "R1C2",
+        "waterOverlaps": 1,
+        "totalFeatures": 967,
+        "overlapRate": 0.001034126163391934
+      }
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (168 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R1C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (1112 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R1C5",
+      "status": "PASS",
+      "message": "No water body overlap detected (64 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R2C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (66 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R2C2",
+      "status": "PASS",
+      "message": "No features in tenure-cutblocks at z10/149/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R2C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (507 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R2C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (379 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R3C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (442 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R3C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (724 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R4C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (3 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R4C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R4C3",
+      "status": "PASS",
+      "message": "No features in tenure-cutblocks at z10/160/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R5C1",
+      "status": "PASS",
+      "message": "No features in tenure-cutblocks at z10/137/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R5C2",
+      "status": "PASS",
+      "message": "No features in tenure-cutblocks at z10/149/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R5C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (18 features checked)"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — tenure-cutblocks z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R0C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (232 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R1C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (40 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (15 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R1C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (73 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R1C5",
+      "status": "PASS",
+      "message": "No water body overlap detected (7 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R2C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (3 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R2C2",
+      "status": "PASS",
+      "message": "No features in fire-history at z10/149/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R2C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (27 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R2C4",
+      "status": "FAIL",
+      "message": "2 of 84 features have >50% water body overlap (2.38%)",
+      "details": {
+        "point": "R2C4",
+        "waterOverlaps": 2,
+        "totalFeatures": 84,
+        "overlapRate": 0.023809523809523808
+      }
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R3C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (63 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R3C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (19 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R4C1",
+      "status": "PASS",
+      "message": "No features in fire-history at z10/137/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R4C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R4C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (9 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R5C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R5C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (7 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R5C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (10 features checked)"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — fire-history z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R0C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (13 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R1C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R1C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (5 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R1C5",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R2C1",
+      "status": "PASS",
+      "message": "No features in parks at z10/137/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R2C2",
+      "status": "PASS",
+      "message": "No features in parks at z10/149/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R2C3",
+      "status": "PASS",
+      "message": "No features in parks at z10/160/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R2C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (3 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R3C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (4 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R3C3",
+      "status": "PASS",
+      "message": "No features in parks at z10/160/323 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R4C1",
+      "status": "PASS",
+      "message": "No features in parks at z10/137/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R4C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R4C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R5C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R5C2",
+      "status": "PASS",
+      "message": "No features in parks at z10/149/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R5C3",
+      "status": "PASS",
+      "message": "No features in parks at z10/160/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — parks z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R0C3",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/160/353 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R1C2",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/149/344 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R1C4",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/172/344 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R1C5",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/184/344 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R2C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R2C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R2C3",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/160/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R2C4",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/172/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R3C2",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/149/323 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R3C3",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/160/323 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R4C1",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/137/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R4C2",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/149/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R4C3",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/160/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R5C1",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/137/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R5C2",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/149/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R5C3",
+      "status": "PASS",
+      "message": "No features in conservancies at z10/160/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — conservancies z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R0C3",
+      "status": "PASS",
+      "message": "No features in ogma at z10/160/353 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R1C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (56 features checked)"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (84 features checked)"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R1C4",
+      "status": "PASS",
+      "message": "No features in ogma at z10/172/344 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R1C5",
+      "status": "PASS",
+      "message": "No features in ogma at z10/184/344 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R2C1",
+      "status": "PASS",
+      "message": "No features in ogma at z10/137/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R2C2",
+      "status": "PASS",
+      "message": "No features in ogma at z10/149/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R2C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (109 features checked)"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R2C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (35 features checked)"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R3C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (67 features checked)"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R3C3",
+      "status": "PASS",
+      "message": "No features in ogma at z10/160/323 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R4C1",
+      "status": "PASS",
+      "message": "No features in ogma at z10/137/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R4C2",
+      "status": "PASS",
+      "message": "No features in ogma at z10/149/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R4C3",
+      "status": "PASS",
+      "message": "No features in ogma at z10/160/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R5C1",
+      "status": "PASS",
+      "message": "No features in ogma at z10/137/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R5C2",
+      "status": "PASS",
+      "message": "No features in ogma at z10/149/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R5C3",
+      "status": "PASS",
+      "message": "No features in ogma at z10/160/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — ogma z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R0C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R1C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (9 features checked)"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (34 features checked)"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R1C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R1C5",
+      "status": "PASS",
+      "message": "No water body overlap detected (24 features checked)"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R2C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R2C2",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/149/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R2C3",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/160/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R2C4",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/172/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R3C2",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/149/323 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R3C3",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/160/323 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R4C1",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/137/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R4C2",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/149/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R4C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (10 features checked)"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R5C1",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/137/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R5C2",
+      "status": "PASS",
+      "message": "No features in wildlife-habitat-areas at z10/149/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R5C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — wildlife-habitat-areas z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R0C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (5 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R1C2",
+      "status": "PASS",
+      "message": "No features in ungulate-winter-range at z10/149/344 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (41 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R1C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (98 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R1C5",
+      "status": "PASS",
+      "message": "No water body overlap detected (509 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R2C1",
+      "status": "PASS",
+      "message": "No features in ungulate-winter-range at z10/137/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R2C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (4 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R2C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R2C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R3C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (18 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R3C3",
+      "status": "PASS",
+      "message": "No features in ungulate-winter-range at z10/160/323 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R4C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R4C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (10 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R4C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R5C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R5C2",
+      "status": "PASS",
+      "message": "No features in ungulate-winter-range at z10/149/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R5C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (6 features checked)"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — ungulate-winter-range z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R0C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (11 features checked)"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R1C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (2 features checked)"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R1C3",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/160/344 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R1C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (8 features checked)"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R1C5",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/184/344 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R2C1",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/137/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R2C2",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/149/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R2C3",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/160/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R2C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (1 features checked)"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R3C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (5 features checked)"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R3C3",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/160/323 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R4C1",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/137/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R4C2",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/149/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R4C3",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/160/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R5C1",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/137/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R5C2",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/149/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R5C3",
+      "status": "PASS",
+      "message": "No features in community-watersheds at z10/160/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — community-watersheds z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R0C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/353 for point R0C0"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R0C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/353 for point R0C1"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R0C2",
+      "status": "WARN",
+      "message": "No tile data at z10/149/353 for point R0C2"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R0C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (138 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R0C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/353 for point R0C4"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R0C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/353 for point R0C5"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R1C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/344 for point R1C0"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R1C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/344 for point R1C1"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R1C2",
+      "status": "FAIL",
+      "message": "1 of 97 features have >50% water body overlap (1.03%)",
+      "details": {
+        "point": "R1C2",
+        "waterOverlaps": 1,
+        "totalFeatures": 97,
+        "overlapRate": 0.010309278350515464
+      }
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R1C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (34 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R1C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (42 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R1C5",
+      "status": "PASS",
+      "message": "No water body overlap detected (20 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R2C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/334 for point R2C0"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R2C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (7 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R2C2",
+      "status": "PASS",
+      "message": "No features in mining-claims at z10/149/334 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R2C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (8 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R2C4",
+      "status": "PASS",
+      "message": "No water body overlap detected (5 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R2C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/334 for point R2C5"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R3C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/323 for point R3C0"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R3C1",
+      "status": "WARN",
+      "message": "No tile data at z10/137/323 for point R3C1"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R3C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (54 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R3C3",
+      "status": "PASS",
+      "message": "No water body overlap detected (65 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R3C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/323 for point R3C4"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R3C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/323 for point R3C5"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R4C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/312 for point R4C0"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R4C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (179 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R4C2",
+      "status": "PASS",
+      "message": "No water body overlap detected (62 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R4C3",
+      "status": "PASS",
+      "message": "No features in mining-claims at z10/160/312 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R4C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/312 for point R4C4"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R4C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/312 for point R4C5"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R5C0",
+      "status": "WARN",
+      "message": "No tile data at z10/125/300 for point R5C0"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R5C1",
+      "status": "PASS",
+      "message": "No water body overlap detected (19 features checked)"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R5C2",
+      "status": "PASS",
+      "message": "No features in mining-claims at z10/149/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R5C3",
+      "status": "PASS",
+      "message": "No features in mining-claims at z10/160/300 — nothing to check"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R5C4",
+      "status": "WARN",
+      "message": "No tile data at z10/172/300 for point R5C4"
+    },
+    {
+      "check": "Water body overlap — mining-claims z10 @ R5C5",
+      "status": "WARN",
+      "message": "No tile data at z10/184/300 for point R5C5"
+    },
+    {
+      "check": "S1: Water body overlap rate — forest-age",
+      "status": "PASS",
+      "message": "0/36 sample points flagged (0.0%)",
+      "details": {
+        "layer": "forest-age",
+        "flaggedPoints": 0,
+        "totalPoints": 36,
+        "overlapRatePct": 0
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — tenure-cutblocks",
+      "status": "PASS",
+      "message": "0/36 sample points flagged (0.0%)",
+      "details": {
+        "layer": "tenure-cutblocks",
+        "flaggedPoints": 0,
+        "totalPoints": 36,
+        "overlapRatePct": 0
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — fire-history",
+      "status": "WARN",
+      "message": "1/36 sample points flagged (2.8%)",
+      "details": {
+        "layer": "fire-history",
+        "flaggedPoints": 1,
+        "totalPoints": 36,
+        "overlapRatePct": 2.7777777777777777
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — parks",
+      "status": "PASS",
+      "message": "0/36 sample points flagged (0.0%)",
+      "details": {
+        "layer": "parks",
+        "flaggedPoints": 0,
+        "totalPoints": 36,
+        "overlapRatePct": 0
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — conservancies",
+      "status": "PASS",
+      "message": "0/36 sample points flagged (0.0%)",
+      "details": {
+        "layer": "conservancies",
+        "flaggedPoints": 0,
+        "totalPoints": 36,
+        "overlapRatePct": 0
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — ogma",
+      "status": "PASS",
+      "message": "0/36 sample points flagged (0.0%)",
+      "details": {
+        "layer": "ogma",
+        "flaggedPoints": 0,
+        "totalPoints": 36,
+        "overlapRatePct": 0
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — wildlife-habitat-areas",
+      "status": "PASS",
+      "message": "0/36 sample points flagged (0.0%)",
+      "details": {
+        "layer": "wildlife-habitat-areas",
+        "flaggedPoints": 0,
+        "totalPoints": 36,
+        "overlapRatePct": 0
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — ungulate-winter-range",
+      "status": "PASS",
+      "message": "0/36 sample points flagged (0.0%)",
+      "details": {
+        "layer": "ungulate-winter-range",
+        "flaggedPoints": 0,
+        "totalPoints": 36,
+        "overlapRatePct": 0
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — community-watersheds",
+      "status": "PASS",
+      "message": "0/36 sample points flagged (0.0%)",
+      "details": {
+        "layer": "community-watersheds",
+        "flaggedPoints": 0,
+        "totalPoints": 36,
+        "overlapRatePct": 0
+      }
+    },
+    {
+      "check": "S1: Water body overlap rate — mining-claims",
+      "status": "WARN",
+      "message": "1/36 sample points flagged (2.8%)",
+      "details": {
+        "layer": "mining-claims",
+        "flaggedPoints": 1,
+        "totalPoints": 36,
+        "overlapRatePct": 2.7777777777777777
+      }
+    },
+    {
+      "check": "Forest-age classification — z10 @ R0C0",
+      "status": "PASS",
+      "message": "No tile data at z10/125/353 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R0C1",
+      "status": "PASS",
+      "message": "No tile data at z10/137/353 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R0C2",
+      "status": "PASS",
+      "message": "No tile data at z10/149/353 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R0C3",
+      "status": "PASS",
+      "message": "All 6384 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R0C4",
+      "status": "PASS",
+      "message": "No tile data at z10/172/353 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R0C5",
+      "status": "PASS",
+      "message": "No tile data at z10/184/353 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R1C0",
+      "status": "PASS",
+      "message": "No tile data at z10/125/344 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R1C1",
+      "status": "PASS",
+      "message": "No tile data at z10/137/344 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R1C2",
+      "status": "PASS",
+      "message": "All 10914 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R1C3",
+      "status": "PASS",
+      "message": "All 4118 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R1C4",
+      "status": "PASS",
+      "message": "All 10561 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R1C5",
+      "status": "PASS",
+      "message": "All 2471 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R2C0",
+      "status": "PASS",
+      "message": "No tile data at z10/125/334 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R2C1",
+      "status": "PASS",
+      "message": "All 5673 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R2C2",
+      "status": "PASS",
+      "message": "All 5232 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R2C3",
+      "status": "PASS",
+      "message": "All 13734 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R2C4",
+      "status": "PASS",
+      "message": "All 6388 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R2C5",
+      "status": "PASS",
+      "message": "No tile data at z10/184/334 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R3C0",
+      "status": "PASS",
+      "message": "No tile data at z10/125/323 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R3C1",
+      "status": "PASS",
+      "message": "No tile data at z10/137/323 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R3C2",
+      "status": "PASS",
+      "message": "All 8393 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R3C3",
+      "status": "PASS",
+      "message": "All 10298 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R3C4",
+      "status": "PASS",
+      "message": "No tile data at z10/172/323 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R3C5",
+      "status": "PASS",
+      "message": "No tile data at z10/184/323 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R4C0",
+      "status": "PASS",
+      "message": "No tile data at z10/125/312 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R4C1",
+      "status": "PASS",
+      "message": "All 1377 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R4C2",
+      "status": "PASS",
+      "message": "All 4995 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R4C3",
+      "status": "PASS",
+      "message": "All 8570 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R4C4",
+      "status": "PASS",
+      "message": "No tile data at z10/172/312 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R4C5",
+      "status": "PASS",
+      "message": "No tile data at z10/184/312 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R5C0",
+      "status": "PASS",
+      "message": "No tile data at z10/125/300 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R5C1",
+      "status": "PASS",
+      "message": "All 2546 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R5C2",
+      "status": "PASS",
+      "message": "All 1427 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R5C3",
+      "status": "PASS",
+      "message": "All 10477 forest-age features have consistent class/age"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R5C4",
+      "status": "PASS",
+      "message": "No tile data at z10/172/300 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification — z10 @ R5C5",
+      "status": "PASS",
+      "message": "No tile data at z10/184/300 — no forest-age features to check"
+    },
+    {
+      "check": "Forest-age classification consistency — summary",
+      "status": "PASS",
+      "message": "All 113558 forest-age features passed class/age consistency check",
+      "details": {
+        "totalFeatures": 113558,
+        "totalInconsistent": 0,
+        "examples": []
+      }
+    }
+  ]
+}

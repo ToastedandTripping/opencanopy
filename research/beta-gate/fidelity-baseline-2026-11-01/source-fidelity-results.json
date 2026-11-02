@@ -1,0 +1,1200 @@
+{
+  "timestamp": "2026-11-01T21:56:30.721Z",
+  "summary": {
+    "total": 4,
+    "passed": 3,
+    "warned": 1,
+    "failed": 0
+  },
+  "results": [
+    {
+      "check": "F1: Feature Existence",
+      "status": "PASS",
+      "message": "599/600 features found across 12 layers (99.8%). Meets >98% threshold.",
+      "details": {
+        "sampled": 600,
+        "found": 599,
+        "foundRate": 0.9983333333333333
+      }
+    },
+    {
+      "check": "F2: Property Value Preservation",
+      "status": "PASS",
+      "message": "All 30 property keys match at ≥90% rate.",
+      "details": [
+        {
+          "key": "age",
+          "matchCount": 49,
+          "total": 49,
+          "matchRate": 1
+        },
+        {
+          "key": "ANCIENT_FOREST_IND",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "AREA_HA",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "BGC_LABEL",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "class",
+          "matchCount": 49,
+          "total": 49,
+          "matchRate": 1
+        },
+        {
+          "key": "CLIENT_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "COMMON_SPECIES_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "company_id",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "CW_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "designation",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "DISTURBANCE_START_DATE",
+          "matchCount": 46,
+          "total": 50,
+          "matchRate": 0.92
+        },
+        {
+          "key": "FEATURE_AREA_SQM",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "FIELD_VERIFIED_IND",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "FIRE_CAUSE",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "FIRE_SIZE_HECTARES",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "FIRE_YEAR",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "HABITAT_AREA_ID",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "LANDSCAPE_UNIT_NAME",
+          "matchCount": 100,
+          "total": 100,
+          "matchRate": 1
+        },
+        {
+          "key": "name",
+          "matchCount": 100,
+          "total": 100,
+          "matchRate": 1
+        },
+        {
+          "key": "OGMA_TYPE",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "OWNER_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "PLANNED_GROSS_BLOCK_AREA",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "PRIORITY_BIG_TREED_OG_IND",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "ROAD_SECTION_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "species",
+          "matchCount": 49,
+          "total": 49,
+          "matchRate": 1
+        },
+        {
+          "key": "SPECIES_1",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "TAP_CLASSIFICATION_LABEL",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "TENURE_STATUS",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "TENURE_TYPE_DESCRIPTION",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "UWR_TAG",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        }
+      ]
+    },
+    {
+      "check": "F3: Per-Layer Breakdown",
+      "status": "PASS",
+      "message": "Breakdown available for all 12 layers.",
+      "details": [
+        {
+          "layer": "forest-age",
+          "sampled": 50,
+          "found": 49,
+          "foundRate": 0.98,
+          "propertyRates": [
+            {
+              "key": "age",
+              "matchCount": 49,
+              "total": 49,
+              "matchRate": 1
+            },
+            {
+              "key": "class",
+              "matchCount": 49,
+              "total": 49,
+              "matchRate": 1
+            },
+            {
+              "key": "species",
+              "matchCount": 49,
+              "total": 49,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "tenure-cutblocks",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "company_id",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "DISTURBANCE_START_DATE",
+              "matchCount": 46,
+              "total": 50,
+              "matchRate": 0.92
+            },
+            {
+              "key": "PLANNED_GROSS_BLOCK_AREA",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "fire-history",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "FIRE_CAUSE",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "FIRE_SIZE_HECTARES",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "FIRE_YEAR",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "parks",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "designation",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "name",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "conservancies",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "name",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "ogma",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "LANDSCAPE_UNIT_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "OGMA_TYPE",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "wildlife-habitat-areas",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "COMMON_SPECIES_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "HABITAT_AREA_ID",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "ungulate-winter-range",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "SPECIES_1",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "UWR_TAG",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "community-watersheds",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "AREA_HA",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "CW_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "mining-claims",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "OWNER_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "TENURE_STATUS",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "TENURE_TYPE_DESCRIPTION",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "forestry-roads",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "CLIENT_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "ROAD_SECTION_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "conservation-priority",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "ANCIENT_FOREST_IND",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "BGC_LABEL",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "FEATURE_AREA_SQM",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "FIELD_VERIFIED_IND",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "LANDSCAPE_UNIT_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "PRIORITY_BIG_TREED_OG_IND",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "TAP_CLASSIFICATION_LABEL",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "check": "F4: Grid Boundary Stress Test",
+      "status": "WARN",
+      "message": "1 layer(s) degraded near WFS seams: forest-age",
+      "details": {
+        "layers": [
+          {
+            "layer": "forest-age",
+            "boundarySampled": 20,
+            "boundaryFound": 15,
+            "boundaryFoundRate": 0.75,
+            "interiorFoundRate": 0.98,
+            "degraded": true
+          },
+          {
+            "layer": "tenure-cutblocks",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "fire-history",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "parks",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "conservancies",
+            "boundarySampled": 9,
+            "boundaryFound": 9,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "ogma",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "wildlife-habitat-areas",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "ungulate-winter-range",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "community-watersheds",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "mining-claims",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "forestry-roads",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          },
+          {
+            "layer": "conservation-priority",
+            "boundarySampled": 20,
+            "boundaryFound": 20,
+            "boundaryFoundRate": 1,
+            "interiorFoundRate": 1,
+            "degraded": false
+          }
+        ],
+        "degradedLayers": [
+          "forest-age"
+        ]
+      }
+    }
+  ],
+  "fidelityData": {
+    "f1": {
+      "status": "PASS",
+      "sampled": 600,
+      "found": 599,
+      "foundRate": 0.9983333333333333,
+      "message": "599/600 features found across 12 layers (99.8%). Meets >98% threshold."
+    },
+    "f2": {
+      "propertyRates": [
+        {
+          "key": "age",
+          "matchCount": 49,
+          "total": 49,
+          "matchRate": 1
+        },
+        {
+          "key": "ANCIENT_FOREST_IND",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "AREA_HA",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "BGC_LABEL",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "class",
+          "matchCount": 49,
+          "total": 49,
+          "matchRate": 1
+        },
+        {
+          "key": "CLIENT_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "COMMON_SPECIES_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "company_id",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "CW_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "designation",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "DISTURBANCE_START_DATE",
+          "matchCount": 46,
+          "total": 50,
+          "matchRate": 0.92
+        },
+        {
+          "key": "FEATURE_AREA_SQM",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "FIELD_VERIFIED_IND",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "FIRE_CAUSE",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "FIRE_SIZE_HECTARES",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "FIRE_YEAR",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "HABITAT_AREA_ID",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "LANDSCAPE_UNIT_NAME",
+          "matchCount": 100,
+          "total": 100,
+          "matchRate": 1
+        },
+        {
+          "key": "name",
+          "matchCount": 100,
+          "total": 100,
+          "matchRate": 1
+        },
+        {
+          "key": "OGMA_TYPE",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "OWNER_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "PLANNED_GROSS_BLOCK_AREA",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "PRIORITY_BIG_TREED_OG_IND",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "ROAD_SECTION_NAME",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "species",
+          "matchCount": 49,
+          "total": 49,
+          "matchRate": 1
+        },
+        {
+          "key": "SPECIES_1",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "TAP_CLASSIFICATION_LABEL",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "TENURE_STATUS",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "TENURE_TYPE_DESCRIPTION",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        },
+        {
+          "key": "UWR_TAG",
+          "matchCount": 50,
+          "total": 50,
+          "matchRate": 1
+        }
+      ],
+      "message": "All 30 property keys match at ≥90% rate."
+    },
+    "f3": {
+      "layers": [
+        {
+          "layer": "forest-age",
+          "sampled": 50,
+          "found": 49,
+          "foundRate": 0.98,
+          "propertyRates": [
+            {
+              "key": "age",
+              "matchCount": 49,
+              "total": 49,
+              "matchRate": 1
+            },
+            {
+              "key": "class",
+              "matchCount": 49,
+              "total": 49,
+              "matchRate": 1
+            },
+            {
+              "key": "species",
+              "matchCount": 49,
+              "total": 49,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "tenure-cutblocks",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "company_id",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "DISTURBANCE_START_DATE",
+              "matchCount": 46,
+              "total": 50,
+              "matchRate": 0.92
+            },
+            {
+              "key": "PLANNED_GROSS_BLOCK_AREA",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "fire-history",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "FIRE_CAUSE",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "FIRE_SIZE_HECTARES",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "FIRE_YEAR",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "parks",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "designation",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "name",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "conservancies",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "name",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "ogma",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "LANDSCAPE_UNIT_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "OGMA_TYPE",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "wildlife-habitat-areas",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "COMMON_SPECIES_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "HABITAT_AREA_ID",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "ungulate-winter-range",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "SPECIES_1",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "UWR_TAG",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "community-watersheds",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "AREA_HA",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "CW_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "mining-claims",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "OWNER_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "TENURE_STATUS",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "TENURE_TYPE_DESCRIPTION",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "forestry-roads",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "CLIENT_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "ROAD_SECTION_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        },
+        {
+          "layer": "conservation-priority",
+          "sampled": 50,
+          "found": 50,
+          "foundRate": 1,
+          "propertyRates": [
+            {
+              "key": "ANCIENT_FOREST_IND",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "BGC_LABEL",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "FEATURE_AREA_SQM",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "FIELD_VERIFIED_IND",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "LANDSCAPE_UNIT_NAME",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "PRIORITY_BIG_TREED_OG_IND",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            },
+            {
+              "key": "TAP_CLASSIFICATION_LABEL",
+              "matchCount": 50,
+              "total": 50,
+              "matchRate": 1
+            }
+          ]
+        }
+      ]
+    },
+    "f4": {
+      "layers": [
+        {
+          "layer": "forest-age",
+          "boundarySampled": 20,
+          "boundaryFound": 15,
+          "boundaryFoundRate": 0.75,
+          "interiorFoundRate": 0.98,
+          "degraded": true
+        },
+        {
+          "layer": "tenure-cutblocks",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "fire-history",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "parks",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "conservancies",
+          "boundarySampled": 9,
+          "boundaryFound": 9,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "ogma",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "wildlife-habitat-areas",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "ungulate-winter-range",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "community-watersheds",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "mining-claims",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "forestry-roads",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        },
+        {
+          "layer": "conservation-priority",
+          "boundarySampled": 20,
+          "boundaryFound": 20,
+          "boundaryFoundRate": 1,
+          "interiorFoundRate": 1,
+          "degraded": false
+        }
+      ],
+      "degradedLayers": [
+        "forest-age"
+      ]
+    }
+  }
+}

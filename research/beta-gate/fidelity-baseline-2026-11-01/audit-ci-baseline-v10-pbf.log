@@ -1,0 +1,2102 @@
+
+[1mOpenCanopy Unified Audit Suite[0m
+[33mCI mode enabled. Warnings treated as failures.[0m
+
+[1m[36m────────────────────────────────────────────────────────────[0m
+[1mRunning: Tiles (npm run audit:tiles)[0m
+[36m────────────────────────────────────────────────────────────[0m
+
+Opening PMTiles archive...
+  PMTiles version: 3, zoom range: z4-z12
+
+A1: Checking source layers...
+A2: Checking feature counts...
+A3: Checking property preservation...
+A4: Checking large feature detection...
+A5: Checking tile boundary artifacts...
+A6: Checking zoom consistency...
+A7: Checking timeline property format...
+A8: Checking preprocessing comparison...
+
+[1mOpenCanopy Tile Audit Results[0m
+[2m────────────────────────────────────────────────────────────[0m
+[32m[PASS][0m A1: Source layer metadata
+     [2mFound 12 layer(s) in PMTiles metadata: community-watersheds, conservancies, conservation-priority, fire-history, forest-age, forestry-roads, mining-claims, ogma, parks, tenure-cutblocks, ungulate-winter-range, wildlife-habitat-areas[0m
+[32m[PASS][0m A1: All 12 expected source layers present
+     [2mAll 12 expected source layers found in metadata.[0m
+[32m[PASS][0m A1: Source layers present in BC center tile (z8)
+     [2mBC center tile at z8/37/82 contains layers: ogma, conservation-priority, fire-history, conservancies, wildlife-habitat-areas, tenure-cutblocks, parks, ungulate-winter-range, forest-age, mining-claims, forestry-roads[0m
+     [2m{[0m
+     [2m  "tile": "8/37/82"[0m
+     [2m}[0m
+[33m[WARN][0m A2: Feature count [forest-age]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/forest-age.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [tenure-cutblocks]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/tenure-cutblocks.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [fire-history]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/fire-history.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [parks]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/parks.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [conservancies]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/conservancies.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [ogma]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/ogma.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [wildlife-habitat-areas]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/wildlife-habitat-areas.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [ungulate-winter-range]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/ungulate-winter-range.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [community-watersheds]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/community-watersheds.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [mining-claims]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/mining-claims.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [forestry-roads]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/forestry-roads.ndjson. Cannot reconcile feature count.[0m
+[33m[WARN][0m A2: Feature count [conservation-priority]
+     [2mNDJSON file not found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/conservation-priority.ndjson. Cannot reconcile feature count.[0m
+[32m[PASS][0m A3: Property preservation [forest-age]
+     [2mAll expected properties preserved at z10. Tile has: class, age, species[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "class"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "class",[0m
+     [2m    "age",[0m
+     [2m    "species"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [tenure-cutblocks]
+     [2mAll expected properties preserved at z10. Tile has: company_id, DISTURBANCE_START_DATE, PLANNED_GROSS_BLOCK_AREA[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "company_id",[0m
+     [2m    "PLANNED_GROSS_BLOCK_AREA"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "company_id",[0m
+     [2m    "DISTURBANCE_START_DATE",[0m
+     [2m    "PLANNED_GROSS_BLOCK_AREA"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [fire-history]
+     [2mAll expected properties preserved at z10. Tile has: FIRE_YEAR, FIRE_SIZE_HECTARES, FIRE_CAUSE[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "FIRE_YEAR"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "FIRE_YEAR",[0m
+     [2m    "FIRE_SIZE_HECTARES",[0m
+     [2m    "FIRE_CAUSE"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [parks]
+     [2mAll expected properties preserved at z10. Tile has: name, designation[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "name"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "name",[0m
+     [2m    "designation"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[33m[WARN][0m A3: Property preservation [conservancies]
+     [2mNo features found in z10 tile. Cannot verify property preservation.[0m
+[32m[PASS][0m A3: Property preservation [ogma]
+     [2mAll expected properties preserved at z10. Tile has: OGMA_TYPE[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "OGMA_TYPE"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "OGMA_TYPE"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [wildlife-habitat-areas]
+     [2mAll expected properties preserved at z10. Tile has: COMMON_SPECIES_NAME, HABITAT_AREA_ID[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "COMMON_SPECIES_NAME"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "COMMON_SPECIES_NAME",[0m
+     [2m    "HABITAT_AREA_ID"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [ungulate-winter-range]
+     [2mAll expected properties preserved at z10. Tile has: SPECIES_1[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "SPECIES_1"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "SPECIES_1"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [community-watersheds]
+     [2mAll expected properties preserved at z10. Tile has: CW_NAME[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "CW_NAME"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "CW_NAME"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[33m[WARN][0m A3: Property preservation [mining-claims]
+     [2mNo features found in z10 tile. Cannot verify property preservation.[0m
+[32m[PASS][0m A3: Property preservation [forestry-roads]
+     [2mAll expected properties preserved at z10. Tile has: ROAD_SECTION_NAME, CLIENT_NAME[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "ROAD_SECTION_NAME"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "ROAD_SECTION_NAME",[0m
+     [2m    "CLIENT_NAME"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A3: Property preservation [conservation-priority]
+     [2mAll expected properties preserved at z10. Tile has: TAP_CLASSIFICATION_LABEL, LANDSCAPE_UNIT_NAME, ANCIENT_FOREST_IND, PRIORITY_BIG_TREED_OG_IND, BGC_LABEL, FIELD_VERIFIED_IND, FEATURE_AREA_SQM[0m
+     [2m{[0m
+     [2m  "zoom": 10,[0m
+     [2m  "expectedProperties": [[0m
+     [2m    "TAP_CLASSIFICATION_LABEL"[0m
+     [2m  ],[0m
+     [2m  "foundProperties": [[0m
+     [2m    "TAP_CLASSIFICATION_LABEL",[0m
+     [2m    "LANDSCAPE_UNIT_NAME",[0m
+     [2m    "ANCIENT_FOREST_IND",[0m
+     [2m    "PRIORITY_BIG_TREED_OG_IND",[0m
+     [2m    "BGC_LABEL",[0m
+     [2m    "FIELD_VERIFIED_IND",[0m
+     [2m    "FEATURE_AREA_SQM"[0m
+     [2m  ],[0m
+     [2m  "missingProperties": [][0m
+     [2m}[0m
+[32m[PASS][0m A4: Cutblocks present in BC tiles (z8)
+     [2mFound tenure-cutblocks in 9/9 BC sample tiles. Total: 29147 features across sampled tiles.[0m
+     [2m{[0m
+     [2m  "tilesChecked": 9,[0m
+     [2m  "tilesWithCutblocks": 9,[0m
+     [2m  "totalFeatures": 29147[0m
+     [2m}[0m
+[32m[PASS][0m A4: Large features (>2000 ha) exist in tile data
+     [2mFound 40 feature(s) with PLANNED_GROSS_BLOCK_AREA > 2000 ha in BC tiles at z8. Property preserved in tiles (as expected). Registry filter excludes them from rendering.[0m
+     [2m{[0m
+     [2m  "largeFeatureCount": 40,[0m
+     [2m  "totalFeaturesChecked": 29147,[0m
+     [2m  "threshold": 2000,[0m
+     [2m  "tilesWithLargeArea": 40[0m
+     [2m}[0m
+[32m[PASS][0m A5: Tile boundary artifacts (z7, Revelstoke)
+     [2m0.5% of polygon edges aligned with tile boundaries (9231/1761765 edges). Below 5% threshold -- tile clipping looks normal.[0m
+     [2m{[0m
+     [2m  "tile": "7/21/42",[0m
+     [2m  "features": 269028,[0m
+     [2m  "boundaryEdges": 9231,[0m
+     [2m  "totalEdges": 1761765,[0m
+     [2m  "boundaryPercent": 0.5[0m
+     [2m}[0m
+[32m[PASS][0m A5: Tile boundary artifacts (z9, Revelstoke)
+     [2m0.6% of polygon edges aligned with tile boundaries (1988/358601 edges). Below 5% threshold -- tile clipping looks normal.[0m
+     [2m{[0m
+     [2m  "tile": "9/87/171",[0m
+     [2m  "features": 40262,[0m
+     [2m  "boundaryEdges": 1988,[0m
+     [2m  "totalEdges": 358601,[0m
+     [2m  "boundaryPercent": 0.6[0m
+     [2m}[0m
+[32m[PASS][0m A6: Zoom consistency (z10 -> z6 parent coverage)
+     [2m100.0% of z10 tiles with features have corresponding z6 parent data (28/28 tiles). Above 80% -- zoom coverage looks consistent.[0m
+     [2m{[0m
+     [2m  "tilesChecked": 50,[0m
+     [2m  "tilesWithFeatures": 28,[0m
+     [2m  "parentTilesWithFeatures": 28,[0m
+     [2m  "coveragePercent": 100[0m
+     [2m}[0m
+[33m[WARN][0m A7: Timeline property format [cutblocks] field: DISTURBANCE_START_DATE
+     [2m"DISTURBANCE_START_DATE" has 2/20 values that don't match /^\d{4}/. These features won't match timeline year filters. Example malformed values: ["null","null"][0m
+     [2m{[0m
+     [2m  "field": "DISTURBANCE_START_DATE",[0m
+     [2m  "sourceLayer": "tenure-cutblocks",[0m
+     [2m  "zoom": 10,[0m
+     [2m  "sampled": 20,[0m
+     [2m  "numberCount": 0,[0m
+     [2m  "stringWithYearCount": 18,[0m
+     [2m  "nullCount": 0,[0m
+     [2m  "malformedCount": 2,[0m
+     [2m  "malformedExamples": [[0m
+     [2m    "null",[0m
+     [2m    "null"[0m
+     [2m  ][0m
+     [2m}[0m
+[33m[WARN][0m A7: Timeline property format [tenure-cutblocks] field: DISTURBANCE_START_DATE
+     [2m"DISTURBANCE_START_DATE" has 2/20 values that don't match /^\d{4}/. These features won't match timeline year filters. Example malformed values: ["null","null"][0m
+     [2m{[0m
+     [2m  "field": "DISTURBANCE_START_DATE",[0m
+     [2m  "sourceLayer": "tenure-cutblocks",[0m
+     [2m  "zoom": 10,[0m
+     [2m  "sampled": 20,[0m
+     [2m  "numberCount": 0,[0m
+     [2m  "stringWithYearCount": 18,[0m
+     [2m  "nullCount": 0,[0m
+     [2m  "malformedCount": 2,[0m
+     [2m  "malformedExamples": [[0m
+     [2m    "null",[0m
+     [2m    "null"[0m
+     [2m  ][0m
+     [2m}[0m
+[32m[PASS][0m A7: Timeline property format [fire-history] field: FIRE_YEAR
+     [2m"FIRE_YEAR" format looks correct: 20/20 sampled features have string values starting with a 4-digit year (z10, source: "fire-history"). [0m
+     [2m{[0m
+     [2m  "field": "FIRE_YEAR",[0m
+     [2m  "sourceLayer": "fire-history",[0m
+     [2m  "zoom": 10,[0m
+     [2m  "sampled": 20,[0m
+     [2m  "stringWithYearCount": 20,[0m
+     [2m  "nullCount": 0[0m
+     [2m}[0m
+[32m[PASS][0m A8: Preprocessing report
+     [2mNo preprocessing report found — raw data used (run `npm run preprocess:v2` to generate)[0m
+[2m────────────────────────────────────────────────────────────[0m
+[1mSummary:[0m [32m20 passed[0m, [33m16 warned[0m, [31m0 failed[0m
+
+[33m[1mAUDIT PASSED WITH WARNINGS[0m -- review 16 item(s).
+
+
+[1m[36m────────────────────────────────────────────────────────────[0m
+[1mRunning: Fidelity (npm run audit:fidelity)[0m
+[36m────────────────────────────────────────────────────────────[0m
+
+[1m
+OpenCanopy Source Fidelity Audit[0m
+[2m────────────────────────────────────────────────────────────[0m
+  PMTiles: zoom z4-z12, tracing at z10
+
+Collecting F1/F2/F3 traces (50 features × 12 layers)...
+  forest-age... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/forest-age.ndjson')
+  tenure-cutblocks... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/tenure-cutblocks.ndjson')
+  fire-history... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/fire-history.ndjson')
+  parks... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/parks.ndjson')
+  conservancies... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/conservancies.ndjson')
+  ogma... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/ogma.ndjson')
+  wildlife-habitat-areas... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/wildlife-habitat-areas.ndjson')
+  ungulate-winter-range... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/ungulate-winter-range.ndjson')
+  community-watersheds... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/community-watersheds.ndjson')
+  mining-claims... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/mining-claims.ndjson')
+  forestry-roads... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/forestry-roads.ndjson')
+  conservation-priority... SKIP (ENOENT: no such file or directory, open '/home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/conservation-priority.ndjson')
+
+F1: Feature existence...
+  [31m[FAIL][0m 0/0 features found across 12 layers (0.0%). Below 95% — significant feature loss detected.
+
+F2: Property value preservation...
+  [2mNo found features to compare.[0m
+
+F3: Per-layer breakdown...
+  forest-age                     found 0/0 (0.0%)
+  tenure-cutblocks               found 0/0 (0.0%)
+  fire-history                   found 0/0 (0.0%)
+  parks                          found 0/0 (0.0%)
+  conservancies                  found 0/0 (0.0%)
+  ogma                           found 0/0 (0.0%)
+  wildlife-habitat-areas         found 0/0 (0.0%)
+  ungulate-winter-range          found 0/0 (0.0%)
+  community-watersheds           found 0/0 (0.0%)
+  mining-claims                  found 0/0 (0.0%)
+  forestry-roads                 found 0/0 (0.0%)
+  conservation-priority          found 0/0 (0.0%)
+
+F4: Grid boundary stress test (20 features × 12 layers near seams)...
+  forest-age... SKIP
+  tenure-cutblocks... SKIP
+  fire-history... SKIP
+  parks... SKIP
+  conservancies... SKIP
+  ogma... SKIP
+  wildlife-habitat-areas... SKIP
+  ungulate-winter-range... SKIP
+  community-watersheds... SKIP
+  mining-claims... SKIP
+  forestry-roads... SKIP
+  conservation-priority... SKIP
+
+  [32m[PASS][0m No layers show boundary degradation.
+
+[2m────────────────────────────────────────────────────────────[0m
+[1mSummary:[0m
+  [31m[FAIL][0m F1: Feature Existence: 0/0 features found across 12 layers (0.0%). Below 95% — significant feature loss detected.
+  [32m[PASS][0m F2: Property Value Preservation: No found features to compare.
+  [32m[PASS][0m F3: Per-Layer Breakdown: Breakdown available for all 12 layers.
+  [32m[PASS][0m F4: Grid Boundary Stress Test: No boundary degradation detected.
+
+Results saved to: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/reports/source-fidelity-results.json
+
+
+[1m[36m────────────────────────────────────────────────────────────[0m
+[1mRunning: Spatial (npm run audit:spatial)[0m
+[36m────────────────────────────────────────────────────────────[0m
+
+=== OpenCanopy Spatial Audit ===
+
+
+S1: Checking water body overlap at z10 for 10 layer(s)...
+  Loading lake reference data...
+  Loaded 386218 lake polygons
+  Layer: forest-age
+  Using preloaded 386218 lake polygons
+  Checked 113558 features. Water overlaps: 32 across 9 sample points
+  Layer: tenure-cutblocks
+  Using preloaded 386218 lake polygons
+  Checked 4511 features. Water overlaps: 1 across 1 sample points
+  Layer: fire-history
+  Using preloaded 386218 lake polygons
+  Checked 592 features. Water overlaps: 2 across 1 sample points
+  Layer: parks
+  Using preloaded 386218 lake polygons
+  Checked 35 features. Water overlaps: 0 across 0 sample points
+  Layer: conservancies
+  Using preloaded 386218 lake polygons
+  Checked 5 features. Water overlaps: 0 across 0 sample points
+  Layer: ogma
+  Using preloaded 386218 lake polygons
+  Checked 351 features. Water overlaps: 0 across 0 sample points
+  Layer: wildlife-habitat-areas
+  Using preloaded 386218 lake polygons
+  Checked 81 features. Water overlaps: 0 across 0 sample points
+  Layer: ungulate-winter-range
+  Using preloaded 386218 lake polygons
+  Checked 698 features. Water overlaps: 0 across 0 sample points
+  Layer: community-watersheds
+  Using preloaded 386218 lake polygons
+  Checked 27 features. Water overlaps: 0 across 0 sample points
+  Layer: mining-claims
+  Using preloaded 386218 lake polygons
+  Checked 730 features. Water overlaps: 1 across 1 sample points
+
+  Per-layer overlap rates:
+    forest-age                     0/36 points flagged (0.0%)
+    tenure-cutblocks               0/36 points flagged (0.0%)
+    fire-history                   1/36 points flagged (2.8%)
+    parks                          0/36 points flagged (0.0%)
+    conservancies                  0/36 points flagged (0.0%)
+    ogma                           0/36 points flagged (0.0%)
+    wildlife-habitat-areas         0/36 points flagged (0.0%)
+    ungulate-winter-range          0/36 points flagged (0.0%)
+    community-watersheds           0/36 points flagged (0.0%)
+    mining-claims                  1/36 points flagged (2.8%)
+
+S2: Forest-age classification consistency at z10 (36 points)...
+
+[1mOpenCanopy Tile Audit Results[0m
+[2m────────────────────────────────────────────────────────────[0m
+[32m[PASS][0m Spatial audit — PMTiles availability
+     [2mPMTiles archive found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/tiles/opencanopy.pmtiles[0m
+[32m[PASS][0m Spatial audit — lakes reference data
+     [2mFWA lakes reference data found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/geojson/reference/fwa-lakes.ndjson[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R0C3
+     [2m5 of 6384 features have >50% water body overlap (0.08%)[0m
+     [2m{[0m
+     [2m  "point": "R0C3",[0m
+     [2m  "waterOverlaps": 5,[0m
+     [2m  "totalFeatures": 6384,[0m
+     [2m  "overlapRate": 0.0007832080200501253[0m
+     [2m}[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R1C2
+     [2m1 of 10914 features have >50% water body overlap (0.01%)[0m
+     [2m{[0m
+     [2m  "point": "R1C2",[0m
+     [2m  "waterOverlaps": 1,[0m
+     [2m  "totalFeatures": 10914,[0m
+     [2m  "overlapRate": 0.0000916254352208173[0m
+     [2m}[0m
+[32m[PASS][0m Water body overlap — forest-age z10 @ R1C3
+     [2mNo water body overlap detected (4118 features checked)[0m
+[32m[PASS][0m Water body overlap — forest-age z10 @ R1C4
+     [2mNo water body overlap detected (10561 features checked)[0m
+[32m[PASS][0m Water body overlap — forest-age z10 @ R1C5
+     [2mNo water body overlap detected (2471 features checked)[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — forest-age z10 @ R2C1
+     [2mNo water body overlap detected (5673 features checked)[0m
+[32m[PASS][0m Water body overlap — forest-age z10 @ R2C2
+     [2mNo water body overlap detected (5232 features checked)[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R2C3
+     [2m6 of 13734 features have >50% water body overlap (0.04%)[0m
+     [2m{[0m
+     [2m  "point": "R2C3",[0m
+     [2m  "waterOverlaps": 6,[0m
+     [2m  "totalFeatures": 13734,[0m
+     [2m  "overlapRate": 0.00043687199650502403[0m
+     [2m}[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R2C4
+     [2m1 of 6388 features have >50% water body overlap (0.02%)[0m
+     [2m{[0m
+     [2m  "point": "R2C4",[0m
+     [2m  "waterOverlaps": 1,[0m
+     [2m  "totalFeatures": 6388,[0m
+     [2m  "overlapRate": 0.00015654351909830932[0m
+     [2m}[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — forest-age z10 @ R3C2
+     [2mNo water body overlap detected (8393 features checked)[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R3C3
+     [2m7 of 10298 features have >50% water body overlap (0.07%)[0m
+     [2m{[0m
+     [2m  "point": "R3C3",[0m
+     [2m  "waterOverlaps": 7,[0m
+     [2m  "totalFeatures": 10298,[0m
+     [2m  "overlapRate": 0.0006797436395416586[0m
+     [2m}[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — forest-age z10 @ R4C1
+     [2mNo water body overlap detected (1377 features checked)[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R4C2
+     [2m8 of 4995 features have >50% water body overlap (0.16%)[0m
+     [2m{[0m
+     [2m  "point": "R4C2",[0m
+     [2m  "waterOverlaps": 8,[0m
+     [2m  "totalFeatures": 4995,[0m
+     [2m  "overlapRate": 0.0016016016016016017[0m
+     [2m}[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R4C3
+     [2m2 of 8570 features have >50% water body overlap (0.02%)[0m
+     [2m{[0m
+     [2m  "point": "R4C3",[0m
+     [2m  "waterOverlaps": 2,[0m
+     [2m  "totalFeatures": 8570,[0m
+     [2m  "overlapRate": 0.00023337222870478414[0m
+     [2m}[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R5C1
+     [2m1 of 2546 features have >50% water body overlap (0.04%)[0m
+     [2m{[0m
+     [2m  "point": "R5C1",[0m
+     [2m  "waterOverlaps": 1,[0m
+     [2m  "totalFeatures": 2546,[0m
+     [2m  "overlapRate": 0.00039277297721916735[0m
+     [2m}[0m
+[32m[PASS][0m Water body overlap — forest-age z10 @ R5C2
+     [2mNo water body overlap detected (1427 features checked)[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R5C3
+     [2m1 of 10477 features have >50% water body overlap (0.01%)[0m
+     [2m{[0m
+     [2m  "point": "R5C3",[0m
+     [2m  "waterOverlaps": 1,[0m
+     [2m  "totalFeatures": 10477,[0m
+     [2m  "overlapRate": 0.00009544716999140975[0m
+     [2m}[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — forest-age z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R0C3
+     [2mNo water body overlap detected (60 features checked)[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R1C2
+     [2m1 of 967 features have >50% water body overlap (0.10%)[0m
+     [2m{[0m
+     [2m  "point": "R1C2",[0m
+     [2m  "waterOverlaps": 1,[0m
+     [2m  "totalFeatures": 967,[0m
+     [2m  "overlapRate": 0.001034126163391934[0m
+     [2m}[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R1C3
+     [2mNo water body overlap detected (168 features checked)[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R1C4
+     [2mNo water body overlap detected (1112 features checked)[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R1C5
+     [2mNo water body overlap detected (64 features checked)[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R2C1
+     [2mNo water body overlap detected (66 features checked)[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R2C2
+     [2mNo features in tenure-cutblocks at z10/149/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R2C3
+     [2mNo water body overlap detected (507 features checked)[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R2C4
+     [2mNo water body overlap detected (379 features checked)[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R3C2
+     [2mNo water body overlap detected (442 features checked)[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R3C3
+     [2mNo water body overlap detected (724 features checked)[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R4C1
+     [2mNo water body overlap detected (3 features checked)[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R4C2
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R4C3
+     [2mNo features in tenure-cutblocks at z10/160/312 — nothing to check[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R5C1
+     [2mNo features in tenure-cutblocks at z10/137/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R5C2
+     [2mNo features in tenure-cutblocks at z10/149/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — tenure-cutblocks z10 @ R5C3
+     [2mNo water body overlap detected (18 features checked)[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — tenure-cutblocks z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R0C3
+     [2mNo water body overlap detected (232 features checked)[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R1C2
+     [2mNo water body overlap detected (40 features checked)[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R1C3
+     [2mNo water body overlap detected (15 features checked)[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R1C4
+     [2mNo water body overlap detected (73 features checked)[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R1C5
+     [2mNo water body overlap detected (7 features checked)[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R2C1
+     [2mNo water body overlap detected (3 features checked)[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R2C2
+     [2mNo features in fire-history at z10/149/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R2C3
+     [2mNo water body overlap detected (27 features checked)[0m
+[31m[FAIL][0m Water body overlap — fire-history z10 @ R2C4
+     [2m2 of 84 features have >50% water body overlap (2.38%)[0m
+     [2m{[0m
+     [2m  "point": "R2C4",[0m
+     [2m  "waterOverlaps": 2,[0m
+     [2m  "totalFeatures": 84,[0m
+     [2m  "overlapRate": 0.023809523809523808[0m
+     [2m}[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R3C2
+     [2mNo water body overlap detected (63 features checked)[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R3C3
+     [2mNo water body overlap detected (19 features checked)[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R4C1
+     [2mNo features in fire-history at z10/137/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R4C2
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R4C3
+     [2mNo water body overlap detected (9 features checked)[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R5C1
+     [2mNo water body overlap detected (2 features checked)[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R5C2
+     [2mNo water body overlap detected (7 features checked)[0m
+[32m[PASS][0m Water body overlap — fire-history z10 @ R5C3
+     [2mNo water body overlap detected (10 features checked)[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — fire-history z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R0C3
+     [2mNo water body overlap detected (13 features checked)[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R1C2
+     [2mNo water body overlap detected (2 features checked)[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R1C3
+     [2mNo water body overlap detected (2 features checked)[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R1C4
+     [2mNo water body overlap detected (5 features checked)[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R1C5
+     [2mNo water body overlap detected (2 features checked)[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R2C1
+     [2mNo features in parks at z10/137/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R2C2
+     [2mNo features in parks at z10/149/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R2C3
+     [2mNo features in parks at z10/160/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R2C4
+     [2mNo water body overlap detected (3 features checked)[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R3C2
+     [2mNo water body overlap detected (4 features checked)[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R3C3
+     [2mNo features in parks at z10/160/323 — nothing to check[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R4C1
+     [2mNo features in parks at z10/137/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R4C2
+     [2mNo water body overlap detected (2 features checked)[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R4C3
+     [2mNo water body overlap detected (1 features checked)[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R5C1
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R5C2
+     [2mNo features in parks at z10/149/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — parks z10 @ R5C3
+     [2mNo features in parks at z10/160/300 — nothing to check[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — parks z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R0C3
+     [2mNo features in conservancies at z10/160/353 — nothing to check[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R1C2
+     [2mNo features in conservancies at z10/149/344 — nothing to check[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R1C3
+     [2mNo water body overlap detected (2 features checked)[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R1C4
+     [2mNo features in conservancies at z10/172/344 — nothing to check[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R1C5
+     [2mNo features in conservancies at z10/184/344 — nothing to check[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R2C1
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R2C2
+     [2mNo water body overlap detected (2 features checked)[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R2C3
+     [2mNo features in conservancies at z10/160/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R2C4
+     [2mNo features in conservancies at z10/172/334 — nothing to check[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R3C2
+     [2mNo features in conservancies at z10/149/323 — nothing to check[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R3C3
+     [2mNo features in conservancies at z10/160/323 — nothing to check[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R4C1
+     [2mNo features in conservancies at z10/137/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R4C2
+     [2mNo features in conservancies at z10/149/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R4C3
+     [2mNo features in conservancies at z10/160/312 — nothing to check[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R5C1
+     [2mNo features in conservancies at z10/137/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R5C2
+     [2mNo features in conservancies at z10/149/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — conservancies z10 @ R5C3
+     [2mNo features in conservancies at z10/160/300 — nothing to check[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — conservancies z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R0C3
+     [2mNo features in ogma at z10/160/353 — nothing to check[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R1C2
+     [2mNo water body overlap detected (56 features checked)[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R1C3
+     [2mNo water body overlap detected (84 features checked)[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R1C4
+     [2mNo features in ogma at z10/172/344 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R1C5
+     [2mNo features in ogma at z10/184/344 — nothing to check[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R2C1
+     [2mNo features in ogma at z10/137/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R2C2
+     [2mNo features in ogma at z10/149/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R2C3
+     [2mNo water body overlap detected (109 features checked)[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R2C4
+     [2mNo water body overlap detected (35 features checked)[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R3C2
+     [2mNo water body overlap detected (67 features checked)[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R3C3
+     [2mNo features in ogma at z10/160/323 — nothing to check[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R4C1
+     [2mNo features in ogma at z10/137/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R4C2
+     [2mNo features in ogma at z10/149/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R4C3
+     [2mNo features in ogma at z10/160/312 — nothing to check[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R5C1
+     [2mNo features in ogma at z10/137/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R5C2
+     [2mNo features in ogma at z10/149/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ogma z10 @ R5C3
+     [2mNo features in ogma at z10/160/300 — nothing to check[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — ogma z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R0C3
+     [2mNo water body overlap detected (1 features checked)[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R1C2
+     [2mNo water body overlap detected (9 features checked)[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R1C3
+     [2mNo water body overlap detected (34 features checked)[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R1C4
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R1C5
+     [2mNo water body overlap detected (24 features checked)[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R2C1
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R2C2
+     [2mNo features in wildlife-habitat-areas at z10/149/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R2C3
+     [2mNo features in wildlife-habitat-areas at z10/160/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R2C4
+     [2mNo features in wildlife-habitat-areas at z10/172/334 — nothing to check[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R3C2
+     [2mNo features in wildlife-habitat-areas at z10/149/323 — nothing to check[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R3C3
+     [2mNo features in wildlife-habitat-areas at z10/160/323 — nothing to check[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R4C1
+     [2mNo features in wildlife-habitat-areas at z10/137/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R4C2
+     [2mNo features in wildlife-habitat-areas at z10/149/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R4C3
+     [2mNo water body overlap detected (10 features checked)[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R5C1
+     [2mNo features in wildlife-habitat-areas at z10/137/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R5C2
+     [2mNo features in wildlife-habitat-areas at z10/149/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — wildlife-habitat-areas z10 @ R5C3
+     [2mNo water body overlap detected (1 features checked)[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — wildlife-habitat-areas z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R0C3
+     [2mNo water body overlap detected (5 features checked)[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R1C2
+     [2mNo features in ungulate-winter-range at z10/149/344 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R1C3
+     [2mNo water body overlap detected (41 features checked)[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R1C4
+     [2mNo water body overlap detected (98 features checked)[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R1C5
+     [2mNo water body overlap detected (509 features checked)[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R2C1
+     [2mNo features in ungulate-winter-range at z10/137/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R2C2
+     [2mNo water body overlap detected (4 features checked)[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R2C3
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R2C4
+     [2mNo water body overlap detected (2 features checked)[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R3C2
+     [2mNo water body overlap detected (18 features checked)[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R3C3
+     [2mNo features in ungulate-winter-range at z10/160/323 — nothing to check[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R4C1
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R4C2
+     [2mNo water body overlap detected (10 features checked)[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R4C3
+     [2mNo water body overlap detected (2 features checked)[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R5C1
+     [2mNo water body overlap detected (1 features checked)[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R5C2
+     [2mNo features in ungulate-winter-range at z10/149/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — ungulate-winter-range z10 @ R5C3
+     [2mNo water body overlap detected (6 features checked)[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — ungulate-winter-range z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R0C3
+     [2mNo water body overlap detected (11 features checked)[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R1C2
+     [2mNo water body overlap detected (2 features checked)[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R1C3
+     [2mNo features in community-watersheds at z10/160/344 — nothing to check[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R1C4
+     [2mNo water body overlap detected (8 features checked)[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R1C5
+     [2mNo features in community-watersheds at z10/184/344 — nothing to check[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R2C1
+     [2mNo features in community-watersheds at z10/137/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R2C2
+     [2mNo features in community-watersheds at z10/149/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R2C3
+     [2mNo features in community-watersheds at z10/160/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R2C4
+     [2mNo water body overlap detected (1 features checked)[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R3C2
+     [2mNo water body overlap detected (5 features checked)[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R3C3
+     [2mNo features in community-watersheds at z10/160/323 — nothing to check[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R4C1
+     [2mNo features in community-watersheds at z10/137/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R4C2
+     [2mNo features in community-watersheds at z10/149/312 — nothing to check[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R4C3
+     [2mNo features in community-watersheds at z10/160/312 — nothing to check[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R5C1
+     [2mNo features in community-watersheds at z10/137/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R5C2
+     [2mNo features in community-watersheds at z10/149/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — community-watersheds z10 @ R5C3
+     [2mNo features in community-watersheds at z10/160/300 — nothing to check[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — community-watersheds z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R0C0
+     [2mNo tile data at z10/125/353 for point R0C0[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R0C1
+     [2mNo tile data at z10/137/353 for point R0C1[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R0C2
+     [2mNo tile data at z10/149/353 for point R0C2[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R0C3
+     [2mNo water body overlap detected (138 features checked)[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R0C4
+     [2mNo tile data at z10/172/353 for point R0C4[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R0C5
+     [2mNo tile data at z10/184/353 for point R0C5[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R1C0
+     [2mNo tile data at z10/125/344 for point R1C0[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R1C1
+     [2mNo tile data at z10/137/344 for point R1C1[0m
+[31m[FAIL][0m Water body overlap — mining-claims z10 @ R1C2
+     [2m1 of 97 features have >50% water body overlap (1.03%)[0m
+     [2m{[0m
+     [2m  "point": "R1C2",[0m
+     [2m  "waterOverlaps": 1,[0m
+     [2m  "totalFeatures": 97,[0m
+     [2m  "overlapRate": 0.010309278350515464[0m
+     [2m}[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R1C3
+     [2mNo water body overlap detected (34 features checked)[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R1C4
+     [2mNo water body overlap detected (42 features checked)[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R1C5
+     [2mNo water body overlap detected (20 features checked)[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R2C0
+     [2mNo tile data at z10/125/334 for point R2C0[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R2C1
+     [2mNo water body overlap detected (7 features checked)[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R2C2
+     [2mNo features in mining-claims at z10/149/334 — nothing to check[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R2C3
+     [2mNo water body overlap detected (8 features checked)[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R2C4
+     [2mNo water body overlap detected (5 features checked)[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R2C5
+     [2mNo tile data at z10/184/334 for point R2C5[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R3C0
+     [2mNo tile data at z10/125/323 for point R3C0[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R3C1
+     [2mNo tile data at z10/137/323 for point R3C1[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R3C2
+     [2mNo water body overlap detected (54 features checked)[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R3C3
+     [2mNo water body overlap detected (65 features checked)[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R3C4
+     [2mNo tile data at z10/172/323 for point R3C4[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R3C5
+     [2mNo tile data at z10/184/323 for point R3C5[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R4C0
+     [2mNo tile data at z10/125/312 for point R4C0[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R4C1
+     [2mNo water body overlap detected (179 features checked)[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R4C2
+     [2mNo water body overlap detected (62 features checked)[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R4C3
+     [2mNo features in mining-claims at z10/160/312 — nothing to check[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R4C4
+     [2mNo tile data at z10/172/312 for point R4C4[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R4C5
+     [2mNo tile data at z10/184/312 for point R4C5[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R5C0
+     [2mNo tile data at z10/125/300 for point R5C0[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R5C1
+     [2mNo water body overlap detected (19 features checked)[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R5C2
+     [2mNo features in mining-claims at z10/149/300 — nothing to check[0m
+[32m[PASS][0m Water body overlap — mining-claims z10 @ R5C3
+     [2mNo features in mining-claims at z10/160/300 — nothing to check[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R5C4
+     [2mNo tile data at z10/172/300 for point R5C4[0m
+[33m[WARN][0m Water body overlap — mining-claims z10 @ R5C5
+     [2mNo tile data at z10/184/300 for point R5C5[0m
+[32m[PASS][0m S1: Water body overlap rate — forest-age
+     [2m0/36 sample points flagged (0.0%)[0m
+     [2m{[0m
+     [2m  "layer": "forest-age",[0m
+     [2m  "flaggedPoints": 0,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 0[0m
+     [2m}[0m
+[32m[PASS][0m S1: Water body overlap rate — tenure-cutblocks
+     [2m0/36 sample points flagged (0.0%)[0m
+     [2m{[0m
+     [2m  "layer": "tenure-cutblocks",[0m
+     [2m  "flaggedPoints": 0,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 0[0m
+     [2m}[0m
+[33m[WARN][0m S1: Water body overlap rate — fire-history
+     [2m1/36 sample points flagged (2.8%)[0m
+     [2m{[0m
+     [2m  "layer": "fire-history",[0m
+     [2m  "flaggedPoints": 1,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 2.7777777777777777[0m
+     [2m}[0m
+[32m[PASS][0m S1: Water body overlap rate — parks
+     [2m0/36 sample points flagged (0.0%)[0m
+     [2m{[0m
+     [2m  "layer": "parks",[0m
+     [2m  "flaggedPoints": 0,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 0[0m
+     [2m}[0m
+[32m[PASS][0m S1: Water body overlap rate — conservancies
+     [2m0/36 sample points flagged (0.0%)[0m
+     [2m{[0m
+     [2m  "layer": "conservancies",[0m
+     [2m  "flaggedPoints": 0,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 0[0m
+     [2m}[0m
+[32m[PASS][0m S1: Water body overlap rate — ogma
+     [2m0/36 sample points flagged (0.0%)[0m
+     [2m{[0m
+     [2m  "layer": "ogma",[0m
+     [2m  "flaggedPoints": 0,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 0[0m
+     [2m}[0m
+[32m[PASS][0m S1: Water body overlap rate — wildlife-habitat-areas
+     [2m0/36 sample points flagged (0.0%)[0m
+     [2m{[0m
+     [2m  "layer": "wildlife-habitat-areas",[0m
+     [2m  "flaggedPoints": 0,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 0[0m
+     [2m}[0m
+[32m[PASS][0m S1: Water body overlap rate — ungulate-winter-range
+     [2m0/36 sample points flagged (0.0%)[0m
+     [2m{[0m
+     [2m  "layer": "ungulate-winter-range",[0m
+     [2m  "flaggedPoints": 0,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 0[0m
+     [2m}[0m
+[32m[PASS][0m S1: Water body overlap rate — community-watersheds
+     [2m0/36 sample points flagged (0.0%)[0m
+     [2m{[0m
+     [2m  "layer": "community-watersheds",[0m
+     [2m  "flaggedPoints": 0,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 0[0m
+     [2m}[0m
+[33m[WARN][0m S1: Water body overlap rate — mining-claims
+     [2m1/36 sample points flagged (2.8%)[0m
+     [2m{[0m
+     [2m  "layer": "mining-claims",[0m
+     [2m  "flaggedPoints": 1,[0m
+     [2m  "totalPoints": 36,[0m
+     [2m  "overlapRatePct": 2.7777777777777777[0m
+     [2m}[0m
+[32m[PASS][0m Forest-age classification — z10 @ R0C0
+     [2mNo tile data at z10/125/353 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R0C1
+     [2mNo tile data at z10/137/353 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R0C2
+     [2mNo tile data at z10/149/353 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R0C3
+     [2mAll 6384 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R0C4
+     [2mNo tile data at z10/172/353 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R0C5
+     [2mNo tile data at z10/184/353 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R1C0
+     [2mNo tile data at z10/125/344 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R1C1
+     [2mNo tile data at z10/137/344 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R1C2
+     [2mAll 10914 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R1C3
+     [2mAll 4118 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R1C4
+     [2mAll 10561 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R1C5
+     [2mAll 2471 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R2C0
+     [2mNo tile data at z10/125/334 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R2C1
+     [2mAll 5673 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R2C2
+     [2mAll 5232 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R2C3
+     [2mAll 13734 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R2C4
+     [2mAll 6388 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R2C5
+     [2mNo tile data at z10/184/334 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R3C0
+     [2mNo tile data at z10/125/323 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R3C1
+     [2mNo tile data at z10/137/323 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R3C2
+     [2mAll 8393 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R3C3
+     [2mAll 10298 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R3C4
+     [2mNo tile data at z10/172/323 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R3C5
+     [2mNo tile data at z10/184/323 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R4C0
+     [2mNo tile data at z10/125/312 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R4C1
+     [2mAll 1377 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R4C2
+     [2mAll 4995 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R4C3
+     [2mAll 8570 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R4C4
+     [2mNo tile data at z10/172/312 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R4C5
+     [2mNo tile data at z10/184/312 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R5C0
+     [2mNo tile data at z10/125/300 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R5C1
+     [2mAll 2546 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R5C2
+     [2mAll 1427 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R5C3
+     [2mAll 10477 forest-age features have consistent class/age[0m
+[32m[PASS][0m Forest-age classification — z10 @ R5C4
+     [2mNo tile data at z10/172/300 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification — z10 @ R5C5
+     [2mNo tile data at z10/184/300 — no forest-age features to check[0m
+[32m[PASS][0m Forest-age classification consistency — summary
+     [2mAll 113558 forest-age features passed class/age consistency check[0m
+     [2m{[0m
+     [2m  "totalFeatures": 113558,[0m
+     [2m  "totalInconsistent": 0,[0m
+     [2m  "examples": [][0m
+     [2m}[0m
+[2m────────────────────────────────────────────────────────────[0m
+[1mSummary:[0m [32m205 passed[0m, [33m202 warned[0m, [31m2 failed[0m
+
+[31m[1mAUDIT FAILED[0m -- 2 check(s) require attention.
+
+Results saved to /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/reports/spatial-results.json
+
+[1m[36m────────────────────────────────────────────────────────────[0m
+[1mRunning: Adversarial (npm run audit:adversarial)[0m
+[36m────────────────────────────────────────────────────────────[0m
+
+
+OpenCanopy Adversarial Audit
+────────────────────────────────────────────────────────────
+  Archive: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/tiles/opencanopy.pmtiles
+  Points:  9
+  Zoom:    z10
+
+  Checking: Garibaldi Provincial Park
+
+  Checking: Fairy Creek Watershed
+
+  Checking: Great Bear Rainforest
+
+  Checking: Revelstoke Logging Area
+
+  Checking: Pacific Ocean (West Vancouver Island)
+
+  Checking: Lytton 2021 Fire
+
+  Checking: Highland Valley Mine
+
+  Checking: Vancouver Watershed
+
+  Checking: Strathcona Provincial Park
+
+  Running V4 contradiction checks...
+
+[1mOpenCanopy Tile Audit Results[0m
+[2m────────────────────────────────────────────────────────────[0m
+[32m[PASS][0m V1:Presence | Garibaldi Provincial Park | parks
+     [2m4 feature(s) found in 'parks' at Garibaldi Provincial Park[0m
+     [2m{[0m
+     [2m  "lat": 49.92,[0m
+     [2m  "lon": -122.73,[0m
+     [2m  "featureCount": 4[0m
+     [2m}[0m
+[32m[PASS][0m V2:Property | Garibaldi Provincial Park | parks.name
+     [2mProperty 'name' = "GARIBALDI PARK" matches expected[0m
+     [2m{[0m
+     [2m  "lat": 49.92,[0m
+     [2m  "lon": -122.73,[0m
+     [2m  "actualValue": "GARIBALDI PARK"[0m
+     [2m}[0m
+[32m[PASS][0m V1:Presence | Fairy Creek Watershed | tenure-cutblocks
+     [2m866 feature(s) found in 'tenure-cutblocks' at Fairy Creek Watershed[0m
+     [2m{[0m
+     [2m  "lat": 48.66,[0m
+     [2m  "lon": -124.52,[0m
+     [2m  "featureCount": 866[0m
+     [2m}[0m
+[32m[PASS][0m V2:Property | Fairy Creek Watershed | tenure-cutblocks.company_id
+     [2mProperty 'company_id' = "other" matches expected[0m
+     [2m{[0m
+     [2m  "lat": 48.66,[0m
+     [2m  "lon": -124.52,[0m
+     [2m  "actualValue": "other"[0m
+     [2m}[0m
+[32m[PASS][0m V1:Presence | Great Bear Rainforest | conservancies
+     [2m4 feature(s) found in 'conservancies' at Great Bear Rainforest[0m
+     [2m{[0m
+     [2m  "lat": 52.5,[0m
+     [2m  "lon": -128.2,[0m
+     [2m  "featureCount": 4[0m
+     [2m}[0m
+[32m[PASS][0m V2:Property | Great Bear Rainforest | conservancies.name
+     [2mProperty 'name' = "FIORDLAND CONSERVANCY" matches expected[0m
+     [2m{[0m
+     [2m  "lat": 52.5,[0m
+     [2m  "lon": -128.2,[0m
+     [2m  "actualValue": "FIORDLAND CONSERVANCY"[0m
+     [2m}[0m
+[32m[PASS][0m V1:Presence | Revelstoke Logging Area | tenure-cutblocks
+     [2m381 feature(s) found in 'tenure-cutblocks' at Revelstoke Logging Area[0m
+     [2m{[0m
+     [2m  "lat": 51,[0m
+     [2m  "lon": -118.2,[0m
+     [2m  "featureCount": 381[0m
+     [2m}[0m
+[32m[PASS][0m V2:Property | Revelstoke Logging Area | tenure-cutblocks.company_id
+     [2mProperty 'company_id' = "other" matches expected[0m
+     [2m{[0m
+     [2m  "lat": 51,[0m
+     [2m  "lon": -118.2,[0m
+     [2m  "actualValue": "other"[0m
+     [2m}[0m
+[32m[PASS][0m V3:Absence | Pacific Ocean (West Vancouver Island) | forest-age
+     [2mTile missing at z10 -- absence confirmed (no tile = no features)[0m
+     [2m{[0m
+     [2m  "lat": 49.5,[0m
+     [2m  "lon": -128.5,[0m
+     [2m  "layer": "forest-age"[0m
+     [2m}[0m
+[32m[PASS][0m V1:Presence | Lytton 2021 Fire | fire-history
+     [2m190 feature(s) found in 'fire-history' at Lytton 2021 Fire[0m
+     [2m{[0m
+     [2m  "lat": 50.23,[0m
+     [2m  "lon": -121.58,[0m
+     [2m  "featureCount": 190[0m
+     [2m}[0m
+[32m[PASS][0m V2:Property | Lytton 2021 Fire | fire-history.FIRE_YEAR
+     [2mProperty 'FIRE_YEAR' = "2023" matches expected[0m
+     [2m{[0m
+     [2m  "lat": 50.23,[0m
+     [2m  "lon": -121.58,[0m
+     [2m  "actualValue": "2023"[0m
+     [2m}[0m
+[32m[PASS][0m V1:Presence | Highland Valley Mine | mining-claims
+     [2m1218 feature(s) found in 'mining-claims' at Highland Valley Mine[0m
+     [2m{[0m
+     [2m  "lat": 50.48,[0m
+     [2m  "lon": -121.05,[0m
+     [2m  "featureCount": 1218[0m
+     [2m}[0m
+[32m[PASS][0m V2:Property | Highland Valley Mine | mining-claims.TENURE_TYPE_DESCRIPTION
+     [2mProperty 'TENURE_TYPE_DESCRIPTION' = "Mineral" matches expected[0m
+     [2m{[0m
+     [2m  "lat": 50.48,[0m
+     [2m  "lon": -121.05,[0m
+     [2m  "actualValue": "Mineral"[0m
+     [2m}[0m
+[32m[PASS][0m V1:Presence | Vancouver Watershed | community-watersheds
+     [2m7 feature(s) found in 'community-watersheds' at Vancouver Watershed[0m
+     [2m{[0m
+     [2m  "lat": 49.41,[0m
+     [2m  "lon": -122.9,[0m
+     [2m  "featureCount": 7[0m
+     [2m}[0m
+[32m[PASS][0m V2:Property | Vancouver Watershed | community-watersheds.CW_NAME
+     [2mProperty 'CW_NAME' = "Capilano Community Watershed" matches expected[0m
+     [2m{[0m
+     [2m  "lat": 49.41,[0m
+     [2m  "lon": -122.9,[0m
+     [2m  "actualValue": "Capilano Community Watershed"[0m
+     [2m}[0m
+[32m[PASS][0m V1:Presence | Strathcona Provincial Park | parks
+     [2m3 feature(s) found in 'parks' at Strathcona Provincial Park[0m
+     [2m{[0m
+     [2m  "lat": 49.63,[0m
+     [2m  "lon": -125.75,[0m
+     [2m  "featureCount": 3[0m
+     [2m}[0m
+[32m[PASS][0m V2:Property | Strathcona Provincial Park | parks.name
+     [2mProperty 'name' = "STRATHCONA PARK" matches expected[0m
+     [2m{[0m
+     [2m  "lat": 49.63,[0m
+     [2m  "lon": -125.75,[0m
+     [2m  "actualValue": "STRATHCONA PARK"[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | CutblocksInPark | Garibaldi Provincial Park
+     [2mParks (4) and cutblocks (157) coexist in z10 tile at Garibaldi Provincial Park (expected at this resolution)[0m
+     [2m{[0m
+     [2m  "lat": 49.92,[0m
+     [2m  "lon": -122.73,[0m
+     [2m  "parkFeatureCount": 4,[0m
+     [2m  "cutblockFeatureCount": 157[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | OldGrowthPostFire | Garibaldi Provincial Park
+     [2mOld-growth and recent fire coexist in tile at Garibaldi Provincial Park (66% mature -- below conflict threshold)[0m
+     [2m{[0m
+     [2m  "lat": 49.92,[0m
+     [2m  "lon": -122.73,[0m
+     [2m  "totalForestFeatures": 3091,[0m
+     [2m  "matureOrOldGrowthCount": 2046,[0m
+     [2m  "matureRatio": 66,[0m
+     [2m  "recentFireCount": 7,[0m
+     [2m  "significant": false[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | CutblocksInPark | Fairy Creek Watershed
+     [2mParks (3) and cutblocks (866) coexist in z10 tile at Fairy Creek Watershed (expected at this resolution)[0m
+     [2m{[0m
+     [2m  "lat": 48.66,[0m
+     [2m  "lon": -124.52,[0m
+     [2m  "parkFeatureCount": 3,[0m
+     [2m  "cutblockFeatureCount": 866[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | OldGrowthPostFire | Fairy Creek Watershed
+     [2mOld-growth and recent fire coexist in tile at Fairy Creek Watershed (53% mature -- below conflict threshold)[0m
+     [2m{[0m
+     [2m  "lat": 48.66,[0m
+     [2m  "lon": -124.52,[0m
+     [2m  "totalForestFeatures": 5094,[0m
+     [2m  "matureOrOldGrowthCount": 2678,[0m
+     [2m  "matureRatio": 53,[0m
+     [2m  "recentFireCount": 4,[0m
+     [2m  "significant": false[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | CutblocksInPark | Great Bear Rainforest
+     [2mParks (1) and cutblocks (472) coexist in z10 tile at Great Bear Rainforest (expected at this resolution)[0m
+     [2m{[0m
+     [2m  "lat": 52.5,[0m
+     [2m  "lon": -128.2,[0m
+     [2m  "parkFeatureCount": 1,[0m
+     [2m  "cutblockFeatureCount": 472[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | CutblocksInPark | Revelstoke Logging Area
+     [2mParks (6) and cutblocks (381) coexist in z10 tile at Revelstoke Logging Area (expected at this resolution)[0m
+     [2m{[0m
+     [2m  "lat": 51,[0m
+     [2m  "lon": -118.2,[0m
+     [2m  "parkFeatureCount": 6,[0m
+     [2m  "cutblockFeatureCount": 381[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | OldGrowthPostFire | Revelstoke Logging Area
+     [2mOld-growth and recent fire coexist in tile at Revelstoke Logging Area (83% mature -- below conflict threshold)[0m
+     [2m{[0m
+     [2m  "lat": 51,[0m
+     [2m  "lon": -118.2,[0m
+     [2m  "totalForestFeatures": 9282,[0m
+     [2m  "matureOrOldGrowthCount": 7681,[0m
+     [2m  "matureRatio": 83,[0m
+     [2m  "recentFireCount": 19,[0m
+     [2m  "significant": false[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | CutblocksInPark | Lytton 2021 Fire
+     [2mParks (6) and cutblocks (323) coexist in z10 tile at Lytton 2021 Fire (expected at this resolution)[0m
+     [2m{[0m
+     [2m  "lat": 50.23,[0m
+     [2m  "lon": -121.58,[0m
+     [2m  "parkFeatureCount": 6,[0m
+     [2m  "cutblockFeatureCount": 323[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | OldGrowthPostFire | Lytton 2021 Fire
+     [2mOld-growth and recent fire coexist in tile at Lytton 2021 Fire (78% mature -- below conflict threshold)[0m
+     [2m{[0m
+     [2m  "lat": 50.23,[0m
+     [2m  "lon": -121.58,[0m
+     [2m  "totalForestFeatures": 37211,[0m
+     [2m  "matureOrOldGrowthCount": 28987,[0m
+     [2m  "matureRatio": 78,[0m
+     [2m  "recentFireCount": 62,[0m
+     [2m  "significant": false[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | CutblocksInPark | Highland Valley Mine
+     [2mParks (3) and cutblocks (1196) coexist in z10 tile at Highland Valley Mine (expected at this resolution)[0m
+     [2m{[0m
+     [2m  "lat": 50.48,[0m
+     [2m  "lon": -121.05,[0m
+     [2m  "parkFeatureCount": 3,[0m
+     [2m  "cutblockFeatureCount": 1196[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | OldGrowthPostFire | Highland Valley Mine
+     [2mOld-growth and recent fire coexist in tile at Highland Valley Mine (73% mature -- below conflict threshold)[0m
+     [2m{[0m
+     [2m  "lat": 50.48,[0m
+     [2m  "lon": -121.05,[0m
+     [2m  "totalForestFeatures": 23426,[0m
+     [2m  "matureOrOldGrowthCount": 17054,[0m
+     [2m  "matureRatio": 73,[0m
+     [2m  "recentFireCount": 50,[0m
+     [2m  "significant": false[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | CutblocksInPark | Vancouver Watershed
+     [2mParks (4) and cutblocks (343) coexist in z10 tile at Vancouver Watershed (expected at this resolution)[0m
+     [2m{[0m
+     [2m  "lat": 49.41,[0m
+     [2m  "lon": -122.9,[0m
+     [2m  "parkFeatureCount": 4,[0m
+     [2m  "cutblockFeatureCount": 343[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | OldGrowthPostFire | Vancouver Watershed
+     [2mOld-growth and recent fire coexist in tile at Vancouver Watershed (74% mature -- below conflict threshold)[0m
+     [2m{[0m
+     [2m  "lat": 49.41,[0m
+     [2m  "lon": -122.9,[0m
+     [2m  "totalForestFeatures": 10625,[0m
+     [2m  "matureOrOldGrowthCount": 7822,[0m
+     [2m  "matureRatio": 74,[0m
+     [2m  "recentFireCount": 4,[0m
+     [2m  "significant": false[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | CutblocksInPark | Strathcona Provincial Park
+     [2mParks (3) and cutblocks (11) coexist in z10 tile at Strathcona Provincial Park (expected at this resolution)[0m
+     [2m{[0m
+     [2m  "lat": 49.63,[0m
+     [2m  "lon": -125.75,[0m
+     [2m  "parkFeatureCount": 3,[0m
+     [2m  "cutblockFeatureCount": 11[0m
+     [2m}[0m
+[32m[PASS][0m V4:Contradiction | OldGrowthPostFire | Strathcona Provincial Park
+     [2mOld-growth and recent fire coexist in tile at Strathcona Provincial Park (91% mature -- below conflict threshold)[0m
+     [2m{[0m
+     [2m  "lat": 49.63,[0m
+     [2m  "lon": -125.75,[0m
+     [2m  "totalForestFeatures": 8150,[0m
+     [2m  "matureOrOldGrowthCount": 7406,[0m
+     [2m  "matureRatio": 91,[0m
+     [2m  "recentFireCount": 12,[0m
+     [2m  "significant": false[0m
+     [2m}[0m
+[2m────────────────────────────────────────────────────────────[0m
+[1mSummary:[0m [32m32 passed[0m, [33m0 warned[0m, [31m0 failed[0m
+
+[32m[1mAUDIT PASSED[0m -- all checks clean.
+
+
+Results saved to /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/reports/adversarial-results.json
+
+[1m[36m────────────────────────────────────────────────────────────[0m
+[1mRunning: Property-Deep (npm run audit:property-deep)[0m
+[36m────────────────────────────────────────────────────────────[0m
+
+
+[1mOpenCanopy Tile Audit Results[0m
+[2m────────────────────────────────────────────────────────────[0m
+[32m[PASS][0m Property deep audit — PMTiles availability
+     [2mPMTiles archive found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/tiles/opencanopy.pmtiles[0m
+[32m[PASS][0m P1 Property validation — forest-age
+     [2m113558 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "class",[0m
+     [2m    "age",[0m
+     [2m    "species"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 113558,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[31m[FAIL][0m P1 Property validation — tenure-cutblocks
+     [2m4511 features checked; 772 had violations (17.1%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "company_id",[0m
+     [2m    "PLANNED_GROSS_BLOCK_AREA",[0m
+     [2m    "DISTURBANCE_START_DATE"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 4511,[0m
+     [2m  "violations": 772[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — fire-history
+     [2m592 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "FIRE_YEAR",[0m
+     [2m    "FIRE_SIZE_HECTARES",[0m
+     [2m    "FIRE_CAUSE"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 592,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — parks
+     [2m35 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "name",[0m
+     [2m    "designation"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 35,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — conservancies
+     [2m5 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "name"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 5,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — ogma
+     [2m351 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "OGMA_TYPE",[0m
+     [2m    "LANDSCAPE_UNIT_NAME"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 351,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — wildlife-habitat-areas
+     [2m81 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "COMMON_SPECIES_NAME",[0m
+     [2m    "HABITAT_AREA_ID"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 81,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — ungulate-winter-range
+     [2m698 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "SPECIES_1",[0m
+     [2m    "UWR_TAG"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 698,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — community-watersheds
+     [2m27 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "CW_NAME",[0m
+     [2m    "AREA_HA"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 27,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — mining-claims
+     [2m730 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "TENURE_TYPE_DESCRIPTION",[0m
+     [2m    "OWNER_NAME",[0m
+     [2m    "TENURE_STATUS"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 730,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — forestry-roads
+     [2m6788 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "ROAD_SECTION_NAME",[0m
+     [2m    "CLIENT_NAME"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 6788,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P1 Property validation — conservation-priority
+     [2m3705 features checked; 0 had violations (0.0%).[0m
+     [2m{[0m
+     [2m  "requiredProperties": [[0m
+     [2m    "TAP_CLASSIFICATION_LABEL",[0m
+     [2m    "LANDSCAPE_UNIT_NAME",[0m
+     [2m    "ANCIENT_FOREST_IND",[0m
+     [2m    "PRIORITY_BIG_TREED_OG_IND",[0m
+     [2m    "BGC_LABEL",[0m
+     [2m    "FIELD_VERIFIED_IND",[0m
+     [2m    "FEATURE_AREA_SQM"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 3705,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P2 company_id enum — tenure-cutblocks
+     [2m4511 company_id values checked; 0 not in known set (0.0%).[0m
+     [2m{[0m
+     [2m  "knownValues": [[0m
+     [2m    "canfor",[0m
+     [2m    "west-fraser",[0m
+     [2m    "tolko",[0m
+     [2m    "interfor",[0m
+     [2m    "western-forest-products",[0m
+     [2m    "bc-timber-sales",[0m
+     [2m    "mosaic",[0m
+     [2m    "weyerhaeuser",[0m
+     [2m    "teal-jones",[0m
+     [2m    "san-group",[0m
+     [2m    "conifex",[0m
+     [2m    "dunkley",[0m
+     [2m    "carrier",[0m
+     [2m    "gorman",[0m
+     [2m    "canoe-forest",[0m
+     [2m    "other"[0m
+     [2m  ],[0m
+     [2m  "featuresChecked": 4511,[0m
+     [2m  "violations": 0[0m
+     [2m}[0m
+[32m[PASS][0m P3 Date validity — DISTURBANCE_START_DATE
+     [2m3739 date values checked; 0 outside [1900, 2026] (0.0%).[0m
+[32m[PASS][0m P3 Date validity — FIRE_YEAR
+     [2m592 date values checked; 0 outside [1900, 2026] (0.0%).[0m
+[33m[WARN][0m P4 Numeric range — PLANNED_GROSS_BLOCK_AREA
+     [2m4511 values checked; 3 out of declared range (0.1%).[0m
+[32m[PASS][0m P4 Numeric range — FIRE_SIZE_HECTARES
+     [2m592 values checked; 0 out of declared range (0.0%).[0m
+[33m[WARN][0m P4 Numeric range — AREA_HA
+     [2mNo non-null AREA_HA values found to validate.[0m
+[32m[PASS][0m P4 Numeric range — FEATURE_AREA_SQM
+     [2m3705 values checked; 0 out of declared range (0.0%).[0m
+[2m────────────────────────────────────────────────────────────[0m
+[1mSummary:[0m [32m17 passed[0m, [33m2 warned[0m, [31m1 failed[0m
+
+[31m[1mAUDIT FAILED[0m -- 1 check(s) require attention.
+
+Results saved to /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/reports/property-deep-results.json
+
+[1m[36m────────────────────────────────────────────────────────────[0m
+[1mRunning: Precision (npm run audit:precision)[0m
+[36m────────────────────────────────────────────────────────────[0m
+
+[1m
+OpenCanopy Geometry Precision Audit[0m
+[2m────────────────────────────────────────────────────────────[0m
+Layers: 10  Samples/layer: 20  Zooms: 7, 10
+Expected measurements: 400
+
+  NOTE: forestry-roads excluded — line layer, not polygon; Hausdorff polygon audit does not apply
+  NOTE: conservation-priority excluded — not present in current PMTiles build
+
+Sampling source NDJSON features...
+  forest-age                     20 features
+  tenure-cutblocks               20 features
+  fire-history                   20 features
+  parks                          20 features
+  conservancies                  20 features
+  ogma                           20 features
+  wildlife-habitat-areas         20 features
+  ungulate-winter-range          20 features
+  community-watersheds           20 features
+  mining-claims                  20 features
+
+Measuring at z7...
+  forest-age                     19 measured, 1 skipped | H mean=109594.2m max=241632.7m
+  tenure-cutblocks               20 measured, 0 skipped | H mean=354.3m max=1071.5m
+  fire-history                   20 measured, 0 skipped | H mean=4328.1m max=76926.3m
+  parks                          20 measured, 0 skipped | H mean=1223.9m max=4189.8m
+  conservancies                  20 measured, 0 skipped | H mean=1746.8m max=3974.6m
+  ogma                           NOTE low-cardinality — Hausdorff skipped (unique props < 50% of sample)
+  wildlife-habitat-areas         20 measured, 0 skipped | H mean=491.5m max=1599.5m
+  ungulate-winter-range          NOTE low-cardinality — Hausdorff skipped (unique props < 50% of sample)
+  community-watersheds           20 measured, 0 skipped | H mean=1422.6m max=3296.2m
+  mining-claims                  20 measured, 0 skipped | H mean=26739.7m max=105480.8m
+
+Measuring at z10...
+  forest-age                     19 measured, 1 skipped | H mean=17330.6m max=31745.7m
+  tenure-cutblocks               20 measured, 0 skipped | H mean=193.3m max=1116.8m
+  fire-history                   20 measured, 0 skipped | H mean=185.0m max=351.0m
+  parks                          20 measured, 0 skipped | H mean=1759.9m max=17560.6m
+  conservancies                  20 measured, 0 skipped | H mean=9172.1m max=67856.9m
+  ogma                           NOTE low-cardinality — Hausdorff skipped (unique props < 50% of sample)
+  wildlife-habitat-areas         20 measured, 0 skipped | H mean=204.8m max=549.6m
+  ungulate-winter-range          NOTE low-cardinality — Hausdorff skipped (unique props < 50% of sample)
+  community-watersheds           20 measured, 0 skipped | H mean=562.0m max=1074.4m
+  mining-claims                  20 measured, 0 skipped | H mean=8115.7m max=23080.4m
+
+[1mG1: Hausdorff distance at z10[0m
+  forest-age                     mean=17330.6m median=19240.4m max=31745.7m p95=31745.7m (n=19)
+  tenure-cutblocks               mean=193.3m median=160.6m max=1116.8m p95=1116.8m (n=20)
+  fire-history                   mean=185.0m median=161.7m max=351.0m p95=351.0m (n=20)
+  parks                          mean=1759.9m median=353.8m max=17560.6m p95=17560.6m (n=20)
+  conservancies                  mean=9172.1m median=732.2m max=67856.9m p95=67856.9m (n=20)
+  ogma                           mean=0.0m median=0.0m max=0.0m p95=0.0m (n=0)
+  wildlife-habitat-areas         mean=204.8m median=152.2m max=549.6m p95=549.6m (n=20)
+  ungulate-winter-range          mean=0.0m median=0.0m max=0.0m p95=0.0m (n=0)
+  community-watersheds           mean=562.0m median=534.4m max=1074.4m p95=1074.4m (n=20)
+  mining-claims                  mean=8115.7m median=5654.3m max=23080.4m p95=23080.4m (n=20)
+
+[1mG2: Hausdorff distance at z7[0m
+  forest-age                     mean=109594.2m median=80307.6m max=241632.7m p95=241632.7m (n=19)
+  tenure-cutblocks               mean=354.3m median=352.9m max=1071.5m p95=1071.5m (n=20)
+  fire-history                   mean=4328.1m median=488.2m max=76926.3m p95=76926.3m (n=20)
+  parks                          mean=1223.9m median=833.4m max=4189.8m p95=4189.8m (n=20)
+  conservancies                  mean=1746.8m median=1508.6m max=3974.6m p95=3974.6m (n=20)
+  ogma                           mean=0.0m median=0.0m max=0.0m p95=0.0m (n=0)
+  wildlife-habitat-areas         mean=491.5m median=336.3m max=1599.5m p95=1599.5m (n=20)
+  ungulate-winter-range          mean=0.0m median=0.0m max=0.0m p95=0.0m (n=0)
+  community-watersheds           mean=1422.6m median=1432.9m max=3296.2m p95=3296.2m (n=20)
+  mining-claims                  mean=26739.7m median=15771.8m max=105480.8m p95=105480.8m (n=20)
+
+[1mG3: Area preservation[0m
+  [33m[WARN][0m z7 forest-age                   19/19 features exceed ±10% area tolerance (max divergence: 1932.7%)
+  [33m[WARN][0m z7 tenure-cutblocks             17/20 features exceed ±10% area tolerance (max divergence: 76.9%)
+  [33m[WARN][0m z7 fire-history                 16/20 features exceed ±10% area tolerance (max divergence: 84.5%)
+  [33m[WARN][0m z7 parks                        8/20 features exceed ±10% area tolerance (max divergence: 52.8%)
+  [33m[WARN][0m z7 conservancies                1/20 features exceed ±10% area tolerance (max divergence: 55.2%)
+  [32m[PASS][0m z7 ogma                         All 0 features within ±10% area tolerance
+  [33m[WARN][0m z7 wildlife-habitat-areas       14/20 features exceed ±10% area tolerance (max divergence: 71.2%)
+  [32m[PASS][0m z7 ungulate-winter-range        All 0 features within ±10% area tolerance
+  [33m[WARN][0m z7 community-watersheds         3/20 features exceed ±10% area tolerance (max divergence: 55.9%)
+  [33m[WARN][0m z7 mining-claims                18/20 features exceed ±10% area tolerance (max divergence: 4366.0%)
+  [33m[WARN][0m z10 forest-age                   18/19 features exceed ±10% area tolerance (max divergence: 548.5%)
+  [33m[WARN][0m z10 tenure-cutblocks             3/20 features exceed ±10% area tolerance (max divergence: 35.6%)
+  [33m[WARN][0m z10 fire-history                 2/20 features exceed ±10% area tolerance (max divergence: 31.1%)
+  [33m[WARN][0m z10 parks                        2/20 features exceed ±10% area tolerance (max divergence: 65.4%)
+  [33m[WARN][0m z10 conservancies                5/20 features exceed ±10% area tolerance (max divergence: 83.8%)
+  [32m[PASS][0m z10 ogma                         All 0 features within ±10% area tolerance
+  [33m[WARN][0m z10 wildlife-habitat-areas       2/20 features exceed ±10% area tolerance (max divergence: 14.6%)
+  [32m[PASS][0m z10 ungulate-winter-range        All 0 features within ±10% area tolerance
+  [32m[PASS][0m z10 community-watersheds         All 20 features within ±10% area tolerance
+  [33m[WARN][0m z10 mining-claims                12/20 features exceed ±10% area tolerance (max divergence: 4333.2%)
+
+[1mG4: Vertex reduction ratio[0m
+  z7 forest-age                     src=62.1 tile=7.2 ratio=0.115 (n=19)
+  z7 tenure-cutblocks               src=239.1 tile=5.7 ratio=0.024 (n=20)
+  z7 fire-history                   src=121.8 tile=5.6 ratio=0.046 (n=20)
+  z7 parks                          src=717.3 tile=16.1 ratio=0.023 (n=20)
+  z7 conservancies                  src=2422.7 tile=45.8 ratio=0.019 (n=20)
+  z7 ogma                           src=0.0 tile=0.0 ratio=0.000 (n=0)
+  z7 wildlife-habitat-areas         src=457.1 tile=7.3 ratio=0.016 (n=20)
+  z7 ungulate-winter-range          src=0.0 tile=0.0 ratio=0.000 (n=0)
+  z7 community-watersheds           src=498.1 tile=13.6 ratio=0.027 (n=20)
+  z7 mining-claims                  src=14.7 tile=6.6 ratio=0.449 (n=20)
+  z10 forest-age                     src=62.1 tile=12.3 ratio=0.197 (n=19)
+  z10 tenure-cutblocks               src=239.1 tile=18.3 ratio=0.076 (n=20)
+  z10 fire-history                   src=121.8 tile=18.1 ratio=0.149 (n=20)
+  z10 parks                          src=717.3 tile=43.9 ratio=0.061 (n=20)
+  z10 conservancies                  src=2422.7 tile=113.9 ratio=0.047 (n=20)
+  z10 ogma                           src=0.0 tile=0.0 ratio=0.000 (n=0)
+  z10 wildlife-habitat-areas         src=457.1 tile=29.3 ratio=0.064 (n=20)
+  z10 ungulate-winter-range          src=0.0 tile=0.0 ratio=0.000 (n=0)
+  z10 community-watersheds           src=498.1 tile=50.8 ratio=0.102 (n=20)
+  z10 mining-claims                  src=14.7 tile=6.3 ratio=0.432 (n=20)
+
+[2m────────────────────────────────────────────────────────────[0m
+[33m[WARN][0m G3: 15 layer-zoom combination(s) exceed ±10% area tolerance:
+  z7 forest-age: 19/19 features exceed ±10% area tolerance (max divergence: 1932.7%)
+  z7 tenure-cutblocks: 17/20 features exceed ±10% area tolerance (max divergence: 76.9%)
+  z7 fire-history: 16/20 features exceed ±10% area tolerance (max divergence: 84.5%)
+  z7 parks: 8/20 features exceed ±10% area tolerance (max divergence: 52.8%)
+  z7 conservancies: 1/20 features exceed ±10% area tolerance (max divergence: 55.2%)
+  z7 wildlife-habitat-areas: 14/20 features exceed ±10% area tolerance (max divergence: 71.2%)
+  z7 community-watersheds: 3/20 features exceed ±10% area tolerance (max divergence: 55.9%)
+  z7 mining-claims: 18/20 features exceed ±10% area tolerance (max divergence: 4366.0%)
+  z10 forest-age: 18/19 features exceed ±10% area tolerance (max divergence: 548.5%)
+  z10 tenure-cutblocks: 3/20 features exceed ±10% area tolerance (max divergence: 35.6%)
+  z10 fire-history: 2/20 features exceed ±10% area tolerance (max divergence: 31.1%)
+  z10 parks: 2/20 features exceed ±10% area tolerance (max divergence: 65.4%)
+  z10 conservancies: 5/20 features exceed ±10% area tolerance (max divergence: 83.8%)
+  z10 wildlife-habitat-areas: 2/20 features exceed ±10% area tolerance (max divergence: 14.6%)
+  z10 mining-claims: 12/20 features exceed ±10% area tolerance (max divergence: 4333.2%)
+
+Results saved to: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/reports/geometry-precision-results.json
+
+
+[1m[36m────────────────────────────────────────────────────────────[0m
+[1mRunning: Temporal (npm run audit:temporal)[0m
+[36m────────────────────────────────────────────────────────────[0m
+
+=== OpenCanopy Temporal Consistency Audit ===
+
+
+[1mOpenCanopy Tile Audit Results[0m
+[2m────────────────────────────────────────────────────────────[0m
+[33m[WARN][0m Temporal audit — archive availability
+     [2mNo archives found in /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/tiles/archive. Temporal comparison requires at least one previous build. Skipping temporal checks.[0m
+[2m────────────────────────────────────────────────────────────[0m
+[1mSummary:[0m [32m0 passed[0m, [33m1 warned[0m, [31m0 failed[0m
+
+[33m[1mAUDIT PASSED WITH WARNINGS[0m -- review 1 item(s).
+
+Results saved to /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/reports/temporal-results.json
+
+[1m[36m────────────────────────────────────────────────────────────[0m
+[1mRunning: CrossSource (npm run audit:crosssource-lite)[0m
+[36m────────────────────────────────────────────────────────────[0m
+
+
+OpenCanopy Cross-Source Consistency Audit (Lite)
+────────────────────────────────────────────────────────────
+  Archive: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/tiles/opencanopy.pmtiles
+  Grid:    BC_EXTENDED_GRID (36 points)
+  Zoom:    z10
+  Rules:   R1 (fire+mature), R2 (cutblocks+not-harvested)
+  [1/36] R0C0... (no tile)
+  [2/36] R0C1... (no tile)
+  [3/36] R0C2... (no tile)
+  [4/36] R0C3... ok
+  [5/36] R0C4... (no tile)
+  [6/36] R0C5... (no tile)
+  [7/36] R1C0... (no tile)
+  [8/36] R1C1... (no tile)
+  [9/36] R1C2... ok
+  [10/36] R1C3... CONFLICT (R1:true, R2:false)
+  [11/36] R1C4... CONFLICT (R1:true, R2:false)
+  [12/36] R1C5... CONFLICT (R1:true, R2:false)
+  [13/36] R2C0... (no tile)
+  [14/36] R2C1... ok
+  [15/36] R2C2... ok
+  [16/36] R2C3... CONFLICT (R1:true, R2:false)
+  [17/36] R2C4... CONFLICT (R1:true, R2:false)
+  [18/36] R2C5... (no tile)
+  [19/36] R3C0... (no tile)
+  [20/36] R3C1... (no tile)
+  [21/36] R3C2... CONFLICT (R1:true, R2:false)
+  [22/36] R3C3... CONFLICT (R1:true, R2:false)
+  [23/36] R3C4... (no tile)
+  [24/36] R3C5... (no tile)
+  [25/36] R4C0... (no tile)
+  [26/36] R4C1... ok
+  [27/36] R4C2... CONFLICT (R1:true, R2:false)
+  [28/36] R4C3... CONFLICT (R1:true, R2:false)
+  [29/36] R4C4... (no tile)
+  [30/36] R4C5... (no tile)
+  [31/36] R5C0... (no tile)
+  [32/36] R5C1... ok
+  [33/36] R5C2... CONFLICT (R1:true, R2:false)
+  [34/36] R5C3... CONFLICT (R1:true, R2:false)
+  [35/36] R5C4... (no tile)
+  [36/36] R5C5... (no tile)
+
+────────────────────────────────────────────────────────────
+  Tiles checked:          17
+  Tiles missing:          19
+  Consistent points:      6
+  Conflict points:        11
+  Internal consistency:   35.3%
+  Total conflicts:        11
+
+  Conflicts:
+    [R1] R1C3: Fire history FIRE_YEAR >= 2000 (2023, 2012, 2012, 2014, 2014, 2014, 2015, 2023, 2012) but 83.6% of forest-age features show mature/old-growth
+    [R1] R1C4: Fire history FIRE_YEAR >= 2000 (2009, 2009, 2008, 2021, 2011, 2006, 2006, 2015, 2003, 2012, 2023, 2024, 2018, 2018, 2016, 2010) but 60.7% of forest-age features show mature/old-growth
+    [R1] R1C5: Fire history FIRE_YEAR >= 2000 (2017, 2023, 2007, 2003, 2003) but 87.9% of forest-age features show mature/old-growth
+    [R1] R2C3: Fire history FIRE_YEAR >= 2000 (2017, 2021, 2019, 2000, 2007, 2014, 2011, 2018, 2008, 2024, 2008, 2010, 2021) but 69.1% of forest-age features show mature/old-growth
+    [R1] R2C4: Fire history FIRE_YEAR >= 2000 (2007, 2007, 2010, 2007, 2018, 2007, 2018, 2004, 2024, 2021, 2018, 2022, 2014, 2024) but 80.3% of forest-age features show mature/old-growth
+    [R1] R3C2: Fire history FIRE_YEAR >= 2000 (2005, 2015, 2024, 2023, 2006, 2012, 2009) but 79.5% of forest-age features show mature/old-growth
+    [R1] R3C3: Fire history FIRE_YEAR >= 2000 (2015, 2023, 2013, 2015, 2009, 2023, 2018, 2012, 2018, 2023) but 76.2% of forest-age features show mature/old-growth
+    [R1] R4C2: Fire history FIRE_YEAR >= 2000 (2023) but 96.3% of forest-age features show mature/old-growth
+    [R1] R4C3: Fire history FIRE_YEAR >= 2000 (2025, 2022, 2007) but 98.6% of forest-age features show mature/old-growth
+    [R1] R5C2: Fire history FIRE_YEAR >= 2000 (2015, 2018, 2019, 2024) but 77.8% of forest-age features show mature/old-growth
+    [R1] R5C3: Fire history FIRE_YEAR >= 2000 (2018, 2012, 2012, 2018, 2023, 2023, 2025, 2023) but 68.8% of forest-age features show mature/old-growth
+
+Results saved to /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/reports/crosssource-lite-results.json
+
+Consistency rate 35.3% is below 90% threshold.
+
+[1m════════════════════════════════════════════════════════════[0m
+[1mAUDIT SUITE SUMMARY[0m
+[1m════════════════════════════════════════════════════════════[0m
+
+[2mAudit                 Exit    Status[0m
+[2m────────────────────────────────────[0m
+Tiles                    [32m0[0m   [2mUNKNOWN[0m
+Fidelity                 [31m1[0m      [31mFAIL[0m
+Spatial                  [31m1[0m      [31mFAIL[0m
+Adversarial              [32m0[0m      [32mPASS[0m
+Property-Deep            [31m1[0m      [31mFAIL[0m
+Precision                [32m0[0m      [32mPASS[0m
+Temporal                 [32m0[0m      [33mWARN[0m
+CrossSource              [31m1[0m      [32mPASS[0m
+[2m────────────────────────────────────[0m
+
+[31m[1mSUITE FAILED[0m — one or more audits have FAIL status.
+

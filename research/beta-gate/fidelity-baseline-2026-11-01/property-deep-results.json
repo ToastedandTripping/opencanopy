@@ -1,0 +1,256 @@
+{
+  "timestamp": "2026-11-01T22:36:50.727Z",
+  "summary": {
+    "total": 20,
+    "passed": 17,
+    "warned": 2,
+    "failed": 1
+  },
+  "results": [
+    {
+      "check": "Property deep audit — PMTiles availability",
+      "status": "PASS",
+      "message": "PMTiles archive found: /home/leesalo/.local/share/marvin/worktrees/opencanopy/canopy/data/tiles/opencanopy.pmtiles"
+    },
+    {
+      "check": "P1 Property validation — forest-age",
+      "status": "PASS",
+      "message": "113558 features checked; 0 had violations (0.0%).",
+      "layerName": "forest-age",
+      "details": {
+        "requiredProperties": [
+          "class",
+          "age",
+          "species"
+        ],
+        "featuresChecked": 113558,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — tenure-cutblocks",
+      "status": "FAIL",
+      "message": "4511 features checked; 772 had violations (17.1%).",
+      "layerName": "tenure-cutblocks",
+      "details": {
+        "requiredProperties": [
+          "company_id",
+          "PLANNED_GROSS_BLOCK_AREA",
+          "DISTURBANCE_START_DATE"
+        ],
+        "featuresChecked": 4511,
+        "violations": 772
+      }
+    },
+    {
+      "check": "P1 Property validation — fire-history",
+      "status": "PASS",
+      "message": "592 features checked; 0 had violations (0.0%).",
+      "layerName": "fire-history",
+      "details": {
+        "requiredProperties": [
+          "FIRE_YEAR",
+          "FIRE_SIZE_HECTARES",
+          "FIRE_CAUSE"
+        ],
+        "featuresChecked": 592,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — parks",
+      "status": "PASS",
+      "message": "35 features checked; 0 had violations (0.0%).",
+      "layerName": "parks",
+      "details": {
+        "requiredProperties": [
+          "name",
+          "designation"
+        ],
+        "featuresChecked": 35,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — conservancies",
+      "status": "PASS",
+      "message": "5 features checked; 0 had violations (0.0%).",
+      "layerName": "conservancies",
+      "details": {
+        "requiredProperties": [
+          "name"
+        ],
+        "featuresChecked": 5,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — ogma",
+      "status": "PASS",
+      "message": "351 features checked; 0 had violations (0.0%).",
+      "layerName": "ogma",
+      "details": {
+        "requiredProperties": [
+          "OGMA_TYPE",
+          "LANDSCAPE_UNIT_NAME"
+        ],
+        "featuresChecked": 351,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — wildlife-habitat-areas",
+      "status": "PASS",
+      "message": "81 features checked; 0 had violations (0.0%).",
+      "layerName": "wildlife-habitat-areas",
+      "details": {
+        "requiredProperties": [
+          "COMMON_SPECIES_NAME",
+          "HABITAT_AREA_ID"
+        ],
+        "featuresChecked": 81,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — ungulate-winter-range",
+      "status": "PASS",
+      "message": "698 features checked; 0 had violations (0.0%).",
+      "layerName": "ungulate-winter-range",
+      "details": {
+        "requiredProperties": [
+          "SPECIES_1",
+          "UWR_TAG"
+        ],
+        "featuresChecked": 698,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — community-watersheds",
+      "status": "PASS",
+      "message": "27 features checked; 0 had violations (0.0%).",
+      "layerName": "community-watersheds",
+      "details": {
+        "requiredProperties": [
+          "CW_NAME",
+          "AREA_HA"
+        ],
+        "featuresChecked": 27,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — mining-claims",
+      "status": "PASS",
+      "message": "730 features checked; 0 had violations (0.0%).",
+      "layerName": "mining-claims",
+      "details": {
+        "requiredProperties": [
+          "TENURE_TYPE_DESCRIPTION",
+          "OWNER_NAME",
+          "TENURE_STATUS"
+        ],
+        "featuresChecked": 730,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — forestry-roads",
+      "status": "PASS",
+      "message": "6788 features checked; 0 had violations (0.0%).",
+      "layerName": "forestry-roads",
+      "details": {
+        "requiredProperties": [
+          "ROAD_SECTION_NAME",
+          "CLIENT_NAME"
+        ],
+        "featuresChecked": 6788,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P1 Property validation — conservation-priority",
+      "status": "PASS",
+      "message": "3705 features checked; 0 had violations (0.0%).",
+      "layerName": "conservation-priority",
+      "details": {
+        "requiredProperties": [
+          "TAP_CLASSIFICATION_LABEL",
+          "LANDSCAPE_UNIT_NAME",
+          "ANCIENT_FOREST_IND",
+          "PRIORITY_BIG_TREED_OG_IND",
+          "BGC_LABEL",
+          "FIELD_VERIFIED_IND",
+          "FEATURE_AREA_SQM"
+        ],
+        "featuresChecked": 3705,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P2 company_id enum — tenure-cutblocks",
+      "status": "PASS",
+      "message": "4511 company_id values checked; 0 not in known set (0.0%).",
+      "layerName": "tenure-cutblocks",
+      "details": {
+        "knownValues": [
+          "canfor",
+          "west-fraser",
+          "tolko",
+          "interfor",
+          "western-forest-products",
+          "bc-timber-sales",
+          "mosaic",
+          "weyerhaeuser",
+          "teal-jones",
+          "san-group",
+          "conifex",
+          "dunkley",
+          "carrier",
+          "gorman",
+          "canoe-forest",
+          "other"
+        ],
+        "featuresChecked": 4511,
+        "violations": 0
+      }
+    },
+    {
+      "check": "P3 Date validity — DISTURBANCE_START_DATE",
+      "status": "PASS",
+      "message": "3739 date values checked; 0 outside [1900, 2026] (0.0%).",
+      "layerName": "tenure-cutblocks"
+    },
+    {
+      "check": "P3 Date validity — FIRE_YEAR",
+      "status": "PASS",
+      "message": "592 date values checked; 0 outside [1900, 2026] (0.0%).",
+      "layerName": "fire-history"
+    },
+    {
+      "check": "P4 Numeric range — PLANNED_GROSS_BLOCK_AREA",
+      "status": "WARN",
+      "message": "4511 values checked; 3 out of declared range (0.1%).",
+      "layerName": "tenure-cutblocks"
+    },
+    {
+      "check": "P4 Numeric range — FIRE_SIZE_HECTARES",
+      "status": "PASS",
+      "message": "592 values checked; 0 out of declared range (0.0%).",
+      "layerName": "fire-history"
+    },
+    {
+      "check": "P4 Numeric range — AREA_HA",
+      "status": "WARN",
+      "message": "No non-null AREA_HA values found to validate.",
+      "layerName": "community-watersheds"
+    },
+    {
+      "check": "P4 Numeric range — FEATURE_AREA_SQM",
+      "status": "PASS",
+      "message": "3705 values checked; 0 out of declared range (0.0%).",
+      "layerName": "conservation-priority"
+    }
+  ]
+}

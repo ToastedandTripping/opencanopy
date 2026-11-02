@@ -84,6 +84,23 @@ Hot spots are curated locations in `src/data/hotspots.ts`. Add a new entry to th
 3. Test the build: `npm run build` must succeed.
 4. Write a clear PR description explaining what changed and why.
 
+## Updating Dependencies
+
+CI blocks on a high advisory in anything non-dev and on a critical anywhere in
+the tree; a high in the dev chain only warns. To clear one, use npm 10 (what
+Node 22 ships in CI) and change the lock without touching `node_modules`:
+
+```bash
+npm audit fix --package-lock-only                  # exits 1 while moderates remain; that is not a failure
+npm install <package>@<fixed> --package-lock-only  # or name the fixed version of a direct dependency
+npm audit --omit=dev --audit-level=high            # must exit 0
+npm audit --audit-level=critical                   # must exit 0
+npm ci
+```
+
+Do not use `npm update`: on this lock it crashes on `edgesOut`. If no patched
+version exists, open an issue naming the advisory rather than silencing the step.
+
 ## Reporting Issues
 
 Open an issue on GitHub. Include:

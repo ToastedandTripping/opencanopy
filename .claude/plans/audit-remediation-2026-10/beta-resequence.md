@@ -5,7 +5,7 @@ the *order* in its **Dependency graph** are replaced by the order below. Relay s
 contracts (C1-C7), the agents-and-models table, the critic contract and the release rules stand
 unless a section here names a change. It is less a re-ordering than an insertion: Waves 1-3 keep
 their internal order (M1a, M1b, M2, M3a; S0a, S0b, S1-lite, S1′), ten relays are inserted, and
-four are deferred into the beta. Lee sees this order before G0 starts.
+four are deferred into the beta. Lee sees this order before G0 starts. **Wave-close duty:** at each wave close the session reads CI on main (`gh run view`, annotations, a scheduled run under 8 days old) and acts on a red.
 
 ## Intent (grilled)
 
@@ -47,13 +47,12 @@ The vehicle is this program.
 - Phase 0 has not started; no Wave 1 child plan is written.
 - Shipped outside the program: the `email_click` hotfix (16dc5e9), Next 16.4.2, MapLibre 6.15
   (main 120cc10, 2026-10-22).
-- **CI is red** at `npm audit --audit-level=high`, so Lint never runs (`ci.yml:38-41`, run
-  39866175520). The three high groups are all dev-chain: brace-expansion (via eslint and
-  eslint-config-next, minimatch), js-yaml (via @eslint/eslintrc), vite (with the launch-editor
-  advisories).
-- `@mapbox/vector-tile` and `pbf`, which the fidelity suite's MVT reader imports, are still
-  transitive under MapLibre 6 (`npm ls`: maplibre-gl 6.15.0 → @mapbox/vector-tile 3.0.0, pbf
-  5.1.2), unpinned.
+- **CI was red** from 2026-09-11 at `npm audit --audit-level=high`, so Lint never ran. Relay CI
+  (`.claude/plans/2026-11-ci-green.md`) reorders and splits the gate. Today's four high groups were
+  dev-chain (brace-expansion, js-yaml, vite with launch-editor, happy-dom), but most recent reds were
+  real runtime findings, not dev noise: 9 of the last 10 would still be red under the new gate.
+- `@mapbox/vector-tile` and `pbf`, which the fidelity suite's MVT reader imports, are direct dev
+  deps as of relay CI, at the versions maplibre-gl 6.15.0 carries (3.0.0 and 5.1.2).
 - `scripts/pipeline/rebuild.sh` is five vector phases into **one** archive, then manual steps
   (edit `PMTILES_URL`, run `deploy-tiles.sh`); no raster, no story products, no fidelity run.
 - The X spike (`spike/intro-animation`) is on MapLibre 5, on a Netlify draft awaiting Lee's
@@ -82,12 +81,15 @@ Each gets its own child plan, critic (three rounds max, round one at xhigh) and 
 just in time. Public copy in any of them (label note, known-issues page, form text) is shown to
 Lee before merge, as story copy is.
 
-- **CI (Simple, this session, G0; released with or right after P0's docs commit).** Clear the
-  three dev-chain high groups by bumps, or by `--omit=dev` on the audit step with the dev chain
-  tracked; the child plan picks and says why. Lint runs. Pin `@mapbox/vector-tile` and `pbf` as
-  direct dev deps (the install needs Lee's terminal). Run `npm run audit:ci` once on v10 as a
-  baseline and record the result; if it is red, the failing audits are classified into
-  TRACEABILITY and owned before REBUILD. Done when main is green three runs running.
+- **CI (Simple, this session, G0; released with or right after P0's docs commit).** Child plan:
+  `.claude/plans/2026-11-ci-green.md`. Lint runs above the audit. The audit blocks on anything
+  non-dev at high and the whole tree at critical; a dev-chain high warns; a weekly scheduled run turns
+  CI red on a new advisory. Bumps clear today's high groups, and `@mapbox/vector-tile`, `pbf` and
+  `@types/geojson` are pinned as direct dev deps, installed by the session. The fidelity suite stays
+  out of CI (a 3.8 GB archive plus the NDJSON inputs) and runs per rebuild inside PIPE; its v10
+  baseline is `research/beta-gate/fidelity-baseline-2026-11-01.md`, with the failing audits classified
+  into TRACEABILITY. Done when main is green three runs running with Lint executed, at least one of
+  them `event: schedule`.
 - **OPS (Simple, this session, G1).** Client and edge error capture; uptime monitors on `/`,
   `/map`, the WFS proxy and one PMTiles range request; free tiers. *(call)* UptimeRobot for uptime;
   the error tool chosen in the child plan under C6: page URL, request URL and breadcrumbs scrubbed
@@ -96,7 +98,11 @@ Lee before merge, as story copy is.
   Lee" means a monitor on a deliberately failing URL, or the tool's test notification; production
   is never taken down to prove it. Sampling or rate limits,
   and an alert at 80% of the free quota, so one bug on every load cannot drain it into silence.
-  /privacy names the tool. Probe the free-tier limits before the plan.
+  /privacy names the tool. Probe the free-tier limits before the plan. **Red CI on main is routed
+  here too:** until OPS the reader is the session's `gh run list` at each wave close, because GitHub's
+  failure email has not been shown to reach Lee; OPS's plan names the route that reaches him. The
+  response stands: a red runtime audit gets a bump pull request for Lee's yes, and with no patched
+  version he gets the choice, with any exception recorded by advisory id.
 - **NUM (Standard, Lane S with a Lane M batch, G2 to the gate).** The figure set: static public
   copy and aggregates (landing, hero, film captions if L = film, calculator outputs, share card,
   Discover panel, legend notes, the /map timeline's cumulative readout and per-year histogram,
@@ -138,7 +144,7 @@ Lee before merge, as story copy is.
   against the previous version (fails on a drop), the C1 version constant, and a runbook
   (`docs/REBUILD.md`) for Lee's quarterly run. MAPFIX and T-pre prove their changes on current
   data; PIPE packages them; REBUILD re-runs the package on fresh data. Three builds, not four.
-  Does not touch CHARTER.md (the wording is with Lee via session-d09d2c).
+  Does not touch CHARTER.md (the wording is with Lee via session-d09d2c). **Fixes the suite first:** the seven defects in `research/beta-gate/fidelity-baseline-2026-11-01.md`, chiefly the fail-open in `audit-all.ts`, the swallowed parse error and passes on zero input, and defines per audit what green means at REBUILD. It diagnoses TRACEABILITY's FB rows assigned to it; a finding leaves by diagnosis, never by a definition of green.
 - **SPEED (Simple, Lane M, after M1a).** A throttled guard: cold `/map` and a cold deep link, cache
   disabled, first data layer painted (probe count > 0 and layer pixels) within 10 s, on the profile
   Lee rules (decision S). The guard records the WebGL renderer string and refuses to report on
@@ -321,9 +327,10 @@ added to the 2026-10-23 entries (written by this session on the critic's finding
 
 ## Load-bearing assumptions
 
-- The fidelity suite runs on v10. Unverified; CI's baseline run resolves it in G0.
-- The CI fix has no runtime change. All three high groups are dev-chain (verified); residual
-  risk is a vite bump breaking vitest.
+- The fidelity suite runs on v10. Measured 2026-11-01 once the reader was fixed for pbf 5; it runs,
+  and prints SUITE FAILED, in `research/beta-gate/fidelity-baseline-2026-11-01.md`.
+- The CI fix has almost no runtime change: the only non-dev lock move is nanoid 3.3.18 to 3.3.20.
+  Today's four high groups are dev-chain; a new runtime advisory will still turn main red, by design.
 - Netlify Forms works with this static export and its cap suffices. BETA's probe resolves both.
 - A free error tool meets C6. If none does, OPS falls back to an edge-logged error beacon.
 - MAPFIX's defects reproduce live; if not, MAPFIX shrinks to the palette.
