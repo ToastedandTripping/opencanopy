@@ -42,6 +42,18 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - - **Path to beta (Lee, 2026-10-23; BETA.md; DECISIONS 2026-10-23):** the 2026-10 remediation program is re-sequenced so the beta gate comes first: .claude/plans/audit-remediation-2026-10/beta-resequence.md (critic r1 FAIL, r2 CONCERN, r3 PASS, Fable at xhigh because the Codex weekly window was at 100%). Lee's four answers: the film opens the beta, with the figure corrected now; the calculator is redesigned first; the speed bar is on faster 4G; shared links are fixed before beta. Next: G0 (Phase 0 with its record list reconciled, CI, P0b), on Lee's go. Every child plan gets three critic rounds at most, round one at xhigh. Waiting on Lee: keep or strike the two attribution notes on the 2026-10-23 bar and exit entries; a terminal install of @mapbox/vector-tile and pbf as dev deps (CI, G0); a reboot to fix the GPU driver before SPEED (G2).
 
+- Relay HEAVY before S0b (G2).
+
+- M1a batch 0 retargets the two `audit:live` tests before its acceptance can pass.
+
+- P0b's post-release record: ride in the next release's first commit.
+
+- P0b's first CI run on main (owner: the session that pushed): if red, the fix goes out as the next release and the three-run count restarts.
+
+- `/save` is not a release path for OpenCanopy; it stops at the pre-push hook. (Until a marvin change teaches `/save` the release path.)
+
+- P0b bootstrap step 0: a marvin session commits the ignore patterns for `state/opencanopy-release*` (the four state paths) and `state/heavy-build.lock*` in `~/marvin`; `init` and `install` refuse until then. Runbook: ARCHITECTURE.md, Releases.
+
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |

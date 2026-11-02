@@ -1,7 +1,7 @@
 ---
 status: in-progress
-current: "Oct 23: PATH TO BETA ruled (Lee, path-to-beta grill; DECISIONS 2026-10-23; BETA.md). An open public beta opens once charter goals (1) and (3) are met; goal (2) is built during beta. The approved 2026-10 remediation program is re-sequenced so the beta gate comes first (.claude/plans/audit-remediation-2026-10/beta-resequence.md; critic PASS in three rounds; Lee ruled the four beta decisions 2026-10-23). Shipped since Sep 2: email_click hotfix (16dc5e9), Next 16.4.2, MapLibre 6.15 (main 120cc10, 2026-10-22). CI still red on dev-only highs (vite, launch-editor), so lint does not run. Intro-film spike (spike/intro-animation, unmerged) is on a Netlify draft awaiting Lee's smoothness check; Canopy palette ruled 2026-10-11, not yet applied."
-next: "G0 on Lee's go: Phase 0 records (reconciled), the CI fix, release tooling (P0b). Then G1: monitoring (OPS), M1a map plumbing, S0a copy and privacy. Lee ruled 2026-10-23: film at beta (figure corrected now), calculator redesigned first, faster-4G speed bar, shared links fixed before beta. Full order: beta-resequence.md."
+current: "Nov 1: P0b release tooling built on relay p0b-release-tooling (three batches, Razor-reviewed; plan .claude/plans/2026-10-p0b-release-tooling.md): deploy identity tag oc-build, the release ledger with lease, tokens and halts, check-push and a pre-push hook (Lee 2026-11-01: hook on). Every release now goes through the sequence in ARCHITECTURE.md, Releases; /save is not a release path here. Not yet released: it ships through its own bootstrap. Oct 23: PATH TO BETA ruled (Lee, path-to-beta grill; DECISIONS 2026-10-23; BETA.md). An open public beta opens once charter goals (1) and (3) are met; goal (2) is built during beta. The approved 2026-10 remediation program is re-sequenced so the beta gate comes first (.claude/plans/audit-remediation-2026-10/beta-resequence.md; critic PASS in three rounds; Lee ruled the four beta decisions 2026-10-23). Shipped since Sep 2: email_click hotfix (16dc5e9), Next 16.4.2, MapLibre 6.15 (main 120cc10, 2026-10-22). CI still red on dev-only highs (vite, launch-editor), so lint does not run. Intro-film spike (spike/intro-animation, unmerged) is on a Netlify draft awaiting Lee's smoothness check; Canopy palette ruled 2026-10-11, not yet applied."
+next: "Release P0b by its bootstrap (ARCHITECTURE.md, Releases): a marvin session commits the four state ignore patterns, then the first install on Lee's 2026-11-01 yes, init, and P0b's own release; its first CI run on main is a close condition. Then G1: monitoring (OPS), M1a map plumbing, S0a copy and privacy. Lee ruled 2026-10-23: film at beta (figure corrected now), calculator redesigned first, faster-4G speed bar, shared links fixed before beta. Full order: beta-resequence.md."
 testing: null
 pinned: false
 shipped:
@@ -142,7 +142,16 @@ Held or awaiting a check:
 - Undated blocks option 2: revisit after the status-code check.
 - iOS Safari bottom-bar check (no owner for a fix if it reproduces).
 - The eslint dev chain's moderates, held by the eslint-config-next pin; `tsx` pinned in PIPE.
-- Heavy-build lock: split from P0b as its own small relay, needed by G2.
+- Heavy-build lock: split from P0b as its own small relay, **HEAVY**, in G2 before S0b (Lee, 2026-11-01). Binding rules: `.claude/plans/2026-10-p0b-release-tooling.md`, "Relay HEAVY". Owed in `.claude/handoff.md`.
+
+Deferred from P0b release tooling (2026-11-01; plan `.claude/plans/2026-10-p0b-release-tooling.md`, "Out of scope"):
+- Recording build peak memory (C7): belongs to the build relays that run heavy jobs, not to the release tool.
+- The live guards themselves: M1a builds them; P0b only records their verdicts.
+- C1 asset versioning: S2-pages and the data relays own it.
+- Retargeting the two `audit:live` tests at `live-health.spec.ts:187` and `:243`: M1a batch 0 owns it; until then `audit:live` cannot read green.
+- A server-side gate by locking Netlify auto-publish: needs Lee to amend "Deploy is git-triggered"; the escalation if the cooperative hook proves insufficient.
+- A `netlify.toml` `ignore` for docs-only commits: only if the docs route (a docs commit is a release) proves too heavy; 8 of the last 19 production deploys were docs.
+- Teaching `/save` the OpenCanopy release path: a marvin change; until then `/save` stops at the pre-push hook.
 - Five leftover decisions from the 2026-09-20 plan (D4-D8, including branch protection): batched for Lee, see TRACEABILITY.
 
 ### Deferred from 2026-09-11 — FOM watch` below. Grill before planning; the charter needs Lee's amendment first (advocacy is not in it).
