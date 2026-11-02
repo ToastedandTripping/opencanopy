@@ -1,0 +1,27 @@
+#!/bin/sh
+# OpenCanopy pre-push gate. Installed by `release-ledger.mjs install`, beside the
+# tool it calls; core.hooksPath points at the installed copy.
+#
+# Gates every stdin line whose remote ref is refs/heads/main, whatever the remote is
+# called: a URL arrives as $1, so $1 is ignored. Nonzero blocks. Other refs pass.
+# Release sequence: ARCHITECTURE.md. --no-verify is Lee's valve, and it is detected.
+tool="$(dirname -- "$0")/../release-ledger.mjs"
+status=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$remote_ref" = "refs/heads/main" ] || continue
+  case "$local_sha" in
+    *[!0]*) ;;
+    *)
+      echo "NO-GO: deleting main is always refused" >&2
+      status=1
+      continue
+      ;;
+  esac
+  if [ -z "${OC_RELEASE_TOKEN:-}" ]; then
+    echo "NO-GO: a push to main needs OC_RELEASE_TOKEN from the release sequence (ARCHITECTURE.md)" >&2
+    status=1
+    continue
+  fi
+  node "$tool" check-push --token "$OC_RELEASE_TOKEN" --pushed-sha "$local_sha" --remote-sha "$remote_sha" </dev/null || status=1
+done
+exit "$status"

@@ -20,6 +20,15 @@ import os from "node:os";
 import path from "node:path";
 import { MutexError, withMutex } from "./lib/dir-mutex.mjs";
 import {
+  ADOPTABLE,
+  READ_TIMEOUT_MS,
+  ReadFailed,
+  boundedRun,
+  classifyInFlight,
+  listDeploys,
+  readPublished,
+} from "./lib/netlify-read.mjs";
+import {
   LedgerError,
   closesHalt,
   fold,
@@ -31,9 +40,12 @@ import {
   verdictOf,
 } from "./lib/release-state.mjs";
 
-const SITE_ID = "6b007878-a00d-4ada-86d4-5cf84e9acc2a";
 const STALE_MS = 2 * 60 * 60 * 1000;
-const READ_TIMEOUT_MS = 30_000;
+const REQUEST_MAX_AGE_MS = 60 * 60 * 1000;
+const READ_REDOS = 3;
+const DEFAULT_POLL_MS = 15_000;
+const DEFAULT_SITE_URL = "https://opencanopy.ca/";
+const SHA_RE = /^[0-9a-f]{40}$/;
 const NOTIFY_TIMEOUT_MS = 10_000;
 const LANES = new Set(["M", "S", "session"]);
 const KINDS = new Set(["instrumentation", "behaviour", "corrective"]);
@@ -56,6 +68,8 @@ const REPAIR_TEXT = [
 
 const HELP = `release-ledger: the OpenCanopy release ledger. Release sequence: ARCHITECTURE.md.
 
+  install --lee "LEE'S WORDS"          (Lee's yes every time)
+  init --evidence TEXT
   status [--json]
   summary (--sha S | --unrecorded)
   claim --lane M|S|session (--sha S | --deploy D) --kind instrumentation|behaviour|corrective [--data-version V]
@@ -63,14 +77,14 @@ const HELP = `release-ledger: the OpenCanopy release ledger. Release sequence: A
   reconcile
   takeover --lane L --observed-token N
   request --token N --sha S --parent P --approval "LEE'S WORDS" --checks EVIDENCE
+  check-push --token N [--pushed-sha S --remote-sha R]
   record-push --token N --sha S
+  await-live --token N --sha S --source netlify|meta [--timeout-min 10]
   guard [--token N] [--sha S] --deploy D --result green|red|unverified|negative-control --evidence PATH [--lee "LEE'S WORDS"]
   authorize-corrective [--token N] --sha S --lee "LEE'S WORDS"
   record-rollback [--token N] --deploy D --lee "LEE'S WORDS"
   ack-deploy --deploy D --lee "LEE'S WORDS"
   repair-note --aside A --fixed F --reason TEXT
-
-Not yet built (P0b-3): init, install, check-push, await-live.
 
 Exit: 0 ok or GO; 1 NO-GO or failed read; 2 refused; 3 HALTED; 4 BUSY.
 ${REPAIR_TEXT}
@@ -138,6 +152,10 @@ const ledgerPath = () => path.join(stateDir(), "opencanopy-releases.jsonl");
 const leaseDir = () => path.join(stateDir(), "opencanopy-release.lock");
 const leaseFile = () => path.join(leaseDir(), "lease.json");
 const mutexDir = () => path.join(stateDir(), "opencanopy-release.mutex");
+const toolDir = () => path.join(stateDir(), "opencanopy-release-tool");
+const installedFile = () => path.join(toolDir(), "installed.json");
+const hooksDir = () => path.join(toolDir(), "hooks");
+const STATE_PATHS = ["opencanopy-releases.jsonl", "opencanopy-release.lock", "opencanopy-release.mutex", "opencanopy-release-tool"];
 
 function nowMs() {
   const fake = seam("OC_RELEASE_NOW");
@@ -255,38 +273,76 @@ function writeLease(body) {
 
 /* ---------- external reads ---------- */
 
-/**
- * The published-deploy read. P0b-3 replaces this with scripts/lib/netlify-read.mjs,
- * which adds the process-group kill, the in-flight read and the ledger-moved retry.
- */
-function readPublished() {
-  const bin = seam("OC_RELEASE_NETLIFY_BIN") ?? "netlify";
-  const timeout = Number(seam("OC_RELEASE_READ_TIMEOUT_MS") ?? READ_TIMEOUT_MS);
-  const run = spawnSync(bin, ["api", "getSite", "--data", JSON.stringify({ site_id: SITE_ID })], {
-    encoding: "utf8",
-    timeout,
-    stdio: ["ignore", "pipe", "pipe"],
+const readTimeoutMs = () => Number(seam("OC_RELEASE_READ_TIMEOUT_MS") ?? READ_TIMEOUT_MS);
+const netlifyOpts = () => ({ bin: seam("OC_RELEASE_NETLIFY_BIN") ?? "netlify", timeoutMs: readTimeoutMs() });
+
+/** A failed read exits nonzero and writes nothing. */
+function exitOnFailedRead(promise) {
+  return promise.catch((err) => {
+    if (err instanceof ReadFailed) throw new Exit(1, `READ FAILED: ${err.message}; nothing written`);
+    throw err;
   });
-  const fail = (why) => new Exit(1, `READ FAILED: netlify getSite ${why}; nothing written`);
-  if (run.error) throw fail(run.error.message);
-  if (run.status !== 0) throw fail(`exited ${run.status}`);
-  let site;
-  try {
-    site = JSON.parse(run.stdout);
-  } catch {
-    throw fail("printed non-JSON");
-  }
-  if (!site?.published_deploy?.id) throw fail("has no published_deploy");
-  return site.published_deploy;
+}
+const published = () => exitOnFailedRead(readPublished(netlifyOpts()));
+const deploysList = () => exitOnFailedRead(listDeploys(netlifyOpts()));
+
+/** Git's repo-local variables, set inside a hook: they would override any -C. */
+const GIT_LOCAL_ENV = [
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_CONFIG", "GIT_CONFIG_PARAMETERS", "GIT_CONFIG_COUNT",
+  "GIT_OBJECT_DIRECTORY", "GIT_DIR", "GIT_WORK_TREE", "GIT_IMPLICIT_WORK_TREE", "GIT_GRAFT_FILE",
+  "GIT_INDEX_FILE", "GIT_NO_REPLACE_OBJECTS", "GIT_REPLACE_REF_BASE", "GIT_PREFIX",
+  "GIT_SHALLOW_FILE", "GIT_COMMON_DIR",
+];
+
+function gitEnv() {
+  const env = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
+  for (const name of GIT_LOCAL_ENV) delete env[name];
+  return env;
 }
 
-function liveOriginMain() {
-  const run = spawnSync("git", ["ls-remote", "origin", "refs/heads/main"], {
-    encoding: "utf8",
-    timeout: Number(seam("OC_RELEASE_READ_TIMEOUT_MS") ?? READ_TIMEOUT_MS),
-  });
-  if (run.error || run.status !== 0) return null;
-  return run.stdout.trim().split(/\s+/)[0] || null;
+const git = (dir, args) =>
+  boundedRun("git", ["-C", dir, ...args], { env: gitEnv(), timeoutMs: readTimeoutMs() });
+
+const text = (run) => run.stdout.toString("utf8").trim();
+
+function readInstalled() {
+  try {
+    const installed = JSON.parse(fs.readFileSync(installedFile(), "utf8"));
+    return typeof installed?.common_dir === "string" ? installed : null;
+  } catch (err) {
+    // Absent is normal before the first install; anything else also reads as P8 off.
+    if (err.code !== "ENOENT") process.stderr.write(`warning: ${installedFile()}: ${err.message}\n`);
+    return null;
+  }
+}
+
+/** The tool has no fixed cwd: git reads go to the repo install recorded, else the caller's. */
+const repoDir = () => readInstalled()?.common_dir ?? process.cwd();
+
+/** {sha} when live origin main answered (null: it has no main), {failed} when it did not. */
+async function readOriginMain(dir) {
+  const run = await git(dir, ["ls-remote", "origin", "refs/heads/main"]);
+  if (!run.ok) return { failed: run.why };
+  return { sha: text(run).split(/\s+/)[0] || null };
+}
+
+async function liveOriginMain() {
+  return (await readOriginMain(repoDir())).sha ?? null;
+}
+
+/** P8: asked of the repo install recorded, or GATE OFF cries wolf from any other. */
+async function gateState() {
+  const installed = readInstalled();
+  if (!installed) return { ok: false, why: `no readable ${installedFile()}` };
+  const run = await git(installed.common_dir, ["config", "core.hooksPath"]);
+  const actual = run.ok ? text(run) : "unset";
+  if (actual !== hooksDir()) return { ok: false, why: `core.hooksPath is ${actual}, not ${hooksDir()}` };
+  try {
+    fs.accessSync(path.join(hooksDir(), "pre-push"), fs.constants.X_OK);
+  } catch (err) {
+    return { ok: false, why: `the installed hook is not executable (${err.code})` };
+  }
+  return { ok: true, sourceSha: installed.source_sha };
 }
 
 /* ---------- output and notices ---------- */
@@ -390,14 +446,43 @@ function applyObservation(ctx, published) {
   return newHalt;
 }
 
-function cmdReconcile(flags) {
+const ledgerLength = () => {
+  try {
+    return fs.statSync(ledgerPath()).size;
+  } catch {
+    return -1; // Absent: locked() then reports it, under the mutex.
+  }
+};
+
+const MOVED = Symbol("ledger moved");
+
+/**
+ * A Netlify read is only acted on if the ledger did not move during it. Otherwise
+ * a read from just before another lane's deploy record logs a rollback that never
+ * happened.
+ */
+async function withFreshRead(read, act) {
+  for (let attempt = 0; attempt <= READ_REDOS; attempt += 1) {
+    const before = ledgerLength();
+    const observed = await read();
+    const result = locked((ctx) => {
+      if (ledgerLength() !== before) return MOVED;
+      return act(ctx, observed);
+    });
+    if (result !== MOVED) return result;
+  }
+  throw new Exit(4, "BUSY: the ledger moved during every Netlify read; nothing was acted on");
+}
+
+async function cmdReconcile(flags) {
   only(flags, []);
   readUnlocked();
-  const published = readPublished();
-  locked((ctx) => {
-    applyObservation(ctx, published);
+  const gate = await gateState();
+  process.stdout.write(gate.ok ? `gate on, running from ${gate.sourceSha}\n` : `GATE OFF: ${gate.why}\n`);
+  await withFreshRead(published, (ctx, site) => {
+    applyObservation(ctx, site);
     if (ctx.state.openHalts.length > 0) throw halted(ctx.state);
-    process.stdout.write(`reconciled: published ${published.id} is current\n`);
+    process.stdout.write(`reconciled: published ${site.id} is current\n`);
   });
 }
 
@@ -409,7 +494,7 @@ function eligibleLiveDeploy(state, deploy) {
   return Boolean(cur.rollback || cur.sha === null);
 }
 
-function cmdClaim(flags) {
+async function cmdClaim(flags) {
   only(flags, ["lane", "sha", "deploy", "kind", "data-version"]);
   const lane = need(flags, "lane");
   const kind = need(flags, "kind");
@@ -417,9 +502,8 @@ function cmdClaim(flags) {
   if (!KINDS.has(kind)) throw refuse(`unknown kind ${kind}`);
   if (Boolean(flags.sha) === Boolean(flags.deploy)) throw refuse("exactly one of --sha, --deploy");
   readUnlocked();
-  const published = readPublished();
-  locked((ctx) => {
-    const newHalt = applyObservation(ctx, published);
+  await withFreshRead(published, (ctx, site) => {
+    const newHalt = applyObservation(ctx, site);
     if (newHalt) throw halted(ctx.state);
     const { state } = ctx;
     const cur = state.current;
@@ -491,17 +575,43 @@ function cmdRelease(flags) {
   });
 }
 
-function cmdTakeover(flags) {
+/**
+ * Takeover's in-flight rule: the candidate's own deploy still building is adopted;
+ * anything else in flight halts until `ack-deploy`. Returns the adoption, or null.
+ */
+function settleInFlight(ctx, deploys, site) {
+  const blocking = classifyInFlight(deploys, site, ctx.state.stranded, nowMs());
+  let adopted = null;
+  let unresolved = false;
+  let newHalt = false;
+  for (const d of blocking) {
+    const ref = d.commit_ref ?? null;
+    if (ADOPTABLE.has(d.state) && ref && ref === ctx.state.holder?.sha) {
+      adopted = { sha: ref, deploy: d.id };
+      continue;
+    }
+    unresolved = true;
+    if (!ctx.state.openHalts.some((h) => h.kind === "unclassifiable" && h.deploy === d.id)) {
+      append(ctx, { type: "halt", reason: `deploy in flight (${d.state})`, deploy: d.id, sha: ref });
+      newHalt = true;
+    }
+  }
+  if (newHalt) announceHalt();
+  if (unresolved) throw halted(ctx.state);
+  return adopted;
+}
+
+async function cmdTakeover(flags) {
   only(flags, ["lane", "observed-token"]);
   const lane = need(flags, "lane");
   if (!LANES.has(lane)) throw refuse(`unknown lane ${lane}`);
   const observed = tokenFlag(flags, "observed-token");
   if (observed === null) throw refuse("--observed-token is required");
   readUnlocked();
-  const published = readPublished();
-  locked((ctx) => {
+  const read = async () => ({ site: await published(), deploys: await deploysList() });
+  await withFreshRead(read, (ctx, { site, deploys }) => {
     // An open halt does not block a takeover (a red waits on Lee, and sessions end); a new one does.
-    if (applyObservation(ctx, published)) throw halted(ctx.state);
+    if (applyObservation(ctx, site)) throw halted(ctx.state);
     const { state, lease } = ctx;
     if (!fs.existsSync(leaseDir()) || !state.held || !lease) throw refuse("no lease to take over");
     if (observed !== state.token) {
@@ -509,8 +619,11 @@ function cmdTakeover(flags) {
     }
     const age = nowMs() - Date.parse(lease.ts);
     if (!(age > STALE_MS)) throw refuse(`lease is ${Math.round(age / 1000)} s old, not past 2 h`);
+    const adopted = settleInFlight(ctx, deploys, site);
     const token = nextToken(ctx);
-    append(ctx, { type: "takeover", token, lane, observed_token: observed });
+    const rec = { type: "takeover", token, lane, observed_token: observed };
+    if (adopted) rec.adopted = adopted;
+    append(ctx, rec);
     crashAt("takeover-after-append");
     // Rename over lease.json; the directory stays, so a loser cannot remove a successor's lease.
     writeLease({ lane, sha: state.holder?.sha ?? null, kind: state.holder?.kind ?? null, token, ts: nowIso() });
@@ -530,7 +643,7 @@ function cmdRequest(flags) {
     fence(ctx, token);
     const { holder, request } = ctx.state;
     if (sha !== holder.sha) throw refuse(`--sha ${sha} differs from the lease's ${holder.sha}`);
-    if (request && request.approval === approval && request.parent === parent && request.checks === checks) {
+    if (request && request.token === token && request.approval === approval && request.parent === parent && request.checks === checks) {
       process.stdout.write("request unchanged\n");
       return;
     }
@@ -539,13 +652,13 @@ function cmdRequest(flags) {
   });
 }
 
-function cmdRecordPush(flags) {
+async function cmdRecordPush(flags) {
   only(flags, ["token", "sha"]);
   const token = tokenFlag(flags);
   if (token === null) throw refuse("--token is required");
   const sha = need(flags, "sha");
   readUnlocked();
-  const origin = liveOriginMain();
+  const origin = await liveOriginMain();
   locked((ctx) => {
     fence(ctx, token);
     const { holder } = ctx.state;
@@ -682,7 +795,10 @@ function cmdRecordRollback(flags) {
       process.stdout.write("rollback already recorded\n");
       return;
     }
-    if (onCurrent && !cur.rollback && !cur.acked) throw refuse(`${deploy} is the current deploy, not a rollback`);
+    // An ack still answering its halt may gain a rollback's words; anything else current never rolled back.
+    if (onCurrent && !cur.rollback && !(cur.acked && liveDoorOpen(ctx.state))) {
+      throw refuse(`${deploy} is the current deploy, not a rollback`);
+    }
     const known = knownDeploySha(ctx.records, deploy);
     if (!known) throw refuse(`the ledger has never recorded deploy ${deploy}`);
     append(ctx, { type: "rollback", deploy, sha: known.sha, lee });
@@ -691,14 +807,14 @@ function cmdRecordRollback(flags) {
   });
 }
 
-function cmdAckDeploy(flags) {
+async function cmdAckDeploy(flags) {
   only(flags, ["deploy", "lee"]);
   const deploy = need(flags, "deploy");
   const lee = words(flags, "lee");
   readUnlocked();
-  const published = readPublished();
+  const site = await published();
   locked((ctx) => {
-    const isPublished = published.id === deploy;
+    const isPublished = site.id === deploy;
     const { current, stranded } = ctx.state;
     if (isPublished && current.deploy === deploy && current.acked) {
       process.stdout.write("already acked\n");
@@ -710,7 +826,7 @@ function cmdAckDeploy(flags) {
       return;
     }
     const rec = { type: "ack-deploy", deploy, lee, published: isPublished };
-    rec.sha = isPublished ? (published.commit_ref ?? null) : null;
+    rec.sha = isPublished ? (site.commit_ref ?? null) : null;
     append(ctx, rec);
     noticeLee("ack-deploy", lee);
     process.stdout.write(
@@ -807,17 +923,13 @@ function summaryFor(records, sha) {
   return `sha=${sha} deploy=${deploys.join(",") || "none"} data_version=${claim?.data_version ?? "none"} guards=${guards.join(",") || "none"}`;
 }
 
-function originHandoff() {
-  const fetched = spawnSync("git", ["fetch", "--quiet", "origin", "refs/heads/main"], {
-    encoding: "utf8",
-    timeout: Number(seam("OC_RELEASE_READ_TIMEOUT_MS") ?? READ_TIMEOUT_MS),
-  });
-  if (fetched.error || fetched.status !== 0) {
-    throw new Exit(1, "READ FAILED: could not fetch origin main");
-  }
-  const shown = spawnSync("git", ["show", "FETCH_HEAD:.claude/handoff.md"], { encoding: "utf8" });
+async function originHandoff() {
+  const dir = repoDir();
+  const fetched = await git(dir, ["fetch", "--quiet", "origin", "refs/heads/main"]);
+  if (!fetched.ok) throw new Exit(1, "READ FAILED: could not fetch origin main");
+  const shown = await git(dir, ["show", "FETCH_HEAD:.claude/handoff.md"]);
   // A branch with no handoff.md holds no records, so every release is unrecorded.
-  return shown.status === 0 ? shown.stdout : "";
+  return shown.ok ? shown.stdout.toString("utf8") : "";
 }
 
 function shippedShas(records) {
@@ -835,7 +947,7 @@ function shippedShas(records) {
   return shas;
 }
 
-function cmdSummary(flags) {
+async function cmdSummary(flags) {
   only(flags, ["sha", "unrecorded"]);
   if (Boolean(flags.sha) === Boolean(flags.unrecorded)) throw refuse("exactly one of --sha, --unrecorded");
   const { records } = readUnlocked();
@@ -843,15 +955,377 @@ function cmdSummary(flags) {
     process.stdout.write(`${summaryFor(records, flags.sha)}\n`);
     return;
   }
-  const handoff = originHandoff();
+  const handoff = await originHandoff();
   for (const sha of shippedShas(records)) {
     if (!handoff.includes(sha)) process.stdout.write(`${summaryFor(records, sha)}\n`);
   }
 }
 
+/* ---------- check-push ---------- */
+
+/** The bound corrective: authorized for exactly this SHA, unconsumed, and the holder's own. */
+function boundCorrective(state, pushed) {
+  const auth = pushed ? state.correctives[pushed] : null;
+  return Boolean(auth && !auth.consumed && state.holder?.kind === "corrective" && state.holder.sha === pushed);
+}
+
+/** Why P1 fails, or null. The request must be un-pushed, under this token, and under an hour old. */
+function requestProblem(state, token) {
+  if (token === null || token !== state.token || !state.held) {
+    return `token ${token ?? "absent"} is not the current lease (ledger token ${state.token})`;
+  }
+  const { request } = state;
+  if (!request) return "no un-pushed request";
+  if (request.token !== token) return `the request was made under token ${request.token}, not ${token}`;
+  if (state.holder?.pushed) return "the candidate has already been pushed";
+  if (!(nowMs() - Date.parse(request.ts) < REQUEST_MAX_AGE_MS)) {
+    return "the request is 60 minutes old or more; ask Lee again";
+  }
+  return null;
+}
+
+async function ancestorProblem(dir, parent, pushed) {
+  if (!SHA_RE.test(parent ?? "") || !SHA_RE.test(pushed ?? "")) return `cannot compare ${parent} and ${pushed}`;
+  const run = await git(dir, ["merge-base", "--is-ancestor", parent, pushed]);
+  return run.ok ? null : `parent ${parent} is not an ancestor of ${pushed}`;
+}
+
+const settledRead = (promise) => promise.then((value) => ({ value }), (error) => ({ error }));
+
+/** Writes nothing. Every failed predicate is reported; any failed read is NO-GO. */
+async function cmdCheckPush(flags) {
+  only(flags, ["token", "pushed-sha", "remote-sha"]);
+  let snap;
+  try {
+    snap = readUnlocked();
+  } catch (err) {
+    if (err instanceof Exit) throw new Exit(err.code, `NO-GO\n${err.message}`);
+    throw err;
+  }
+  const { state } = snap;
+  const token = /^[0-9]+$/.test(flags.token ?? "") ? Number(flags.token) : null;
+  const dir = repoDir();
+  const { request } = state;
+
+  let pushed = flags["pushed-sha"] ?? null;
+  let headFailed = null;
+  if (pushed === null) {
+    const head = await git(process.cwd(), ["rev-parse", "HEAD"]);
+    if (head.ok) pushed = text(head);
+    else headFailed = head.why;
+  }
+
+  const [origin, site, deploys, gate, ancestor] = await Promise.all([
+    readOriginMain(dir),
+    settledRead(published()),
+    settledRead(deploysList()),
+    gateState(),
+    request ? ancestorProblem(dir, request.parent, pushed) : null,
+  ]);
+
+  const failures = [];
+  const fail = (id, why) => failures.push(`${id}: ${why}`);
+
+  const p1 = requestProblem(state, token);
+  if (p1) fail("P1", p1);
+
+  if (headFailed) fail("P2", `could not read HEAD (${headFailed})`);
+  else if (!request) fail("P2", "no request to compare the pushed SHA with");
+  else {
+    if (pushed !== request.sha) fail("P2", `pushing ${pushed}, but the request names ${request.sha}`);
+    if (ancestor) fail("P2", ancestor);
+  }
+
+  if (origin.failed || !origin.sha) fail("P3", `live origin main unreadable (${origin.failed ?? "empty"})`);
+  else {
+    if (!request) fail("P3", "no request names a parent");
+    else if (origin.sha !== request.parent) fail("P3", `live origin main is ${origin.sha}, not the parent ${request.parent}`);
+    if (flags["remote-sha"] !== undefined && flags["remote-sha"] !== origin.sha) {
+      fail("P3", `the push expects origin at ${flags["remote-sha"]}, live is ${origin.sha}`);
+    }
+  }
+
+  if (site.error || deploys.error) {
+    fail("P4", `in-flight read failed (${(deploys.error ?? site.error).message})`);
+  } else {
+    const inFlight = classifyInFlight(deploys.value, site.value, state.stranded, nowMs());
+    if (inFlight.length > 0) {
+      fail("P4", `deploy in flight: ${inFlight.map((d) => `${d.id} (${d.state})`).join(", ")}; if it is stuck, ack-deploy on Lee's word`);
+    }
+  }
+  if (site.value?.locked === true) {
+    fail("P4", `published deploy ${site.value.id} is locked; netlify api unlockDeploy on Lee's word`);
+  }
+
+  if (site.error) fail("P5", `published read failed (${site.error.message})`);
+  else if (site.value.id !== state.current?.deploy) {
+    fail("P5", `published ${site.value.id} is not the ledger's current ${state.current?.deploy}`);
+  }
+
+  const corrective = boundCorrective(state, pushed);
+  const predecessor = state.current ? verdictOf(state, state.current.sha, state.current.deploy) : null;
+  if (predecessor !== "green" && !corrective) {
+    fail("P6", `predecessor is ${predecessor ?? "pending"}, and no corrective is bound to this SHA`);
+  }
+
+  const passable = corrective ? new Set(["red", "unverified", "build-failed"]) : new Set();
+  const blockingHalts = state.openHalts.filter((h) => !passable.has(h.kind));
+  if (blockingHalts.length > 0) {
+    fail("P7", `open halt: ${blockingHalts.map((h) => `${h.kind} sha=${h.sha ?? "none"} deploy=${h.deploy ?? "none"}`).join("; ")}`);
+  }
+
+  if (!gate.ok) fail("P8", `the gate is off: ${gate.why}`);
+
+  if (failures.length > 0) throw new Exit(1, `NO-GO\n${failures.join("\n")}`);
+  process.stdout.write(`GO sha=${pushed} parent=${request.parent} rollback=${state.knownGood?.deploy ?? "none"}\n`);
+}
+
+/* ---------- await-live ---------- */
+
+function metaBuildId(html) {
+  const tag = /<meta\b[^>]*\bname="oc-build"[^>]*>/.exec(html);
+  return tag ? (/\bcontent="([^"]*)"/.exec(tag[0])?.[1] ?? null) : null;
+}
+
+/** The site's own oc-build tag, or null on any failure: a poll that learned nothing. */
+async function fetchBuildId() {
+  const url = seam("OC_RELEASE_SITE_URL") ?? DEFAULT_SITE_URL;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(readTimeoutMs()) });
+    return res.ok ? metaBuildId(await res.text()) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function observeCandidate(sha, source) {
+  const [site, deploys, buildId] = await Promise.all([
+    settledRead(published()),
+    settledRead(deploysList()),
+    source === "meta" ? fetchBuildId() : null,
+  ]);
+  const pub = site.value ?? null;
+  const live = Boolean(pub && pub.commit_ref === sha && pub.state === "ready");
+  const newest = (deploys.value ?? []).find((d) => d.context === "production" && d.commit_ref === sha);
+  return {
+    live,
+    deployId: live ? pub.id : null,
+    match: live && (source !== "meta" || buildId === sha),
+    failed: !live && newest?.state === "error" ? newest.id : null,
+  };
+}
+
+function recordLive(ctx, sha, deployId) {
+  if (ctx.state.current?.deploy !== deployId) {
+    append(ctx, { type: "deploy", deploy: deployId, sha, source: "await-live" });
+  }
+}
+
+async function cmdAwaitLive(flags) {
+  only(flags, ["token", "sha", "source", "timeout-min"]);
+  const token = tokenFlag(flags);
+  if (token === null) throw refuse("--token is required");
+  const sha = need(flags, "sha");
+  const source = need(flags, "source");
+  if (source !== "netlify" && source !== "meta") throw refuse(`unknown source ${source}`);
+  const minutes = flags["timeout-min"] === undefined ? 10 : Number(flags["timeout-min"]);
+  if (!(minutes > 0)) throw refuse("--timeout-min must be a positive number of minutes");
+  const fenced = (ctx) => {
+    fence(ctx, token);
+    if (sha !== ctx.state.holder.sha) throw refuse(`--sha ${sha} differs from the lease's ${ctx.state.holder.sha}`);
+  };
+  locked(fenced);
+  // A real monotonic clock, never OC_RELEASE_NOW: this deadline is about waiting.
+  const deadline = performance.now() + minutes * 60_000;
+  const pollMs = Number(seam("OC_RELEASE_POLL_MS") ?? DEFAULT_POLL_MS);
+  for (;;) {
+    const seen = await observeCandidate(sha, source);
+    if (seen.failed) {
+      locked((ctx) => {
+        fenced(ctx);
+        if (!ctx.state.openHalts.some((h) => h.kind === "build-failed" && h.sha === sha)) {
+          append(ctx, { type: "build-failed", sha, deploy: seen.failed });
+          announceHalt();
+        }
+      });
+      throw haltedExit(`the build of ${sha} failed; production is unchanged; the known-good deploy is still live`);
+    }
+    if (seen.match) {
+      locked((ctx) => {
+        fenced(ctx);
+        recordLive(ctx, sha, seen.deployId);
+      });
+      process.stdout.write(`live deploy=${seen.deployId} sha=${sha}\n`);
+      return;
+    }
+    if (performance.now() >= deadline) {
+      locked((ctx) => {
+        fenced(ctx);
+        if (seen.deployId) recordLive(ctx, sha, seen.deployId);
+        const prev = verdictOf(ctx.state, sha, seen.deployId);
+        const transition = guardTransition(prev, "unverified", false);
+        if (transition === "refuse") throw new Exit(1, `await-live timed out; verdict ${prev} stands`);
+        if (transition === "ok") {
+          append(ctx, { type: "guard", sha, deploy: seen.deployId, result: "unverified", evidence: "await-live timeout" });
+          announceHalt();
+        }
+      });
+      throw haltedExit(`await-live timed out on ${sha}: unverified, deploy ${seen.deployId ?? "none"}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+}
+
+/* ---------- init and install ---------- */
+
+/** `init` and `install` refuse until ~/marvin ignores every state path. */
+async function requireIgnored() {
+  const root = override ? seam("OC_RELEASE_MARVIN_ROOT") : path.join(os.homedir(), "marvin");
+  if (!root) return; // Skipped under the override unless a fixture names a root.
+  for (const name of STATE_PATHS) {
+    const run = await git(root, ["check-ignore", "-q", `state/${name}`]);
+    if (!run.ok) throw refuse(`${root} does not ignore state/${name}; commit the ignore patterns first`);
+  }
+}
+
+async function cmdInit(flags) {
+  only(flags, ["evidence"]);
+  const evidence = words(flags, "evidence");
+  if (fs.existsSync(ledgerPath())) throw refuse("a ledger already exists");
+  await requireIgnored();
+  const installed = readInstalled();
+  if (!installed) throw refuse("run install first: genesis carries the first install's words");
+  const [site, deploys] = await Promise.all([published(), deploysList()]);
+  const inFlight = classifyInFlight(deploys, site, [], nowMs());
+  if (inFlight.length > 0) throw refuse(`a deploy is in flight: ${inFlight.map((d) => d.id).join(", ")}`);
+  withMutex(mutexDir(), () => {
+    if (fs.existsSync(ledgerPath())) throw refuse("a ledger already exists");
+    const rec = {
+      v: 1,
+      ts: nowIso(),
+      type: "genesis",
+      token: 1,
+      deploy: site.id,
+      sha: site.commit_ref ?? null,
+      evidence,
+      install: { source_sha: installed.source_sha, lee: installed.lee },
+    };
+    const fd = fs.openSync(ledgerPath(), "wx");
+    try {
+      fs.writeSync(fd, `${JSON.stringify(rec)}\n`);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    process.stdout.write(`initialized: known-good ${site.id}\n`);
+  });
+}
+
+const LIB_FILES = [
+  ["scripts/release-ledger.mjs", "release-ledger.mjs"],
+  ["scripts/lib/dir-mutex.mjs", "lib/dir-mutex.mjs"],
+  ["scripts/lib/release-state.mjs", "lib/release-state.mjs"],
+  ["scripts/lib/netlify-read.mjs", "lib/netlify-read.mjs"],
+];
+const HOOK_FILE = ["scripts/hooks/pre-push", "hooks/pre-push"];
+/** The hook lands last: while a copy is half done, the old hook still gates. */
+const TOOL_FILES = [...LIB_FILES, HOOK_FILE];
+
+/** Each path's bytes at this commit, or null if any is missing. Objects only, never the tree. */
+async function readToolObjects(dir, sha) {
+  const out = [];
+  for (const [src, dest] of TOOL_FILES) {
+    const run = await git(dir, ["show", `${sha}:${src}`]);
+    if (!run.ok) return null;
+    out.push({ dest, bytes: run.stdout });
+  }
+  return out;
+}
+
+/** Live origin main's exact SHA; the first install alone may use HEAD. */
+async function installSource(dir, first) {
+  const origin = await readOriginMain(dir);
+  if (origin.failed) throw new Exit(1, `READ FAILED: live origin main (${origin.failed})`);
+  if (origin.sha) {
+    const fetched = await git(dir, ["fetch", "--quiet", "origin", "refs/heads/main"]);
+    if (!fetched.ok) throw new Exit(1, `READ FAILED: could not fetch origin main (${fetched.why})`);
+    const files = await readToolObjects(dir, origin.sha);
+    if (files) return { sha: origin.sha, files };
+  }
+  if (!first) throw refuse(`origin main ${origin.sha ?? "(empty)"} lacks the tool paths`);
+  const head = await git(process.cwd(), ["rev-parse", "HEAD"]);
+  if (!head.ok) throw refuse(`cannot read HEAD (${head.why})`);
+  const files = await readToolObjects(dir, text(head));
+  if (!files) throw refuse(`HEAD ${text(head)} lacks the tool paths`);
+  return { sha: text(head), files };
+}
+
+function placeFile(dest, bytes) {
+  const full = path.join(toolDir(), dest);
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  const tmp = `${full}.tmp.${process.pid}`;
+  fs.writeFileSync(tmp, bytes);
+  fs.chmodSync(tmp, 0o755);
+  fs.renameSync(tmp, full);
+}
+
+function recordInstall(sourceSha, lee) {
+  let records;
+  try {
+    records = parseLedger(ledgerPath());
+  } catch (err) {
+    // A bad tool must be replaceable: a bad or absent ledger does not stop the install.
+    if (!(err instanceof LedgerError)) throw err;
+    process.stderr.write(`note: no install record (ledger ${err.kind})\n`);
+    return;
+  }
+  const last = records.findLast((r) => r.type === "install") ?? records.find((r) => r.install)?.install;
+  if (last?.source_sha === sourceSha && last.lee === lee) return;
+  append({ records, state: fold(records) }, { type: "install", source_sha: sourceSha, lee });
+}
+
+async function cmdInstall(flags) {
+  only(flags, ["lee"]);
+  const lee = words(flags, "lee");
+  const probe = await git(process.cwd(), ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  if (!probe.ok) throw refuse("install runs from inside the repo it gates");
+  const commonDir = text(probe);
+  if (override && !isInside(resolveReal(commonDir), resolveReal(path.dirname(path.resolve(override))))) {
+    throw refuse(`under the override the repo must sit under the temp root; ${commonDir} does not`);
+  }
+  await requireIgnored();
+  const source = await installSource(commonDir, readInstalled() === null);
+  withMutex(mutexDir(), () => {
+    if (fs.existsSync(leaseDir())) {
+      throw refuse(
+        `a lease is held at ${leaseDir()}: the tool that authorizes a push does not change under the push. Release it, or on Lee's word remove the lease dir`,
+      );
+    }
+    source.files.forEach(({ dest, bytes }, i) => {
+      placeFile(dest, bytes);
+      if (i === 0) crashAt("install-mid-copy");
+    });
+    fs.accessSync(path.join(hooksDir(), "pre-push"), fs.constants.X_OK);
+    const set = spawnSync("git", ["-C", commonDir, "config", "core.hooksPath", hooksDir()], {
+      env: gitEnv(),
+      encoding: "utf8",
+      timeout: readTimeoutMs(),
+    });
+    if (set.error || set.status !== 0) throw new Exit(1, `could not set core.hooksPath: ${set.stderr ?? set.error}`);
+    const tmp = `${installedFile()}.tmp.${process.pid}`;
+    fs.writeFileSync(tmp, JSON.stringify({ source_sha: source.sha, lee, common_dir: commonDir, ts: nowIso() }));
+    fs.renameSync(tmp, installedFile());
+    recordInstall(source.sha, lee);
+    noticeLee("install", lee);
+    process.stdout.write(`installed from ${source.sha}; core.hooksPath is ${hooksDir()}\n`);
+  });
+}
+
 /* ---------- entry ---------- */
 
 const COMMANDS = {
+  install: cmdInstall,
+  init: cmdInit,
   status: cmdStatus,
   summary: cmdSummary,
   claim: cmdClaim,
@@ -859,7 +1333,9 @@ const COMMANDS = {
   reconcile: cmdReconcile,
   takeover: cmdTakeover,
   request: cmdRequest,
+  "check-push": cmdCheckPush,
   "record-push": cmdRecordPush,
+  "await-live": cmdAwaitLive,
   guard: cmdGuard,
   "authorize-corrective": cmdAuthorizeCorrective,
   "record-rollback": cmdRecordRollback,
@@ -867,21 +1343,16 @@ const COMMANDS = {
   "repair-note": cmdRepairNote,
 };
 
-function main(argv) {
+async function main(argv) {
   const [command, ...rest] = argv;
   guardPaths(command);
   if (!command || command === "--help") {
     process.stdout.write(HELP);
     return;
   }
-  // Fails closed until P0b-3 builds it: nothing may read this as a GO.
-  if (command === "check-push") throw new Exit(1, "NO-GO: check-push is not built yet (P0b-3)");
-  if (["init", "install", "await-live"].includes(command)) {
-    throw refuse(`${command} is not built yet (P0b-3)`);
-  }
-  const run = COMMANDS[command];
+  const run = Object.hasOwn(COMMANDS, command) ? COMMANDS[command] : null;
   if (!run) throw refuse(`unknown command ${command}`);
-  run(parseArgs(rest));
+  await run(parseArgs(rest));
 }
 
 function exitCodeFor(err) {
@@ -905,7 +1376,7 @@ function exitCodeFor(err) {
 
 let code = 0;
 try {
-  main(process.argv.slice(2));
+  await main(process.argv.slice(2));
 } catch (err) {
   code = exitCodeFor(err);
 }

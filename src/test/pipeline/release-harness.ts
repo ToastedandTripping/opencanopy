@@ -11,6 +11,9 @@ import type { Readable } from "node:stream";
 
 export const CLI = path.resolve(__dirname, "../../../scripts/release-ledger.mjs");
 export const MUTEX_LIB = path.resolve(__dirname, "../../../scripts/lib/dir-mutex.mjs");
+const SCRIPTS = path.resolve(__dirname, "../../../scripts");
+/** Every path `install` copies, relative to scripts/. Read from disk so a mutant is what gets installed. */
+export const TOOL_PATHS = ["release-ledger.mjs", "lib/dir-mutex.mjs", "lib/release-state.mjs", "lib/netlify-read.mjs", "hooks/pre-push"];
 
 export const T0 = Date.parse("2026-11-01T12:00:00.000Z");
 export const HOUR = 60 * 60 * 1000;
@@ -67,6 +70,7 @@ export function cleanupUniverses(): void {
 
 export interface Git {
   dir: string;
+  origin: string;
   git(...args: string[]): string;
   commit(file: string, content: string): string;
   pushMain(): void;
@@ -84,7 +88,11 @@ export class Universe {
   readonly mutexDir = path.join(this.stateDir, "opencanopy-release.mutex");
   readonly notifyLog = path.join(this.root, "notify.log");
   readonly notifyFail = path.join(this.root, "notify-fail");
+  readonly toolDir = path.join(this.stateDir, "opencanopy-release-tool");
+  readonly hookPath = path.join(this.toolDir, "hooks", "pre-push");
   private readonly siteFile = path.join(this.root, "site.json");
+  private readonly deploysFile = path.join(this.root, "deploys.json");
+  private readonly netlifyScriptFile = path.join(this.root, "netlify-script.sh");
   private evidenceCount = 0;
   /** The fake clock; each CLI run sees it, then it moves one second. */
   now = T0;
@@ -95,7 +103,12 @@ export class Universe {
     fs.mkdirSync(this.stateDir, { recursive: true });
     fs.mkdirSync(this.binDir, { recursive: true });
     const netlify = path.join(this.binDir, "netlify");
-    fs.writeFileSync(netlify, `#!/bin/sh\ncat '${this.siteFile}'\n`, { mode: 0o755 });
+    fs.writeFileSync(
+      netlify,
+      `#!/bin/sh\n[ -f '${this.netlifyScriptFile}' ] && . '${this.netlifyScriptFile}'\ncase "$2" in\n  listSiteDeploys) cat '${this.deploysFile}' ;;\n  *) cat '${this.siteFile}' ;;\nesac\n`,
+      { mode: 0o755 },
+    );
+    fs.writeFileSync(this.deploysFile, "[]");
     const notify = path.join(this.binDir, "notify");
     fs.writeFileSync(
       notify,
@@ -145,8 +158,26 @@ export class Universe {
 
   /** What the fake netlify bin answers as the published deploy. */
   publish(id: string, commitRef: string | null, extra: Record<string, unknown> = {}): void {
-    const published = { id, state: "ready", commit_ref: commitRef, context: "production", ...extra };
+    const published = {
+      id,
+      state: "ready",
+      commit_ref: commitRef,
+      context: "production",
+      created_at: new Date(this.now).toISOString(),
+      ...extra,
+    };
     fs.writeFileSync(this.siteFile, JSON.stringify({ published_deploy: published }));
+  }
+
+  /** What the fake netlify bin answers to listSiteDeploys. */
+  deploys(list: Array<Record<string, unknown>>): void {
+    fs.writeFileSync(this.deploysFile, JSON.stringify(list));
+  }
+
+  /** Shell sourced by the fake netlify bin before it answers; `$2` is the API method. */
+  netlifyScript(body: string | null): void {
+    if (body === null) fs.rmSync(this.netlifyScriptFile, { force: true });
+    else fs.writeFileSync(this.netlifyScriptFile, body);
   }
 
   /** The fixture's starting point. `init` itself arrives in P0b-3. */
@@ -285,7 +316,23 @@ export class Universe {
     const pushMain = () => {
       git("push", "--quiet", "origin", "HEAD:refs/heads/main");
     };
-    return { dir, git, commit, pushMain, head };
+    return { dir, origin, git, commit, pushMain, head };
+  }
+
+  /** Commits the real tool (the bytes on disk, so a mutant) into a fixture repo. */
+  commitTool(repo: Git): string {
+    for (const rel of TOOL_PATHS) {
+      const dest = path.join(repo.dir, "scripts", rel);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(path.join(SCRIPTS, rel), dest);
+    }
+    return repo.commit("app.txt", "base\n");
+  }
+
+  /** Real git in this universe's environment, so a hook sees the override. Returns the result. */
+  gitRun(cwd: string, args: string[], env: Record<string, string> = {}): RunResult {
+    const res = spawnSync("git", args, { cwd, env: asEnv(this.env({ env })), encoding: "utf8", timeout: 25_000 });
+    return toResult(res.status, res.stdout, res.stderr);
   }
 }
 

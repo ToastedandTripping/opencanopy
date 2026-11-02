@@ -2,11 +2,11 @@
 /**
  * P0b-2: ledger, lease, fencing. Every case runs the real CLI as a subprocess
  * against temp state and a fake HOME; assertions are on exit code, reason and
- * bytes, never timing. Build-failed and takeover-adoption records are seeded here
- * because their writers (`await-live`, adoption) arrive in P0b-3, as does `init`.
+ * bytes, never timing. Build-failed and takeover-adoption records are seeded here;
+ * their writers are exercised in release-check-push.test.ts.
  *
- * "Every halt reaches GO" asserts the ledger's half (no open halt, predecessor
- * green, a fresh claim and request succeed); `check-push` printing GO is P0b-3's.
+ * "Every halt reaches GO" ends on the real `check-push` printing GO, against a real
+ * fixture repo and installed gate.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -698,17 +698,26 @@ describe("transition table", () => {
   });
 });
 
-describe("every halt reaches GO (the ledger's half)", () => {
-  /** No open halt, predecessor green, and a new release can claim and request. */
+describe("every halt reaches GO", () => {
+  /** No open halt, predecessor green, and the next release gets a real GO. */
   function expectClear(u: Universe, heldToken?: number): void {
     const st = u.state();
     expect(st.open_halts).toEqual([]);
     expect(st.predecessor).toBe("green");
     if (heldToken !== undefined) expect(u.run(["release", "--token", String(heldToken)]).code).toBe(0);
-    const next = sha("ff");
+    const repo = u.repo();
+    const parent = u.commitTool(repo);
+    repo.pushMain();
+    const installed = u.run(["install", "--lee", LEE], { cwd: repo.dir });
+    expect(installed.code, installed.out).toBe(0);
+    const next = repo.commit("next.txt", "next\n");
     const token = u.claim(next);
-    const req = u.run(["request", "--token", String(token), "--sha", next, "--parent", G, "--approval", LEE, "--checks", "ok"]);
+    const req = u.run(["request", "--token", String(token), "--sha", next, "--parent", parent, "--approval", LEE, "--checks", "ok"]);
     expect(req.code, req.out).toBe(0);
+    const go = u.run(["check-push", "--token", String(token), "--pushed-sha", next]);
+    expect(go.code, go.out).toBe(0);
+    expect(go.stdout).toContain(`GO sha=${next}`);
+    expect(go.stdout).toContain(`rollback=${st.known_good.deploy}`);
   }
 
   it("red, holder alive: green with --lee", () => {
@@ -1109,6 +1118,107 @@ describe("doors refuse halts they do not own", () => {
     });
   });
 
+  describe("R1: a door shuts only for a later halt still open", () => {
+    function rolledBackThenStranded(): Universe {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      u.run(["release", "--token", String(token)]);
+      u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]);
+      u.publish("dep-genesis", G);
+      u.appendRecord({ type: "halt", token: u.state().token, reason: "in flight", deploy: "dep-y", sha: S2 });
+      expect(u.run(["ack-deploy", "--deploy", "dep-y", "--lee", LEE]).code).toBe(0);
+      expect(u.state().open_halts.map((h: { kind: string }) => h.kind)).toEqual(["red"]);
+      return u;
+    }
+
+    it("a rollback's door stays open after a later halt closed, and its green clears the red", () => {
+      const u = rolledBackThenStranded();
+      const claimed = u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]);
+      expect(claimed.code, claimed.out).toBe(0);
+      expect(u.guard("dep-genesis", G, "green", { token: u.state().token }).code).toBe(0);
+      expect(u.state().open_halts).toEqual([]);
+    });
+
+    it("an ack's door stays open after a later halt closed", () => {
+      const u = universe();
+      u.publish("dep-x", S);
+      u.run(["reconcile"]);
+      u.run(["ack-deploy", "--deploy", "dep-x", "--lee", LEE]);
+      u.appendRecord({ type: "halt", token: u.state().token, reason: "in flight", deploy: "dep-y", sha: S2 });
+      u.run(["ack-deploy", "--deploy", "dep-y", "--lee", LEE]);
+      const claimed = u.run(["claim", "--lane", "M", "--sha", S, "--kind", "behaviour"]);
+      expect(claimed.code, claimed.out).toBe(0);
+      expect(u.guard("dep-x", S, "green", { token: u.state().token }).code).toBe(0);
+      expect(u.state().open_halts).toEqual([]);
+    });
+
+    it("a later halt still open shuts the door, and closing it reopens the same door", () => {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      u.run(["release", "--token", String(token)]);
+      u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]);
+      u.publish("dep-genesis", G);
+      u.appendRecord({ type: "halt", token: u.state().token, reason: "in flight", deploy: "dep-y", sha: S2 });
+      refused(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]));
+      u.run(["ack-deploy", "--deploy", "dep-y", "--lee", LEE]);
+      expect(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]).code).toBe(0);
+    });
+
+    it("a green on the door still cannot close the later halt it did not answer", () => {
+      const u = universe();
+      const token = u.deployed(S, "dep-a");
+      u.guard("dep-a", S, "red", { token });
+      u.run(["record-rollback", "--token", String(token), "--deploy", "dep-genesis", "--lee", LEE]);
+      u.publish("dep-genesis", G);
+      u.appendRecord({ type: "halt", token, reason: "in flight", deploy: "dep-y", sha: S2 });
+      expect(u.guard("dep-genesis", G, "green", { token }).code).toBe(0);
+      expect(u.state().open_halts.map((h: { deploy: string }) => h.deploy)).toEqual(["dep-y"]);
+    });
+  });
+
+  describe("R2: record-rollback needs a rollback, or an ack still answering its halt", () => {
+    function spentAck(): { u: Universe; held: number } {
+      const u = universe();
+      u.publish("dep-x", S);
+      u.run(["reconcile"]);
+      u.run(["ack-deploy", "--deploy", "dep-x", "--lee", LEE]);
+      const acked = u.claim(S);
+      u.guard("dep-x", S, "green", { token: acked });
+      u.run(["release", "--token", String(acked)]);
+      return { u, held: u.claim(S2) };
+    }
+
+    it("a spent ack is refused, nothing recorded, no notice, and the later halt stays open", () => {
+      const { u, held } = spentAck();
+      u.appendRecord({ type: "guard", token: held, sha: S2, deploy: null, result: "unverified", evidence: "timeout" });
+      const before = u.bytes();
+      const noticed = fs.existsSync(u.notifyLog) ? fs.readFileSync(u.notifyLog, "utf8") : "";
+      refused(u.run(["record-rollback", "--token", String(held), "--deploy", "dep-x", "--lee", "words about something else"]));
+      expect(u.bytes()).toBe(before);
+      expect(fs.readFileSync(u.notifyLog, "utf8")).toBe(noticed);
+      expect(u.guard("dep-x", S, "green", { token: held }).code).toBe(0);
+      expect(u.state().open_halts.map((h: { sha: string }) => h.sha)).toEqual([S2]);
+    });
+
+    it("a spent ack with no halt open is refused too", () => {
+      const { u, held } = spentAck();
+      refused(u.run(["record-rollback", "--token", String(held), "--deploy", "dep-x", "--lee", LEE]));
+    });
+
+    it("an unspent ack with a later halt open is refused until that halt closes", () => {
+      const u = universe();
+      u.publish("dep-x", S);
+      u.run(["reconcile"]);
+      u.run(["ack-deploy", "--deploy", "dep-x", "--lee", LEE]);
+      u.appendRecord({ type: "halt", token: u.state().token, reason: "in flight", deploy: "dep-y", sha: S2 });
+      refused(u.run(["record-rollback", "--deploy", "dep-x", "--lee", LEE]));
+      u.run(["ack-deploy", "--deploy", "dep-y", "--lee", LEE]);
+      expect(u.run(["record-rollback", "--deploy", "dep-x", "--lee", LEE]).code).toBe(0);
+    });
+  });
+
   describe("W1: rolling back to an older green has a door in either order", () => {
     function olderGreenUnclassifiable(): Universe {
       const u = universe();
@@ -1502,10 +1612,11 @@ describe("path safety", () => {
     expect(res.code, res.out).toBe(2);
   });
 
-  it("check-push never reads as a GO before P0b-3 builds it", () => {
+  it("check-push in a universe with no lease and no gate reads NO-GO, never a GO", () => {
     const u = universe();
     const res = u.run(["check-push", "--token", "1"]);
     expect(res.code).toBe(1);
     expect(res.out).toContain("NO-GO");
+    expect(res.stdout).not.toContain("GO sha=");
   });
 });

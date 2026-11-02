@@ -97,11 +97,13 @@ const deployKey = (id) => `deploy:${id}`;
 
 /**
  * May a claim come in on the current deploy itself, bypassing a halt? Only for a
- * door still answering what opened it: not once green, not after a later halt.
+ * door still answering what opened it: not once green, and not while a later halt
+ * stays open. A later halt that has already closed says nothing about this door.
  */
 export function liveDoorOpen(state) {
   const cur = state.current;
-  return Boolean(cur && (cur.acked || (cur.rollback && cur.worded)) && !cur.spent && cur.doorAt === state.haltSeq);
+  if (!cur || !(cur.acked || (cur.rollback && cur.worded)) || cur.spent) return false;
+  return !state.openHalts.some((h) => h.id > cur.doorAt);
 }
 
 export function verdictOf(state, sha, deploy) {
@@ -246,14 +248,15 @@ export function fold(records) {
         if (rec.sha && !rec.live) s.registrations[rec.sha] = { abandoned: false };
         break;
       case "takeover":
+        // A queued request stays visible under its own token; P1 refuses it for the new owner.
         s.held = true;
-        s.request = null;
         s.holder = {
           ...s.holder,
           token: rec.token,
           lane: rec.lane,
           pushed: Boolean(s.holder?.pushed || rec.adopted),
         };
+        if (rec.adopted && s.correctives[rec.adopted.sha]) s.correctives[rec.adopted.sha].consumed = true;
         break;
       case "request":
         s.request = {
