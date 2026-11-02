@@ -163,7 +163,13 @@ describe("P3", () => {
     const r = ready();
     const cached = r.repo.git("rev-parse", "refs/remotes/origin/main");
     expect(cached).toBe(r.parent);
-    expect(r.u.gitRun(r.repo.dir, ["push", "--no-verify", r.repo.origin, `${r.tip}:refs/heads/main`]).code).toBe(0);
+    // Origin advances without this checkout pushing: the bare repo pulls the tip itself.
+    // A push from here, even to origin's URL rather than its name, refreshes
+    // refs/remotes/origin/main on git >= 2.56 (RelNotes 2.56.0: "When the push remote is
+    // specified as a URL, the fetch refspec of a uniquely matching configured remote is
+    // now used to find and update the remote-tracking branch"), which left no stale cache.
+    expect(r.u.gitRun(r.repo.origin, ["fetch", "--quiet", r.repo.dir, "refs/heads/main:refs/heads/main"]).code).toBe(0);
+    expect(r.repo.git("--git-dir", r.repo.origin, "rev-parse", "refs/heads/main")).toBe(r.tip);
     expect(r.repo.git("rev-parse", "refs/remotes/origin/main")).toBe(cached);
     onlyFails(r.check(), "P3");
   });
