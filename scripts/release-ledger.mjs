@@ -363,17 +363,12 @@ function noticeLee(door, words) {
 /** Best effort and never blocking; runs after the mutex is released. */
 function flushNotices() {
   for (const { payload, plain } of notices.splice(0)) {
-    let bin;
-    let args;
-    if (override) {
-      bin = seam("OC_RELEASE_NOTIFY_BIN");
-      if (!bin) continue;
-      args = [payload];
-    } else {
-      bin = process.execPath;
-      args = [path.join(os.homedir(), "marvin", "skills", "notify", "send.mjs"), payload];
-    }
-    const run = spawnSync(bin, args, { timeout: NOTIFY_TIMEOUT_MS, stdio: "ignore" });
+    const [bin, ...lead] = override
+      ? [seam("OC_RELEASE_NOTIFY_BIN")]
+      : [process.execPath, path.join(os.homedir(), "marvin", "skills", "notify", "send.mjs")];
+    if (!bin) continue;
+    // One argument list, so the real channel gets exactly the bytes the tests see.
+    const run = spawnSync(bin, [...lead, payload], { timeout: NOTIFY_TIMEOUT_MS, stdio: "ignore" });
     if (run.error || run.status !== 0) {
       process.stderr.write(`warning: notice to Lee failed; tell him directly: ${plain}\n`);
     }

@@ -805,6 +805,16 @@ describe("takeover", () => {
       expect(res.out).toContain("already current");
       expect(r.u.count("ack-deploy")).toBe(before);
     });
+
+    it("a red on the current deploy owes no ack: its door is Lee's words on the guard", () => {
+      const b = base();
+      const X = sha("ab");
+      const token = b.u.deployed(X, "dep-x");
+      expect(b.u.guard("dep-x", X, "red", { token }).code).toBe(0);
+      const res = b.u.run(["ack-deploy", "--deploy", "dep-x", "--lee", LEE]);
+      expect(res.code).toBe(2);
+      expect(res.out).toContain("already current");
+    });
   });
 });
 
