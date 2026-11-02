@@ -823,7 +823,10 @@ async function cmdAckDeploy(flags) {
       return;
     }
     // A deploy record can make a halted deploy current, and its halt closes only on an ack.
-    const owesAck = ctx.state.openHalts.some((h) => h.kind === "unclassifiable" && h.deploy === deploy);
+    // A worded rollback already answers that halt; an ack would replace it and drop Lee's words.
+    const owesAck =
+      !(current.rollback && current.worded) &&
+      ctx.state.openHalts.some((h) => h.kind === "unclassifiable" && h.deploy === deploy);
     if (isPublished && current.deploy === deploy && !owesAck) throw refuse(`${deploy} is already current`);
     if (!isPublished && stranded.includes(deploy)) {
       process.stdout.write("already acked\n");

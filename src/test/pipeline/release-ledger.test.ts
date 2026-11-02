@@ -1258,6 +1258,24 @@ describe("doors refuse halts they do not own", () => {
       expect(u.guard("dep-genesis", G, "green", { token: held }).code).toBe(0);
       expect(u.state().open_halts).toEqual([]);
     });
+
+    it("R3: after a worded record-rollback, ack-deploy is refused and the rollback still closes the red", () => {
+      const u = olderGreenUnclassifiable();
+      u.publish("dep-genesis", G);
+      u.run(["reconcile"]);
+      expect(u.run(["record-rollback", "--deploy", "dep-genesis", "--lee", LEE]).code).toBe(0);
+      const bytes = u.bytes();
+      const ack = u.run(["ack-deploy", "--deploy", "dep-genesis", "--lee", LEE]);
+      refused(ack);
+      expect(ack.out).toContain("already current");
+      expect(u.bytes()).toBe(bytes);
+      expect(u.state().current.rollback).toBe(true);
+      expect(u.run(["claim", "--lane", "M", "--deploy", "dep-genesis", "--kind", "behaviour"]).code).toBe(0);
+      const held = u.state().token;
+      expect(u.guard("dep-genesis", G, "green", { token: held }).code).toBe(0);
+      expect(u.state().open_halts).toEqual([]);
+      expect(u.state().known_good.deploy).toBe("dep-genesis");
+    });
   });
 
   it("W2: repair burns past the lease's token too, so it is never issued again", () => {
