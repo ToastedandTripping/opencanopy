@@ -349,26 +349,32 @@ async function gateState() {
 
 const notices = [];
 
+/** send.mjs defaults to parse_mode HTML and Telegram rejects over 4096, so words are escaped and capped. */
+const NOTICE_WORDS_MAX = 3900;
+const escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 function noticeLee(door, words) {
-  notices.push(`OpenCanopy release door "${door}" used. Lee's recorded words: "${words}"`);
+  const noticeText = (recorded) => `OpenCanopy release door "${door}" used. Lee's recorded words: "${recorded}"`;
+  const kept = words.length > NOTICE_WORDS_MAX ? `${words.slice(0, NOTICE_WORDS_MAX)} [cut here; the ledger has them all]` : words;
+  notices.push({ payload: noticeText(escapeHtml(kept)), plain: noticeText(words) });
 }
 
 /** Best effort and never blocking; runs after the mutex is released. */
 function flushNotices() {
-  for (const text of notices.splice(0)) {
+  for (const { payload, plain } of notices.splice(0)) {
     let bin;
     let args;
     if (override) {
       bin = seam("OC_RELEASE_NOTIFY_BIN");
       if (!bin) continue;
-      args = [text];
+      args = [payload];
     } else {
       bin = process.execPath;
-      args = [path.join(os.homedir(), "marvin", "skills", "notify", "send.mjs"), text];
+      args = [path.join(os.homedir(), "marvin", "skills", "notify", "send.mjs"), payload];
     }
     const run = spawnSync(bin, args, { timeout: NOTIFY_TIMEOUT_MS, stdio: "ignore" });
     if (run.error || run.status !== 0) {
-      process.stderr.write(`warning: notice to Lee failed; tell him directly: ${text}\n`);
+      process.stderr.write(`warning: notice to Lee failed; tell him directly: ${plain}\n`);
     }
   }
 }

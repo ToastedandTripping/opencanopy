@@ -1362,6 +1362,33 @@ describe("words and notices", () => {
     expect(lines[2]).toContain("words three");
   });
 
+  it("Lee's words reach the HTML channel escaped, and parse back to exactly what he said", () => {
+    const u = universe();
+    const said = `Lee: x<y & <b>ship</b> if a>b, "really" &amp; not`;
+    expect(u.run(["authorize-corrective", "--sha", S, "--lee", said]).code).toBe(0);
+    const [payload] = notifyLines(u);
+    expect(payload).toContain(`Lee: x&lt;y &amp; &lt;b&gt;ship&lt;/b&gt; if a&gt;b, "really" &amp;amp; not`);
+    expect(payload).not.toMatch(/<|>/);
+    expect(u.records().at(-1)?.lee).toBe(said);
+  });
+
+  it("the failure fallback prints his words raw, for a human, not the escaped payload", () => {
+    const u = universe();
+    fs.writeFileSync(u.notifyFail, "");
+    const res = u.run(["authorize-corrective", "--sha", S, "--lee", "a<b"]);
+    expect(res.stderr).toContain(`"a<b"`);
+  });
+
+  it("words past Telegram's limit still deliver a notice, cut; the ledger keeps them whole", () => {
+    const u = universe();
+    const said = "L".repeat(5000);
+    expect(u.run(["authorize-corrective", "--sha", S, "--lee", said]).code).toBe(0);
+    const [payload] = notifyLines(u);
+    expect(payload.length).toBeLessThanOrEqual(4096);
+    expect(payload).toContain("[cut here; the ledger has them all]");
+    expect(u.records().at(-1)?.lee).toBe(said);
+  });
+
   it("a failing notifier blocks nothing, and says so", () => {
     const u = universe();
     fs.writeFileSync(u.notifyFail, "");
