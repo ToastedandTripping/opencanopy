@@ -1190,6 +1190,22 @@ describe("doors refuse halts they do not own", () => {
       u.run(["ack-deploy", "--deploy", "dep-stuck", "--lee", LEE]);
       expect(u.state().known_good.deploy).toBe("dep-genesis");
     });
+
+    it("a green that went red while waiting is never promoted by a later close", () => {
+      const u = greenWaiting();
+      const token = u.state().token;
+      u.guard("dep-a", S, "red", { token });
+      u.run(["ack-deploy", "--deploy", "dep-stuck", "--lee", LEE]);
+      u.run(["authorize-corrective", "--token", String(token), "--sha", S2, "--lee", LEE]);
+      u.run(["release", "--token", String(token)]);
+      const held = u.claim(S2, "corrective");
+      u.land("dep-b", S2);
+      expect(u.guard("dep-b", S2, "green", { token: held }).code).toBe(0);
+      expect(u.state().known_good.deploy).toBe("dep-b");
+      // The stack beneath dep-b shows up when it goes red: dep-a must not be there.
+      expect(u.guard("dep-b", S2, "red", { token: held }).code).toBe(0);
+      expect(u.state().known_good.deploy).toBe("dep-genesis");
+    });
   });
 });
 
