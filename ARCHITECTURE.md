@@ -236,9 +236,9 @@ live process past 5 s). Every external read (`netlify`, `git ls-remote`) has a 3
    `state/opencanopy-release.mutex`, `state/opencanopy-release-tool` (the pattern
    `state/opencanopy-release*` covers them), with `state/heavy-build.lock*` for relay HEAVY in
    the same commit. An OpenCanopy session cannot make that commit; it asks for it.
-1. **The first `install` is Lee's yes of 2026-11-01** ("hook on", relayed by the coordinator).
+1. **The first `install` is Lee's yes of 2026-11-01** ("Full, trimmed, with hook", given in the canopy session).
    That ruling covers the first install only. Rebase the P0b branch, run the checks, then from
-   its tip: `install --lee "Lee, 2026-11-01: hook on (relayed by the coordinator)"`. With no tool
+   its tip, running the worktree's copy (`node scripts/release-ledger.mjs install …`, the one exception to the rule above, since nothing is installed yet): `install --lee "Lee, 2026-11-01: Full, trimmed, with hook"`. With no tool
    installed yet and origin not yet holding it, this one installs from the objects at `HEAD`.
 2. `init --evidence "audit:live: N passed, two named failures by construction at
    live-health.spec.ts:187 and :243; HTTP 200 on /, /map, /privacy"`, with N measured that day.
@@ -246,7 +246,7 @@ live process past 5 s). Every external read (`netlify`, `git ls-remote`) has a 3
 3. P0b itself then goes through the normal sequence from `claim`. Its identity guard reads the
    CLI first (`commit_ref` equals the SHA, `state` is `ready`), then the `oc-build` tag on `/`,
    `/map`, `/privacy`, each 200.
-4. Once P0b is on origin, ask Lee, then `install --lee` again, so the installed bytes are what
+4. Once P0b is on origin and its `release` is recorded (sequence step 7; `install` refuses while a lease is held), ask Lee, then `install --lee` again, so the installed bytes are what
    shipped.
 
 ### The sequence
@@ -350,13 +350,13 @@ daemon watches for halts**; a halt nobody reads waits until someone runs the too
   deploy, `release`. A holder still on the lease uses its own token; with no lease held,
   `record-rollback` takes none and `claim --deploy <restored>` gives the guard one. **Origin main still contains the failed commit, so
   the next release must revert it, and `check-push` will not notice.**
-- *One corrective.* `authorize-corrective --sha <fix> --lee "<his words>"`; the holder
+- *One corrective.* `authorize-corrective --sha <fix> --lee "<his words>"` (with `--token N` while the holder still has the lease); the holder
   `release`s; `claim --kind corrective --sha <fix>` for that bound SHA only. It is the only push
   allowed while halted, and `record-push` consumes the authorization.
 
 **A flake after release has only an indirect door.** When a released, known-good deploy later
 goes red and Lee says it was a flake: `guard --lee` with no token exits 2, `claim --sha` of the
-same SHA exits 3 (halted), and rollback and ack both refuse the current deploy. The door is a
+same SHA exits 3 (halted), and rollback and ack both refuse the current deploy (if the current deploy came from a worded rollback, `record-rollback` exits 0 "already recorded" and opens nothing; the door below still works). The door is a
 corrective on a placeholder SHA that will never be pushed:
 
 ```
@@ -411,7 +411,7 @@ stays until a guard or a door closes it, so a retry loop around it only burns ti
 Every `--lee`, `--approval` and `guard --result green` is an attestation by the session, not
 proof: the tool runs no guard and cannot verify that Lee said anything.
 - **Verbatim** from his own message, never a paraphrase. A peer session's relay is recorded as
-  relayed, and by whom ("Lee, 2026-11-01: hook on (relayed by the coordinator)"). Empty or
+  relayed, and by whom (for example "Lee, 2026-11-02: … (relayed by session-d09d2c)"). Empty or
   whitespace is refused.
 - A notice goes to Lee on each relaxing record (red to green, `ack-deploy`, `record-rollback`,
   `authorize-corrective`, `install`) through `~/marvin/skills/notify/send.mjs`, with the door and
