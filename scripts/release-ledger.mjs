@@ -26,6 +26,7 @@ import {
   boundedRun,
   classifyInFlight,
   listDeploys,
+  newestBuildOf,
   readPublished,
 } from "./lib/netlify-read.mjs";
 import {
@@ -1076,6 +1077,13 @@ async function cmdCheckPush(flags) {
     fail("P6", `predecessor is ${predecessor ?? "pending"}, and no corrective is bound to this SHA`);
   }
 
+  // Read here, not only from the ledger: await-live is the one recorder of a failed
+  // build, and a session can leave the lease without ever running it.
+  const tipBuild = origin.sha && deploys.value ? newestBuildOf(deploys.value, origin.sha) : null;
+  if (tipBuild?.state === "error" && site.value?.commit_ref !== origin.sha && !corrective) {
+    fail("P6", `live origin main ${origin.sha} failed its build (deploy ${tipBuild.id}); the only way on is a corrective, authorize-corrective on Lee's word`);
+  }
+
   const passable = corrective ? new Set(["red", "unverified", "build-failed"]) : new Set();
   const blockingHalts = state.openHalts.filter((h) => !passable.has(h.kind));
   if (blockingHalts.length > 0) {
@@ -1114,7 +1122,7 @@ async function observeCandidate(sha, source) {
   ]);
   const pub = site.value ?? null;
   const live = Boolean(pub && pub.commit_ref === sha && pub.state === "ready");
-  const newest = (deploys.value ?? []).find((d) => d.context === "production" && d.commit_ref === sha);
+  const newest = newestBuildOf(deploys.value ?? [], sha);
   return {
     live,
     deployId: live ? pub.id : null,

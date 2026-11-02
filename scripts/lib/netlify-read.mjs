@@ -85,6 +85,11 @@ export async function listDeploys(opts = {}) {
   return deploys;
 }
 
+/** The newest production deploy of this commit: the list is newest first. A rebuild outranks its failure. */
+export function newestBuildOf(deploys, sha) {
+  return deploys.find((d) => d.context === "production" && d.commit_ref === sha) ?? null;
+}
+
 /**
  * The deploys that block a push: production, not settled, not acked as stranded,
  * and newer than the published deploy or under 24 h old (an older deploy still

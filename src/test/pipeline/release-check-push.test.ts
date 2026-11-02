@@ -336,6 +336,66 @@ describe("P6", () => {
   });
 });
 
+describe("P6: a failed build of live origin main, recorded by nobody", () => {
+  /** Pushed with a valid token, the session dies before record-push, the build fails. */
+  function failedAndTakenOver() {
+    const r = ready();
+    const pushed = r.u.gitRun(r.repo.dir, ["push", "origin", `${r.tip}:refs/heads/main`], { OC_RELEASE_TOKEN: String(r.token) });
+    expect(pushed.code, pushed.out).toBe(0);
+    r.u.deploys([{ id: "dep-bad", state: "error", context: "production", commit_ref: r.tip, created_at: new Date(T0 + HOUR).toISOString() }]);
+    r.u.now += 3 * HOUR;
+    expect(r.u.run(["takeover", "--lane", "S", "--observed-token", String(r.token)]).code).toBe(0);
+    return { ...r, held: r.token + 1 };
+  }
+
+  function nextRelease(f: ReturnType<typeof failedAndTakenOver>, kind = "behaviour") {
+    const tip = f.repo.commit("next.txt", "next\n");
+    if (kind === "corrective") expect(f.u.run(["authorize-corrective", "--sha", tip, "--lee", LEE]).code).toBe(0);
+    const token = f.u.claim(tip, kind);
+    expect(request(f.u, token, tip, f.tip).code).toBe(0);
+    return f.u.run(["check-push", "--token", String(token), "--pushed-sha", tip]);
+  }
+
+  it.each([[["--abandon"]], [[]]])("takeover, then release %j: the next release is NO-GO, with the corrective named", (flags) => {
+    const f = failedAndTakenOver();
+    expect(f.u.run(["release", "--token", String(f.held), ...flags]).code).toBe(0);
+    const res = nextRelease(f);
+    onlyFails(res, "P6");
+    expect(res.out).toContain(`${f.tip} failed its build (deploy dep-bad)`);
+    expect(res.out).toContain("corrective");
+  });
+
+  it("the door: a bound corrective on top of the failed commit is GO", () => {
+    const f = failedAndTakenOver();
+    f.u.run(["release", "--token", String(f.held), "--abandon"]);
+    go(nextRelease(f, "corrective"));
+  });
+
+  it("a rebuild that succeeded outranks the failure, and the order of the list is what says so", () => {
+    const f = failedAndTakenOver();
+    f.u.run(["release", "--token", String(f.held), "--abandon"]);
+    const at = new Date(T0 + HOUR).toISOString();
+    f.u.deploys([
+      { id: "dep-rebuilt", state: "ready", context: "production", commit_ref: f.tip, created_at: at },
+      { id: "dep-bad", state: "error", context: "production", commit_ref: f.tip, created_at: at },
+    ]);
+    go(nextRelease(f));
+  });
+
+  it("a failed preview of that commit is no failed build", () => {
+    const f = failedAndTakenOver();
+    f.u.run(["release", "--token", String(f.held), "--abandon"]);
+    f.u.deploys([{ id: "dep-prev", state: "error", context: "deploy-preview", commit_ref: f.tip, created_at: new Date(T0 + HOUR).toISOString() }]);
+    go(nextRelease(f));
+  });
+
+  it("a failed rebuild of the commit already live changes nothing: it did build", () => {
+    const r = ready();
+    r.u.deploys([{ id: "dep-rebuild", state: "error", context: "production", commit_ref: r.parent, created_at: new Date(T0 + HOUR).toISOString() }]);
+    go(r.check());
+  });
+});
+
 describe("P7", () => {
   it("halted with every other predicate true: the takeover that halted, its deploy later settled error", () => {
     const r = ready();
