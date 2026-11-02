@@ -541,6 +541,30 @@ describe("hook", () => {
     expect(originHead(r)).toBe(r.parent);
   });
 
+  it("the SHA git hands the hook is what gets checked: HEAD on the requested tip does not excuse another commit", () => {
+    const r = ready();
+    const wrong = r.repo.commit("wrong.txt", "wrong\n");
+    r.repo.git("reset", "--quiet", "--hard", r.tip);
+    expect(r.repo.head()).toBe(r.tip);
+    const res = r.u.gitRun(r.repo.dir, ["push", "origin", `${wrong}:refs/heads/main`], { OC_RELEASE_TOKEN: String(r.token) });
+    expect(res.code).not.toBe(0);
+    expect(res.out).toContain(`P2: pushing ${wrong}`);
+    expect(originHead(r)).toBe(r.parent);
+  });
+
+  it("the remote SHA git hands the hook is forwarded: a stale one is rejected though live origin is the parent", () => {
+    const r = ready();
+    const stale = sha("ee");
+    const res = spawnSync(r.u.hookPath, [], {
+      cwd: r.repo.dir,
+      env: r.u.env({ env: { OC_RELEASE_TOKEN: String(r.token) } }) as unknown as NodeJS.ProcessEnv,
+      input: `refs/heads/x ${r.tip} refs/heads/main ${stale}\n`,
+      encoding: "utf8",
+    });
+    expect(res.status, res.stderr).toBe(1);
+    expect(res.stderr).toContain(`P3: the push expects origin at ${stale}`);
+  });
+
   it("from a linked worktree: no token rejected, valid token passes", () => {
     const r = ready();
     const wt = path.join(r.u.root, "linked");
@@ -683,6 +707,19 @@ describe("takeover", () => {
     expect(r.u.state().known_good.deploy).toBe("dep-tip");
   });
 
+  it("adopting a corrective's own build consumes its authorization, as record-push would", () => {
+    const b = haltedOn("red");
+    const { tip, token } = correctiveOn(b);
+    b.u.deploys([{ id: "dep-fix", state: "building", context: "production", commit_ref: tip, created_at: new Date(T0 + HOUR).toISOString() }]);
+    b.u.now += 3 * HOUR;
+    expect(b.u.run(["takeover", "--lane", "S", "--observed-token", String(token)]).code).toBe(0);
+    expect(b.u.state().correctives[tip].consumed).toBe(true);
+    const held = token + 1;
+    const again = b.u.run(["authorize-corrective", "--token", String(held), "--sha", tip, "--lee", LEE]);
+    expect(again.code, again.out).toBe(2);
+    expect(again.out).toContain("already consumed");
+  });
+
   it("in flight, another deploy: exit 3, a halt, lease unchanged, no takeover", () => {
     const r = ready();
     const created = new Date(T0 + HOUR).toISOString();
@@ -810,6 +847,33 @@ describe("no false rollback", () => {
     landingDuringRead(r.u, r.token, r.tip, true);
     const res = r.u.run(["reconcile"]);
     expect(res.code).toBe(4);
+    expect(r.u.count("rollback")).toBe(0);
+  });
+
+  /** The same race on claim, which applies the same observation with no lease held. */
+  function releasedScenario() {
+    const r = scenario();
+    expect(r.u.run(["release", "--token", String(r.token), "--abandon"]).code).toBe(0);
+    return r;
+  }
+
+  it("claim: the read is dropped and redone, no rollback", () => {
+    const r = releasedScenario();
+    landingDuringRead(r.u, r.token, r.tip, false);
+    const next = r.repo.commit("next.txt", "next\n");
+    r.u.claim(next);
+    expect(r.u.count("rollback")).toBe(0);
+    expect(r.u.state().current.deploy).toBe("dep-tip");
+  });
+
+  it("claim: if it moves every time, exit 4 and no claim", () => {
+    const r = releasedScenario();
+    r.u.publish("dep-genesis", r.parent);
+    landingDuringRead(r.u, r.token, r.tip, true);
+    const claims = r.u.count("claim");
+    const res = r.u.run(["claim", "--lane", "M", "--sha", sha("cd"), "--kind", "behaviour"]);
+    expect(res.code).toBe(4);
+    expect(r.u.count("claim")).toBe(claims);
     expect(r.u.count("rollback")).toBe(0);
   });
 
@@ -1078,6 +1142,29 @@ describe("install", () => {
     expect(u.run(["install"], { cwd: repo.dir }).code).toBe(2);
     expect(u.run(["install", "--lee", "  "], { cwd: repo.dir }).code).toBe(2);
     expect(fs.existsSync(u.toolDir)).toBe(false);
+  });
+
+  /** origin main moved by another clone, so its objects are nowhere in this repo until it fetches. */
+  function originAheadElsewhere(u: Universe, repo: Git): string {
+    const other = path.join(u.root, "other");
+    repo.git("clone", "--quiet", repo.origin, other);
+    fs.appendFileSync(path.join(other, "scripts/lib/dir-mutex.mjs"), "// origin's version\n");
+    repo.git("-C", other, "add", "--all");
+    repo.git("-C", other, "commit", "--quiet", "-m", "ahead");
+    repo.git("-C", other, "push", "--quiet", "origin", "HEAD:refs/heads/main");
+    const ahead = repo.git("-C", other, "rev-parse", "HEAD");
+    expect(spawnSync("git", ["-C", repo.dir, "cat-file", "-e", ahead]).status).not.toBe(0);
+    return ahead;
+  }
+
+  it.each([["the first install"], ["a later install"]])("%s fetches: origin's objects absent locally still install from origin", (which) => {
+    const { u, repo } = fresh();
+    if (which === "a later install") expect(u.run(["install", "--lee", LEE], { cwd: repo.dir }).code).toBe(0);
+    const ahead = originAheadElsewhere(u, repo);
+    const res = u.run(["install", "--lee", LEE], { cwd: repo.dir });
+    expect(res.code, res.out).toBe(0);
+    expect(JSON.parse(fs.readFileSync(path.join(u.toolDir, "installed.json"), "utf8")).source_sha).toBe(ahead);
+    expect(installedBytes(u, "lib/dir-mutex.mjs").toString("utf8")).toContain("// origin's version");
   });
 
   it("installs from origin's exact SHA, sets an absolute hooks path in the fixture only, hook executable, installed.json written", () => {
@@ -1365,6 +1452,19 @@ describe("netlify-read: the request the real CLI receives", () => {
 });
 
 describe("git reads bind to the recorded repo", () => {
+  /** A hook runs with these set, and any of them would override -C. */
+  it.each([
+    ["GIT_DIR", (d: string) => d],
+    ["GIT_COMMON_DIR", (d: string) => d],
+    ["GIT_WORK_TREE", (d: string) => path.dirname(d)],
+  ])("%s pointing at another repo changes nothing", (name, value) => {
+    const r = ready();
+    const decoy = path.join(r.u.root, "decoy");
+    r.repo.git("init", "--quiet", "--bare", decoy);
+    const env = { [name]: value(decoy) };
+    go(r.u.run(["check-push", "--token", String(r.token), "--pushed-sha", r.tip], { env }));
+  });
+
   it("check-push from another directory reads the recorded repo's origin", () => {
     const r = ready();
     go(r.u.run(["check-push", "--token", String(r.token), "--pushed-sha", r.tip], { cwd: r.u.root }));
