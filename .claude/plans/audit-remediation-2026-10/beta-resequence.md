@@ -221,13 +221,16 @@ Each is indexed in the ROADMAP Parking Lot when this plan is approved.
 
 Lanes as before: Lane M (map), Lane S (story and pages), and this session (orchestrator, ops,
 calculator design). Releases stay serialized under C2; C7's heavy-build lock covers G4-G5, where
-both lanes build heavy.
+both lanes build heavy. **Amended, relay P0b, 2026-11-01:** the lock is no longer P0b's. It is its
+own small relay, **HEAVY**, in G2 before S0b (Lee, 2026-11-01: `heavy-run` leaves P0b), reusing
+P0b's `dir-mutex`; its binding rules are in `.claude/plans/2026-10-p0b-release-tooling.md`, "Relay
+HEAVY".
 
 | Wave | This session | Lane M | Lane S |
 |---|---|---|---|
 | G0 | Phase 0 (records reconciled; TRACEABILITY with the serious set), **CI**, P0b | — | — |
 | G1 | **OPS** | M1a (probe release, then core) | S0a (copy, privacy) |
-| G2 | **NUM** figure set and test registry started | M1b (+ MapLibre 6 follow-through); **SPEED** guard | S0b (dated-only overlays) |
+| G2 | **HEAVY** (heavy-build lock, before S0b); **NUM** figure set and test registry started | M1b (+ MapLibre 6 follow-through); **SPEED** guard | S0b (dated-only overlays, after HEAVY) |
 | G3 | K.2 grill, K.3 design (if K = build) | M2; **MAPFIX** | S1-lite (+ defects 1, 2); X closes on Lee's verdict |
 | G4 | — | M3a; **T-pre** | **MERGE** then S1′ (if L = film), or S2 story half (if L = scroll story); S2-pages |
 | G5 | **PIPE**; K.4 (if K = build; after M3a) | **HIDE-K** (if K = hide); **BETA** | HIDE-K's copy touch |
@@ -260,6 +263,7 @@ The original rows stand except as changed here.
 |---|---|---|
 | CI | — | with or right after P0 |
 | OPS | P0b | CI |
+| HEAVY | P0b (reuses `dir-mutex`) | P0b; before S0b, which builds heavy |
 | NUM | S0a | its gate check runs after REBUILD |
 | SPEED | M1a | M1b |
 | MAPFIX | M1b | M2 (C1 versioned raster) |

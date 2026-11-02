@@ -224,6 +224,33 @@ rulings: `.claude/DECISIONS.md` at `origin/main` (11 entries as of 3db5823).
 | panel slot (`src/components/panels/`) | M3a (creates), K.4, B′ | K.4 and B′ start after M3a merges |
 | `ROADMAP.md`, `.claude/handoff.md` | every relay | written via the writers on the relay branch; conflicts resolved at merge, never by dropping lines |
 | R2 tile paths and manifest | C′, T, D′ | C1 versioning; one data release at a time |
+| `scripts/build-scrub-tables.py`, `scripts/build-year-overlays.py`, the dots builder (not yet in `scripts/`; its relay names the path) | Lane S relays (S0b, S1-lite, MERGE, S1′), PIPE | PIPE never edits them while a Lane S relay does; PIPE builds after those relays per its graph edge |
+| `scripts/pipeline/*` | T-pre, PIPE, REBUILD (runs only) | One relay at a time; PIPE after T-pre merges; Lane S treats it as read-only while PIPE is open |
+| `src/app/layout.tsx`, existing row | adds P0b (`oc-build`) | P0b lands first; `metadata.other["oc-build"]` must survive M2's and S2-pages' rebases |
+| `scripts/release-ledger.mjs`, `scripts/lib/{dir-mutex,release-state,netlify-read}.mjs`, `scripts/hooks/pre-push` | P0b, then any relay fixing them | `install` refuses while a lease is held: the tool that authorizes a push does not change under the push |
+
+**Amended, relay P0b, 2026-11-01.** C2 as built, which supersedes the wording above where they
+differ:
+- **Who pushes.** DECISIONS, Deploy entry, amended by Lee 2026-10-05: "the session pushes a
+  release to main after Lee's yes in conversation, with green checks and a named rollback; Lee no
+  longer pushes from his terminal." So `check-push` is run by the session just before its own
+  push, and again by the pre-push hook on the push itself. "Lee pushes" and "Lee runs
+  `check-push`" above are superseded. Rollback is not amended: a session never rolls back
+  production on its own.
+- **The hook.** Lee, 2026-11-01: "hook on". On this repo, `/save` and terminal pushes to `main`
+  refuse without passing the check. That moves past "nothing technically stops a direct push", by
+  his ruling. Enforcement is still cooperative: `--no-verify`, a GitHub web merge, a push from
+  another machine or an unset `core.hooksPath` get past it, and a bypass is detected afterwards,
+  when reconciliation finds a published deploy the ledger never recorded, which halts scheduling.
+- **"The candidate SHA equals the local `main` head"** means the SHA actually being pushed. Local
+  `refs/heads/main` is checked out in Lee's primary and shared by every worktree, so moving it
+  before the lease would let two lanes collide on it. Releases do not touch it.
+- **Post-release records** (`shipped`, guard results, deploy id) ride in the next release's first
+  commit, since pushing them alone is itself a release. The ledger is the durable record
+  meanwhile; `summary --unrecorded` lists what is owed.
+- **M1a's instrumentation acceptance cannot read `audit:live` as green until the tests at
+  `live-health.spec.ts:187` and `:243` are retargeted; M1a batch 0 owns that.**
+- The runbook is root `ARCHITECTURE.md`, "Releases".
 
 **C3. Guards observe the user outcome, with falsifiable negative controls.**
 - **The probe ships first, alone.** M1a's batch 0 is an instrumentation-only release:
@@ -497,6 +524,10 @@ be decided sensibly before the inventory exists. No session deletes analytics da
   - **Liveness, not Netlify, decides staleness:** a lock whose PID is dead (`kill -0`) is stale.
   - At acquire, the build checks for at least 16 GB available memory, and refuses otherwise.
   - Tests cover a killed build (lock recovered) and a live build (lock respected).
+  - **Amended, relay P0b, 2026-11-01 (Lee: `heavy-run` leaves P0b):** the lock's owner moves from
+    0.5b to its own small relay, **HEAVY**, in wave G2 before S0b, which waits on the lock. It
+    reuses P0b's `scripts/lib/dir-mutex.mjs` and reads no release ledger. The rules three P0b
+    critic rounds settled bind it; they are in P0b's plan under "Relay HEAVY".
 - **Spike budget (X):**
   - one Jen spec, two Ted builds, one fix round each, one Jen review, one research agent;
   - time box of 7 days from start to videos in Lee's hands.
@@ -625,14 +656,18 @@ blocks `git push :main` from a session. A docs-only deploy.
   SHA and its state must be `ready`. That is equally strong, and it is the same check C2's
   reconciliation uses. From S0a on, guards read the meta tag.
 - `scripts/release-ledger.mjs` in the OpenCanopy repo: append, claim and release the lease,
-  stale-lease check, reconcile against the Netlify published deploy, and the heavy-build lock.
+  stale-lease check, reconcile against the Netlify published deploy, ~~and the heavy-build lock~~.
 - Its tests cover:
   - concurrent claims;
   - a duplicate SHA;
   - a stale lease;
-  - a killed build;
+  - ~~a killed build;~~
   - **a malformed or unreadable ledger, which halts all scheduling** until a human repairs it.
 - Owner: this session.
+- **Amended, relay P0b, 2026-11-01:** Standard tier, not Simple. The heavy-build lock and its
+  killed-build test moved to relay HEAVY (G2, before S0b; see C7). The tool also carries
+  `check-push`, a pre-push hook installed with Lee's yes, and the release runbook, which lives in
+  root `ARCHITECTURE.md` under "Releases". Plan: `.claude/plans/2026-10-p0b-release-tooling.md`.
 
 0.6 **Write and critique the Wave-1 plans**: P0b, S0a, S0b, M1a, M1b, S1-lite and X. X is a spike, but Lee
 asked that everything be critiqued.
@@ -1455,7 +1490,8 @@ The remaining r8 CONCERNs become acceptance conditions of the named child plans:
 - S1-lite: missing-JSON and missing-raster degradation after rollback;
 - M3a: error-to-recovery transitions;
 - P0b: atomic reclaim, crash-safe tokens, pre-launch heavy-build classification, process-tree
-  ownership.
+  ownership. **Amended, relay P0b, 2026-11-01:** the heavy-build classification and process-tree
+  ownership (PID reuse, parent killed, pre-launch) moved with the lock to relay HEAVY (C7).
 
 **2026-10-07, APPROVED by Lee (grill, no round 9)** (`.claude/grills/2026-10-07-remediation-approval-and-phone-qa.md`).
 - The r8 X2 fix stands as folded; S0a's child critic reviews it in detail.
