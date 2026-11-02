@@ -1294,7 +1294,8 @@ async function cmdInstall(flags) {
     throw refuse(`under the override the repo must sit under the temp root; ${commonDir} does not`);
   }
   await requireIgnored();
-  const source = await installSource(commonDir, readInstalled() === null);
+  // Presence, not parse: an unreadable record must not reopen the HEAD exception.
+  const source = await installSource(commonDir, !fs.existsSync(installedFile()));
   withMutex(mutexDir(), () => {
     if (fs.existsSync(leaseDir())) {
       throw refuse(

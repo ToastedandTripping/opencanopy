@@ -239,6 +239,19 @@ describe("P4", () => {
     r.u.netlifyScript(`[ "$2" = listSiteDeploys ] && exit 1\n`);
     onlyFails(r.check(), "P4");
   });
+
+  it("a list read that is not a list is NO-GO", () => {
+    const r = ready();
+    r.u.netlifyScript(`[ "$2" = listSiteDeploys ] && { echo '{}'; exit 0; }\n`);
+    onlyFails(r.check(), "P4");
+  });
+
+  it("newer than an old published deploy, non-terminal, past 24 h: still NO-GO", () => {
+    const r = ready();
+    r.u.publish("dep-genesis", r.parent, { created_at: new Date(T0 - 240 * HOUR).toISOString() });
+    r.u.deploys([{ id: "dep-z", state: "building", context: "production", commit_ref: sha("cc"), created_at: new Date(T0 - 72 * HOUR).toISOString() }]);
+    onlyFails(r.check(), "P4");
+  });
 });
 
 describe("P5", () => {
@@ -742,6 +755,7 @@ describe("reconcile table", () => {
     ["exits 1", "exit 1\n"],
     ["prints non-JSON", "echo nope; exit 0\n"],
     ["omits published_deploy", `echo '{}'; exit 0\n`],
+    ["prints good JSON but exits 1", `echo '{"published_deploy":{"id":"dep-direct","state":"ready"}}'; exit 1\n`],
   ])("a failed read (%s): nonzero, no bytes written, not halted", (_name, script) => {
     const r = ready();
     r.u.netlifyScript(script);
@@ -878,8 +892,7 @@ describe("init", () => {
   function marvinRoot(u: Universe, ignore: string | null): string {
     const root = path.join(u.root, "marvin");
     fs.mkdirSync(root);
-    const init = spawnSync("git", ["init", "--quiet", root], { env: { PATH: process.env.PATH, HOME: u.home } });
-    expect(init.status).toBe(0);
+    expect(u.gitRun(u.root, ["init", "--quiet", root]).code).toBe(0);
     if (ignore) fs.writeFileSync(path.join(root, ".gitignore"), ignore);
     return root;
   }
