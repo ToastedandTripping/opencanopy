@@ -38,9 +38,9 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **GPU rendering is broken on the build machine (2026-10-11):** nvidia-smi reports 'Driver/library version mismatch' (NVML 580.178 userspace vs an older loaded kernel module), so headless Chromium falls back to llvmpipe. On 2026-10-07 the same flags gave the GTX 1060. A reboot should fix it; until then every recording is software-rendered and choppy, and is no evidence of how smooth the film is.
 
-- - **MapLibre 6 follow-through (shipped 2026-10-22 by session-d09d2c, main 120cc10):** (1) eyes owed on /map: data overlays at zoom, v6's deeper default overscale (queryRenderedFeatures popups), overlapping semi-transparent lines in registry.ts. (2) The intro spike branch (spike/intro-animation) is still on MapLibre 5: merge main into it, switch its maplibre imports to namespace form, and re-verify the dot canvas source, the offscreen warm-up map and the film clock's idle gates under v6 before any further draft. Ship note: ~/marvin/state/security-2026-10-22/opencanopy-shipped.md.
+- **MapLibre 6 follow-through (shipped 2026-10-22 by session-d09d2c, main 120cc10):** (1) eyes owed on /map: data overlays at zoom, v6's deeper default overscale (queryRenderedFeatures popups), overlapping semi-transparent lines in registry.ts. (2) The intro spike branch (spike/intro-animation) is still on MapLibre 5: merge main into it, switch its maplibre imports to namespace form, and re-verify the dot canvas source, the offscreen warm-up map and the film clock's idle gates under v6 before any further draft. Ship note: ~/marvin/state/security-2026-10-22/opencanopy-shipped.md.
 
-- - **Path to beta (Lee, 2026-10-23; BETA.md; DECISIONS 2026-10-23):** the 2026-10 remediation program is re-sequenced so the beta gate comes first: .claude/plans/audit-remediation-2026-10/beta-resequence.md (critic r1 FAIL, r2 CONCERN, r3 PASS, Fable at xhigh because the Codex weekly window was at 100%). Lee's four answers: the film opens the beta, with the figure corrected now; the calculator is redesigned first; the speed bar is on faster 4G; shared links are fixed before beta. Next: G0 (Phase 0 with its record list reconciled, CI, P0b), on Lee's go. Every child plan gets three critic rounds at most, round one at xhigh. Waiting on Lee: keep or strike the two attribution notes on the 2026-10-23 bar and exit entries; a terminal install of @mapbox/vector-tile and pbf as dev deps (CI, G0); a reboot to fix the GPU driver before SPEED (G2).
+- **Path to beta (Lee, 2026-10-23; BETA.md; DECISIONS 2026-10-23):** the 2026-10 remediation program is re-sequenced so the beta gate comes first: .claude/plans/audit-remediation-2026-10/beta-resequence.md (critic r1 FAIL, r2 CONCERN, r3 PASS, Fable at xhigh because the Codex weekly window was at 100%). Lee's four answers: the film opens the beta, with the figure corrected now; the calculator is redesigned first; the speed bar is on faster 4G; shared links are fixed before beta. Next: G0 (Phase 0 with its record list reconciled, CI, P0b), on Lee's go. Every child plan gets three critic rounds at most, round one at xhigh. Waiting on Lee: keep or strike the two attribution notes on the 2026-10-23 bar and exit entries; a terminal install of @mapbox/vector-tile and pbf as dev deps (CI, G0); a reboot to fix the GPU driver before SPEED (G2).
 
 - Relay HEAVY before S0b (G2).
 
@@ -53,6 +53,9 @@ in this project has already been ruled on, usually for a reason that is not obvi
 - `/save` is not a release path for OpenCanopy; it stops at the pre-push hook. (Until a marvin change teaches `/save` the release path.)
 
 - P0b bootstrap step 0: a marvin session commits the ignore patterns for `state/opencanopy-release*` (the four state paths) and `state/heavy-build.lock*` in `~/marvin`; `init` and `install` refuse until then. Runbook: ARCHITECTURE.md, Releases.
+- **Film rethink (Lee, 2026-11-02):** picked concept 'One tree, one clock' (research: ~/marvin/research/captivating-opencanopy-landing-film-bc-forests-20261102/report.md, scan, not verified). Spike branch spike/one-tree-one-clock, draft https://6ae8045f62c3a41b15f731f5--merry-queijadas-27cd31.netlify.app/film-lab (report ~/marvin/state/relay/one-tree-spike-report.md). Waiting on Lee's phone. The approved beat sheet and the clock-waits-for-paint ruling are reopened only if he picks it. Harvest-volume table must enter the repo before any 'since 1989' line ships.
+
+- **Live /map throws on wheel and drag (found 2026-11-02, production at 4bd41f0):** uncaught 'Cannot read properties of undefined (reading center)', 41 errors in one short session; react-map-gl 8.1.0 reads map.transform, undefined under maplibre-gl 6.15 (upgrade of 2026-10-22). The map still moves. The URL hash does not update on move, which may be the older M1a defect. react-map-gl 8.1.3 is out and untested. Owner: M1a, or a small fix ahead of it. Error monitoring (OPS) would have caught it.
 
 ## Open questions awaiting Lee
 
@@ -74,6 +77,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-11-02: wave one live, film rethink, spike draft
+
+G0 partly done: primary back on main; Phase 0 records, CI fix on main at 4bd41f0 (deploy 6ae7ecaeb4412e93460ae384, rollback 6ada8fe82bdc8d8f12f11918); four CI negative controls read on real runs; first green on main, three needed with one scheduled. P0b: batches 1-2 reviewed, batch 3 in mutation tests, not installed. Fidelity baseline in research/beta-gate. Lee asked to step back on the film; scan research done; 'One tree, one clock' chosen for a spike.
 
 ### 2026-10-23: path-to-beta rulings recorded, program re-sequenced, Lee's four beta decisions
 
