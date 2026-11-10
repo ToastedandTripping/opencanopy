@@ -19,7 +19,7 @@ import Map, {
 import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLES, INITIAL_VIEW_STATE, TERRAIN_SOURCE } from "@/lib/mapConfig";
-import { DEFAULT_RANGE } from "@/hooks/useTimeline";
+import { useGlobalStateYear } from "@/hooks/useGlobalStateYear";
 import { LAYER_REGISTRY_AVAILABLE, getLayer } from "@/lib/layers";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import { DataLayer } from "./DataLayer";
@@ -77,7 +77,16 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
 
   useImperativeHandle(ref, () => mapRef.current!);
 
+  // Sole writer of the `currentYear` global state (R1-02). It writes on every
+  // year change once the style has loaded, and on `load` it writes the latest
+  // chosen year (or DEFAULT_RANGE[0]).
+  const onStyleLoad = useGlobalStateYear(mapRef, yearFilter);
+
   const onLoad = useCallback(() => {
+    // First, before the terrain block: a throw there must not skip the only
+    // write of the year on load.
+    onStyleLoad();
+
     const map = mapRef.current?.getMap();
     if (!map) return;
 
@@ -91,10 +100,8 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
       map.setTerrain({ source: "terrain-rgb", exaggeration: 1.2 });
     }
 
-    map.setGlobalStateProperty("currentYear", DEFAULT_RANGE[0]);
-
     pipelineLog("map-load", "CanopyMap ready");
-  }, []);
+  }, [onStyleLoad]);
 
   // Expose map instance on window for e2e testing (Playwright screenshot regression).
   // Dev-only (D-fix): this previously shipped ungated to production window scope.

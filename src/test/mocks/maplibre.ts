@@ -63,7 +63,9 @@ export function createMockMap() {
     setTerrain: [] as unknown[],
     setSky: [] as unknown[],
     easeTo: [] as unknown[],
+    setGlobalState: [] as { name: string; value: unknown }[],
   };
+  const globalState: Record<string, unknown> = {};
 
   let styleLoaded = true;
 
@@ -249,8 +251,17 @@ export function createMockMap() {
     }),
 
     // ── Global state ──────────────────────────────────────────────
-    setGlobalStateProperty: vi.fn().mockReturnThis(),
-    getGlobalState: vi.fn().mockReturnValue({}),
+    // Records every write; returns the map, like MapLibre's chaining setter.
+    setGlobalStateProperty: vi.fn(function (
+      this: unknown,
+      name: string,
+      value: unknown,
+    ) {
+      globalState[name] = value;
+      calls.setGlobalState.push({ name, value });
+      return this;
+    }),
+    getGlobalState: vi.fn(() => ({ ...globalState })),
 
     // ── Image management ──────────────────────────────────────────
     addImage: vi.fn(),
@@ -298,6 +309,8 @@ export function createMockMap() {
       calls.setTerrain.length = 0;
       calls.setSky.length = 0;
       calls.easeTo.length = 0;
+      calls.setGlobalState.length = 0;
+      for (const key of Object.keys(globalState)) delete globalState[key];
       styleLoaded = true;
     },
   };

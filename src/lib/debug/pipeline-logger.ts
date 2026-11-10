@@ -35,7 +35,8 @@ type PipelineStage =
   | "pmtiles-layer"
   | "raster-mount"
   | "map-load"
-  | "layer-health";
+  | "layer-health"
+  | "global-state-year";
 
 export function isEnabled(): boolean {
   if (typeof window === "undefined") {
