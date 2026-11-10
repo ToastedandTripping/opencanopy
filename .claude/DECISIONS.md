@@ -173,11 +173,13 @@ The Phase 2 play-on-scroll dolly video needs ffmpeg for the encode step and the 
 **Amended, Lee, 2026-10-07:** Lee approved the correction: ffmpeg is installed on the build machine (/usr/bin/ffmpeg, verified 2026-10-07), and the render route now runs headless on its GPU (GTX 1060, ANGLE). Render and encode can run in a session; upload to R2 and deploy still wait on Lee's yes, like any release.
 
 ### Deploy is git-triggered: pushing to main auto-builds and deploys via Netlify's GitHub integration.
-*2026-07-17, corrected per Lee, migrated from handoff.md 2026-08-21, amended 2026-10-05*
+*2026-07-17, corrected per Lee, migrated from handoff.md 2026-08-21, amended 2026-10-05, amended 2026-11-10*
 
 Two earlier sessions logged the opposite (CLI-driven deploy) and were wrong; the Netlify build env holds the key. Standard deploy = merge to main + push, then watch `netlify api listSiteDeploys` for `state:ready` and HTTP-verify. Deploys remain human-in-the-loop by choice because they are outward-facing.
 
 **Amended, Lee, 2026-10-05:** Lee, in the marvin portfolio grill (round 2): the session pushes a release to main after Lee's yes in conversation, with green checks and a named rollback; Lee no longer pushes from his terminal. Deploys stay human-in-the-loop through that yes, and stay outward-facing. This resolves the conflict between the line above and MARVIN's 2026-09-01 Tier 3 rule, and Lee's 2026-09-02 "I don't want to repeat the auto classifier issue where I need to manually push everything". The same grill approved the full seven-wave 2026-10 remediation program.
+
+**Amended, per Lee, 2026-11-10:** Lee, 2026-11-10 (relayed by marvin session-f1a7d3, stand-in coordinator): "I'm quite sure for Open Canopy, we can go ahead and push and release everything. Essentially, I'm live testing it on the live website. I don't think there's anyone who really knows it exists." This is a standing yes: a session releases each item that comes green through this project's own gates (plan, a critic where the project requires one, Razor, tests, and every step of the release sequence in ARCHITECTURE.md) without asking again, and cites these words, verbatim and marked as relayed, in the ledger's `request --approval`. It does not cover anything at critic FAIL, deleting data, or changing a public number before the measure-merge fixes (2,000 ha cap on max(attribute, geometry), overlap dissolve). It changes nothing else: `install` still needs his yes each time, a session still never rolls production back, and a red guard still halts and goes to him.
 
 ### The analytics script is served from opencanopy.ca itself and its source lives in this repository.
 *2026-09-02, per Lee*
