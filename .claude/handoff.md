@@ -46,8 +46,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - P0b's post-release record: ride in the next release's first commit.
 
-- P0b's first CI run on main (owner: the session that pushed): if red, the fix goes out as the next release and the three-run count restarts.
-
 - `/save` is not a release path for OpenCanopy; it stops at the pre-push hook. (Until a marvin change teaches `/save` the release path.)
 
 - **Live /map throws on wheel and drag (found 2026-11-02, production at 4bd41f0):** uncaught 'Cannot read properties of undefined (reading center)', 41 errors in one short session; react-map-gl 8.1.0 reads map.transform, undefined under maplibre-gl 6.15 (upgrade of 2026-10-22). The map still moves. The URL hash does not update on move, which may be the older M1a defect. react-map-gl 8.1.3 is out and untested. Owner: M1a, or a small fix ahead of it. Error monitoring (OPS) would have caught it.
@@ -55,6 +53,8 @@ in this project has already been ruled on, usually for a reason that is not obvi
 - Path to beta: the order is .claude/plans/audit-remediation-2026-10/beta-resequence.md (Lee's four answers 2026-10-23: film at beta, figure corrected now; calculator redesigned first; faster 4G; shared links fixed before beta). G0 status 2026-11-02: Phase 0 records, CI fix and the audit import are on main (4bd41f0); CI green once on main, three needed with one scheduled; P0b release tool built and reviewed (four batches, Razor PASS), shipping as its own release with the first install (Lee 2026-11-02 'Ship it'). Next: P0b's release sequence, then G1 (OPS, M1a, S0a). Still owed by Lee: the GPU driver reboot before SPEED (G2); keep or strike the two attribution notes on the 2026-10-23 bar and exit entries.
 
 - **Film rethink (Lee, 2026-11-02), spike done, waiting on Lee's phone:** concept 'One tree, one clock' (research: ~/marvin/research/captivating-opencanopy-landing-film-bc-forests-20261102/report.md, scan, not verified). Spike branch spike/one-tree-one-clock (local only, d776a0a + e19797b), report ~/marvin/state/relay/one-tree-spike-report.md, draft https://6ae8045f62c3a41b15f731f5--merry-queijadas-27cd31.netlify.app/film-lab (re-checked 2026-11-02: clips serve; the /r2 proxy answers 206 on the PMTiles archive and 404 off-list, so tiles load on Netlify). Verdicts: the LiDAR orbit of Big Lonely Doug reads as a tree; the clip-to-live-map seam is pixel-exact in Chrome at capture size, edges soften via 4:2:0 chroma. Open: (1) clips 8.6 MB + 7.4 MB against the 2 MB pre-interaction bar (DECISIONS 2026-10-23), Lee's ruling owed after the phone check (shrink, tap-to-play, or loosen); (2) 4-6 s frozen last frame while the map idles: mount the map ~3 s before the clip ends; (3) the z<=9 raster opening overstates logging ~1.7x and has no tiles north of 55.8 N, not shippable before the area-true rebuild; (4) iPhone Safari BT.709 colour shift at the fade untested; (5) the 2019->2023 dissolve mixes growth with 2.6x pulse density, no growth caption until separated; LiDAR height 67.8 m vs registry 66.0 m unexplained, do not quote it. Next step: Lee opens the draft on his phone and reports colour at the fade, how the hold feels, the printed idle time, and whether the tree holds on a small screen. The approved beat sheet and the clock-waits-for-paint ruling are reopened only if he picks it. Harvest-volume table must enter the repo before any 'since 1989' line ships.
+
+- **Next (brief 2026-11-10, item 2):** one relay for the three DataLayer public-path bugs, located on today's tree: R1-02 page.tsx:325 (`if (!map.isStyleLoaded()) return;` before setGlobalStateProperty, never retried); R1-03 DataLayer.tsx:1145 early return for tile-backed layers sits above the `!visible -> clearLayerStatus` at :1152; R1-05 PmtilesLayers (DataLayer.tsx:219, addLayersToMap at :262, reactive effects bail at :500) still lacks SatelliteLayers' `visibleRef` (:122). Rendered tests: mock at src/test/mocks/maplibre.ts, lifecycle pattern in src/test/pipeline/visibility-lifecycle.test.ts. Plan, critic (xhigh, max three rounds), relay, then release under Lee's standing yes (DECISIONS Deploy entry, amended 2026-11-10).
 
 ## Open questions awaiting Lee
 
@@ -76,6 +76,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-11-10: brief from marvin session-f1a7d3; P0b found already closed
+
+Stand-in coordinator brief (state/briefs/opencanopy-2026-11-10.md in the marvin session worktree): six items, release each as it comes green. Item 1, P0b's bootstrap, was already done on 2026-11-02: ledger token 3 released green on deploy 6ae8b912 (main 9ad701b); installed tool byte-identical to origin/main; ~/marvin ignore patterns committed; core.hooksPath set; CI on main green on push 41481043557 and schedules 41540042323, 42720356767. ROADMAP `current`/`next` still describe P0b as unreleased; correct them in the next release's first commit, with P0b's post-release record. Lee's standing release yes recorded as a DECISIONS amendment on the Deploy entry (b7df0b4). Fable is blocked until 2026-11-12 03:00 Vancouver; creative reviser passes run on Opus meanwhile, said so. Saved at the coordinator's request before starting item 2 on fresh context.
 
 ### 2026-11-02: checkpoint before the P0b release
 
