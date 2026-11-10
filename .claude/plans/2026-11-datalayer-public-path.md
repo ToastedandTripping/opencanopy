@@ -1,6 +1,6 @@
 # DataLayer public-path fixes (R1-02, R1-03, R1-05), with rendered PmtilesLayers tests
 
-*Plan, 2026-11-10. Session marvin/canopy (driven by marvin session-f1a7d3, brief item 2). Tier: standard relay, one batch.*
+*Plan, 2026-11-10, revised after critic round 1 (CONCERN; every must-fix folded, see "Round 1 folds" at the end). Session marvin/canopy (driven by marvin session-f1a7d3, brief item 2). Tier: standard relay, two sequential batches.*
 
 ## Intent (grilled)
 
@@ -8,38 +8,27 @@ Grill skipped, on purpose: this is fix mode on defects already specified and rou
 
 ## Intent
 
-Three defects found by the 2026-09-01 code refresh (`.refresh/2026-09-01-findings/findings-R1.jsonl`) still live on the public /map path. Each is a state write that is dropped once and never retried, so the map silently disagrees with the controls. Fix the class, not the three instances: after this relay, the map's year, a layer's visibility and filters, and a layer's status are each a function of current React state, re-applied whenever the thing they apply to comes into existence. Ship with rendered tests that go red on today's code.
+Three defects found by the 2026-09-01 code refresh (`.refresh/2026-09-01-findings/findings-R1.jsonl`) are still live on the public /map path. Each is a state write that is dropped once and never retried, so the map silently disagrees with the controls. Fix the class, not the three instances: after this relay, the map's year, a layer's visibility and filters, and a layer's status are each a function of current React state, re-applied whenever the thing they apply to comes into existence. Ship with rendered tests that go red when the fix is reverted.
 
-The handoff ordered this ahead of Batch 2 (paint re-spine), which edits the same effects.
+The hand-off ordered this ahead of Batch 2 (paint re-spine), which edits the same effects. Charter fit: goal (1), "every public layer reading correctly ... honest status states instead of silent blanks", and non-goal (3), the render-gated playhead. No visual design change; no public number changes.
 
-Charter fit: goal (1), "every public layer reading correctly ... honest status states instead of silent blanks", and non-goal (3), the render-gated playhead. No visual design change; no public number changes.
+## The three defects, verified on today's tree (origin/main 9ad701b plus three docs commits and this plan)
 
-## The three defects, verified on today's tree (main 9ad701b + two docs commits)
+**R1-02, timeline year dropped while any tile loads.** `src/app/map/page.tsx:322-327` guards `map.setGlobalStateProperty("currentYear", …)` with `if (!map.isStyleLoaded()) return;` (:325) and re-runs only on a year change. In MapLibre 6.15.0 (`node_modules/maplibre-gl/dist/maplibre-gl-dev.mjs`), `Map.isStyleLoaded()` (:59919) returns `Style.loaded()` (:47426), false while `_updatedSources` is non-empty, any tile manager has a tile in flight, or the image manager is busy. `Style.setGlobalStateProperty` (:47252) only calls `_checkLoaded()` (:47473), which throws before the style JSON is parsed; `Style._loaded` is set true once in `_load` and never reset. So a tick that lands during a tile load is lost: the bar shows year N while the GPU evaluates N-1, or 1950 (CanopyMap's onLoad default, `CanopyMap.tsx:94`). If the timeline is enabled before `load`, the first year is lost and onLoad writes `DEFAULT_RANGE[0]` over it. `mapStyle={MAP_STYLES.dark}` is a module constant (`CanopyMap.tsx:198`, mapConfig.ts); react-maplibre calls `setStyle` only on a prop-identity change; nothing in `src/` calls `setStyle`. After `load` the setter cannot throw.
 
-**R1-02, timeline year dropped while any tile loads.** `src/app/map/page.tsx:322-327`:
+**R1-03, toggle-off never clears status for any public layer.** `DataLayer.tsx:1145` returns early for every tile-backed layer above the `if (!visible) { clearLayerStatus(layer.id); return; }` at :1151-1154. CanopyMap mounts the public seven (`LAYER_REGISTRY_AVAILABLE`, CanopyMap.tsx:219); all six public data layers are tile-backed, and their only status source is `handlePmtilesError` (:1105-1107), fired by PmtilesLayers' 15 s header timeout and its addLayer catch. The six instances share one source (`PMTILES_SOURCE_ID = "opencanopy"`), so one header timeout puts all six into `error`, visible or not. `StatusToast` (`src/components/ui/StatusToast.tsx:26-31`) shows every `error` with no visibility check; it is the only consumer that would show a hidden layer's error (LoadingBar reads "loading" only; MapLegend reads enabled layers only). And LoadingContext debounces terminal statuses 250 ms per id (`LoadingContext.tsx:115-124`) while `clearLayerStatus` (:129-136) does not cancel the pending write, so a clear can be overtaken by an error queued just before it.
 
-```ts
-useEffect(() => {
-  const map = mapRef.current?.getMap();
-  if (!map || timeline.yearFilter == null) return;
-  if (!map.isStyleLoaded()) return;
-  map.setGlobalStateProperty("currentYear", timeline.yearFilter);
-}, [timeline.yearFilter]);
-```
+**R1-05, PmtilesLayers adds layers from a stale closure.** The add effect (`DataLayer.tsx:238-446`, deps `[map, layer.id, layer.tileSource, layer.style]`) waits for `load` and then `sourcedata` before `addLayersToMap`, which writes `layout.visibility` (:291, :312) and line opacity (:358) from the `visible` captured at mount and applies only the registry base filter. The visibility effect (:448-475) and the merged filter effect (:495-579) bail with `if (!getLayer(...)) return` while the layers do not exist; nothing re-runs them once the layers are added. A toggle, a class-filter change or a timeline switch made during the wait is lost: legend checked, map empty, until the reader toggles twice. SatelliteLayers fixed the visibility half with `visibleRef` on 2026-06-11 (:122-123, :148-153); the filter half has no precedent.
 
-Read in `node_modules/maplibre-gl/dist/maplibre-gl-dev.mjs` (6.15.0): `Map.isStyleLoaded()` (:59919) returns `Style.loaded()` (:47426), which is false while `_updatedSources` is non-empty, any tile manager has a tile in flight, or the image manager is busy. `Style.setGlobalStateProperty` (:47252) only calls `_checkLoaded()` (:47473), which throws when `!this._loaded`, i.e. before the style JSON is parsed. The guard is far stricter than the failure it protects against, and the effect re-runs only on a year change, so a tick that lands during a tile load is lost: the bar shows year N while the GPU expressions evaluate N-1, or 1950 (CanopyMap's onLoad default, `CanopyMap.tsx:94`). Separately, if the timeline is enabled before `load`, the first year is lost and onLoad then writes `DEFAULT_RANGE[0]` over it. `mapStyle={MAP_STYLES.dark}` is a constant (`CanopyMap.tsx:198`) and nothing in `src/` calls `setStyle`, so after `load` the style is never replaced and the setter cannot throw.
-
-**R1-03, toggle-off never clears status for any public layer.** `DataLayer.tsx:1145` returns early for every tile-backed layer (`if (!map || layer.source.type !== "wfs" || hasTileSource) return;`) above the `if (!visible) { clearLayerStatus(layer.id); return; }` at :1152. All six public data layers are tile-backed. Their only status source is `handlePmtilesError` (:1105-1107), fired by PmtilesLayers' 15 s header timeout and its addLayer catch. Every PmtilesLayers instance mounts at page load (CanopyMap mounts every registry layer) and they share one source (`PMTILES_SOURCE_ID = "opencanopy"`), so one header timeout puts all six layers, visible or not, into `error`. `StatusToast` (`src/components/ui/StatusToast.tsx:26-31`) shows every `error` entry with no visibility check. So: an error toast for a layer that is off, and one that persists after the reader turns the failing layer off.
-
-**R1-05, PmtilesLayers adds layers from a stale closure.** The add effect (`DataLayer.tsx:237`, deps `[map, layer.id, layer.tileSource, layer.style]`) waits for `load` and then `sourcedata` before `addLayersToMap` (:262), which writes `layout.visibility` (:290, :311) and line opacity (:357) from the `visible` captured at mount, and applies only the registry base filter. The visibility effect (:448-475) and the merged filter effect (:494-499) bail with `if (!getLayer(...)) return` while the layers do not exist, and nothing re-runs them once the layers are added. A toggle, a class-filter change or a timeline switch made during the wait is lost: legend checked, map empty, until the reader toggles twice. SatelliteLayers fixed the visibility half of this race with `visibleRef` on 2026-06-11 (:118-122, :147-152); the filter half has no precedent.
-
-Why no test caught any of it: the mock's `isSourceLoaded` (`src/test/mocks/maplibre.ts`) returns true the instant a source is added, so the async wait path never runs in a test; `isStyleLoaded` is a constant; `setGlobalStateProperty` is a bare `vi.fn` with no call record; page.tsx has no unit tests; no test mounts DataLayer and reads `LoadingContext`.
+Why no test caught any of it: the mock's `isSourceLoaded` returns true the instant a source is added, so the async wait never runs in a test; `isStyleLoaded` is a constant; the mock's `calls` object has no entry for `setGlobalStateProperty`; page.tsx has no unit tests; no test mounts DataLayer against a real LoadingProvider.
 
 ## Strategies considered
 
-- **A. Three spot patches.** try/catch in page.tsx; `visibleRef` in PmtilesLayers; move the clear above the early return. Smallest diff, but leaves the filter half of R1-05 open, leaves the hidden-layer error toast (R1-03's other half) open, and leaves the onLoad-overwrites-year race.
-- **B. Fix the class: state is re-applied when its target appears (chosen).** Each of the three writes becomes "derive from current state, and re-apply when the map object it targets comes into existence". Slightly larger diff, same files, no new architecture.
-- **C. Make PmtilesLayers declarative** (react-map-gl `<Layer>`). Rejected: the imperative path exists because declarative `<Layer>` fails when the PMTiles source resolves asynchronously (comment at :213-219), and reshaping these effects is Batch 2's job.
+- **A. Three spot patches.** try/catch in page.tsx; `visibleRef` in PmtilesLayers; move the clear above the early return. Leaves the filter half of R1-05, the hidden-layer toast and the onLoad-overwrites-year race open.
+- **B. Fix the class: state is re-applied when its target appears (chosen).** Same files, no new architecture.
+- **C. Make PmtilesLayers declarative** (react-map-gl `<Layer>`). Rejected: the imperative path exists because declarative `<Layer>` fails when the PMTiles source resolves asynchronously (comment at :211-217), and reshaping these effects is Batch 2's job.
+
+Within B, for R1-05's re-apply trigger: (i) `useEffectEvent`, (ii) the finding's `layersReady` state counter re-running the effects, (iii) a latest-ref to the apply function. **Chosen: (iii).** (i) is a trap in this React version: react-dom 19.2.4 refreshes an effect event's implementation only for plain function components, so inside `memo()` without a comparator or `forwardRef` it silently keeps mount-time props (critic r1 probe; react-dom-client.development.js:13874-13892); a Batch 2 `memo(PmtilesLayers)` would bring R1-05 back with no error. (ii) costs a render per layer add and a `setState` that can run synchronously in the add effect's body on the already-loaded path. (iii) works in every component kind and adds no render.
 
 ## Design (strategy B)
 
@@ -49,140 +38,181 @@ New hook `src/hooks/useGlobalStateYear.ts`:
 
 ```ts
 export function useGlobalStateYear(
-  getMap: () => maplibregl.Map | undefined,
+  mapRef: React.RefObject<MapRef | null>,
   yearFilter: number | null | undefined,
-): () => void   // returns onStyleLoad, called from CanopyMap's onLoad
+): () => void   // returns onStyleLoad, called first thing in CanopyMap's onLoad
 ```
 
-- A `styleReadyRef` latch, false until the returned `onStyleLoad` runs.
-- A `latestYearRef` holding the most recent non-null `yearFilter`, written in a `useLayoutEffect` (not during render; the react-hooks 7 `refs` rule flags render-phase writes).
-- Effect on `[yearFilter]`: if `yearFilter == null`, the map, or the latch is missing, do nothing; otherwise `map.setGlobalStateProperty("currentYear", yearFilter)`. No `isStyleLoaded()` predicate anywhere on this path.
-- `onStyleLoad()`: set the latch, then write `latestYearRef.current ?? DEFAULT_RANGE[0]`. This replaces the hard-coded `DEFAULT_RANGE[0]` write in `CanopyMap.onLoad` (:94), so a year chosen before `load` survives it.
+- Takes the ref, not a getter, so nothing in its deps changes identity per render.
+- `styleReadyRef` latch, false until `onStyleLoad` runs. `latestYearRef` holds the most recent non-null `yearFilter`, written in `useLayoutEffect`, never during render.
+- Effect on `[yearFilter]`: if `yearFilter == null`, no map, or no latch, do nothing; else `setGlobalStateProperty("currentYear", yearFilter)`. No `isStyleLoaded()` on this path.
+- `onStyleLoad` (stable `useCallback`): set the latch, then write `latestYearRef.current ?? DEFAULT_RANGE[0]`.
+- Each write emits `pipelineLog("global-state-year", "currentYear", { year, source: "tick" | "load" })` (new `PipelineStage` member in `src/lib/debug/pipeline-logger.ts`), so production writes are observable behind `?debug=pipeline`.
 
-CanopyMap calls the hook with its existing `yearFilter` prop (already `timeline.yearFilter`, page.tsx:699) and calls `onStyleLoad()` inside `onLoad`. The page.tsx effect at :319-327 is deleted. One writer of `currentYear` remains, in the component that owns `onLoad`.
+CanopyMap calls the hook with its `yearFilter` prop (already `timeline.yearFilter`, page.tsx:699) and calls `onStyleLoad()` as the first statement of `onLoad`, before the terrain block (:85-92), so a throw there cannot skip the only default write. The hard-coded write at :94 is deleted, and so is the page.tsx effect at :319-327. One writer of `currentYear` remains in `src/`.
 
-Not wrapped in try/catch: after `load` the setter cannot throw in this app (constant style, verified above), and a swallowed throw would hide a real regression. If that premise ever breaks, the throw is loud, which is the right failure.
+Not wrapped in try/catch: after `load` the setter cannot throw in this app. If that premise ever breaks (a basemap toggle that calls `setStyle`), the throw reaches MapErrorBoundary (page.tsx:689-1107), which replaces /map with its crash panel. That is acceptable only while no style switch exists; a code comment on the write says any future `setStyle` must revisit it.
 
-Render gate unchanged: `setGlobalStateProperty` calls `_update(true)` (:58279-58281), so the `idle` that `waitForRender` awaits still follows the write. Moving the write from page.tsx to CanopyMap does not change ordering relative to `useTimeline`'s loop: the loop registers `map.once("idle")` after `setCurrentYear`, and the commit that runs either effect happens after that.
+Render gate unchanged: `Map.setGlobalStateProperty` calls `_update(true)`, so the `idle` that `waitForRender` awaits still follows the write. useTimeline registers `map.once("idle")` synchronously after `setCurrentYear` (useTimeline.ts:299, :221; page.tsx:309); the commit that runs either writer's passive effect comes later, and CanopyMap's effect keeps the same position relative to DataLayer's filter effect as page.tsx's did (critic r1 checked the order).
 
 ### 2. Layer status is a function of (visible, failed) (R1-03)
 
 In `DataLayer`:
 
-- `const [pmtilesFailed, setPmtilesFailed] = useState(false)`. `handlePmtilesError` sets it (it runs from a timer or a catch, never synchronously in an effect body).
-- One effect, placed above any source-type branching, deps `[visible, pmtilesFailed, layer.id, ...]`: `!visible` clears the layer's status; `visible && pmtilesFailed` sets `error`.
-- `loadData`'s own `if (!visible) { clearLayerStatus; return; }` stays as it is: its `return` is what stops a hidden WFS-only layer from fetching, and the clear is harmless.
+- `const [pmtilesFailed, setPmtilesFailed] = useState(false)`; `handlePmtilesError` sets it. (It can run synchronously inside the add effect through the addLayer catch when style and source are already loaded; harmless at runtime, and the lint rule cannot see through the `onError` prop.)
+- One effect above any source-type branching, deps `[visible, pmtilesFailed, layer.id, setLayerStatus, clearLayerStatus]`: `!visible` clears the status; `visible && pmtilesFailed` sets `error`.
+- `src/contexts/LoadingContext.tsx`: `clearLayerStatus(id)` also cancels the pending debounced write for `id`, so a clear cannot be overtaken by an error queued before it.
+- `loadData`'s `if (!visible) { clearLayerStatus; return; }` stays: its `return` keeps a hidden WFS-only layer from fetching.
 
-Effect: a header timeout no longer puts hidden layers into the toast; turning a failing layer off clears its toast; turning it back on restores the error honestly (the source is still dead and nothing retries; a retry is out of scope).
+Result: a header timeout no longer toasts hidden layers; turning a failing layer off clears its toast; turning it back on restores the error honestly (the source is still dead; a retry is out of scope). Tile-backed layers still take `error` from the PMTiles path only (dual-source rule).
 
-The `error` status remains the PMTiles path's alone for tile-backed layers (dual-source rule, ARCHITECTURE.md Status model).
+Known remaining member, not fixed here: a WFS-only layer whose fetch is in flight when it is hidden receives the fetch's terminal status after the await (:1220-1236). No WFS-only layer is mounted on /map; parked (see Out of scope).
 
 ### 3. PmtilesLayers re-applies current state after it adds layers (R1-05)
 
-- Extract the bodies of the visibility effect (:448-475) and the merged filter effect (:494-~560) into two plain functions in the component, `applyVisibility()` and `applyFilters()`, each reading the current props and no-oping when the target layers do not exist, exactly as now.
-- Wrap a call to both in `const applyCurrentState = useEffectEvent(() => { applyVisibility(); applyFilters(); })` (React 19.2.4, verified in node_modules; `useEffectEvent` reads the latest props and may be called from listeners an effect registered).
-- `addLayersToMap` writes initial `layout.visibility` / line opacity through the same current value (no stale closure, so no one-frame flash at the wrong visibility), then calls `applyCurrentState()` after the `addLayer` calls succeed.
-- The two reactive effects keep their current deps and now call `applyVisibility()` / `applyFilters()`.
+- Extract the visibility effect's body (:448-475) and the whole merged filter effect's body (:495-579, including the no-timeline restore branch) into `applyVisibility` and `applyFilters`, each a `useCallback` over exactly the props it reads, each no-oping when its target layers do not exist, as now.
+- The two reactive effects become `useEffect(() => applyVisibility(), [applyVisibility])` and the same for filters: same triggers as today's deps, no lint suppression.
+- `const applyCurrentStateRef = useRef<() => void>(() => {})`, assigned `() => { applyVisibility(); applyFilters(); }` in a `useLayoutEffect` over both callbacks.
+- `addLayersToMap` keeps its `addLayer` configs unchanged and calls `applyCurrentStateRef.current()` after the `addLayer` calls succeed. No separate initial-visibility mechanism: `addLayer` and the re-apply run in one JS task, and MapLibre paints on the next frame, so a stale config value is never drawn. Tests assert effective state (design 4), which is what MapLibre draws.
+- A comment on the ref names why it is not `useEffectEvent` (the component-kind trap), so Batch 2 does not "modernise" it back.
 
-This covers visibility, class filters and timeline on/off with one mechanism. Calls are idempotent (`setLayoutProperty`, `setFilter`, `setPaintProperty` with the same values).
+Idempotent: `setLayoutProperty`, `setFilter` and `setPaintProperty` with unchanged values. For all six public layers, re-applying the no-timeline branch reproduces the `addLayer` paint (each carries a registry `fill-opacity`), so no visual drift.
 
-Fallback if `useEffectEvent` misbehaves under vitest/happy-dom or the lint plugin: refs for `visible`, `classFilters`, `timelineActive`, written in `useLayoutEffect`, read by the same two functions. Ted reports which one shipped and why.
-
-Sweep (named so the critic can check it): every other place in DataLayer.tsx that writes map state from a value captured at effect creation. Known: `onError` and `tileMinZoom` are excluded from the add effect's deps; `onError` is a stable `useCallback`, `tileMinZoom` is a registry constant per layer, so neither is stale in practice. Ted lists anything else found with a line number and either fixes it or says why it is not stale.
+**Sweep of the class.**
+- Stale closure in an add effect: `onError` (stable `useCallback`) and `tileMinZoom` (a registry constant per layer) are not stale in practice. **WfsLayers** has the same race as R1-05 (reads `visible` at :679, :694, :713, :755, :789 from a closure whose deps at :886 exclude it; its class-filter effect :980-997 no-ops before layers exist). No public layer is WFS-only, so it is unreachable on /map: parked.
+- `isStyleLoaded()` as a readiness test: `DataLayer.tsx:174` (SatelliteLayers), `:423` (PmtilesLayers add effect), `:859` (WfsLayers) decide "add now or wait for `load`"; if their effect ever re-ran after `load` with a tile in flight, they would wait for a `load` that already fired. Latent: their deps are stable in production. `StoryMap.tsx:72` (camera) and `:152` (binary reveal, the drop the hand-off logged on 2026-10-07) drop writes while tiles load; lane S. None fixed here; each parked with this reason. ARCHITECTURE states the rule: `isStyleLoaded()` is never a readiness test.
 
 ### 4. Mock and test infrastructure
 
 `src/test/mocks/maplibre.ts`:
-- `calls.setGlobalState: { name, value }[]`, recorded by `setGlobalStateProperty`, and `getGlobalState()` returning the recorded values; `_reset` clears both.
-- `_setSourcesPending(pending: boolean)`: while true, `isSourceLoaded` returns false for every source; flipping it false does not emit anything (tests emit `sourcedata` themselves). Default false keeps every existing test's behaviour.
+- `calls.setGlobalState: { name, value }[]`, recorded by `setGlobalStateProperty` (still `return this`); `getGlobalState()` returns the recorded values.
+- `_setSourcesPending(pending)`: while true, `isSourceLoaded` returns false; flipping it emits nothing (tests emit `sourcedata`).
+- `getLayoutProperty(id, prop)` and `getFilter(id)`, seeded from the `addLayer` config and overwritten by `setLayoutProperty` / `setFilter`: the effective state MapLibre would draw.
+- `_reset` clears all of the above, including the pending flag.
 
-### 5. Tests (each must be shown red on today's code, then green)
+No existing test reads layout or filter state or calls `getGlobalState`, and the pending flag defaults off, so no current test can move (critic r1 checked).
 
-New `src/test/pipeline/pmtiles-layers-lifecycle.test.tsx` (rendered, `@testing-library/react`, the `wfs-layers-d10` harness: mocked `useMap`, mocked `maplibre-gl`, StrictMode). The LoadingContext mock records `setLayerStatus` / `clearLayerStatus` calls instead of no-ops.
+Toolchain: run `npm ci` before B1 (this worktree has vitest 4.1.1 and happy-dom 20.10.2 against lockfile pins 4.1.12 and 21.0.4). If the classifier blocks the install, record the installed versions in `--checks` and treat CI on main as the locked-toolchain run.
 
-1. Visibility during the wait: style not loaded, sources pending; mount a tile-backed fill layer with `visible=false`; rerender `visible=true`; emit `load`, then `sourcedata {sourceId}`; assert fill and outline `layout.visibility === "visible"`.
-2. The reverse (`true` then `false`): assert `"none"`.
-3. Class filter during the wait: mount with no class filter; rerender with `classFilters={ [id]: ["old"] }`; emit; assert the fill's last filter contains `["in", ["get","class"], ["literal",["old"]]]`.
-4. Timeline switched on during the wait: rerender with `yearFilter=2000` on a layer with `timelineField`; emit; assert the fill filter contains `["global-state","currentYear"]` and fill-opacity is the age-graded expression.
-5. Line layer: same as 1 for a `style.type: "line"` layer; assert `line-opacity` equals the registry value.
-6. Status on hide (R1-03): mount visible; trigger the 15 s timeout with fake timers; assert `setLayerStatus(id,"error")`; rerender `visible=false`; assert `clearLayerStatus(id)` after the error.
-7. Hidden layer never reports error: mount `visible=false`, trigger the timeout; assert no `setLayerStatus(id,"error")`; rerender `visible=true`; assert `error` now set.
+### 5. Tests
 
-New `src/hooks/useGlobalStateYear.test.ts` (`renderHook`, mock map):
+Rendered DataLayer tests use the **real `LoadingProvider`** and assert on `layerStatuses` after advancing fake timers past the 250 ms debounce, not a recording mock (the d10 harness's mock hands out fresh setters per render, which re-runs DataLayer's cleanup effect and would turn test 6 green on today's code).
 
-8. Year written while tiles load: latch set; `isStyleLoaded` mocked false; change year; assert `calls.setGlobalState` ends with `currentYear = new year`. (Red today in the equivalent page.tsx logic; Ted demonstrates red by temporarily reinstating the `isStyleLoaded` guard in the hook, records it, removes it.)
-9. Year chosen before `load` survives `load`: latch unset; set year 1987; call `onStyleLoad()`; assert last write is 1987, not `DEFAULT_RANGE[0]`.
-10. No year before `load`: `onStyleLoad()` writes `DEFAULT_RANGE[0]` (today's behaviour kept).
-11. Null year (timeline off) never writes.
+`src/test/pipeline/pmtiles-layers-lifecycle.test.tsx` (StrictMode, mocked `useMap` and `maplibre-gl`, effective-state oracles):
 
-Plus a source-text guard (pattern of the existing CSS text guard): `src/app/map/page.tsx` contains no `setGlobalStateProperty`, and CanopyMap's `onLoad` contains no literal `DEFAULT_RANGE[0]` write, so the single-writer rule cannot regress by someone re-adding the page effect.
+1. Visibility during the wait: style not loaded, sources pending; mount a tile-backed fill layer `visible=false`; rerender `visible=true`; emit `load`, then `sourcedata {sourceId}`; `getLayoutProperty` on fill and outline is `"visible"`.
+2. The reverse: `"none"`.
+3. Class filter during the wait: rerender with `classFilters={ [id]: ["old"] }`; `getFilter(fill)` contains `["in", ["get","class"], ["literal",["old"]]]`.
+4. Timeline on during the wait: rerender with `yearFilter=2000` on a layer with `timelineField`; `getFilter(fill)` contains `["global-state","currentYear"]`; fill-opacity is the age-graded expression.
+5. Line layer: as 1, `line-opacity` equals the registry value.
+6. Status on hide: mount visible; fire the 15 s timeout; advance past 250 ms; `layerStatuses.get(id) === "error"`; rerender `visible=false`; status absent.
+7. Hidden layers never report: two tile-backed layers on the shared source, one visible, one hidden; fire the timeouts; only the visible one is `error`; show the hidden one; now it is `error`.
+8. Debounce race: mount visible; fire the timeout; rerender `visible=false` within 250 ms; advance past 250 ms; status absent.
+9. StrictMode with the style loaded and sources pending: mount, flip pending off, emit `sourcedata`; exactly one `addLayer` per layer id in `calls.addLayer`; the first handler was passed to `off("sourcedata")`.
+10. A WFS-only fixture layer (not mounted on /map; harness only) hidden then shown: never `error` while hidden; no fetch while hidden.
 
-**Revert proof (Lee, 2026-08-09: a test is not a guard until it has gone red).** For each of tests 1-9, Ted reverts the matching production change on the branch, runs the test, records the red line verbatim, restores, records green. Razor re-runs at least three of those reverts himself, never trusting the table.
+`src/hooks/useGlobalStateYear.test.ts` (`renderHook`, mock map in a ref):
+
+11. Year written while tiles load: latch set; `isStyleLoaded` false; change year; last `calls.setGlobalState` is the new year.
+12. Year chosen before `load` survives it: set 1987; `onStyleLoad()`; last write 1987.
+13. No year before `load`: `onStyleLoad()` writes `DEFAULT_RANGE[0]`.
+14. Null year never writes.
+15. Rerendering with an unchanged year writes nothing (stable deps).
+
+`src/test/pipeline/canopy-map-year.test.tsx` (rendered CanopyMap): mock `react-map-gl/maplibre`'s `Map` as a `forwardRef` whose handle returns the mock map from `getMap()` and which fires `props.onLoad` on demand; children and DataLayers stubbed.
+
+16. Mount with `yearFilter=1987` before load; fire `onLoad`; last write 1987. Rerender with 1990; last write 1990.
+17. Mount with `yearFilter=null`; fire `onLoad`; write is `DEFAULT_RANGE[0]`.
+
+`src/test/audit/global-state-writer.test.ts` (source-text guard):
+
+18. `setGlobalStateProperty(` appears in exactly one non-test file under `src/`: `src/hooks/useGlobalStateYear.ts`.
+19. `CanopyMap.tsx` calls `useGlobalStateYear(` with its `yearFilter` and calls `onStyleLoad()` inside `onLoad`.
+
+**Revert table (Lee, 2026-08-09: a test is not a guard until it has gone red).** Ted records, per test, the mutation, the red line verbatim, and green after restore:
+- 1-5, 9: revert the re-apply call in `addLayersToMap` (red on today's behaviour).
+- 6, 7, 10: remove the status effect (7 and 10 also: restore `setLayerStatus(error)` directly in `handlePmtilesError`).
+- 8: remove the debounce cancel in `clearLayerStatus`.
+- 11: reinstate an `isStyleLoaded()` guard in the hook (a mutation of the new code, not today's code). 12: restore the hard-coded `DEFAULT_RANGE[0]` write. 14: drop the null check. 15: pass an inline getter in the deps.
+- 16, 17: remove the `onStyleLoad()` call from `onLoad`.
+- 18: re-add the page.tsx effect. 19: remove the `onStyleLoad()` call.
+
+Razor re-runs at least three of these reverts himself, including 16, never trusting the table.
 
 ### 6. Docs, in the same branch
 
-- ARCHITECTURE.md :124-126: the writer is CanopyMap via `useGlobalStateYear`, latched on `load`, not page.tsx; why `isStyleLoaded()` is the wrong predicate.
-- ARCHITECTURE.md Status model: status is derived from (visible, failed) at DataLayer level; a hidden layer never reports error.
-- ROADMAP: `current`/`next` corrected (P0b released 2026-11-02, per the hand-off log), shipped entry for this relay; P0b's post-release record rides in the release's first commit (Releases, sequence step 1, `summary --unrecorded`).
-- hand-off: remove the R1 Owed bullet and the Next bullet; log entry.
+- ARCHITECTURE.md near :124-126: the writer is CanopyMap via `useGlobalStateYear`, latched on `load`; `isStyleLoaded()` is never a readiness test, and why.
+- ARCHITECTURE.md Status model: status is derived from (visible, failed) at DataLayer level; a clear cancels a pending debounced write; a hidden tile-backed layer does not report error. Stated as it is, with the parked WFS-only in-flight case named.
+- ARCHITECTURE.md Rendering, beside PmtilesLayers: the latest-ref re-apply, and why not `useEffectEvent`.
+- ROADMAP: `current`/`next` corrected (P0b released 2026-11-02); P0b's post-release record from `summary --unrecorded`. **This relay's own `shipped` entry is not in this release**; it rides in the next release's first commit (ARCHITECTURE, Releases, post-release records). Parking Lot lines for each out-of-scope item below.
+- Hand-off: the R1 Owed and Next bullets are replaced by "released pending guards" wording, not an outcome; log entry.
 
 ## Batches and dependency graph
 
-Two batches, sequential (B2 edits the mock B1 extends; no other shared file).
+Two batches, sequential.
 
-- **B1, year sync (R1-02).** Files: `src/hooks/useGlobalStateYear.ts` (new), `src/hooks/useGlobalStateYear.test.ts` (new), `src/components/map/CanopyMap.tsx`, `src/app/map/page.tsx`, `src/test/mocks/maplibre.ts` (`calls.setGlobalState`), the source-text guard test (new, `src/test/audit/global-state-writer.test.ts`). Six files.
-- **B2, layer state (R1-03, R1-05).** Files: `src/components/map/DataLayer.tsx`, `src/test/mocks/maplibre.ts` (`_setSourcesPending`), `src/test/pipeline/pmtiles-layers-lifecycle.test.tsx` (new). Three files. Depends on B1 only through the mock.
-- **Docs** (ARCHITECTURE.md, ROADMAP.md, `.claude/handoff.md`) at relay close, ROADMAP and hand-off through the relay's pre-merge edits.
+- **B1, year sync (R1-02).** `src/hooks/useGlobalStateYear.ts` (new), `src/hooks/useGlobalStateYear.test.ts` (new), `src/components/map/CanopyMap.tsx`, `src/app/map/page.tsx`, `src/lib/debug/pipeline-logger.ts` (one union member), `src/test/mocks/maplibre.ts` (`calls.setGlobalState`), `src/test/pipeline/canopy-map-year.test.tsx` (new), `src/test/audit/global-state-writer.test.ts` (new). Eight files, one subsystem (the /map shell).
+- **B2, layer state (R1-03, R1-05).** `src/components/map/DataLayer.tsx`, `src/contexts/LoadingContext.tsx`, `src/test/mocks/maplibre.ts` (pending flag, effective-state getters), `src/test/pipeline/pmtiles-layers-lifecycle.test.tsx` (new). Four files. Depends on B1 only through the mock.
+- **Docs** (ARCHITECTURE.md, ROADMAP.md, `.claude/handoff.md`) at relay close.
 
 ## Review Focus
 
-Inputs or failure modes the intent implies that no test above exercises directly, each pinned to an owner:
-
-1. A real MapLibre map, not the mock: the year and the layer state on an actual tile load. Owner: the release's live checks (agent on production, headless), listed under Release; not a blocking guard because the agent cannot read `currentYear` on production (`window.__opencanopy_map` is dev-only).
-2. StrictMode double-invoke of the add effect while sources are pending: two `sourcedata` handlers, one cleaned up. Owner: B2, tests 1-5 run under StrictMode, and Razor confirms exactly one `addLayer` per layer id.
-3. The timeline loop's render gate after the write moved from page.tsx to CanopyMap: does `waitForRender` still resolve after the year paints? Owner: B1, a test that records the order of `setGlobalStateProperty` and the `once("idle")` registration through `useTimeline` with an injected `waitForRender`, or Razor's written reasoning if the order cannot be observed in a unit test.
-4. Several tile-backed layers failing on the one shared source at once: only visible ones report error. Owner: B2, test 7 extended to two layers, one visible.
-5. A WFS-only layer (fish-streams) hidden and shown under the new status effect: no flip to `error` while hidden, fetch still suppressed. Owner: B2, one extra case beside test 6.
+1. A real MapLibre map, not the mock: year and layer state on an actual tile load. Owner: the release's agent live checks (below), run headless on production through `?debug=pipeline` and `window.__OC_HEALTH_REPORT`.
+2. StrictMode double-invoke of the add effect with sources pending. Owner: B2, test 9.
+3. The render gate after the writer moved. Owner: B1, Razor's written check of the order (useTimeline registers `once("idle")` before the commit that runs the writer), since a unit test cannot observe MapLibre's idle ordering; test 16 proves the writer runs on rerender.
+4. Several layers failing on the one shared source. Owner: B2, test 7.
+5. A WFS-only layer under the new status effect. Owner: B2, test 10 (harness fixture; no WFS-only layer is on /map).
 
 ## Out of scope
 
-Indexed in the ROADMAP Parking Lot at relay close where not already scheduled:
+Each gets a ROADMAP Parking Lot index line at relay close, except item 1, which is scheduled:
 
-- Live /map's wheel/drag throw (react-map-gl 8.1.0 vs MapLibre 6.15): brief item 3, its own release (scheduled, not parked).
-- A retry for a failed PMTiles header (parked).
-- Batch 2's paint re-spine; any palette or visual change.
-- The URL hash not updating on move (M1a).
+1. Live /map's wheel/drag throw (react-map-gl 8.1.0 vs MapLibre 6.15): brief item 3, its own release.
+2. A retry for a failed PMTiles header.
+3. WfsLayers' stale-closure race (same class as R1-05; not public).
+4. A WFS-only layer's in-flight fetch writing status after it is hidden (not public).
+5. `isStyleLoaded()` as a readiness test in DataLayer.tsx:174, :423, :859 (latent, stable deps).
+6. StoryMap.tsx:72 and :152 dropping writes while tiles load (lane S).
+7. Batch 2's paint re-spine; the URL hash not updating on move (M1a).
 
-## Pre-mortem: it shipped and broke. How?
+## Pre-mortem: it shipped and the map lied. How?
 
-1. **The year write moved and now fires before CanopyMap's map exists.** Guarded: the effect no-ops until the latch; `onStyleLoad` writes the latest value. Tests 9 and 10.
-2. **react-map-gl calls `onLoad` before CanopyMap's child effects can see the map**, or twice under StrictMode. The latch is idempotent; a second `onStyleLoad` rewrites the same latest year. Test 9 runs under StrictMode.
-3. **`applyCurrentState` re-applies the base filter after the timeline effect set the composed one**, wiping the year filter. Prevented by applying the same function the effect uses (it reads the current `timelineActive`), not the registry base. Test 4.
-4. **The status effect fights `loadData` for WFS-only layers**, flipping a hidden fish-streams layer's status. Both clear on hide; neither sets on hide. Existing WFS tests plus 6-7 cover it; Razor checks.
-5. **Hidden layers no longer show the shared-source failure at all**, so a reader with every layer off never learns tiles are down. Acceptable: there is nothing on screen to be wrong about; the error appears the moment a layer is turned on (test 7).
-6. **`useEffectEvent` breaks the static export or lint.** Fallback named in design 3; `npm run build` and `npm run lint` are release checks.
+1. **The year never reaches the GPU** because CanopyMap calls the hook but not `onStyleLoad()`: timeline on, cutblocks and fire-history vanish while the bar ticks. Guarded by tests 16, 17 and 19, by calling it first in `onLoad`, and by the live check that compares logged writes with the bar.
+2. **The toast still lies.** A clear overtaken by a debounced error, or a test green for the wrong reason. Guarded by the debounce cancel, test 8, the real provider and the revert table.
+3. **Batch 2 wraps PmtilesLayers in `memo()`** and the re-apply freezes. The latest-ref works under `memo`; tests 1-5 stay as the tripwire.
+4. **`applyFilters` re-applies the base filter over the composed one.** It is the same function the effect uses and reads current `timelineActive`; test 4.
+5. **A refactor reintroduces a second `currentYear` writer.** Test 18.
 
 ## Assumptions (load-bearing first)
 
-1. After `load`, `setGlobalStateProperty` cannot throw in this app. Verified: MapLibre source (:47252, :47473) and a constant `mapStyle`, no `setStyle` in `src/`. If false, the throw is visible in error monitoring once OPS lands, and in the console now.
-2. `useEffectEvent` is usable in React 19.2.4 under vitest. Verified it is exported (`typeof React.useEffectEvent === "function"`); behaviour under the test runner is proven by tests 1-5, with the ref fallback if not.
-3. The six public layers are all tile-backed (finding R1-03, `registry.ts` PUBLIC_LAYER_IDS). Ted re-checks against today's registry.
-4. `StatusToast` is the only consumer of `error` status that would care about hidden layers. Ted greps `layerStatuses` consumers and lists them.
+1. After `load`, `setGlobalStateProperty` cannot throw in this app. Verified (MapLibre source, constant `mapStyle`, no `setStyle`). If wrong: MapErrorBoundary shows its crash panel; loud by design.
+2. The latest-ref pattern sees current props from a MapLibre listener in every component kind. It is plain closure semantics over a ref written in a layout effect; tests 1-5 prove it.
+3. The real `LoadingProvider` mounts in the harness without other providers. Ted confirms in B2; if it needs more, a stable-identity recording mock with hoisted `vi.fn()`s is the fallback.
+4. The six public layers are tile-backed and `StatusToast` is the only consumer that shows a hidden layer's error. Verified by critic r1 against registry.ts and every `layerStatuses` consumer.
 
 ## Inversion: how would we guarantee the map lies after this relay?
 
-Keep a predicate that is stricter than the failure (R1-02's mistake), keep two writers for one value (page.tsx and onLoad), or let tests run a mock that never takes the async path (why R1-05 hid). The design removes the first, consolidates the second, and the mock change fixes the third.
+Keep a predicate stricter than the failure (R1-02's mistake), keep two writers for one value, let tests run a mock that never takes the async path, or assert against a mock whose setters change identity per render. The design removes the first two; the mock and harness changes remove the last two.
 
 ## Gates
 
-1. Critic: plan-reviewer, round 1 at xhigh, every finding reported; at most three rounds (DECISIONS 2026-10-07).
-2. Relay: Ted implements (one batch), Razor reviews with mutation re-runs. No Jen gate: no visual or copy change.
-3. Checks on the rebased tip: `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`.
+1. Critic: plan-reviewer at xhigh, at most three rounds (DECISIONS 2026-10-07). Round 1: CONCERN, folded here.
+2. Relay: Ted implements B1 then B2; Razor reviews with revert re-runs. No Jen gate: no visual or copy change.
+3. Checks on the rebased tip: `npm test`, `npx tsc --noEmit`, `npm run lint` (zero new warnings in the touched files, not only exit 0), `npm run build`.
 
 ## Release
 
-Lane M, kind `behaviour`, through ARCHITECTURE.md Releases, steps 1-8, using the installed tool (`node ~/marvin/state/opencanopy-release-tool/release-ledger.mjs`). Approval: Lee's standing yes (DECISIONS, Deploy entry, amended 2026-11-10), cited verbatim and marked as relayed in `request --approval`. Rollback target: whatever `status` names as known-good (expected deploy 6ae8b912, main 9ad701b). No tool paths change, so no `install` afterwards.
+Lane M, kind `behaviour`, through ARCHITECTURE.md Releases, steps 1-8, with the installed tool (`node ~/marvin/state/opencanopy-release-tool/release-ledger.mjs`). Approval: Lee's standing yes, DECISIONS Deploy entry, amended 2026-11-10, quoted in `request --approval` with its attribution intact: "Lee, 2026-11-10 (relayed by marvin session-f1a7d3, stand-in coordinator): I'm quite sure for Open Canopy, we can go ahead and push and release everything. ..." Under the standing yes, step 4's "ask Lee and name the window" is replaced by reporting to the coordinator at push, with the rollback target, and immediately on any red guard, so a halt reaches Lee through the coordinator rather than waiting for him to happen by. Rollback target: whatever `status` names as known-good (today 6ae8b912, main 9ad701b). No tool paths change, so no `install` afterwards.
 
-Blocking guards on the deploy: identity (`commit_ref` equals the SHA, `state: ready`; `oc-build` tag on `/`, `/map`, `/privacy`, each 200); `npm run audit:live`, with its two known by-construction failures (tenure-cutblocks, fish-streams at live-health.spec.ts, routed to brief item 4) named in the evidence and every other test passing; a headless /map load on production with no new console error during load and no interaction (the wheel/drag throw is item 3's and is excluded by not interacting).
+**Before the push:** capture the console of the current known-good deploy with the same headless script the guard uses (load `/map`, no interaction), as the baseline.
 
-Live checks owed, non-blocking (agent, headless on production, where possible; else Lee): with the timeline on and tiles loading, the bar and the painted year agree at each pause; turning a layer on during the first seconds of load shows it without a second toggle; no error toast for a layer that is off. Not a visual release, so no phone check is owed (DECISIONS 2026-10-07 amendment).
+**Blocking guards on the new deploy:**
+- Identity: `commit_ref` equals the SHA, `state: ready`; the `oc-build` tag on `/`, `/map`, `/privacy`, each 200.
+- `npm run audit:live`: every test passes except the two known by-construction failures (tenure-cutblocks and fish-streams assertions at live-health.spec.ts:187 and :243, routed to brief item 4), named with their titles and lines in the evidence file so a third failure is distinguishable.
+- Headless `/map` load with no interaction: no console error that is not in the baseline. (The wheel/drag throw is item 3's and is excluded by not interacting.)
+
+**Agent live checks, recorded in the evidence, non-blocking unless they show the defect:** headless production `/map?debug=pipeline`. (a) Turn the timeline on during the first seconds of load, step several years, and compare each logged `global-state-year` write with the bar's year at each pause. (b) Turn a layer on in the first seconds of load and read its Visible column in `window.__OC_HEALTH_REPORT()`. If either shows the old defect, that is a red guard, not a note. Not a visual release, so no phone check is owed (DECISIONS 2026-10-07 amendment).
+
+## Round 1 folds
+
+Every must-fix from `2026-11-datalayer-public-path-critic-r1.md`: (1) CanopyMap wiring tested (16, 17, 19), single-writer guard repo-wide (18), `onStyleLoad()` first in `onLoad`; (2) real `LoadingProvider`; (3) debounce cancel in `clearLayerStatus`, LoadingContext joins B2, test 8; (4) StrictMode-with-pending case, test 9, one `addLayer` per id asserted; (5) the `useEffectEvent` trap recorded, and the design moved to a latest-ref (strategy note, code comment, ARCHITECTURE); (6) effective-state getters, `_reset` clears the pending flag; (7) `pipelineLog` in the writer, concrete agent live checks, console baseline, red guards reported at once; (8) this relay's `shipped` entry moved to the next release, the relayer quoted; (9) WfsLayers and the five `isStyleLoaded()` readiness sites named and parked; (10) two batches throughout, `useCallback` appliers with real deps, no separate initial-visibility mechanism, guard and test 14 in the revert table, `npm ci` or recorded versions, `mapRef` passed instead of a getter. Citation line numbers corrected.
