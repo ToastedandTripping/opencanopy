@@ -7,10 +7,11 @@
  *     identifier (not `.setGlobalStateProperty(`) catches optional calls,
  *     bracket access and aliases; an identifier followed by `:` (a type or
  *     object key) does not count.
- * 19. Inside CanopyMap's `onLoad` body, `onStyleLoad()` comes before the
- *     terrain block (`TERRAIN_SOURCE`), so a throw there cannot skip the only
- *     write of the year on load. The rendered tests cannot see this ordering:
- *     the terrain block never runs without the MapTiler key.
+ * 19. No `on("load"`, `once("load"`, `onLoad=` or `isStyleLoaded(` in
+ *     src/components/map/** or src/app/map/** (Amendment A): readiness is
+ *     `onStyleReady` (style JSON parsed). `isStyleLoaded()` is false whenever
+ *     a tile is in flight; `load` did not fire on production until the
+ *     visitor interacted. StoryMap (src/components/story) is lane S, parked.
  *
  * Both guards strip // and block comments before matching. "Non-test"
  * excludes src/test/** and any *.test.* file.
@@ -107,20 +108,34 @@ describe("currentYear global state has one writer", () => {
     expect(writers).toEqual(["src/hooks/useGlobalStateYear.ts"]);
   });
 
-  it("19: CanopyMap's onLoad calls onStyleLoad() before the terrain block", () => {
-    const source = stripComments(
-      readFileSync(resolve(SRC, "components/map/CanopyMap.tsx"), "utf-8"),
+  it("19: no load-based or isStyleLoaded() readiness under /map", () => {
+    const READINESS_RE = [
+      /\.on\(\s*["'`]load["'`]/,
+      /\.once\(\s*["'`]load["'`]/,
+      /\bonLoad=/,
+      /\bisStyleLoaded\(/,
+    ];
+    // The patterns must be able to fire.
+    expect(READINESS_RE[0].test('map.on("load", go)')).toBe(true);
+    expect(READINESS_RE[1].test("map.once('load', go)")).toBe(true);
+    expect(READINESS_RE[2].test("<Map onLoad={x}>")).toBe(true);
+    expect(READINESS_RE[3].test("if (map.isStyleLoaded()) go()")).toBe(true);
+    expect(READINESS_RE[0].test('map.on("style.load", go)')).toBe(false);
+
+    const files = [
+      ...walk(resolve(SRC, "components/map")),
+      ...walk(resolve(SRC, "app/map")),
+    ].filter(isNonTest);
+    expect(files.map((f) => relative(REPO, f).split("\\").join("/"))).toContain(
+      "src/components/map/DataLayer.tsx",
     );
-    const start = source.indexOf("const onLoad = useCallback(");
-    expect(start).toBeGreaterThan(-1);
-    // The body runs to the useCallback's closing `}, [` deps list.
-    const end = source.indexOf("}, [", start);
-    expect(end).toBeGreaterThan(start);
-    const body = source.slice(start, end);
-    const call = body.indexOf("onStyleLoad()");
-    const terrain = body.indexOf("TERRAIN_SOURCE");
-    expect(call).toBeGreaterThan(-1);
-    expect(terrain).toBeGreaterThan(-1);
-    expect(call).toBeLessThan(terrain);
+    const offenders: string[] = [];
+    for (const f of files) {
+      const text = stripComments(readFileSync(f, "utf-8"));
+      for (const re of READINESS_RE) {
+        if (re.test(text)) offenders.push(`${relative(REPO, f).split("\\").join("/")} ${re}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

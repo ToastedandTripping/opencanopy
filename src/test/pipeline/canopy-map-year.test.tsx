@@ -1,20 +1,19 @@
 /**
  * Rendered CanopyMap: the year reaches MapLibre's `currentYear` through
- * CanopyMap's own wiring of useGlobalStateYear (R1-02).
+ * CanopyMap's MapStyleSync child (R1-02, Amendment A).
  *
- * The hook tests prove the hook; these prove CanopyMap calls `onStyleLoad()`
- * from its real `onLoad` and passes its `yearFilter` prop through, which the
- * hook tests cannot see.
+ * The hook tests prove the hook; these prove CanopyMap mounts MapStyleSync
+ * inside `<Map>` and passes its `yearFilter` prop through, and that nothing
+ * waits for `load` (test 22: style parsed, tiles pending, `load` never fired).
  *
- * Harness: react-map-gl/maplibre's `Map` is a forwardRef stub whose handle
- * returns the mock map from `getMap()` and which captures `props.onLoad` so
- * the test fires it on demand. DataLayer, MapReadout, MapPopup and the three
- * controls are stubbed; maplibre-gl's import-time `setWorkerUrl` and
- * `addProtocol` are mocked.
+ * Harness: react-map-gl/maplibre's `Map` is a forwardRef stub that renders
+ * its children; `useMap()` returns a handle whose `getMap()` is the mock map.
+ * DataLayer, MapReadout, MapPopup and the three controls are stubbed;
+ * maplibre-gl's import-time `setWorkerUrl` and `addProtocol` are mocked.
  *
- * Divergences NOT covered: a real MapLibre `load` event and real tile loading
+ * Divergences NOT covered: a real MapLibre style parse and real tile loading
  * (happy-dom, no WebGL); the terrain block, which never runs without the
- * MapTiler key (its ordering is guarded by the source-text audit test 19).
+ * MapTiler key.
  */
 
 import React from "react";
@@ -35,7 +34,7 @@ vi.mock("react-map-gl/maplibre", async () => {
     ref: React.Ref<unknown>,
   ) {
     useHandle(ref, () => ({ getMap: () => harness.mockMap }));
-    harness.onLoad = props.onLoad ?? null;
+    harness.onLoad = props.onLoad ?? null; // must stay null: no onLoad prop
     return <div data-testid="map-stub">{props.children}</div>;
   });
   return {
@@ -80,28 +79,51 @@ afterEach(() => {
   cleanup();
 });
 
-function fireLoad() {
-  expect(harness.onLoad).toBeTypeOf("function");
+/** The style JSON finishes parsing. */
+function styleReady() {
   act(() => {
-    harness.onLoad!();
+    mockMap._setStyleLoaded(true);
+    mockMap._emit("style.load");
   });
 }
 
-describe("CanopyMap writes currentYear through useGlobalStateYear", () => {
-  it("16: a year set before load is written on load, and later ticks follow", () => {
+describe("CanopyMap writes currentYear through MapStyleSync", () => {
+  it("16: a year set before the style is ready is written when it is, and later ticks follow", () => {
+    mockMap._setStyleLoaded(false);
     const { rerender } = render(<CanopyMap enabledLayers={[]} yearFilter={1987} />);
     expect(writes()).toHaveLength(0);
 
-    fireLoad();
+    styleReady();
     expect(lastWrite()).toEqual({ name: "currentYear", value: 1987 });
 
     rerender(<CanopyMap enabledLayers={[]} yearFilter={1990} />);
     expect(lastWrite()).toEqual({ name: "currentYear", value: 1990 });
   });
 
-  it("17: with no year before load, load writes DEFAULT_RANGE[0]", () => {
+  it("17: with no year before ready, it writes DEFAULT_RANGE[0]", () => {
+    mockMap._setStyleLoaded(false);
     render(<CanopyMap enabledLayers={[]} yearFilter={null} />);
-    fireLoad();
+    styleReady();
+    expect(lastWrite()).toEqual({ name: "currentYear", value: DEFAULT_RANGE[0] });
+  });
+
+  it("22: style parsed, tiles pending, load never fired: the year is written, and ticks follow", () => {
+    mockMap._setTilesPending(true);
+    expect(mockMap.isStyleLoaded()).toBe(false);
+    const { rerender } = render(<CanopyMap enabledLayers={[]} yearFilter={1987} />);
+    expect(lastWrite()).toEqual({ name: "currentYear", value: 1987 });
+
+    rerender(<CanopyMap enabledLayers={[]} yearFilter={2001} />);
+    expect(lastWrite()).toEqual({ name: "currentYear", value: 2001 });
+
+    // Nothing in CanopyMap waits on `load`.
+    expect(harness.onLoad).toBeNull();
+    expect(mockMap._listenerCount("load")).toBe(0);
+  });
+
+  it("22b: with no year, style parsed and tiles pending, it writes DEFAULT_RANGE[0]", () => {
+    mockMap._setTilesPending(true);
+    render(<CanopyMap enabledLayers={[]} yearFilter={null} />);
     expect(lastWrite()).toEqual({ name: "currentYear", value: DEFAULT_RANGE[0] });
   });
 });

@@ -72,6 +72,12 @@ export function createMockMap() {
   // waits for a PMTiles header takes its async path. Flipping it emits nothing:
   // tests emit `sourcedata` themselves.
   let sourcesPending = false;
+  // While true, isStyleLoaded() is false although the style JSON is parsed
+  // (getStyle() defined): the production condition while tiles are in flight.
+  let tilesPending = false;
+  // One-time listeners, keyed by the caller's own function so off(cb) removes
+  // them, as MapLibre's Evented does.
+  const onceListeners = new Map<string, Set<(...args: unknown[]) => void>>();
 
   const map = {
     // ── Source management ──────────────────────────────────────────
@@ -159,9 +165,11 @@ export function createMockMap() {
     }),
 
     // ── Style queries ─────────────────────────────────────────────
-    isStyleLoaded: vi.fn(() => styleLoaded),
+    isStyleLoaded: vi.fn(() => styleLoaded && !tilesPending),
 
+    // Like MapLibre, undefined until the style JSON is parsed.
     getStyle: vi.fn((): { layers: { id: string; type: string }[] } => {
+      if (!styleLoaded) return undefined as unknown as { layers: { id: string; type: string }[] };
       // Returns all layers in their actual stack order (layerOrder), including
       // the pre-seeded basemap layers. This mirrors real MapLibre where
       // getStyle().layers includes both basemap and imperatively-added layers,
@@ -259,17 +267,14 @@ export function createMockMap() {
 
     off: vi.fn((event: string, callback: (...args: unknown[]) => void) => {
       eventListeners.get(event)?.delete(callback);
+      onceListeners.get(event)?.delete(callback);
     }),
 
     once: vi.fn((event: string, callback: (...args: unknown[]) => void) => {
-      const wrapped = (...args: unknown[]) => {
-        eventListeners.get(event)?.delete(wrapped);
-        callback(...args);
-      };
-      if (!eventListeners.has(event)) {
-        eventListeners.set(event, new Set());
+      if (!onceListeners.has(event)) {
+        onceListeners.set(event, new Set());
       }
-      eventListeners.get(event)!.add(wrapped);
+      onceListeners.get(event)!.add(callback);
     }),
 
     // ── Global state ──────────────────────────────────────────────
@@ -294,9 +299,15 @@ export function createMockMap() {
     _emit: (event: string, ...args: unknown[]) => {
       const listeners = eventListeners.get(event);
       if (listeners) {
-        for (const cb of listeners) {
+        for (const cb of [...listeners]) {
           cb(...args);
         }
+      }
+      const once = onceListeners.get(event);
+      if (once) {
+        const fire = [...once];
+        once.clear();
+        for (const cb of fire) cb(...args);
       }
     },
 
@@ -307,6 +318,14 @@ export function createMockMap() {
     _setSourcesPending: (pending: boolean) => {
       sourcesPending = pending;
     },
+
+    _setTilesPending: (pending: boolean) => {
+      tilesPending = pending;
+    },
+
+    /** Number of registered listeners (persistent + one-time) for an event. */
+    _listenerCount: (event: string) =>
+      (eventListeners.get(event)?.size ?? 0) + (onceListeners.get(event)?.size ?? 0),
 
     _getSources: () => new Map(sources),
     _getLayers: () => new Map(layers),
@@ -325,6 +344,7 @@ export function createMockMap() {
       filterValues.clear();
       layoutValues.clear();
       eventListeners.clear();
+      onceListeners.clear();
       calls.addSource.length = 0;
       calls.addLayer.length = 0;
       calls.removeSource.length = 0;
@@ -339,6 +359,7 @@ export function createMockMap() {
       for (const key of Object.keys(globalState)) delete globalState[key];
       styleLoaded = true;
       sourcesPending = false;
+      tilesPending = false;
     },
   };
 
