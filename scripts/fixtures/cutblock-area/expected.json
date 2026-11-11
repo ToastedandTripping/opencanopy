@@ -1,0 +1,46 @@
+{
+ "buckets": {
+  "read": 18,
+  "kept": 11,
+  "undated": 1,
+  "preStart": 1,
+  "postEnd": 1,
+  "boundaryRecorded": 1,
+  "boundaryDrawn": 1,
+  "zeroArea": 1,
+  "unparseable": 1
+ },
+ "repaired": 2,
+ "emptyAfterRepair": 1,
+ "sumDrawnKeptHa": 711.0,
+ "drawnOnlyBoundaryHa": 2500.0,
+ "shippedTotalHa": 600.0,
+ "band": [
+  570.0,
+  580.0
+ ],
+ "box": {
+  "name": "fixture group 0",
+  "bounds": [
+   -124.48662338252083,
+   53.983964420039754,
+   -124.40067559580358,
+   54.03431551355988
+  ],
+  "year": 2025,
+  "expectHa": 200.0,
+  "tolerancePct": 0.5
+ },
+ "annualHa": {
+  "1950": 10,
+  "1975": 50,
+  "1980": 50,
+  "1985": 75,
+  "1986": 16,
+  "1995": 165,
+  "2000": 150,
+  "2010": 50,
+  "2025": 10
+ },
+ "totalHa": 576
+}
