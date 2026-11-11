@@ -13,8 +13,15 @@ const MAX_CACHE_SIZE = 50;
 /** In-memory cache for fetched layer data, keyed by layer:bbox:zoom */
 const cache = new Map<string, GeoJSON.FeatureCollection>();
 
+/** A pending request: its promise, plus the promise's own reject, captured
+ *  from the constructor so a superseded caller can be settled. */
+interface PendingEntry {
+  promise: Promise<GeoJSON.FeatureCollection>;
+  reject: (reason: unknown) => void;
+}
+
 /** Pending fetch promises to deduplicate concurrent requests */
-const pending = new Map<string, Promise<GeoJSON.FeatureCollection>>();
+const pending = new Map<string, PendingEntry>();
 
 /** Debounce timers per layer */
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -31,13 +38,19 @@ function evictOldest(): void {
   }
 }
 
-/** Reject and clean up all pending promises for a given layer */
+/** Reject and clean up all pending promises for a given layer.
+ *  The rejection is a DOMException named "AbortError": the one shape
+ *  DataLayer's catch treats as a supersede rather than a failure.
+ *  Runs inside the new request's executor, before that request's own
+ *  pending.set, so it can never reach the request that superseded it. */
 function rejectPendingForLayer(layerId: string): void {
-  for (const [key, promise] of pending.entries()) {
+  for (const [key, entry] of pending.entries()) {
     if (key.startsWith(layerId + ":")) {
       pending.delete(key);
-      // Swallow unhandled rejection from orphaned promise
-      promise.catch(() => {});
+      // The no-op catch keeps an unobserved rejection from being reported as
+      // unhandled; a caller that awaits the promise still sees the rejection.
+      entry.promise.catch(() => {});
+      entry.reject(new DOMException("Superseded", "AbortError"));
     }
   }
   // Abort any in-flight fetch for this layer
@@ -88,10 +101,12 @@ export function fetchLayerData(
 
   // Return in-flight request if one exists
   const inflight = pending.get(key);
-  if (inflight) return inflight;
+  if (inflight) return inflight.promise;
 
+  let rejectThis!: (reason: unknown) => void;
   const promise = new Promise<GeoJSON.FeatureCollection>(
     (resolve, reject) => {
+      rejectThis = reject;
       // Clear any existing debounce timer and orphaned promises for this layer
       const existing = debounceTimers.get(layerId);
       if (existing) {
@@ -99,54 +114,60 @@ export function fetchLayerData(
         rejectPendingForLayer(layerId);
       }
 
-      debounceTimers.set(
-        layerId,
-        setTimeout(async () => {
-          try {
-            // Abort any previous in-flight fetch for this layer
-            const prev = controllers.get(layerId);
-            if (prev) prev.abort();
-            const controller = new AbortController();
-            controllers.set(layerId, controller);
+      const timer = setTimeout(async () => {
+        // Assigned once the fetch starts; the finally only deletes the
+        // controller entry if it is still this request's own.
+        let controller: AbortController | undefined;
+        try {
+          // Abort any previous in-flight fetch for this layer
+          const prev = controllers.get(layerId);
+          if (prev) prev.abort();
+          controller = new AbortController();
+          controllers.set(layerId, controller);
 
-            const params = new URLSearchParams({
-              layer: layerId,
-              bbox: bbox.join(","),
-              zoom: String(Math.floor(zoom)),
-            });
+          const params = new URLSearchParams({
+            layer: layerId,
+            bbox: bbox.join(","),
+            zoom: String(Math.floor(zoom)),
+          });
 
-            const res = await fetch(`/api/wfs?${params}`, {
-              signal: controller.signal,
-            });
+          const res = await fetch(`/api/wfs?${params}`, {
+            signal: controller.signal,
+          });
 
-            if (!res.ok) {
-              const error = await res.json().catch(() => ({
-                error: res.statusText,
-              }));
-              throw new DataFetchError(
-                "http",
-                (error as { error: string }).error || `HTTP ${res.status}`
-              );
-            }
+          if (!res.ok) {
+            const error = await res.json().catch(() => ({
+              error: res.statusText,
+            }));
+            throw new DataFetchError(
+              "http",
+              (error as { error: string }).error || `HTTP ${res.status}`
+            );
+          }
 
-            const data =
-              (await res.json()) as GeoJSON.FeatureCollection;
-            cache.set(key, data);
-            evictOldest();
-            resolve(data);
-          } catch (err) {
-            reject(err);
-          } finally {
-            pending.delete(key);
-            debounceTimers.delete(layerId);
+          const data =
+            (await res.json()) as GeoJSON.FeatureCollection;
+          cache.set(key, data);
+          evictOldest();
+          resolve(data);
+        } catch (err) {
+          reject(err);
+        } finally {
+          // Delete only what this request still owns: a newer request for
+          // the same layer (or the same key) may have replaced any of these
+          // entries while this one was in flight (R2-02).
+          if (pending.get(key)?.promise === promise) pending.delete(key);
+          if (debounceTimers.get(layerId) === timer) debounceTimers.delete(layerId);
+          if (controller && controllers.get(layerId) === controller) {
             controllers.delete(layerId);
           }
-        }, debounceMs)
-      );
+        }
+      }, debounceMs);
+      debounceTimers.set(layerId, timer);
     }
   );
 
-  pending.set(key, promise);
+  pending.set(key, { promise, reject: rejectThis });
   return promise;
 }
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { METHODOLOGY_URL } from "@/lib/site-links";
 
 export function Footer() {
   return (
@@ -26,7 +27,7 @@ export function Footer() {
               GitHub
             </a>
             <a
-              href="https://github.com/ToastedandTripping/opencanopy/blob/main/METHODOLOGY.md"
+              href={METHODOLOGY_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-zinc-300 transition-colors"
