@@ -42,13 +42,13 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **M1a after items 3 and 4:** the URL-hash subscription defect stands (useMapState reads the map handle once, before the map exists); a shared deep link now completes its flyTo and can snap late after the visitor pans; batch-0 negative controls that relied on flyTo throwing must be re-baselined. audit:live: item 4 retargeted :187 to cutblocks, replaced :243 with a direct fish-streams proxy request and made every z11 test find the map before moving the camera (no test.skip left in live-health.spec.ts); M1a keeps :118 (stale URL parser) and :130 (raster z5).
 
-- **PMTiles header timeout on slow devices (coordinator 2026-11-11: its own item after item 5; raises the parked 'no header retry' line):** PmtilesLayers gives the shared archive header 15 s from source registration and never retries (DataLayer.tsx, initSource timeout). Measured 2026-11-11 on production under host load 16: header held 10 s plus a saturated main thread (2-6 fps) tripped the timeout and the layer never attached. On a slow enough phone the same happens to every vector layer until reload. Evidence ~/marvin/state/relay/small-routed-fixes-live/candidate-visibility-run1-header-timeout-load16.json.
-
 - **Lee's phone check, landing page (owed since 2026-11-11, release 8):** the hero now reads '5.7 million hectares' (was 5.8) and the logging chapter '5.7 million hectares' (was 'nearly 6 million'). Visual release; non-blocking.
 
 - **Released 2026-11-10/11 (brief items 2-5), all green:** release 4 DataLayer public path (6af3b9d0), 5 react-map-gl 8.1.3 (6af3dd6f), 6 small routed fixes (6af3ee1d), 7 HEAVY (6af41ba4), 8 MEASURE (6af43423, main 45c2109). Ledger clean at token 8, known-good 6af43423. Release 8's post-release record and ROADMAP shipped entry ride in the next release's first commit (summary --unrecorded lists it). Primary ~/Projects/opencanopy main fast-forwarded to 45c2109.
 
-- **Next (coordinator 2026-11-11):** the PMTiles slow-header fix (plan .claude/plans/2026-11-pmtiles-slow-header.md, in critic; build and release only if it stays small), then G1 per beta-resequence.md (OPS, M1a, S0a) in a fresh session after Lee is up.
+- **PMTiles slow header (owed; plan .claude/plans/2026-11-pmtiles-slow-header.md):** after 15 s without the shared archive header, PmtilesLayers stops listening, so a late header (slow phone, saturated main thread) leaves every vector layer blank until reload; measured on production under load (~/marvin/state/relay/small-routed-fixes-live/candidate-visibility-run1-header-timeout-load16.json). Plan: keep listening, recover on a late header, the status effect clears the notice on recovery. Critic r1 and r2 FAIL, both on proof, both folded; the code design is verified against MapLibre 6.15, pmtiles 4.4.0 and react-dom 19.2.4. Next: round 3 (the last, then Lee if it fails), then relay (Standard tier). An outright header failure (no retry) stays parked.
+
+- **Next (coordinator 2026-11-11):** a fresh session after Lee is up: the PMTiles slow-header item above, then G1 per beta-resequence.md (OPS, M1a, S0a).
 
 ## Open questions awaiting Lee
 
