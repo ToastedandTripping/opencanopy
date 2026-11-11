@@ -10,11 +10,19 @@
  *   1. Page loads within 30s
  *   2. Map canvas exists
  *   3. Map reaches idle state (generous 60s timeout)
- *   4. Forest-age layer returns features at z5
- *   5. Cutblocks layer returns features at z7
- *   6. fish-streams WFS returns features (D3 deploy gate — cqlFilter layer)
- *   7. old-growth-250 renders via PMTiles (z10-12 band guard)
- *   8. cutblocks supplemental WFS returns features (D3 deploy gate — cqlFilter layer)
+ *   4. PMTiles file accessible on R2 (200, and 206 on a Range request)
+ *   5. Forest-age raster overview renders at z5
+ *   6. Forest-age vector tiles render features at z11
+ *   7. Public cutblocks vector tiles render features at z11, after a camera
+ *      witness proves the flyTo landed (map-not-found fails, never skips)
+ *   8. old-growth-250 renders via PMTiles (z10-12 band guard)
+ *   9. fish-streams WFS proxy, requested directly: features > 0 and every
+ *      feature STREAM_ORDER >= 3 (D3 deploy gate; cqlFilter layer)
+ *  10. cutblocks WFS proxy, requested directly (D3 deploy gate; cqlFilter layer)
+ *
+ * Every layer the page is asked to show is in PUBLIC_LAYER_IDS: a layer the
+ * public cannot see fails here by construction. The WFS-only cqlFilter path
+ * (fish-streams, not public) is guarded through the proxy instead (check 9).
  */
 
 import { test, expect, type Page } from '@playwright/test';
@@ -184,100 +192,96 @@ test('forest-age vector tiles render features at z11 on production', async ({ pa
   ).toBeGreaterThan(0);
 });
 
-test('tenure-cutblocks vector tiles render features at z11 on production', async ({ page }) => {
-  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+test('cutblocks vector tiles render features at z11 on production', async ({ page }) => {
+  // Public `cutblocks` (tile-backed, source-layer tenure-cutblocks), enabled
+  // through the hash so the page itself shows it. The map is found BEFORE the
+  // flyTo: production never sets window.__opencanopy_map, so a flyTo issued
+  // first is a silent no-op and the count would run at the default z5 camera.
+  await page.goto(`${PRODUCTION_URL}#layers=cutblocks`, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
 
-  // Navigate to central interior at z11 where cutblocks should be dense
-  await page.evaluate(() => {
-     
+  // Map-not-found fails this test (ensureMapInstance throws on timeout).
+  await ensureMapInstance(page, 30000);
+
+  // Central interior at z11, where cutblocks are dense (Prince George vicinity)
+  const TARGET = { lng: -122.7, lat: 53.9, zoom: 11 };
+  await page.evaluate((t) => {
     const map = (window as any).__opencanopy_map;
-    if (!map) return;
-    map.flyTo({ center: [-122.7, 53.9], zoom: 11, duration: 0 });
-    // Ensure tenure-cutblocks layer is visible (may be default-disabled)
-    if (map.getLayer('layer-tenure-cutblocks-tiles-fill')) {
-      map.setLayoutProperty('layer-tenure-cutblocks-tiles-fill', 'visibility', 'visible');
-    }
-  });
+    map.flyTo({ center: [t.lng, t.lat], zoom: t.zoom, duration: 0 });
+  }, TARGET);
 
   await waitForMapIdle(page, 60000);
 
+  // Camera witness: the count below means nothing unless the flyTo landed.
+  const camera = await page.evaluate(() => {
+    const map = (window as any).__opencanopy_map;
+    const c = map.getCenter();
+    return { zoom: map.getZoom() as number, lng: c.lng as number, lat: c.lat as number };
+  });
+  expect(Math.abs(camera.zoom - TARGET.zoom), `camera zoom ${camera.zoom} should be within 0.5 of ${TARGET.zoom}`).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(camera.lng - TARGET.lng), `camera lng ${camera.lng} should be within 0.05 of ${TARGET.lng}`).toBeLessThanOrEqual(0.05);
+  expect(Math.abs(camera.lat - TARGET.lat), `camera lat ${camera.lat} should be within 0.05 of ${TARGET.lat}`).toBeLessThanOrEqual(0.05);
+
   let featureCount = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
-    featureCount = await queryFeatureCount(page, 'layer-tenure-cutblocks-tiles-fill');
+    featureCount = await queryFeatureCount(page, 'layer-cutblocks-tiles-fill');
     if (featureCount > 0) break;
     if (attempt < 2) await page.waitForTimeout(10000);
   }
 
-  if (featureCount === -1) {
-    console.warn('Could not access map instance for queryRenderedFeatures check');
-    test.skip();
-    return;
-  }
-
+  // No skip: -1 (map lost) and 0 (no layer, or nothing drawn) are both red.
   expect(
     featureCount,
-    'tenure-cutblocks should have rendered features at z11'
+    'cutblocks should have rendered features at z11 near Prince George'
   ).toBeGreaterThan(0);
 });
 
 // ── D3 deploy gates: cqlFilter layers must return features ───────────────────
 //
-// These tests are the deploy gate for the D3 proxy CQL fix. Each test:
-//   - Navigates to a viewport that is INSIDE the layer's zoomRange AND
-//     under the 50,000 km² WFS area guard (DataLayer.tsx:930-947).
-//   - Enables the layer and waits for WFS data to arrive.
-//   - Asserts rendered features > 0.
+// These tests are the deploy gate for the D3 proxy CQL fix. Both request the
+// production proxy (/api/wfs) directly: fish-streams is WFS-only and not in
+// PUBLIC_LAYER_IDS, so no UI shows it any more, and cutblocks is tile-backed,
+// so the D10 fix left it no WFS layer in the UI either.
 //
 // Viewport selection rationale:
-//   - fish-streams (z9+): Campbell River area (-125.3, 50.0) at z10 —
-//     dense FWA stream network, high STREAM_ORDER values. Area ~130 km².
-//   - old-growth-250 (tile-backed old growth): Wells Gray (-119.9, 51.7) at z11 —
-//     queries the PMTiles fill (forest-age source filtered to class=old-growth).
-//   - cutblocks (supplemental WFS, tile-backed, z13+): Prince George (-122.7, 53.9)
-//     at z13 — dense tenure cutblocks. Area <50 km². Layer is tile-backed so
-//     this tests the supplemental WFS path; rendered layer ID is the WFS fill.
+//   - fish-streams (z9+): Campbell River bbox -125.4,49.95,-125.2,50.05 at
+//     z10 -- dense FWA stream network, high STREAM_ORDER values. Every feature
+//     must have STREAM_ORDER >= 3, so a dropped CQL filter goes red, not only
+//     an empty answer.
+//   - cutblocks (z13): Prince George (-122.7, 53.9), bbox under 50 km2 --
+//     dense tenure cutblocks.
 //
-// These tests run against production after deploy — they are NOT local CI gates.
+// old-growth-250, which sits between the two, is a PMTiles render check, not
+// a D3 gate.
+//
+// Reading a failure: a 200 with zero features is red. A proxy 502 or a
+// timeout is recorded `unverified` and re-run at least 15 minutes later; a 502
+// that persists is red, because a CQL regression in the proxy also returns 502.
+//
+// These tests run against production after deploy -- they are NOT local CI gates.
 
-test('D3: fish-streams WFS returns features via cqlFilter proxy fix', async ({ page }) => {
-  // fish-streams: zoomRange [9, 18], WFS-only (no tileSource), defaultEnabled: false.
-  // Enable via hash param so the layer is active on load — bare URL leaves it off.
-  await page.goto(`${PRODUCTION_URL}#layers=fish-streams`, { timeout: 30000, waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
-  await waitForMapIdle(page, 60000);
-
-  // Navigate to Campbell River area at z10 — inside fish-streams zoomRange,
-  // well under the 50,000 km² area guard.
-  await page.evaluate(() => {
-     
-    const map = (window as any).__opencanopy_map;
-    if (!map) return;
-    map.flyTo({ center: [-125.3, 50.0], zoom: 10, duration: 0 });
-  });
-
-  await waitForMapIdle(page, 60000);
-
-  // Wait for the WFS layer to be added (may take a moment after navigation)
-  await page.waitForTimeout(5000);
-
-  let featureCount = 0;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    featureCount = await queryFeatureCount(page, 'layer-fish-streams-line');
-    if (featureCount > 0) break;
-    if (attempt < 2) await page.waitForTimeout(8000);
-  }
-
-  if (featureCount === -1) {
-    console.warn('D3 fish-streams: Could not access map instance');
-    test.skip();
-    return;
-  }
-
+test('D3: fish-streams WFS proxy returns stream-order-filtered features', async ({ request }) => {
+  // fish-streams: WFS-only, whitelisted by the proxy with
+  // cqlFilter "STREAM_ORDER >= 3" (netlify/edge-functions/wfs-proxy.ts).
+  const response = await request.get(
+    'https://opencanopy.ca/api/wfs?layer=fish-streams&bbox=-125.4,49.95,-125.2,50.05&zoom=10',
+    { timeout: 30000 }
+  );
   expect(
-    featureCount,
-    'fish-streams WFS layer should return features at z10 (D3 proxy CQL fix)'
+    response.status(),
+    'WFS proxy must return 200 (one 502 or timeout is unverified: re-run 15+ min later; a persistent 502 is red)'
+  ).toBe(200);
+  const body = await response.json();
+  const features: Array<{ properties?: { STREAM_ORDER?: unknown } }> = body.features ?? [];
+  expect(
+    features.length,
+    'fish-streams WFS proxy should return features at z10 near Campbell River (D3 cqlFilter fix)'
   ).toBeGreaterThan(0);
+  const belowOrder3 = features.filter((f) => !(Number(f.properties?.STREAM_ORDER) >= 3));
+  expect(
+    belowOrder3.length,
+    'every fish-streams feature must have STREAM_ORDER >= 3 (the proxy CQL filter is applied)'
+  ).toBe(0);
 });
 
 test('old-growth-250 renders via PMTiles across the z10-12 band', async ({ page }) => {
