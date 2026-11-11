@@ -12,6 +12,12 @@
  * 2026-06-18 to 2026-09-02 on a count nobody could reproduce; the checkpoint
  * supports 5.89M ha.
  *
+ * MEASURE (2026-11, plan 2026-11-measure-fix): the cap is now
+ * max(recorded, drawn) >= 2,000 ha (scripts/lib/cutblock_area.py, CAP_HA pinned to
+ * CUTBLOCK_AREA_CAP_HA below), the hero must sit within 0.1M of the data, the total
+ * may never rise above the shipped 5,888,477.44 ha on this checkpoint, and the Nova
+ * Scotia comparison is checked against the figure the reader sees.
+ *
  * Mutation-verified 2026-09-02: hero "6.1 million" fails (over the data);
  * hero "4 million" fails (more than 0.2M under); chapter "over 8 million"
  * fails; scrub table without `areaCap` fails.
@@ -29,7 +35,19 @@ const heroSource = readFileSync(
   "utf-8"
 );
 
-const totalMillionHa = (cutblocksScrub as { total: number }).total / 1e6;
+const totalHa = (cutblocksScrub as { total: number }).total;
+const totalMillionHa = totalHa / 1e6;
+
+// The figure shipped before MEASURE (2026-05-06 checkpoint, attribute sum, attribute cap).
+const SHIPPED_TOTAL_HA = 5888477.44;
+
+const cutblockAreaPy = readFileSync(resolve(__dirname, "../../../scripts/lib/cutblock_area.py"), "utf-8");
+
+function heroFigure(): number {
+  const m = heroSource.match(/(\d+(?:\.\d+)?) million hectares/);
+  expect(m, "HeroSection.tsx no longer contains '<n> million hectares'").not.toBeNull();
+  return parseFloat(m![1]);
+}
 
 describe("hero hectares figure is sourced from the shipped scrub table", () => {
   it("the scrub table declares the cutblock area cap the map uses", () => {
@@ -39,6 +57,16 @@ describe("hero hectares figure is sourced from the shipped scrub table", () => {
     ).toBe(CUTBLOCK_AREA_CAP_HA);
   });
 
+  it("the builders' cap (scripts/lib/cutblock_area.py CAP_HA) is the map's cap", () => {
+    const m = cutblockAreaPy.match(/^CAP_HA = (\d+)$/m);
+    expect(m, "cutblock_area.py no longer defines 'CAP_HA = <n>' at top level").not.toBeNull();
+    expect(Number(m![1])).toBe(CUTBLOCK_AREA_CAP_HA);
+  });
+
+  it("no public number goes up: the scrub total is at or below the shipped figure on this checkpoint", () => {
+    expect(totalHa).toBeLessThanOrEqual(SHIPPED_TOTAL_HA);
+  });
+
   it("the scrub total is in the range the checkpoint supports (dated 1950-2025, under the cap)", () => {
     // 5.888M ha on the 2026-05-06 checkpoint. A rebuild from a newer FTEN
     // pull may move this; a jump past 7M means the cap stopped applying.
@@ -46,12 +74,10 @@ describe("hero hectares figure is sourced from the shipped scrub table", () => {
     expect(totalMillionHa).toBeLessThan(7);
   });
 
-  it("hero figure: at or below the data, and no more than 0.2M ha below it", () => {
-    const m = heroSource.match(/(\d+(?:\.\d+)?) million hectares/);
-    expect(m, "HeroSection.tsx no longer contains '<n> million hectares'").not.toBeNull();
-    const hero = parseFloat(m![1]);
+  it("hero figure: at or below the data, and within 0.1M ha of it", () => {
+    const hero = heroFigure();
     expect(hero, `hero says ${hero}M but the scrub table totals ${totalMillionHa.toFixed(3)}M`).toBeLessThanOrEqual(totalMillionHa);
-    expect(hero, `hero says ${hero}M — needlessly far under ${totalMillionHa.toFixed(3)}M`).toBeGreaterThanOrEqual(totalMillionHa - 0.2);
+    expect(hero, `hero says ${hero}M, needlessly far under ${totalMillionHa.toFixed(3)}M`).toBeGreaterThan(totalMillionHa - 0.1);
   });
 
   it("logging chapter copy says 'nearly 6 million' only while the data is between 5.5M and 6M", () => {
@@ -64,10 +90,10 @@ describe("hero hectares figure is sourced from the shipped scrub table", () => {
   });
 
   it("the size comparison holds: Nova Scotia is ~5.5M ha", () => {
-    // 55,284 km² (Statistics Canada land + freshwater area). If the figure
-    // ever drops below this, the comparison must change with it.
+    // 55,284 km² (Statistics Canada land + freshwater area). If the figure the
+    // reader sees ever drops below this, the comparison must change with it.
     expect(heroSource).toMatch(/larger than Nova Scotia/);
     expect(heroSource).not.toMatch(/Ireland/);
-    expect(totalMillionHa).toBeGreaterThan(5.53);
+    expect(heroFigure()).toBeGreaterThan(5.53);
   });
 });
