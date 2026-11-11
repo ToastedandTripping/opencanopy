@@ -249,7 +249,8 @@ differ:
   commit, since pushing them alone is itself a release. The ledger is the durable record
   meanwhile; `summary --unrecorded` lists what is owed.
 - **M1a's instrumentation acceptance cannot read `audit:live` as green until the tests at
-  `live-health.spec.ts:187` and `:243` are retargeted; M1a batch 0 owns that.**
+  `live-health.spec.ts:187` and `:243` are retargeted; M1a batch 0 owns that.** Amended 2026-11-11: done by brief
+  item 4 (relay small-routed-fixes); M1a keeps `:118` and `:130`.
 - The runbook is root `ARCHITECTURE.md`, "Releases".
 
 **C3. Guards observe the user outcome, with falsifiable negative controls.**
@@ -825,7 +826,7 @@ The landing sentences contradicted by the record (synthesis top-10 item 3):
   ledger. Budgets are fixed per guard and run on unthrottled desktop. Throttled-profile timings are
   recorded as measurements, never acceptance.
 - Fix the two hollow `audit:live` assertions on non-public layers (`live-health.spec.ts:170-266`,
-  handoff owed).
+  handoff owed). Done 2026-11-11 by brief item 4.
 - ~~Dev deps `@mapbox/vector-tile pbf @types/geojson`. Lee runs the install; the classifier blocks
   installs from a session.~~ **Moved to relay CI, 2026-11-01,** which pinned them.
 

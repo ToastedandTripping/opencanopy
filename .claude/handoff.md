@@ -16,8 +16,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Owed right now
 
-- **Small routed fixes** (any session): PDF footer 'see methodology at opencanopy.ca' points at no route (pdf-generator.ts:287); `audit:live` asserts tenure-cutblocks and fish-streams, both non-public, so two monitor tests fail by construction (live-health.spec.ts:170-266); wfs-client finally-block bookkeeping race (wfs-client.ts:137-143, non-public layers only). `npm i -D @mapbox/vector-tile pbf @types/geojson` (transitive today via maplibre-gl; a MapLibre 6 bump breaks the tile audits otherwise) — classifier blocks installs from a session.
-
 - **Local checkout**: `~/Projects/opencanopy` main is behind origin (fce8c84); `git pull` there before the next worktree spawns, or it forks off stale history again (this session started on the docked dolly branch).
 
 - **Lee's phone checks (two, the July backlog cut per the 2026-10-07 grill):** (1) Batch 1 COPY+CHROME: preset chips, attribution, parks swatch, legend labels, preset renames; (2) the 2026-09-02 story changes: hero reads '5.8 million hectares ... larger than Nova Scotia' (the ~5.5M ha comparison was from memory), the large tenure blocks are gone from the red overlay, the CO2 panel's 'Unknown age' bar, /privacy names ssc-ops.netlify.app. Owed, never blocking.
@@ -50,13 +48,13 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Lane S follow-up:** the landing story has the same readiness pattern (StoryMap.tsx:72, :152, its onLoad; lib/story/visibility.ts:48). ROADMAP Parking Lot, 'Deferred from datalayer-public-path'.
 
-- **react-map-gl 8.1.3 (brief item 3), built and reviewed, release waiting on Lee (2026-11-10):** plan .claude/plans/2026-11-react-map-gl-813.md went three critic rounds, all FAIL on how the release is checked, never on the fix; per the critic cap the release question went to Lee through the coordinator (recommendation: release). Razor PASS. Local A/B: 43/1/2 'center' throws on 8.1.0, 0/0/0 on 8.1.3 (interact/deeplink/story). Live baselines on 6af3b9d0 in ~/marvin/state/relay/wheel-drag-live/ (all blocking checks red today).
-
-- **M1a after item 3 ships:** the URL-hash subscription defect stands (useMapState reads the map handle once, before the map exists); a shared deep link now completes its flyTo and can snap late after the visitor pans; batch-0 negative controls that relied on flyTo throwing must be re-baselined. audit:live :187 and :243 are retargeted by item 4 (plan .claude/plans/2026-11-small-routed-fixes.md); M1a keeps :118, :130, :152, :283.
-
 - **Lane S:** StoryMap never calls jumpTo today only because every chapter shares one camera; an un-docked dolly or a chapter with its own camera meets the readiness bug and, below react-map-gl 8.1.3, the transform throw. Resize on / throws on 8.1.0 (fixed by item 3).
 
-- **Next (brief 2026-11-10, item 4):** small routed fixes, plan in critic round 2; releases after item 3.
+- **M1a after items 3 and 4:** the URL-hash subscription defect stands (useMapState reads the map handle once, before the map exists); a shared deep link now completes its flyTo and can snap late after the visitor pans; batch-0 negative controls that relied on flyTo throwing must be re-baselined. audit:live: item 4 retargeted :187 to cutblocks, replaced :243 with a direct fish-streams proxy request and made every z11 test find the map before moving the camera (no test.skip left in live-health.spec.ts); M1a keeps :118 (stale URL parser) and :130 (raster z5).
+
+- **Small routed fixes (brief item 4), released pending guards (2026-11-11):** plan .claude/plans/2026-11-small-routed-fixes.md (critic r1, r2 FAIL folded; r3 CONCERN passed), Razor PASS after one fix pass. Its new monitor tests were run green on production before the push, with four forced reds red for the intended reason (evidence ~/marvin/state/relay/small-routed-fixes-live/). Its own ROADMAP shipped entry rides in the next release.
+
+- **Next (brief 2026-11-10, item 5):** measure-merge defects (2,000 ha cap on max(attribute, geometry), overlap dissolve, /raster max-age) before any public number changes.
 
 ## Open questions awaiting Lee
 
@@ -78,6 +76,13 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-11-11: release 5 (react-map-gl 8.1.3) green; item 4 releasing
+
+Release record for the ledger (the release tool reads this full SHA here):
+- sha=11b72335d802b7277141b98125b3dda7bdbb3335 deploy=6af3dd6f661a76641ef15441 data_version=none guards=green (react-map-gl 8.1.3; released past the critic cap on Lee's 2026-11-11 answer, relayed: "Yes to the yeses"; evidence ~/marvin/state/relay/wheel-drag-live/guard-evidence-token5.md)
+
+Item 4 merged (fac35c8) with a one-line follow-up found on its pre-push production run: the honest forest-age z11 test needed #layers=forest-age, because no layer is enabled on a fresh visit (7284df5).
 
 ### 2026-11-10: post-release records, releases 3 and 4
 

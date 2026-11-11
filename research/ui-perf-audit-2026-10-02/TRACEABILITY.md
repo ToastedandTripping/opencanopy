@@ -185,7 +185,7 @@ Literal classifications someone could fairly reverse. Listed so the orchestrator
 |---|---|---|---|---|---|
 | R0.1 | Primary checkout onto main | PROCESS | Phase 0.1 | G0 | fixed (`~/Projects/opencanopy` on main at 120cc10) |
 | R0.2 | PDF methodology pointer | SERIOUS | K.4 (K.3 absorbs) | G5 | open (`pdf-generator.ts:287`) |
-| R0.3 | `audit:live` asserts two non-public layers, fails by construction | PROCESS | M1a | G1 | open (`live-health.spec.ts:187`, `:243`) |
+| R0.3 | `audit:live` asserts two non-public layers, fails by construction | PROCESS | M1a | G1 | done 2026-11-11 by brief item 4 (relay small-routed-fixes): `:187` retargeted to cutblocks, `:243` replaced by a direct proxy request |
 | R0.4 | wfs-client finally-block race; non-public path only | COSMETIC | D′ | Beta | open (`wfs-client.ts:137-143`) |
 | R0.5 | Back/Forward (P9) | SERIOUS | M1b | G2 | open (`useMapState.ts:237`, `:300`) |
 | R0.6 | Plans onto main, ROADMAP citations reworded | PROCESS | none; see Unowned | — | open (phase-c, d, e plans only on `relay/phase-b-harvest`) |
