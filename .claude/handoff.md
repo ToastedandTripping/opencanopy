@@ -16,8 +16,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Owed right now
 
-- **Local checkout**: `~/Projects/opencanopy` main is behind origin (fce8c84); `git pull` there before the next worktree spawns, or it forks off stale history again (this session started on the docked dolly branch).
-
 - **Lee's phone checks (two, the July backlog cut per the 2026-10-07 grill):** (1) Batch 1 COPY+CHROME: preset chips, attribution, parks swatch, legend labels, preset renames; (2) the 2026-09-02 story changes: hero reads '5.8 million hectares ... larger than Nova Scotia' (the ~5.5M ha comparison was from memory), the large tenure blocks are gone from the red overlay, the CO2 panel's 'Unknown age' bar, /privacy names ssc-ops.netlify.app. Owed, never blocking.
 
 - **Agent checks on production** (headless, per the 2026-10-07 amendment): a11y P2 cluster (contrast, keyboard shortcuts, focus/dialog, pinch-zoom) and audit P0+P1 (CSP report-only, re-render cascade, CI gates). Timeline lockstep (Phase A, global-state year) is an acceptance condition of M1a's timeline guard, not a separate check. The CO2 calculator check is retired: K rebuilds it.
@@ -30,13 +28,9 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **/map defects found by the palette work (2026-10-11, Jen, recoloured-capture measurements, not yet re-verified):** (1) the z4-9 forest-age raster tiles overstate logging ~1.7x (49.5% of painted pixels harvested at z6 vs 28.6% at z9), so they need an area-true rebuild along with any new palette; (2) those tiles draw above every fire and cutblock shape, so fire is invisible at z<=9 in any palette (z-order); (3) the intro's hand-off jump is the film's own doing: land and old growth fade to black below z8.8 and forest age drops from 0.82 to 0.64 opacity when /map wakes. Jen's report cites palettes.json, checks.csv and film-recolour-report.json; none exist on disk, so her colour-blind pass/fail claims are unverified.
 
-- **GPU rendering is broken on the build machine (2026-10-11):** nvidia-smi reports 'Driver/library version mismatch' (NVML 580.178 userspace vs an older loaded kernel module), so headless Chromium falls back to llvmpipe. On 2026-10-07 the same flags gave the GTX 1060. A reboot should fix it; until then every recording is software-rendered and choppy, and is no evidence of how smooth the film is.
-
 - **MapLibre 6 follow-through (shipped 2026-10-22 by session-d09d2c, main 120cc10):** (1) eyes owed on /map: data overlays at zoom, v6's deeper default overscale (queryRenderedFeatures popups), overlapping semi-transparent lines in registry.ts. (2) The intro spike branch (spike/intro-animation) is still on MapLibre 5: merge main into it, switch its maplibre imports to namespace form, and re-verify the dot canvas source, the offscreen warm-up map and the film clock's idle gates under v6 before any further draft. Ship note: ~/marvin/state/security-2026-10-22/opencanopy-shipped.md.
 
 - `/save` is not a release path for OpenCanopy; it stops at the pre-push hook. (Until a marvin change teaches `/save` the release path.)
-
-- **Live /map throws on wheel and drag (found 2026-11-02, production at 4bd41f0):** uncaught 'Cannot read properties of undefined (reading center)', 41 errors in one short session; react-map-gl 8.1.0 reads map.transform, undefined under maplibre-gl 6.15 (upgrade of 2026-10-22). The map still moves. The URL hash does not update on move, which may be the older M1a defect. react-map-gl 8.1.3 is out and untested. Owner: M1a, or a small fix ahead of it. Error monitoring (OPS) would have caught it.
 
 - Path to beta: the order is .claude/plans/audit-remediation-2026-10/beta-resequence.md (Lee's four answers 2026-10-23: film at beta, figure corrected now; calculator redesigned first; faster 4G; shared links fixed before beta). G0 status 2026-11-02: Phase 0 records, CI fix and the audit import are on main (4bd41f0); CI green once on main, three needed with one scheduled; P0b release tool built and reviewed (four batches, Razor PASS), shipping as its own release with the first install (Lee 2026-11-02 'Ship it'). Next: P0b's release sequence, then G1 (OPS, M1a, S0a). Still owed by Lee: the GPU driver reboot before SPEED (G2); keep or strike the two attribution notes on the 2026-10-23 bar and exit entries.
 
@@ -50,9 +44,11 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **PMTiles header timeout on slow devices (coordinator 2026-11-11: its own item after item 5; raises the parked 'no header retry' line):** PmtilesLayers gives the shared archive header 15 s from source registration and never retries (DataLayer.tsx, initSource timeout). Measured 2026-11-11 on production under host load 16: header held 10 s plus a saturated main thread (2-6 fps) tripped the timeout and the layer never attached. On a slow enough phone the same happens to every vector layer until reload. Evidence ~/marvin/state/relay/small-routed-fixes-live/candidate-visibility-run1-header-timeout-load16.json.
 
-- **MEASURE (brief item 5, second relay), released pending guards (2026-11-11):** logged hectares since 1950 = dissolved union of dated FTEN cutblocks under a cap on max(recorded, drawn) >= 2000 ha (scripts/lib/cutblock_area.py; evidence research/measure-2026-11/crosscheck.json): 5,731,775 ha, hero and chapter now 5.7 million (were 5.8 and nearly 6). Lee's phone check of the landing page is owed (visual release, non-blocking). Story frames regenerate in S0b; /map and the proxy cap move in T-pre. Its own ROADMAP shipped entry rides in the next release.
+- **Lee's phone check, landing page (owed since 2026-11-11, release 8):** the hero now reads '5.7 million hectares' (was 5.8) and the logging chapter '5.7 million hectares' (was 'nearly 6 million'). Visual release; non-blocking.
 
-- **Next (brief 2026-11-10):** the PMTiles header timeout on slow devices (owed above), then G1 per beta-resequence.md (OPS, M1a, S0a).
+- **Released 2026-11-10/11 (brief items 2-5), all green:** release 4 DataLayer public path (6af3b9d0), 5 react-map-gl 8.1.3 (6af3dd6f), 6 small routed fixes (6af3ee1d), 7 HEAVY (6af41ba4), 8 MEASURE (6af43423, main 45c2109). Ledger clean at token 8, known-good 6af43423. Release 8's post-release record and ROADMAP shipped entry ride in the next release's first commit (summary --unrecorded lists it). Primary ~/Projects/opencanopy main fast-forwarded to 45c2109.
+
+- **Next (coordinator 2026-11-11):** the PMTiles slow-header fix (plan .claude/plans/2026-11-pmtiles-slow-header.md, in critic; build and release only if it stays small), then G1 per beta-resequence.md (OPS, M1a, S0a) in a fresh session after Lee is up.
 
 ## Open questions awaiting Lee
 
@@ -74,6 +70,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-11-11: brief items 2-5 released; checkpoint
+
+Releases 4-8 shipped green under Lee's standing yes (item 3 past the critic cap on his answer, relayed: "Yes to the yeses"). Found and fixed along the way: /map's vector layers, terrain and timeline year waited for the visitor's first touch (MapLibre 6 load fires only inside a render); the hero figure overstated (5,888,477 ha attribute sum vs 5,731,775 ha dissolved union, now 5.7 million). Live checks: scripts/live/live-checks.mjs (modes console, attach, visibility, year, interact, deeplink, story), each shown able to fail on the old deploy first. Removed from Owed as done: the wheel/drag throw (release 5), the stale primary checkout (fast-forwarded), the GPU driver mismatch (nvidia-smi reports driver 580.178.04 on 2026-11-10; recordings no longer software-rendered).
 
 ### 2026-11-11: release 7 (HEAVY) green; MEASURE releasing
 
