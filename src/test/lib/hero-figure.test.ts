@@ -70,8 +70,9 @@ function heroFigure(): number {
 function chapterFigure(): number {
   const chapter = CHAPTERS.find((c) => c.id === "logging-timeline");
   expect(chapter, "no logging-timeline chapter").toBeDefined();
-  const m = chapter!.body.match(/(\d+(?:\.\d+)?) million hectares/);
-  expect(m, `logging-timeline body carries no '<n> million hectares': ${chapter!.body}`).not.toBeNull();
+  const body = chapter!.body ?? "";
+  const m = body.match(/(\d+(?:\.\d+)?) million hectares/);
+  expect(m, `logging-timeline body carries no '<n> million hectares': ${body}`).not.toBeNull();
   return parseFloat(m![1]);
 }
 
