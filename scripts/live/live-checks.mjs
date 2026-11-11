@@ -186,6 +186,36 @@ try {
     }
     result.steps = steps;
     result.pass = steps.every((s) => s.sliderYear === s.currentYear);
+  } else if (mode === "interact") {
+    // Wheel-zoom and drag the map like a visitor; count uncaught page errors and record whether
+    // the URL hash follows the camera. Pass = no pageerror and the hash changed after the moves.
+    const pageErrors = [];
+    page.on("pageerror", (e) => pageErrors.push(normalise(e.message)));
+    await page.goto(`${base}/map`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector(".maplibregl-canvas", { timeout: 30_000 });
+    await page.waitForTimeout(8_000);
+    const hashBefore = await page.evaluate(() => location.hash);
+    const box = await page.locator(".maplibregl-canvas").boundingBox();
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await page.mouse.move(cx, cy);
+    for (let i = 0; i < 5; i++) { await page.mouse.wheel(0, -300); await page.waitForTimeout(300); }
+    await page.waitForTimeout(1_500);
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 150, cy + 80, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(3_000);
+    const after = await page.evaluate(() => {
+      const map = window.__ocMap?.();
+      return { hash: location.hash, zoom: map?.getZoom() ?? null, center: map ? map.getCenter().toArray() : null };
+    });
+    result.hashBefore = hashBefore;
+    result.after = after;
+    result.pageErrors = pageErrors;
+    result.pageErrorCount = pageErrors.length;
+    result.hashFollowed = after.hash !== hashBefore && after.hash.includes("z=");
+    result.pass = pageErrors.length === 0 && result.hashFollowed;
   } else {
     throw new Error(`unknown mode ${mode}`);
   }
