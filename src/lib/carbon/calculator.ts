@@ -291,9 +291,14 @@ export interface Co2Presentation {
   bandLow: number;
 }
 
+/** Floor of the one-sided band as a fraction of the headline: the true figure
+ *  may be up to (1 - BAND_LOW_FACTOR) lower. Exported so the PDF footer's
+ *  stated percentage is computed from the same factor and cannot drift. */
+export const BAND_LOW_FACTOR = 0.8;
+
 export function presentCo2Tonnes(totalCo2eTonnes: number): Co2Presentation {
   const rounded = roundToSigFigs(totalCo2eTonnes, 3);
-  return { rounded, bandLow: roundToSigFigs(rounded * 0.8, 3) };
+  return { rounded, bandLow: roundToSigFigs(rounded * BAND_LOW_FACTOR, 3) };
 }
 
 /** Same false-precision fix applied to dollar figures (stumpage revenue,

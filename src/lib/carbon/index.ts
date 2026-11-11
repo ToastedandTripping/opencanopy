@@ -5,6 +5,7 @@ export {
   calculateFinancialValue,
   presentCo2Tonnes,
   presentDollars,
+  BAND_LOW_FACTOR,
 } from "./calculator";
 
 export type {

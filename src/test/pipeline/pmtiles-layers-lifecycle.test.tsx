@@ -8,7 +8,7 @@
  * getFilter / getPaintProperty, seeded from addLayer and overwritten by the
  * setters), not which calls were made.
  *
- * R1-03: layer status is a function of (visible, failed). Tests 6-8 and 10 use
+ * R1-03: layer status is a function of (visible, failed). Tests 6-8, 10 and 11 use
  * the REAL LoadingProvider and read `layerStatuses` after advancing fake timers
  * past its 250 ms terminal-status debounce. A recording mock is not used: one
  * that hands out fresh setters per render re-runs DataLayer's unmount-cleanup
@@ -421,5 +421,30 @@ describe("WFS-only statuses survive the status effect (fixture; none mounted on 
     advance(300);
     expect(probe.statuses.get(WFS_ONLY.id)).toBe("empty");
     expect(fetchLayerData).toHaveBeenCalled();
+  });
+
+  // wfs-client's rejectPendingForLayer now settles a superseded caller with
+  // DOMException("Superseded", "AbortError") (plan 2026-11-small-routed-fixes,
+  // item 3). DataLayer's catch returns early only for a DOMException named
+  // AbortError; any other shape (a DataFetchError("abort") included) logs
+  // "Failed to load layer", clears the layer and sets status "error".
+  it("11: a superseded WFS fetch (DOMException AbortError) leaves no error status and logs no failure", async () => {
+    const rejection = new DOMException("Superseded", "AbortError");
+    vi.mocked(fetchLayerData).mockImplementation(() => Promise.reject(rejection));
+
+    mount([{ layer: WFS_ONLY, visible: true }]);
+    expect(probe.statuses.get(WFS_ONLY.id)).toBe("loading");
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    advance(300);
+
+    expect(fetchLayerData).toHaveBeenCalled();
+    expect(probe.statuses.get(WFS_ONLY.id)).not.toBe("error");
+    const failureLogs = vi
+      .mocked(console.error)
+      .mock.calls.filter((args) => String(args[0]).includes("Failed to load layer"));
+    expect(failureLogs).toHaveLength(0);
   });
 });

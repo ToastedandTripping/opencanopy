@@ -253,3 +253,227 @@ describe("fetchLayerData", () => {
     expect(r2).toEqual(MOCK_FC);
   });
 });
+
+// ── Cleanup ownership and supersede settlement (R2-02) ─────────────────
+//
+// Each debounced request's `finally` used to delete the layer's pending,
+// debounce-timer and controller entries unconditionally, so an older
+// request's cleanup could delete a newer request's bookkeeping. And a
+// request superseded during its debounce never settled. These scenarios
+// pin both fixes, one row per check (plan 2026-11-small-routed-fixes, item 3).
+
+const BBOX_A: BBox = [-126, 48, -124, 50];
+const BBOX_B: BBox = [-120, 50, -118, 52];
+const BBOX_C: BBox = [-116, 52, -114, 54];
+
+/** A FeatureCollection tagged with a label, so a survivor's result can be
+ *  told apart from any other request's. */
+function taggedFc(tag: string): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [-125, 49] },
+        properties: { tag },
+      },
+    ],
+  };
+}
+
+interface FetchCall {
+  url: string;
+  signal: AbortSignal;
+  respond: (data: GeoJSON.FeatureCollection) => void;
+}
+
+/** A fetch mock whose responses the test releases by hand. By default a
+ *  call rejects with an AbortError when its signal aborts (as real fetch
+ *  does); `ignoreAbort(i)` makes call i ignore its signal and settle late. */
+function controllableFetch(ignoreAbort: (i: number) => boolean = () => false) {
+  const calls: FetchCall[] = [];
+  const fn = vi.fn((url: string, init?: { signal?: AbortSignal }) => {
+    return new Promise((resolve, reject) => {
+      const i = calls.length;
+      const signal = init!.signal!;
+      calls.push({
+        url,
+        signal,
+        respond: (data) => resolve({ ok: true, json: () => Promise.resolve(data) }),
+      });
+      if (!ignoreAbort(i)) {
+        signal.addEventListener("abort", () =>
+          reject(new DOMException("The operation was aborted.", "AbortError")),
+        );
+      }
+    });
+  });
+  vi.stubGlobal("fetch", fn);
+  return { fn, calls };
+}
+
+/** Drain the microtask queue without advancing fake time. */
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+}
+
+/** Record how a promise settles, without awaiting it. */
+function track<T>(p: Promise<T>) {
+  const state: { status: "pending" | "resolved" | "rejected"; value?: T; error?: unknown } = {
+    status: "pending",
+  };
+  p.then(
+    (value) => {
+      state.status = "resolved";
+      state.value = value;
+    },
+    (error) => {
+      state.status = "rejected";
+      state.error = error;
+    },
+  );
+  return state;
+}
+
+describe("fetchLayerData cleanup ownership (R2-02)", () => {
+  // Imported after resetModules, from the same fresh module graph as
+  // wfs-client, so instanceof compares against the class it actually throws.
+  let DataFetchError: typeof import("@/lib/data/fetch-errors").DataFetchError;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    vi.resetModules();
+    const mod = await import("@/lib/data/wfs-client");
+    fetchLayerData = mod.fetchLayerData;
+    DataFetchError = (await import("@/lib/data/fetch-errors")).DataFetchError;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("realistic: C issued during B's debounce fires exactly 2 fetches (A and C), and C resolves with its own data", async () => {
+    const { fn, calls } = controllableFetch();
+
+    const a = track(fetchLayerData("fish-streams", BBOX_A, 10, 0));
+    await vi.advanceTimersByTimeAsync(300); // A's debounce flushed: A is fetching
+    expect(calls).toHaveLength(1);
+
+    const b = track(fetchLayerData("fish-streams", BBOX_B, 10, 0)); // aborts A
+    await vi.advanceTimersByTimeAsync(100); // inside B's debounce; A's finally runs
+    const cPromise = fetchLayerData("fish-streams", BBOX_C, 10, 0);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fn).toHaveBeenCalledTimes(2);
+
+    calls[calls.length - 1].respond(taggedFc("C"));
+    await expect(cPromise).resolves.toEqual(taggedFc("C"));
+    expect(a.status).toBe("rejected");
+    expect(b.status).toBe("rejected");
+  });
+
+  it("late settle: an older request settling after B started does not strip B's bookkeeping; C aborts B at once", async () => {
+    const { calls } = controllableFetch((i) => i === 0); // A ignores its abort
+
+    const a = track(fetchLayerData("fish-streams", BBOX_A, 10, 0));
+    await vi.advanceTimersByTimeAsync(300); // A fetching
+    const b = track(fetchLayerData("fish-streams", BBOX_B, 10, 0));
+    await vi.advanceTimersByTimeAsync(300); // B fetching
+    expect(calls).toHaveLength(2);
+
+    calls[0].respond(taggedFc("A")); // A settles late
+    await flushMicrotasks(); // A's finally runs
+
+    const c = track(fetchLayerData("fish-streams", BBOX_C, 10, 0));
+    // Before any timer advance: C's call must have aborted B's fetch.
+    expect(calls[1].signal.aborted).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(300);
+    calls[calls.length - 1].respond(taggedFc("C"));
+    await flushMicrotasks();
+    expect(c.status).toBe("resolved");
+    expect(a.status).not.toBe("pending");
+    expect(b.status).toBe("rejected");
+  });
+
+  it("same key: A's cleanup leaves A' (same key, issued after A was superseded) in place, so a fourth call dedupes to A'", async () => {
+    controllableFetch();
+
+    const a = fetchLayerData("fish-streams", BBOX_A, 10, 0);
+    a.catch(() => {});
+    await vi.advanceTimersByTimeAsync(300); // A fetching
+
+    // B (other key) and A' (A's key) in one tick.
+    const b = fetchLayerData("fish-streams", BBOX_B, 10, 0);
+    b.catch(() => {});
+    const aPrime = fetchLayerData("fish-streams", BBOX_A, 10, 0);
+    aPrime.catch(() => {});
+    expect(aPrime).not.toBe(a);
+
+    await flushMicrotasks(); // A's abort rejection and finally run
+
+    const fourth = fetchLayerData("fish-streams", BBOX_A, 10, 0);
+    expect(fourth).toBe(aPrime);
+  });
+
+  it("debounced away: call 1 superseded inside its debounce rejects with a DOMException AbortError; call 2 resolves with its data", async () => {
+    const { fn, calls } = controllableFetch();
+
+    const p1 = track(fetchLayerData("fish-streams", BBOX_A, 10, 0));
+    const p2 = fetchLayerData("fish-streams", BBOX_B, 10, 0);
+
+    await vi.advanceTimersByTimeAsync(300);
+    expect(fn).toHaveBeenCalledTimes(1);
+    calls[0].respond(taggedFc("B"));
+    await expect(p2).resolves.toEqual(taggedFc("B"));
+    await flushMicrotasks();
+
+    expect(p1.status).toBe("rejected");
+    expect(p1.error).toBeInstanceOf(DOMException);
+    expect((p1.error as DOMException).name).toBe("AbortError");
+  });
+
+  it("in-flight supersede: A (fetching) rejects with a DOMException AbortError, not a DataFetchError; B resolves with its data", async () => {
+    const { calls } = controllableFetch();
+
+    const a = track(fetchLayerData("fish-streams", BBOX_A, 10, 0));
+    await vi.advanceTimersByTimeAsync(300); // A fetching
+    const bPromise = fetchLayerData("fish-streams", BBOX_B, 10, 0);
+    await flushMicrotasks();
+
+    expect(a.status).toBe("rejected");
+    expect(a.error).toBeInstanceOf(DOMException);
+    expect((a.error as DOMException).name).toBe("AbortError");
+    expect(a.error).not.toBeInstanceOf(DataFetchError);
+
+    await vi.advanceTimersByTimeAsync(300);
+    calls[calls.length - 1].respond(taggedFc("B"));
+    await expect(bPromise).resolves.toEqual(taggedFc("B"));
+  });
+
+  it("leak: a request that fails with HTTP 500 frees its key, so the same key fetches again", async () => {
+    const fn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: "Server Error",
+        json: () => Promise.resolve({ error: "Server Error" }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_FC) });
+    vi.stubGlobal("fetch", fn);
+
+    const p1 = fetchLayerData("fish-streams", BBOX_A, 10, 0);
+    const p1Settled = p1.catch((err: Error) => err);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(await p1Settled).toBeInstanceOf(DataFetchError);
+
+    const p2 = fetchLayerData("fish-streams", BBOX_A, 10, 0);
+    p2.catch(() => {});
+    await vi.advanceTimersByTimeAsync(300);
+    await expect(p2).resolves.toEqual(MOCK_FC);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+});
