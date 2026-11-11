@@ -29,10 +29,12 @@
  *             subscription is M1a's defect; plan .claude/plans/2026-11-react-map-gl-813.md).
  * interact:   (above) both gestures must move the camera on their own.
  * story:      once the story style is loaded, scroll / at reading pace (300 px per 0.7 s) with
- *             map.jumpTo wrapped to count calls. Pass = jumpTo reached, no pageerror, no error screen,
- *             map still mounted. A run that never reaches jumpTo is invalid, not a pass.
- * deeplink:   /map#lat=49.3&lng=-123.1&z=10. Pass = no pageerror; whether it landed is recorded.
- * Every result records instrumentSha256; an instrument edit voids earlier baselines.
+ *             map.jumpTo wrapped to count calls (recorded: unreachable on this story), then resize the
+ *             window twice. Pass = no pageerror, no error screen, map still mounted.
+ * deeplink:   /map#lat=49.3&lng=-123.1&z=10, then one click on the layer-panel toggle (the render
+ *             that runs the deep-link flyTo). Pass = no pageerror; whether it landed is recorded.
+ * Every result records instrumentSha256. An edit to a mode's code voids that mode's earlier
+ * baselines (not other modes': console, attach, visibility and year are unchanged since release 4).
  *
  * The comparison rules (two baseline runs, two candidate runs) live in the plan; this only measures.
  */
@@ -250,7 +252,12 @@ try {
     page.on("pageerror", (e) => pageErrors.push(normalise(e.message)));
     await page.goto(`${base}/map#lat=${target.lat}&lng=${target.lng}&z=${target.z}`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".maplibregl-canvas", { timeout: 30_000 });
-    await page.waitForTimeout(12_000);
+    await page.waitForTimeout(10_000);
+    // The deep-link flyTo runs only once /map re-renders after the map exists (CanopyMap's
+    // dep-less useImperativeHandle; critic r3). One click on the layer-panel toggle forces that
+    // render, as a visitor's first click would.
+    await page.getByRole("button", { name: "Toggle layer panel" }).click();
+    await page.waitForTimeout(6_000);
     const cam = await page.evaluate(() => {
       const map = window.__ocMap?.();
       return { zoom: map?.getZoom() ?? null, center: map ? map.getCenter().toArray() : null };
@@ -304,6 +311,13 @@ try {
       }
     }
     await page.waitForTimeout(2_000);
+    // A resize (window resize, phone rotation, browser zoom) runs react-maplibre's resize path,
+    // which on 8.1.0 reads map.transform and throws (critic r3). This is the reachable trigger on /.
+    await page.setViewportSize({ width: 900, height: 700 });
+    await page.waitForTimeout(1_500);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForTimeout(2_000);
+    result.resized = true;
     const end = await page.evaluate(() => ({
       jumps: window.__ocJumps ?? null,
       mapMounted: !!document.querySelector(".maplibregl-map"),
@@ -316,9 +330,11 @@ try {
     result.crashedAt = crashedAt;
     result.pageErrors = pageErrors;
     result.pageErrorCount = pageErrors.length;
-    // Valid only if jumpTo was actually reached; otherwise the run proves nothing.
-    result.reachedJumpTo = (end.jumps ?? 0) > 0 || crashedAt != null;
-    result.pass = result.reachedJumpTo && pageErrors.length === 0 && !end.errorScreen && end.mapMounted;
+    // jumpTo is unreachable on this story (every chapter shares one camera); the count is recorded.
+    // The trigger that IS reachable is the resize above. Pass = no pageerror across scroll and
+    // resize, no error screen, map still mounted.
+    result.reachedJumpTo = (end.jumps ?? 0) > 0;
+    result.pass = pageErrors.length === 0 && !end.errorScreen && end.mapMounted && result.resized === true;
   } else {
     throw new Error(`unknown mode ${mode}`);
   }
