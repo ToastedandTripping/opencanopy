@@ -21,6 +21,7 @@
  * The two env overrides exist only for its revert proofs (pointing it at a
  * saved 8.1.0 dist or an edited lockfile copy); unset, it reads the real files.
  */
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
