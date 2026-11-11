@@ -46,3 +46,15 @@ Lane M, kind `behaviour`, ARCHITECTURE.md Releases; approval: the standing yes (
 ## Gates
 
 Plan-reviewer at xhigh, at most three rounds; Ted; Razor. Checks: `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`.
+
+## Round 2 folds (critic r2, FAIL; folded 2026-11-11, round 3 not yet run)
+
+The code design held against the installed libraries (critic r2): the status effect's transition clear always runs after the stale failure effect (React commit order), is StrictMode-safe and never clears a WFS status; pmtiles 4.4.0 exposes `tiles`, and MapLibre 6.15 copies it onto the source only on a successful header, so the tile-list guard blocks no real recovery. The proof is what changes:
+
+- **Tier is Standard, not Simple** (DataLayer.tsx, the mock, the lifecycle test, live-checks.mjs, plus docs), so this plan owes a Review Focus section before round 3.
+- `addLayersToMap` catches its own errors and never throws outward: it returns a boolean, and `onRecovered` is called only on `true`.
+- **Mock:** `src/test/mocks/maplibre.ts` gives the vector source a `tiles` array once its sources are no longer pending; without it seven existing tests and all new ones go red, and test 4 proves nothing.
+- **Tests renumbered 22-27** (the file already uses 1-21). Test 22 asserts `_listenerCount("sourcedata") === 0` after the late add (the `off` assertion is already true under StrictMode). Tests 23, 24 and 26 advance past the 250 ms debounce before reading status. Test 27 unmounts after the 15 s timeout, not before. Test 24's mutant has no single-edit form under this design: the existing test 10 is the tripwire for dropping the ref condition, and 24 is labelled a regression guard. The status-effect comment records why the clear lives there (no test catches it moving back into the handler).
+- **Live `late-header` mode, rebuilt:** the legend's "BC data unavailable" text renders only in a collapsed row (legend rows start expanded, `MapLegend.tsx:232,291,336`) and the toast uses other text and vanishes after 6 s, so neither is read. The check reads `getSource("opencanopy")?.tiles` (not `isSourceLoaded`, which is true for an errored source), the fill layer's presence and visibility, records that the header request was held and for how long, and records the console's 15 s timeout warning. A green candidate run counts only if the hold applied and the warning appeared (the late path ran); a run on the current deploy must show the layer absent after the header arrived late, which also settles "late, not never" on production.
+
+Next: round 3 (the last), then build and release. Not started in this session (coordinator 2026-11-11: build only if it stays small; it did not).
