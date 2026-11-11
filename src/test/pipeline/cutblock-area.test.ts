@@ -70,12 +70,12 @@ function tmpDir(): string {
 
 /** The builder's environment: this process's, minus any stray seams, plus `extra`. */
 function env(extra: Record<string, string | undefined>): NodeJS.ProcessEnv {
-  const out: NodeJS.ProcessEnv = {};
+  const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) {
     if (v !== undefined && !k.startsWith("OC_SCRUB_") && k !== "VITEST") out[k] = v;
   }
   for (const [k, v] of Object.entries(extra)) if (v !== undefined) out[k] = v;
-  return out;
+  return out as unknown as NodeJS.ProcessEnv;
 }
 
 function runBuilder(extra: Record<string, string | undefined>) {
