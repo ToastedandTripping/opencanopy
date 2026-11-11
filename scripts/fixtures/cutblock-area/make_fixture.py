@@ -87,6 +87,11 @@ def main():
     # polygonal after repair, zero drawn area.
     lines.append(feature(poly(o(12), [(0, 0), (1000, 0), (1000, 0), (0, 0)]), 1990, 5))
 
+    # A malformed date VALUE (the line itself parses): no 4-digit year, so undated.
+    bad = feature(poly(o(13), square(0, 0, 1000, 1000)), None, 100)
+    bad["properties"]["DISTURBANCE_START_DATE"] = "19xx-01-01"
+    lines.append(bad)
+
     out = [json.dumps(f) for f in lines]
     out.insert(5, '{"type":"Feature","geometry":')  # malformed: a truncated line
     (HERE / "tenure-cutblocks.ndjson").write_text("\n".join(out) + "\n")
@@ -101,7 +106,7 @@ def main():
     annual = {"1950": 10, "1975": 50, "1980": 50, "1985": 75, "1986": 16, "1995": 165,
               "2000": 150, "2010": 50, "2025": 10}
     expected = {
-        "buckets": {"read": 18, "kept": 11, "undated": 1, "preStart": 1, "postEnd": 1,
+        "buckets": {"read": 19, "kept": 11, "undated": 2, "preStart": 1, "postEnd": 1,
                     "boundaryRecorded": 1, "boundaryDrawn": 1, "zeroArea": 1, "unparseable": 1},
         "repaired": 2,
         "emptyAfterRepair": 1,

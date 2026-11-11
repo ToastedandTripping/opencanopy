@@ -9,7 +9,8 @@
  * year, a large-drawn small-recorded boundary, a self-intersecting bowtie, a
  * MultiPolygon, a polygon with a hole (and a later block inside the hole), a same-year
  * pair straddling a 10 km tile edge, recorded area exactly 2,000, the years 1949, 1950,
- * 2025, 2026, a malformed line, an undated block and a degenerate ring.
+ * 2025, 2026, a malformed line, an undated block, a malformed date value ("19xx-01-01",
+ * undated) and a degenerate ring.
  *
  * Outputs go to a temp dir through the builder's VITEST-fenced overrides; the committed
  * cutblocks-scrub.json and crosscheck.json are asserted byte-identical before and after.
@@ -118,7 +119,7 @@ describe.skipIf(!pythonReady)("logged hectares: the builder on the committed fix
 
   it("exits 0 and prints a closing accounting line and both totals", () => {
     expect(run.status, run.out).toBe(0);
-    expect(run.out).toMatch(/accounting: read 18 = kept 11 \+ undated 1 \+ preStart 1 \+ postEnd 1 \+ boundaryRecorded 1 \+ boundaryDrawn 1 \+ zeroArea 1 \+ unparseable 1 \(closes\)/);
+    expect(run.out).toMatch(/accounting: read 19 = kept 11 \+ undated 2 \+ preStart 1 \+ postEnd 1 \+ boundaryRecorded 1 \+ boundaryDrawn 1 \+ zeroArea 1 \+ unparseable 1 \(closes\)/);
     expect(run.out).toMatch(/total, method 1 \(rank union\): 576\.00 ha/);
     expect(run.out).toMatch(/total, method 2 \(tile union\): 576\.00 ha/);
   });
@@ -159,6 +160,14 @@ describe.skipIf(!pythonReady)("logged hectares: the builder on the committed fix
     expectAnnual(cross.methods.tileUnion.annualHa);
     expect(cross.methods.tileUnion.tiles).toBeGreaterThan(1);
     expect(cross.methods.rankUnion.totalHa).toBe(JSON.parse(fs.readFileSync(run.scrub, "utf8")).total);
+  });
+
+  it("a malformed date value lands in the undated bucket, not in a year", () => {
+    const cross = JSON.parse(fs.readFileSync(run.cross, "utf8"));
+    const lines = fs.readFileSync(FIXTURE, "utf8").trim().split("\n");
+    expect(lines.some((l) => l.includes('"DISTURBANCE_START_DATE": "19xx-01-01"'))).toBe(true);
+    expect(cross.accounting.undated).toBe(2);
+    expect(cross.accounting.unparseable).toBe(1);
   });
 
   it("buckets every line exactly once, repairs the bowtie, measures the boundaries", () => {
@@ -217,6 +226,122 @@ describe.skipIf(!pythonReady)("logged hectares: the run stops, and writes nothin
   });
 });
 
+/**
+ * One test per hard stop that the profile alone cannot make fire. Check 0's clauses are
+ * driven by the expectations profile; checks 1, 2b and 3 by a harness that imports the
+ * real builder, wraps ONE method's result, and runs main() on the fixture. Each case is
+ * built so that only the check under test fails: with that check deleted the run
+ * completes (exit 0), so the test goes red.
+ */
+describe.skipIf(!pythonReady)("logged hectares: every hard stop is seen to fire", () => {
+  function patchedProfile(patch: (e: Record<string, unknown>) => void): string {
+    const e = JSON.parse(fs.readFileSync(EXPECTED_PATH, "utf8"));
+    patch(e);
+    const p = path.join(tmpDir(), "expect.json");
+    fs.writeFileSync(p, JSON.stringify(e));
+    return p;
+  }
+
+  /** Runs the builder in-process with `wrap` (Python statements) applied to the module `m`. */
+  function harness(wrap: string, expectPath = EXPECTED_PATH) {
+    const dir = tmpDir();
+    const scrub = path.join(dir, "scrub.json");
+    const cross = path.join(dir, "crosscheck.json");
+    const code = [
+      "import importlib.util, sys",
+      `spec = importlib.util.spec_from_file_location('scrub', ${JSON.stringify(BUILDER)})`,
+      "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)",
+      wrap,
+      "sys.argv = ['build-scrub-tables.py', '--dataset', 'cutblocks']",
+      "m.main()",
+    ].join("\n");
+    const r = spawnSync(PY, ["-c", code], {
+      cwd: ROOT,
+      env: env({ VITEST: "1", OC_SCRUB_INPUT: FIXTURE, OC_SCRUB_EXPECT: expectPath, OC_SCRUB_OUT: scrub, OC_SCRUB_CROSSCHECK: cross }),
+      encoding: "utf8",
+    });
+    return { status: r.status, out: `${r.stdout}\n${r.stderr}`, scrub, cross };
+  }
+
+  const nothingWritten = (r: { scrub: string; cross: string }) =>
+    expect(fs.existsSync(r.scrub) || fs.existsSync(r.cross)).toBe(false);
+
+  it("the harness itself, unwrapped, completes (so a red below is the check, not the harness)", () => {
+    const r = harness("pass");
+    expect(r.status, r.out).toBe(0);
+    expect(fs.existsSync(r.scrub)).toBe(true);
+  });
+
+  it.each([
+    ["repaired", (e: Record<string, unknown>) => (e.repaired = 3), /measured counts: repaired 2 != 3\. Nothing written/],
+    ["emptyAfterRepair", (e: Record<string, unknown>) => (e.emptyAfterRepair = 2), /measured counts: emptyAfterRepair 1 != 2\. Nothing written/],
+    ["sumDrawnKeptHa", (e: Record<string, unknown>) => (e.sumDrawnKeptHa = 711.01), /measured counts: sumDrawnKeptHa 711\.00 != 711\.01\. Nothing written/],
+    ["drawnOnlyBoundaryHa", (e: Record<string, unknown>) => (e.drawnOnlyBoundaryHa = 2500.01), /measured counts: drawnOnlyBoundaryHa 2500\.00 != 2500\.01\. Nothing written/],
+  ])("check 0, %s clause", (_name, patch, message) => {
+    const r = fixtureRun(patchedProfile(patch));
+    expect(r.status, r.out).toBe(3);
+    expect(r.out).toMatch(message);
+    nothingWritten(r);
+  });
+
+  it("check 1: one year disagrees between methods while the totals still agree", () => {
+    // Move 2 ha of the tile method's 2000 into 2010: totals unchanged (check 3 passes).
+    const r = harness(
+      [
+        "orig = m.tile_union_annual",
+        "def wrapped(g, y, *a):",
+        "    annual, tiles = orig(g, y, *a)",
+        "    annual[2000] -= 2.0; annual[2010] += 2.0",
+        "    return annual, tiles",
+        "m.tile_union_annual = wrapped",
+      ].join("\n")
+    );
+    expect(r.status, r.out).toBe(3);
+    expect(r.out).toMatch(/check 1: annual\[2000\] differs between methods by 2\.0000 ha \(rank 150\.0000, tile 148\.0000\)/);
+    nothingWritten(r);
+  });
+
+  it("check 3: every year within 1 ha, the totals 1.8 ha apart", () => {
+    const r = harness(
+      [
+        "orig = m.tile_union_annual",
+        "def wrapped(g, y, *a):",
+        "    annual, tiles = orig(g, y, *a)",
+        "    annual[1980] += 0.9; annual[1985] += 0.9",
+        "    return annual, tiles",
+        "m.tile_union_annual = wrapped",
+      ].join("\n")
+    );
+    expect(r.status, r.out).toBe(3);
+    expect(r.out).toMatch(/check 1 PASS/);
+    expect(r.out).toMatch(/check 3: totals differ by -1\.8000 ha/);
+    nothingWritten(r);
+  });
+
+  it("check 2, drawn-sum half: both methods report a union at or above the plain sum", () => {
+    // Both methods inflated alike (checks 1 and 3 agree); shipped figure and band widened
+    // so only the drawn-sum comparison can stop the run.
+    const expectPath = patchedProfile((e) => {
+      e.shippedTotalHa = 10000;
+      e.band = [0, 10000];
+    });
+    const r = harness(
+      [
+        "o_rank, o_tile = m.rank_union_annual, m.tile_union_annual",
+        "def rank(g, y):",
+        "    a = o_rank(g, y); a[2000] += 200.0; return a",
+        "def tile(g, y, *x):",
+        "    a, t = o_tile(g, y, *x); a[2000] += 200.0; return a, t",
+        "m.rank_union_annual, m.tile_union_annual = rank, tile",
+      ].join("\n"),
+      expectPath
+    );
+    expect(r.status, r.out).toBe(3);
+    expect(r.out).toMatch(/check 2: total 776\.00 is not below the sum of drawn area 711\.00 \(a sum, not a union\)/);
+    nothingWritten(r);
+  });
+});
+
 describe.skipIf(!pythonReady)("logged hectares: the output overrides are fenced", () => {
   it("refuses a seam without VITEST, before reading anything", () => {
     const r = runBuilder({ OC_SCRUB_OUT: path.join(tmpDir(), "s.json") });
@@ -254,17 +379,17 @@ describe.skipIf(!pythonReady)("the overlay builder applies the same cap and repa
     expect(r.status, r.stderr).toBe(0);
     const got = JSON.parse(r.stdout.trim().split("\n").pop()!);
     expect(got.counts).toMatchObject({
-      read: 18,
+      read: 19,
       unparseable: 1,
       capped_recorded: 1,
       capped_drawn: 1,
       empty_after_repair: 1,
-      undated: 2,
+      undated: 3,
       after_end: 1,
-      painted: 13,
+      painted: 14,
     });
     expect(got.years).toEqual({
-      "1949": 2, "1950": 1, "1975": 1, "1980": 1, "1985": 1, "1986": 1, "1995": 2, "2000": 2, "2010": 1, "2025": 1,
+      "1949": 3, "1950": 1, "1975": 1, "1980": 1, "1985": 1, "1986": 1, "1995": 2, "2000": 2, "2010": 1, "2025": 1,
     });
     expect(got.repaired).toBe(2);
     expect(got.bowtie).toBe("MultiPolygon");
