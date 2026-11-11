@@ -22,9 +22,10 @@
  * History: the hero said "8 million" from 2026-06-18 to 2026-09-02 on a count nobody
  * could reproduce, then "5.8 million" on the attribute sum until MEASURE.
  *
- * Mutation-verified 2026-09-02: hero "6.1 million" fails (over the data);
- * hero "4 million" fails (more than 0.2M under); chapter "over 8 million"
- * fails; scrub table without `areaCap` fails.
+ * Mutation-verified 2026-09-02, and again for MEASURE 2026-11-11 (Razor B2):
+ * hero above the data fails; hero more than 0.1M under it fails; chapter and
+ * hero disagreeing fails; "nearly" or "8 million" in the chapter fails; the
+ * pre-MEASURE scrub JSON fails; a crosscheck total off by 0.01 ha fails.
  */
 
 import { describe, it, expect } from "vitest";
@@ -113,8 +114,9 @@ describe("hero hectares figure is sourced from the shipped scrub table", () => {
   });
 
   it("the scrub total is in the range the checkpoint supports (dated 1950-2025, under the cap)", () => {
-    // 5.888M ha on the 2026-05-06 checkpoint. A rebuild from a newer FTEN
-    // pull may move this; a jump past 7M means the cap stopped applying.
+    // 5.732M ha on the 2026-05-06 checkpoint (MEASURE, dissolved union; it was
+    // 5.888M as an attribute sum). A newer FTEN pull may move it; a jump past 7M
+    // means the cap stopped applying.
     expect(totalMillionHa).toBeGreaterThan(5);
     expect(totalMillionHa).toBeLessThan(7);
   });
