@@ -44,10 +44,13 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-import rasterio
-from rasterio.transform import from_bounds
-from rasterio.features import rasterize
-from scipy.ndimage import map_coordinates
+from shapely.geometry import mapping
+
+# rasterio and scipy are imported where they are used, so the cutblocks loader
+# (load_year_groups) can be exercised by the fixture test with only shapely and pyproj.
+
+sys.path.insert(0, str(Path(__file__).parent / "lib"))
+import cutblock_area as ca  # noqa: E402  (the shared cap rule and repair)
 
 warnings.filterwarnings("ignore", message=".*Dataset has no geotransform.*")
 
@@ -74,12 +77,13 @@ DATASETS = {
         "year_kind": "date",          # take [:4] of an ISO date string
         "start": 1950,
         "end": 2025,
-        # Same exclusion as the /map cutblocks layer (CUTBLOCK_AREA_CAP_HA in
-        # src/lib/layers/registry.ts) and build-scrub-tables.py: polygons at or
-        # above 2,000 ha are tenure boundaries, not cutblocks. Before 2026-09-02
-        # the overlays painted 2.45M ha of them red/maroon.
-        "area_field": "PLANNED_GROSS_BLOCK_AREA",
-        "max_area": 2000,
+        # Tenure boundaries are excluded by the shared rule in
+        # scripts/lib/cutblock_area.py (also build-scrub-tables.py): recorded OR
+        # drawn area at or above 2,000 ha (CUTBLOCK_AREA_CAP_HA in
+        # src/lib/layers/registry.ts). Before 2026-09-02 the overlays painted
+        # 2.45M ha of them red/maroon; before 2026-11 only the recorded area was
+        # tested. Geometry is repaired (make_valid) before it is measured or painted.
+        "tenure_cap": True,
         "age_stops": [
             (0, (239, 68, 68, 220)),   # #ef4444 bright red
             (25, (185, 28, 28, 200)),  # #b91c1c darker red
@@ -169,6 +173,8 @@ def resample_to_mercator(rgba: np.ndarray, row_map: np.ndarray) -> np.ndarray:
 
     Same output dimensions — only the y-axis row distribution changes.
     """
+    from scipy.ndimage import map_coordinates
+
     height, width = rgba.shape[1], rgba.shape[2]
     out = np.zeros_like(rgba)
     col_coords = np.arange(width, dtype=np.float64)
@@ -210,6 +216,10 @@ def run_forest_base(args) -> None:
     Nearest-neighbour (order=0) Mercator resampling produces a 1-px jagged
     coastline; that is expected, not a defect.
     """
+    import rasterio
+    from rasterio.features import rasterize
+    from rasterio.transform import from_bounds
+
     cfg = DATASETS["forest-base"]
     input_path = _data_path(cfg["filename"])
     output_dir = _PROJECT_ROOT / "public" / "raster" / cfg["output_subdir"]
@@ -349,6 +359,86 @@ def run_forest_base(args) -> None:
     print(f"  (MARVIN will do the mv after visual inspection and full-data run)")
 
 
+def parse_year_value(raw, year_kind: str):
+    """Return an int year from a raw year field value, or None if unparseable."""
+    if raw is None:
+        return None
+    s = str(raw)
+    token = s[:4] if year_kind == "date" else s.strip()
+    return int(token) if token.isdigit() else None
+
+
+def load_year_groups(input_path, cfg: dict, start_year: int, end_year: int):
+    """Stream the NDJSON and group paintable geometries by year.
+
+    Cutblocks (cfg["tenure_cap"]): the shared rule in scripts/lib/cutblock_area.py
+    drops tenure boundaries by recorded OR drawn area (the cap is tested before the
+    year, so undated boundaries are dropped too), and the REPAIRED geometry is what
+    gets painted. Undated and pre-start features go to the undated proxy year when
+    the dataset has one. Only an unparseable JSON line is skipped (and counted); any
+    geometry error raises and stops the build.
+
+    Returns (by_year, counts, repair_stats).
+    """
+    year_field = cfg["year_field"]
+    year_kind = cfg["year_kind"]
+    undated_proxy_year = cfg["undated_proxy_year"]
+    tenure_cap = bool(cfg.get("tenure_cap"))
+    stats = ca.RepairStats()
+    by_year: dict[int, list] = defaultdict(list)
+    counts = {"read": 0, "unparseable": 0, "null_geometry": 0, "capped_recorded": 0, "capped_drawn": 0,
+              "empty_after_repair": 0, "undated": 0, "dropped_undated": 0, "after_end": 0, "painted": 0}
+
+    with open(input_path) as f:
+        for i, line in enumerate(f):
+            counts["read"] += 1
+            try:
+                feat = json.loads(line)
+            except json.JSONDecodeError:
+                counts["unparseable"] += 1
+                continue
+            geom = feat.get("geometry")
+            if not geom:
+                counts["null_geometry"] += 1
+                continue
+            props = feat.get("properties") or {}
+            if tenure_cap:
+                recorded = ca.recorded_area_ha(props)
+                if ca.is_tenure_boundary(recorded, 0.0):
+                    counts["capped_recorded"] += 1
+                    continue
+                lonlat, albers = ca.prepare(geom, stats, where=f"line {i + 1}")
+                if ca.is_tenure_boundary(recorded, ca.geometry_area_ha(albers)):
+                    counts["capped_drawn"] += 1
+                    continue
+                if lonlat.is_empty:
+                    counts["empty_after_repair"] += 1
+                    continue
+                geom = mapping(lonlat)
+            yr = parse_year_value(props.get(year_field, ""), year_kind)
+
+            if yr is None or yr < start_year:
+                # Undated or pre-start: bucket as baseline if the dataset
+                # supports it, otherwise drop (fire has no undated bucket).
+                if undated_proxy_year is not None:
+                    by_year[undated_proxy_year].append(geom)
+                    counts["undated"] += 1
+                    counts["painted"] += 1
+                else:
+                    counts["dropped_undated"] += 1
+                continue
+            if yr > end_year:
+                counts["after_end"] += 1
+                continue
+            by_year[yr].append(geom)
+            counts["painted"] += 1
+
+            if counts["painted"] % 50000 == 0:
+                print(f"  {counts['painted']:,} features...")
+
+    return by_year, counts, stats
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate per-year story overlays")
     parser.add_argument(
@@ -392,8 +482,6 @@ def main():
     age_stops = cfg["age_stops"]
     undated_proxy_year = cfg["undated_proxy_year"]
     undated_color = cfg["undated_color"]
-    max_area = cfg.get("max_area")
-    area_field = cfg.get("area_field")
 
     input_path = _data_path(cfg["filename"])
     output_dir = _PROJECT_ROOT / "public" / "raster" / cfg["output_subdir"]
@@ -417,60 +505,21 @@ def main():
         print(f"\n  ERROR: {input_path} not found")
         sys.exit(1)
 
-    def parse_year(props: dict):
-        """Return an int year from the dataset's year field, or None if unparseable."""
-        raw = props.get(year_field, "")
-        if raw is None:
-            return None
-        s = str(raw)
-        token = s[:4] if year_kind == "date" else s.strip()
-        return int(token) if token.isdigit() else None
+    import rasterio
+    from rasterio.features import rasterize
+    from rasterio.transform import from_bounds
 
     # ── Load features grouped by year ────────────────────────────
     print(f"\nLoading {args.dataset} features...")
-    by_year: dict[int, list] = defaultdict(list)
-    count = 0
-    undated_count = 0
-    capped_count = 0
-
-    with open(input_path) as f:
-        for line in f:
-            try:
-                feat = json.loads(line)
-                geom = feat.get("geometry")
-                if not geom:
-                    continue
-                props = feat.get("properties", {})
-                if max_area is not None:
-                    raw_area = props.get(area_field)
-                    try:
-                        area = float(raw_area) if raw_area is not None else 0.0
-                    except (TypeError, ValueError):
-                        area = 0.0
-                    if area >= max_area:
-                        capped_count += 1
-                        continue
-                yr = parse_year(props)
-
-                if yr is None or yr < start_year:
-                    # Undated or pre-start: bucket as baseline if the dataset
-                    # supports it, otherwise drop (fire has no undated bucket).
-                    if undated_proxy_year is not None:
-                        by_year[undated_proxy_year].append(geom)
-                        undated_count += 1
-                        count += 1
-                    continue
-                if yr > end_year:
-                    continue
-                by_year[yr].append(geom)
-                count += 1
-
-                if count % 50000 == 0:
-                    print(f"  {count:,} features...")
-            except Exception:
-                pass
-
-    print(f"  Loaded {count:,} features ({undated_count:,} undated/pre-{start_year}; {capped_count:,} skipped at/over the {max_area} ha cap)")
+    by_year, counts, stats = load_year_groups(input_path, cfg, start_year, end_year)
+    count, undated_count = counts["painted"], counts["undated"]
+    print(f"  Loaded {count:,} features ({undated_count:,} undated/pre-{start_year}; "
+          f"{counts['capped_recorded']:,} recorded and {counts['capped_drawn']:,} drawn-only at/over the "
+          f"{ca.CAP_HA} ha cap skipped; {counts['unparseable']:,} unparseable lines; "
+          f"{counts['empty_after_repair']:,} empty after repair; {counts['after_end']:,} after {end_year})")
+    if cfg.get("tenure_cap"):
+        print(f"  Repair: {stats.repaired:,} repaired, {stats.nonpolygonal_parts:,} non-polygonal parts dropped, "
+              f"{stats.reprojected_repairs:,} repaired after projection")
     dated_years = [y for y in sorted(by_year.keys()) if y != undated_proxy_year]
     if dated_years:
         print(f"  Dated range: {dated_years[0]}-{dated_years[-1]}")
@@ -500,7 +549,8 @@ def main():
                 label = "undated" if yr == undated_proxy_year else str(yr)
                 print(f"  {label:>7}: {len(by_year[yr]):>6,} features -> {px:>7,} px")
         except Exception as e:
-            print(f"  {yr}: FAILED ({e})")
+            # Fatal: a year that cannot be rasterized would ship a frame missing it.
+            raise RuntimeError(f"rasterizing year {yr} failed: {e}") from e
 
     del by_year
 
