@@ -36,8 +36,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **MapLibre 6 follow-through (shipped 2026-10-22 by session-d09d2c, main 120cc10):** (1) eyes owed on /map: data overlays at zoom, v6's deeper default overscale (queryRenderedFeatures popups), overlapping semi-transparent lines in registry.ts. (2) The intro spike branch (spike/intro-animation) is still on MapLibre 5: merge main into it, switch its maplibre imports to namespace form, and re-verify the dot canvas source, the offscreen warm-up map and the film clock's idle gates under v6 before any further draft. Ship note: ~/marvin/state/security-2026-10-22/opencanopy-shipped.md.
 
-- Relay HEAVY before S0b (G2).
-
 - `/save` is not a release path for OpenCanopy; it stops at the pre-push hook. (Until a marvin change teaches `/save` the release path.)
 
 - **Live /map throws on wheel and drag (found 2026-11-02, production at 4bd41f0):** uncaught 'Cannot read properties of undefined (reading center)', 41 errors in one short session; react-map-gl 8.1.0 reads map.transform, undefined under maplibre-gl 6.15 (upgrade of 2026-10-22). The map still moves. The URL hash does not update on move, which may be the older M1a defect. react-map-gl 8.1.3 is out and untested. Owner: M1a, or a small fix ahead of it. Error monitoring (OPS) would have caught it.
@@ -52,11 +50,11 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **M1a after items 3 and 4:** the URL-hash subscription defect stands (useMapState reads the map handle once, before the map exists); a shared deep link now completes its flyTo and can snap late after the visitor pans; batch-0 negative controls that relied on flyTo throwing must be re-baselined. audit:live: item 4 retargeted :187 to cutblocks, replaced :243 with a direct fish-streams proxy request and made every z11 test find the map before moving the camera (no test.skip left in live-health.spec.ts); M1a keeps :118 (stale URL parser) and :130 (raster z5).
 
-- **Small routed fixes (brief item 4), released pending guards (2026-11-11):** plan .claude/plans/2026-11-small-routed-fixes.md (critic r1, r2 FAIL folded; r3 CONCERN passed), Razor PASS after one fix pass. Its new monitor tests were run green on production before the push, with four forced reds red for the intended reason (evidence ~/marvin/state/relay/small-routed-fixes-live/). Its own ROADMAP shipped entry rides in the next release.
-
 - **Next (brief 2026-11-10, item 5):** measure-merge defects (2,000 ha cap on max(attribute, geometry), overlap dissolve, /raster max-age) before any public number changes.
 
 - **PMTiles header timeout on slow devices (coordinator 2026-11-11: its own item after item 5; raises the parked 'no header retry' line):** PmtilesLayers gives the shared archive header 15 s from source registration and never retries (DataLayer.tsx, initSource timeout). Measured 2026-11-11 on production under host load 16: header held 10 s plus a saturated main thread (2-6 fps) tripped the timeout and the layer never attached. On a slow enough phone the same happens to every vector layer until reload. Evidence ~/marvin/state/relay/small-routed-fixes-live/candidate-visibility-run1-header-timeout-load16.json.
+
+- **HEAVY (brief item 5, first relay), released pending guards (2026-11-11):** scripts/heavy-run.mjs, a kernel flock lock with a 16 GiB floor (ARCHITECTURE.md, Heavy builds). Every heavy job goes through it: node scripts/heavy-run.mjs --job <name> -- <command>; never delete heavy-build.lock. Host rule (coordinator, 2026-11-11): 1-minute load under 8 and announce to the coordinator before a 12 GB build. Its own ROADMAP shipped entry rides in the next release.
 
 ## Open questions awaiting Lee
 
@@ -78,6 +76,13 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-11-11: release 6 (small routed fixes) green; HEAVY releasing
+
+Release record for the ledger (the release tool reads this full SHA here):
+- sha=b5c0753478bf9209676c9d4a591b57aaaf9f934c deploy=6af3ee1dd9c6f6a7b06403d2 data_version=none guards=green (small routed fixes; evidence ~/marvin/state/relay/small-routed-fixes-live/guard-evidence-token6.md)
+
+HEAVY merged (b7698a0) after three critic rounds and one Razor fix pass. MEASURE's plan passed its gate (d74b9f8); its union run waits on HEAVY being live.
 
 ### 2026-11-11: release 5 (react-map-gl 8.1.3) green; item 4 releasing
 
