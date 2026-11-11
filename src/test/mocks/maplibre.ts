@@ -68,6 +68,10 @@ export function createMockMap() {
   const globalState: Record<string, unknown> = {};
 
   let styleLoaded = true;
+  // While true, isSourceLoaded() reports false for every source, so code that
+  // waits for a PMTiles header takes its async path. Flipping it emits nothing:
+  // tests emit `sourcedata` themselves.
+  let sourcesPending = false;
 
   const map = {
     // ── Source management ──────────────────────────────────────────
@@ -93,7 +97,7 @@ export function createMockMap() {
       calls.removeSource.push(id);
     }),
 
-    isSourceLoaded: vi.fn((id: string) => sources.has(id)),
+    isSourceLoaded: vi.fn((id: string) => !sourcesPending && sources.has(id)),
 
     // ── Layer management ──────────────────────────────────────────
     addLayer: vi.fn(
@@ -113,6 +117,16 @@ export function createMockMap() {
             layerPaint.set(key, value);
           }
           paintValues.set(id, layerPaint);
+        }
+
+        // Seed effective layout + filter from the config: what MapLibre would
+        // draw until setLayoutProperty / setFilter overwrite them.
+        const layout = config.layout as Record<string, unknown> | undefined;
+        if (layout) {
+          layoutValues.set(id, new Map(Object.entries(layout)));
+        }
+        if (config.filter !== undefined) {
+          filterValues.set(id, config.filter);
         }
 
         if (beforeId) {
@@ -187,6 +201,14 @@ export function createMockMap() {
       filterValues.set(layerId, filter);
       calls.setFilter.push({ layerId, filter });
     }),
+
+    // Effective layout value (addLayer config, then setLayoutProperty).
+    getLayoutProperty: vi.fn((layerId: string, property: string) => {
+      return layoutValues.get(layerId)?.get(property);
+    }),
+
+    // Effective filter (addLayer config, then setFilter).
+    getFilter: vi.fn((layerId: string) => filterValues.get(layerId)),
 
     setLayoutProperty: vi.fn(
       (layerId: string, property: string, value: unknown) => {
@@ -282,6 +304,10 @@ export function createMockMap() {
       styleLoaded = loaded;
     },
 
+    _setSourcesPending: (pending: boolean) => {
+      sourcesPending = pending;
+    },
+
     _getSources: () => new Map(sources),
     _getLayers: () => new Map(layers),
     // Returns only imperatively-added layers (excludes pre-seeded basemap layers).
@@ -312,6 +338,7 @@ export function createMockMap() {
       calls.setGlobalState.length = 0;
       for (const key of Object.keys(globalState)) delete globalState[key];
       styleLoaded = true;
+      sourcesPending = false;
     },
   };
 

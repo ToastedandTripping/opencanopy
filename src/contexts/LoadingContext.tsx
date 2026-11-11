@@ -82,7 +82,16 @@ function useDebounce(delay: number) {
     [delay]
   );
 
-  return debounce;
+  /** Drop the pending write for `key`, if any (a clear must not be overtaken by it). */
+  const cancel = useCallback((key: string) => {
+    const existing = timers.current.get(key);
+    if (existing) {
+      clearTimeout(existing);
+      timers.current.delete(key);
+    }
+  }, []);
+
+  return { debounce, cancel };
 }
 
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
@@ -90,7 +99,7 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     new Map()
   );
 
-  const debounce = useDebounce(250);
+  const { debounce, cancel: cancelPending } = useDebounce(250);
 
   // Derive loadingLayers set from the status map for back-compat consumers
   const loadingLayers = useMemo(() => {
@@ -126,14 +135,18 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     [debounce]
   );
 
+  // A clear also cancels any terminal status still waiting out its debounce,
+  // so an error queued just before a layer is hidden cannot land after the
+  // clear and toast a layer the reader has turned off (R1-03).
   const clearLayerStatus = useCallback((id: string) => {
+    cancelPending(id);
     setLayerStatuses((prev) => {
       if (!prev.has(id)) return prev;
       const next = new Map(prev);
       next.delete(id);
       return next;
     });
-  }, []);
+  }, [cancelPending]);
 
   // Back-compat: setLayerLoading(id, true) → "loading"; false → "ok"
   // Only transitions to "ok" if the current status is "loading" (don't

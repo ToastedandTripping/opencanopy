@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef, memo } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef, memo } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
 import * as maplibregl from "maplibre-gl";
 import { GeoJSONSource, type FilterSpecification } from "maplibre-gl";
@@ -234,6 +234,28 @@ function PmtilesLayers({
 }) {
   const { current: map } = useMap();
 
+  /**
+   * Latest-ref to "re-apply current visibility + filters" (R1-05).
+   *
+   * The add effect below waits for `load` and then `sourcedata` before adding
+   * layers; the visibility and filter effects no-op while the layers do not
+   * exist, so a toggle, class-filter change or timeline switch made during
+   * that wait was lost. addLayersToMap calls this ref after its addLayer calls,
+   * so the layers come into existence already carrying current React state.
+   *
+   * Deliberately NOT `useEffectEvent`: in react-dom 19.2 an effect event's
+   * implementation is refreshed only for plain function components, so inside
+   * `memo()` (without a comparator) or `forwardRef` it silently keeps
+   * mount-time props. A ref assigned in a layout effect is plain closure
+   * semantics and works in every component kind.
+   *
+   * Lint blind spot: the eslint-disable lines in this component and in
+   * DataLayer switch off the React Compiler rules (refs, set-state-in-effect)
+   * for the whole component, so "lint clean" proves nothing about the ref
+   * handling here. The tests in pmtiles-layers-lifecycle.test.tsx are the proof.
+   */
+  const applyCurrentStateRef = useRef<() => void>(() => {});
+
   // Add source and layers once the map style + PMTiles source are ready
   useEffect(() => {
     if (!map || !layer.tileSource) return;
@@ -372,6 +394,11 @@ function PmtilesLayers({
             pipelineLog("pmtiles-layer", `layer-${layer.id}-tiles-line`, { type: "line", minzoom, maxzoom });
           }
         }
+
+        // The addLayer configs above carry the visibility captured when this
+        // effect ran; bring the new layers to current state (visibility,
+        // class + year filters, opacity) in the same task, before any paint.
+        applyCurrentStateRef.current();
       } catch (err) {
         // Bug 3 fix: surface errors instead of crashing silently
         console.error(`[OpenCanopy] Failed to add PMTiles layers for ${layer.id}:`, err);
@@ -445,8 +472,8 @@ function PmtilesLayers({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onError/tileMinZoom/visible intentionally excluded: including them would teardown+recreate MapLibre sources on every prop change
   }, [map, layer.id, layer.tileSource, layer.style]);
 
-  // Update visibility reactively
-  useEffect(() => {
+  // Apply visibility to whichever of this layer's tile layers exist.
+  const applyVisibility = useCallback(() => {
     if (!map || !layer.tileSource) return;
     const mapInstance = map.getMap();
 
@@ -475,6 +502,11 @@ function PmtilesLayers({
     }
   }, [map, layer.id, layer.tileSource, layer.style.paint, visible]);
 
+  // Update visibility reactively
+  useEffect(() => {
+    applyVisibility();
+  }, [applyVisibility]);
+
   /**
    * Merged filter + opacity effect for PMTiles layers.
    *
@@ -492,7 +524,7 @@ function PmtilesLayers({
    */
   const timelineActive = yearFilter != null;
 
-  useEffect(() => {
+  const applyFilters = useCallback(() => {
     if (!map || !layer.tileSource || layer.style.type !== "fill") return;
     const mapInstance = map.getMap();
     const fillId = `layer-${layer.id}-tiles-fill`;
@@ -577,6 +609,19 @@ function PmtilesLayers({
     // expressions embed ["global-state", "currentYear"] and self-update on the GPU, so the effect
     // only needs to re-run on timeline on/off transitions, not every year tick.
   }, [map, layer.id, layer.tileSource, layer.style.type, layer.style.filter, layer.style.paint, layer.style.outline, layer.style.opacity, layer.timelineField, classFilters, timelineActive]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  // Keep the re-apply ref current. A layout effect, so it is assigned before
+  // any passive effect (including the add effect) can call it.
+  useLayoutEffect(() => {
+    applyCurrentStateRef.current = () => {
+      applyVisibility();
+      applyFilters();
+    };
+  }, [applyVisibility, applyFilters]);
 
   return null; // No DOM output -- layers managed imperatively
 }
@@ -1101,10 +1146,14 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
     };
   }, [map]);
 
-  // PMTiles error callback — called from initSource timeout and addLayersToMap catch
-  const handlePmtilesError = useCallback((layerId: string) => {
-    setLayerStatus(layerId, "error");
-  }, [setLayerStatus]);
+  // PMTiles error callback — called from initSource timeout and addLayersToMap
+  // catch. It records the failure only; the status effect below decides what
+  // the reader sees. (It can run synchronously inside PmtilesLayers' add
+  // effect when style and source are already loaded; harmless at runtime.)
+  const [pmtilesFailed, setPmtilesFailed] = useState(false);
+  const handlePmtilesError = useCallback(() => {
+    setPmtilesFailed(true);
+  }, []);
 
   const hasTileSource = !!layer.tileSource;
   const tileMaxZoom = layer.tileSource?.maxZoom ?? 0;
@@ -1272,6 +1321,20 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
       loadData();
     }
   }, [visible, loadData, layer.source.type]);
+
+  // Layer status is a function of (visible, failed) (R1-03). A hidden layer
+  // reports nothing: the six public layers share one PMTiles source, so one
+  // header timeout fails them all, and StatusToast shows every "error" with no
+  // visibility check. Turning a failed layer back on restores the error
+  // honestly (the source is still dead). No else branch: a visible layer that
+  // has not failed on the PMTiles path keeps whatever the WFS path wrote.
+  // Declared after the WFS load effects on purpose, so it runs after their
+  // synchronous "loading" write in the same commit; an else-clear here would
+  // wipe it (test 10 is the tripwire).
+  useEffect(() => {
+    if (!visible) clearLayerStatus(layer.id);
+    else if (pmtilesFailed) setLayerStatus(layer.id, "error");
+  }, [visible, pmtilesFailed, layer.id, setLayerStatus, clearLayerStatus]);
 
   // Raster layer (satellite imagery) — imperative for correct z-order.
   // D1 fix: declarative <Source>/<Layer> appended to the top of the layer
