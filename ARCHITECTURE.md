@@ -199,6 +199,19 @@ Story overlays come from the same preprocessed checkpoint:
 `scripts/generate-tile-manifest.py` emits the optional binary-tile manifest
 the story's `ocbin://` protocol consults (fail-open when absent).
 
+**Logged hectares** (the hero figure, the logging chapter and the cutblocks
+scrub total) means FTEN cutblocks dated 1950-2025 by `DISTURBANCE_START_DATE`,
+with tenure boundaries removed when max(recorded, drawn) >= 2,000 ha, measured
+as the dissolved union of drawn area in EPSG:3005 so overlapping and
+re-harvested blocks count once. The rule (cap, `make_valid` repair, drawn area)
+lives once in `scripts/lib/cutblock_area.py`, which both story builders import;
+`build-scrub-tables.py` stops the run, writing nothing, unless its bucket
+accounting matches the measured counts for the checkpoint and an independent
+tile-union method agrees year by year. The evidence for the shipped total
+(both methods, the accounting, the checkpoint identity) is
+`research/measure-2026-11/crosscheck.json`. /map's cutblocks filter and the WFS
+proxy still test only the recorded area until T-pre carries the drawn-area rule.
+
 The heavy jobs here (`build-year-overlays.py`, `build-raster-tiles.py`, the
 `preprocess:v2` chain) run one at a time under `scripts/heavy-run.mjs`; see
 Heavy builds below.

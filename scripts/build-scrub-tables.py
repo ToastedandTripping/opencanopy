@@ -42,6 +42,10 @@ Logged hectares (cutblocks), since 2026-11 (plan 2026-11-measure-fix):
     under the plain sum of drawn area; 3 the two totals agree within 1 ha;
     4 the 2026-10-08 Fort Nelson box reproduces within 0.5%; plus the
     plausibility band. The JSON and crosscheck.json are written last.
+  - Evidence: research/measure-2026-11/crosscheck.json (both methods' annual and
+    total areas, the accounting, the box, the checkpoint identity) and the run log
+    beside it. On the 2026-05-06 checkpoint the total is 5,731,775.10 ha, against
+    the 5,888,477.44 ha attribute sum shipped before.
   - Fire is unchanged (fires are dated and capless).
 
 Every geometry error is fatal; only an unparseable JSON line is skipped, and it is
