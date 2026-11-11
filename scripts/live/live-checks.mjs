@@ -112,26 +112,49 @@ try {
     // then compares the fill layer's effective visibility with the switch's state.
     const label = layerArg ?? "Cutblocks";
     const layerId = (layerArg ?? "cutblocks").toLowerCase();
+    // Hold only the FIRST archive request (the header). Holding every range request (the first
+    // version of this check, 2026-11-10) also delays the directory and tile reads that follow,
+    // so the source never finishes loading inside the window on any build and the check cannot pass.
     let held = 0;
+    let headerRequested;
+    const headerSeen = new Promise((r) => { headerRequested = r; });
     await page.route(ARCHIVE, async (route) => {
       held += 1;
-      await new Promise((r) => setTimeout(r, 15_000));
+      // The toggle is made while this first request is held, so it lands after PmtilesLayers has
+      // registered the source and before its layers can exist. 10 s, under PmtilesLayers' 15 s
+      // header timeout: holding 15 s trips that timeout and (by design, no retry) the layer never
+      // attaches on any build.
+      if (held === 1) {
+        headerRequested();
+        await new Promise((r) => setTimeout(r, 10_000));
+      }
       await route.continue();
     });
     await page.goto(`${base}/map`, { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(8_000);
     let toggle = page.getByRole("switch", { name: label, exact: true });
+    await page.getByRole("button", { name: "Toggle layer panel" }).waitFor();
     if (!(await toggle.isVisible().catch(() => false))) {
       await page.getByRole("button", { name: "Toggle layer panel" }).click();
       toggle = page.getByRole("switch", { name: label, exact: true });
     }
+    await toggle.waitFor();
+    // A load-gated build never requests the archive without a frame; give it 20 s, then nudge.
+    const seen = await Promise.race([headerSeen.then(() => true), page.waitForTimeout(20_000).then(() => false)]);
+    result.headerSeenBeforeToggle = seen;
     const before = await toggle.getAttribute("aria-checked");
     const preToggle = await snapshot(page, layerId);
     await toggle.click();
     const after = await toggle.getAttribute("aria-checked");
     await page.waitForTimeout(17_000);
     await page.evaluate(() => window.__ocMap?.()?.triggerRepaint());
-    await page.waitForTimeout(15_000);
+    const polls = [];
+    for (let i = 0; i < 9; i++) {
+      await page.waitForTimeout(5_000);
+      const s = await snapshot(page, layerId);
+      polls.push({ t: 22 + (i + 1) * 5, fill: s.fill, source: s.source });
+      if (s.fill !== "absent") break;
+    }
+    result.polls = polls;
     result.layerId = layerId;
     result.archiveRequestsHeld = held;
     result.switch = { before, after };
