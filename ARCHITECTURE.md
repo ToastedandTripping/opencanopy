@@ -199,6 +199,10 @@ Story overlays come from the same preprocessed checkpoint:
 `scripts/generate-tile-manifest.py` emits the optional binary-tile manifest
 the story's `ocbin://` protocol consults (fail-open when absent).
 
+The heavy jobs here (`build-year-overlays.py`, `build-raster-tiles.py`, the
+`preprocess:v2` chain) run one at a time under `scripts/heavy-run.mjs`; see
+Heavy builds below.
+
 Quality net: the audit suite (`scripts/audit-*.ts`) traces source→tile
 fidelity, geometry precision, spatial/temporal/cross-source consistency.
 `npm run audit:all` runs eight of them; `audit:trend` (archived reports),
@@ -230,6 +234,7 @@ src/test/           unit + audit suites (vitest), mocks/maplibre
 netlify/            edge functions (wfs-proxy)
 scripts/            pipeline v2, raster builder, audit suite,
                     release tooling (release-ledger.mjs, lib/, hooks/pre-push)
+                    heavy-build lock (heavy-run.mjs; see Heavy builds)
 e2e/                playwright screenshots + live monitoring
 ```
 
@@ -487,3 +492,49 @@ the hook, loudly. The bypasses above are detected afterwards by reconcile, not p
 Rollback of the tooling itself, on Lee's word: `git revert`, then `git config --unset
 core.hooksPath`, which takes the gate off every worktree at once; move the ledger aside, never
 delete it; `rm -r` the lease and mutex; remove the installed tool.
+
+## Heavy builds
+
+No two heavy builds run at once on this host, and none starts while `MemAvailable` is under
+16 GiB, so a 12 GB build never takes the machine and every other session down with it. The
+lock is `scripts/heavy-run.mjs`, and it supersedes the P0b lock design (an `O_CREAT|O_EXCL`
+file, a mutex and PID liveness): one launcher opens `~/marvin/state/heavy-build.lock`, has
+`flock(1)` take a kernel lock on that open file, checks memory while holding it, then starts
+the command in its own process group with the same descriptor passed as the command's fd 3.
+The kernel holds that lock until the last process holding the descriptor exits or dies, a
+backgrounded `&` child included, so a crash or a `kill -9` never leaves a stale lock and nothing
+guesses at liveness. Wrap the outermost command only:
+
+```
+node scripts/heavy-run.mjs --job <name> [--retry] -- <command> [args...]
+```
+
+A heavy-run nested inside another refuses itself with 240. Own refusals print
+`heavy-run: REFUSED <code>` and use 240 (lock held), 241 (memory under the floor, or
+`/proc/meminfo` unreadable; the lock is released) and 244 (nothing started: arguments, path
+guard, lock file, `flock`, spawn); 242 and 243 are reserved. Anything else is the command's own
+exit, or 128 plus the signal if it was killed, and a non-zero one also prints
+`heavy-run: command exited N`, so a build that itself exits 240 is never read as a refusal.
+`--retry` retries 240 and 241 only, every 10 minutes for seven attempts in all, holding nothing
+while it waits, then prints `giving up after 7 attempts; tell Lee`: the session reports to its
+coordinator and sends `/notify`, as for a release halt. A 240 prints who the sidecar
+`heavy-build.lock.json` names (job, launcher pid, command pgid, start), which may be stale or
+absent, and `fuser -v <lock>` to find the real holders. The sidecar is informational only.
+
+**Never delete `heavy-build.lock`.** Deleting it while a build holds it lets the next run lock
+a fresh file and start beside the build. To stop a build, signal the launcher (SIGINT, SIGTERM
+or SIGHUP), which signals the command's whole group. If the launcher is gone, use
+`kill -TERM -- -<pgid>` with the pgid from the sidecar, or find the holders with
+`fuser -v ~/marvin/state/heavy-build.lock` when there is no sidecar (a build whose top process
+exited while its background children run leaves none).
+
+Unmeasured is heavy: `scripts/build-year-overlays.py` (about 12 GB),
+`scripts/build-raster-tiles.py` and the `preprocess:v2` chain go through heavy-run; a job
+measured under 8 GB need not. `rebuild.sh` and the npm scripts do not take the lock yet, so a
+session wraps the heavy job itself. Limits: a descendant that closes fd 3, or is started
+without it (a Node child unless passed explicitly, a detached daemon), and outlives its parent
+escapes the lock; both Python builds start no subprocesses and the `preprocess:v2` chain waits
+on its children, so all three are covered. The lock is per host, and it does not enforce load.
+The session rule for this host is the coordinator's (2026-11-11, relayed): run a 12 GB build
+only when the 1-minute load is under 8, and announce it to the coordinator first. That is an
+operating note, not a ruling of Lee's.
