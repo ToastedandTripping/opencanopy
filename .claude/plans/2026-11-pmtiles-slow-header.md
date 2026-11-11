@@ -1,6 +1,6 @@
 # A slow PMTiles header no longer leaves /map's vector layers dead until reload
 
-*Plan, 2026-11-11. Session marvin/canopy (driven by marvin session-f1a7d3; coordinator 2026-11-11: plan it as its own item, build and release only if it stays small). Tier: Simple (one source file and its test).*
+*Plan, 2026-11-11, revised after critic r1 (FAIL, folded). Session marvin/canopy (driven by marvin session-f1a7d3; coordinator 2026-11-11: plan it as its own item, build and release only if it stays small). Tier: Simple (one source file and its test).*
 
 ## Intent (grilled)
 
@@ -12,27 +12,36 @@ Grill skipped: fix mode on a defect measured on production this session and owed
 
 Status today: `handlePmtilesError` sets `pmtilesFailed`; the DataLayer status effect (`:1315-1317`) shows `error` while the layer is visible and failed, and has no else branch on purpose (WFS statuses survive; test 10 of `pmtiles-layers-lifecycle.test.tsx`).
 
-## Change
+## Change (revised after critic r1, FAIL: folded)
 
-1. **Keep listening after the timeout.** The 15 s timer still reports the error (`onError`), but no longer removes the `sourcedata` listener; the effect's cleanup still removes it on unmount, as now.
-2. **Recover when the header arrives late.** When the listener fires after a timeout already reported an error, PmtilesLayers adds the layers as normal (the latest-ref re-apply puts current visibility and filters on them) and calls a new `onRecovered(layer.id)` prop. DataLayer's handler sets `pmtilesFailed` false and clears the layer's status (`clearLayerStatus`), so the error notice goes away; the status effect's "no else branch" stays untouched (the recovery path clears explicitly, once, only after a reported PMTiles failure, so WFS statuses are unaffected).
-3. A `pipelineLog` line marks a late recovery.
+1. **Keep listening after the timeout.** The 15 s timer still reports the error (`onError`), but no longer removes the `sourcedata` listener; the effect's cleanup still removes it on unmount. Hardening: the listener also requires the source to have its tile list before adding (an errored source reads `isSourceLoaded` true in 6.15; it never fires `sourcedata`, but the guard costs one line).
+2. **Recover when the header arrives late.** The listener removes itself and calls `addLayersToMap`; only if that succeeds (no throw) does PmtilesLayers call a new `onRecovered(layer.id)`. A throw keeps the existing `onError` path, so a failed add never hides its own error.
+3. **The status effect owns the clear** (critic r1: an explicit clear can run before React commits the failure's effect, and the stale effect would then queue the error over a drawing layer). DataLayer's `onRecovered` handler only sets `pmtilesFailed` false. The status effect keeps a ref of the previous `pmtilesFailed`; on the transition failed to not-failed while visible it calls `clearLayerStatus` once (which also cancels any pending debounced error); otherwise it behaves exactly as now (no else branch, so WFS statuses survive).
+4. A `pipelineLog` line marks a late recovery.
 
 ## Tests (`src/test/pipeline/pmtiles-layers-lifecycle.test.tsx`, real LoadingProvider, fake timers)
 
-1. Late header: style ready, sources pending, visible; advance 15 s: status `error`; then flip pending off and emit `sourcedata`: the fill layer exists with visibility `visible` and the status is cleared. Mutant: the timeout removes the listener again (red: layer never added).
-2. Late header while hidden: as 1 but the layer is hidden; after recovery no status is set and the layer is added hidden. Regression guard.
-3. Recovery clears only after a reported failure: a normal on-time header never calls `onRecovered`'s clear (a WFS status written for a WFS-only fixture is untouched). Mutant: clear status on every `sourcedata` (red).
-4. Unmount during the wait: the listener is removed by cleanup; a later `sourcedata` adds nothing. Regression guard.
-5. Existing test 7 (hidden layers never report error on the shared source) still passes unchanged.
+1. Late header, visible: style ready, sources pending; advance 15 s: status `error`; flip pending off, emit `sourcedata`; the fill exists with visibility `visible`, the status is cleared after the debounce window, and the handler was passed to `off("sourcedata")`. Mutant: the timeout removes the listener (red: no layer).
+2. Recovery resets the failure: after recovery, hide and re-show the layer: no `error` returns. Mutant: the handler skips the `pmtilesFailed` reset (red).
+3. Recovery clears only after a reported failure, on a tile-backed layer: an on-time header with a status set beforehand by the test leaves that status untouched. Mutant: clear on every `sourcedata` (red).
+4. Failed add during recovery: `addLayer` throws on the late header: status stays `error`. Mutant: call `onRecovered` unconditionally (red).
+5. Late header while hidden: layer added hidden, no status. Regression guard.
+6. Unmount during the wait: a later `sourcedata` adds nothing. Regression guard.
+Existing test 7 (hidden layers never report on the shared source) unchanged.
+
+**Live check.** New `late-header` mode in `scripts/live/live-checks.mjs`: hold the archive header 20 s (past the timeout) on `/map#layers=cutblocks`, then read the fill layer, `isSourceLoaded`, and whether the legend shows "BC data unavailable" for the layer. Run on the current deploy first: it must fail (layer absent) and in doing so shows whether production's header arrives late rather than never; on the candidate the layer must be present and the notice gone. The visibility mode's comment about the 15 s timeout is updated.
 
 ## Out of scope (Parking Lot line)
 
-A header that fails outright (network error) is still not retried: that needs removing and re-adding the shared source for all six layers, with its own design.
+A header that fails outright (network error) is still not retried: that needs removing and re-adding the shared source for all six layers, with its own design. Amend the existing ROADMAP Parking Lot line (around :216, "A failed PMTiles header is never retried") to say late headers now recover and only outright failures remain, rather than adding a second line.
+
+## Docs
+
+ARCHITECTURE.md (the Status model and the PMTiles paragraph around :116-118: late headers recover, the status effect clears on recovery); the status-effect comment and the `console.warn` text in DataLayer.tsx ("did not load within 15 s; still waiting"); the hand-off line for this item.
 
 ## Release
 
-Lane M, kind `behaviour`, ARCHITECTURE.md Releases; approval: the standing yes (2026-11-10 Deploy amendment, verbatim, relayed). Guards: identity, console, `attach`, `visibility` (the late-header case is the visibility check's own scenario when its hold trips the timeout), `interact`, `audit:live` against release 8's set. Not a visual release.
+Lane M, kind `behaviour`, ARCHITECTURE.md Releases; approval: the standing yes (2026-11-10 Deploy amendment, verbatim, relayed). Guards: identity, console, `attach`, `visibility`, `interact`, `audit:live` against release 8's set, and the new `late-header` check (red on release 8 first, green on the candidate). If the release-8 run shows the header never arrives at all under the hold, the check proves nothing on production, and the release says plainly that only the unit tests prove the fix. Not a visual release.
 
 ## Gates
 
