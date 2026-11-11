@@ -1,6 +1,6 @@
 # HEAVY: the heavy-build lock (`scripts/heavy-run.mjs`)
 
-*Plan, 2026-11-11, revised after critic r1 (FAIL; folded, design amended to a kernel lock). Session marvin/canopy (driven by marvin session-f1a7d3), brief item 5, first of two relays. Tier: Standard (a new tool, its test, docs).*
+*Plan, 2026-11-11, revised after critic r1 and r2 (both FAIL; folded; the design is critic r2's tested single-launcher flock design). Session marvin/canopy (driven by marvin session-f1a7d3), brief item 5, first of two relays. Tier: Standard (a new tool, its test, docs).*
 
 ## Intent (grilled)
 
@@ -8,49 +8,61 @@ Grill skipped: the design was ruled through three critic rounds of the P0b plan 
 
 Why now: item 5's second relay (MEASURE) rebuilds `build-year-overlays.py` (about 12 GB, about 35 min; hand-off log 2026-09-02), and the program makes S0b and every overlay build wait on this lock. The coordinator's rule for this host (2026-11-11, relayed): heavy runs only when the 1-minute load is under 8 and at least 16 GiB is free, announced to the coordinator first. The lock enforces the memory half and the one-at-a-time half mechanically; the load half and the announcement stay a session rule (below).
 
-## Design (amended after critic r1: a kernel lock, not a hand-built one)
+## Design (one launcher process holding a kernel lock; amended after critic r1 and r2)
 
-**Why the binding mechanism changes, and what stays.** The P0b rules specified an `O_CREAT|O_EXCL` lock file plus a `dir-mutex`, PID/start-tick liveness and a recorded pgid. Critic r1 measured three ways that design fails at its one job against the real `dir-mutex.mjs`: the lock was released when the launcher's direct child exited, so a build that backgrounds itself (the overlay build has been run "detached", hand-off log 2026-09-02) let a second build start beside it; a crash between spawn and the pgid record, cleared by the printed manual `rm -r`, also became a second build; and every PID/pgid liveness check carries false-live and false-dead edges. util-linux `flock` (2.39.3, `/usr/bin/flock`, on this host and on GitHub's Ubuntu runners) holds a kernel lock on an open file descriptor that every child inherits, including backgrounded and `setsid` grandchildren (critic r1's scratch run), and the kernel releases it only when the last holder exits or dies. No crash window, no stale lock, no liveness guessing. This is a technical call within the session's authority; the rules' purpose (one heavy build at a time, never below the memory floor, never a second build after a crash), the memory floor, the refusal-code shape, the retry policy and the behavioural test list stand. `dir-mutex.mjs` is not used and not edited.
+**Why the binding mechanism changes.** The P0b rules specified an `O_CREAT|O_EXCL` lock file, a `dir-mutex`, PID/start-tick liveness and a recorded pgid. Critic r1 measured it failing at its one job (a backgrounded build released the lock; a crash plus the manual clear became a second build). Critic r2 measured that a Node step between `flock(1)` and the build also fails: Node marks inherited descriptors close-on-exec at startup, so a command spawned with plain inheritance holds nothing. The design below is the one critic r2 built and ran in scratch with every case correct (`scratchpad/heavy2/fix-heavy.mjs`): one Node launcher that owns the lock descriptor and hands it to the build explicitly. The kernel lock lives on the open file description, so it is held until the last process holding that description exits or dies: no stale lock, no liveness guessing, no backgrounding escape. Technical call within the session's authority; it supersedes the P0b mechanism (said here, in ARCHITECTURE and in the shipped entry). `dir-mutex.mjs` is not used and not edited.
 
-New `scripts/heavy-run.mjs` (Node, ESM, no dependencies):
+New `scripts/heavy-run.mjs` (Node, ESM, no dependencies). Canonical invocation, wrapping the outermost command only:
 
 ```
 node scripts/heavy-run.mjs --job <name> [--retry] -- <command> [args...]
 ```
 
-- **Outer step:** validates arguments, applies the path guard, then spawns `flock --nonblock --conflict-exit-code 240 <state>/heavy-build.lock node scripts/heavy-run.mjs --inner --job <name> -- <command...>` with inherited stdio, forwarding SIGINT/SIGTERM/SIGHUP to it. With `--retry`, exit codes 240 and 241 are retried every 10 minutes (an interval seam for tests), six times, then the last code is returned with a line saying it goes to Lee. The outer step never sleeps while holding anything.
-- **Inner step (runs only while the lock is held):** reads `MemAvailable` from `/proc/meminfo` (a path seam for tests); below 16,777,216 kB, or unreadable or unparseable, it exits 241 before starting anything. Otherwise it writes a sidecar `<state>/heavy-build.lock.json` for humans (`job`, `pid`, `host`, `startedAt`, `command`), spawns the command (inheriting the lock descriptor), forwards signals to it, and on exit removes the sidecar only if it still names this run. The sidecar is informational; nothing decides on it.
-- **Exit codes:** the command's own exit code passes through; a command killed by a signal exits 128 plus the signal number (never 0); refusals are 240 (lock held), 241 (memory below the floor or unreadable), 244 (nothing started: bad arguments, refused state path, `flock` missing, command not found). 242 and 243 stay reserved (they named the dead and busy mutex, which no longer exist); a test pins that neither is ever emitted. Every refusal prints one stderr line starting `heavy-run: REFUSED`.
-- **Path guard:** copied verbatim in shape from the release tool (`scripts/release-ledger.mjs:132-151`): state dir `~/marvin/state` unless `OC_HEAVY_STATE_DIR` is set; under `VITEST` the override is required and must resolve outside the real state dir; the override and the meminfo/interval seams are refused (244) when `VITEST` is unset. Lock paths are already ignored by marvin (`~/marvin/.gitignore:71`, `state/heavy-build.lock*`, covering the lock and the sidecar).
-- **Stated limits:** a command that explicitly closes inherited file descriptors and keeps running in a detached child escapes the lock (Python's `subprocess` closes fds in its children by default, but the parent Python process keeps the lock until it exits, which is the build); the lock is per host (state is local); the 1-minute-load half of the host rule is not enforced by the tool.
-- **Which jobs use it:** unmeasured is heavy. Known heavy: `scripts/build-year-overlays.py` (12 GB), `scripts/build-raster-tiles.py`, and the `preprocess:v2` chain (the multi-process case; neither build script forks workers, critic r1). A job measured below 8 GB need not use it.
+1. Validate arguments and apply the path guard (below); failure: 244.
+2. Open `<state>/heavy-build.lock` (`O_RDONLY|O_CREAT`, 0644); failure: 244.
+3. `spawnSync("flock", ["--nonblock", "--conflict-exit-code", "240", "3"], { stdio: ["ignore", "inherit", "inherit", fd] })`: locks the shared open file description. `flock` missing or any non-0, non-240 status: 244. 240: refused, lock held (the stderr line names the sidecar's holder, which may be stale, and suggests `fuser -v <lock>`).
+4. Holding the lock, read `MemAvailable` (`/proc/meminfo`, path seam for tests). Below 16,777,216 kB, unreadable or unparseable: close the descriptor (releasing the lock) and refuse 241.
+5. Write the sidecar `<state>/heavy-build.lock.json` (`job`, launcher `pid`, command `pgid`, `host`, `startedAt`, `command`); informational only, never decides anything.
+6. Spawn the command with `detached: true` (its own process group, restoring the P0b rule "the command runs in its own group; signals go to the group") and `stdio: ["inherit", "inherit", "inherit", fd]`, so the descriptor is passed explicitly as fd 3 and every descendant that does not close it keeps the lock. Spawn error: 244.
+7. Forward SIGINT, SIGTERM and SIGHUP to the command's group (`process.kill(-pgid, sig)`).
+8. On the command's exit: remove the sidecar if it still names this run; exit with the command's code, or 128 plus the signal number if it was killed (never 0). When the command's own code is non-zero, print `heavy-run: command exited N` so a command's 240-244 is never mistaken for a refusal.
 
-## Tests (`src/test/pipeline/heavy-run.test.ts`, node environment, each revert-proven)
+**Refusals vs the command:** only the launcher's own refusals print `heavy-run: REFUSED <code>`. Own refusals use 240 (held), 241 (memory), 244 (nothing started: arguments, path guard, lock file, flock, spawn); 242 and 243 stay reserved and are never used as own refusals. `--retry` retries only own 240 and 241: an initial attempt plus six retries every 10 minutes (interval seam for tests), the descriptor closed during every wait, then the last code with a line `heavy-run: giving up after 7 attempts; tell Lee` (the channel: the session that ran it reports to its coordinator and sends `/notify`, as for a release halt). A 244 or any command exit is never retried.
 
-In `src/test/` because `vitest.config.ts` collects only `src/**` (critic r1). Every test sets `VITEST` with a temp `OC_HEAVY_STATE_DIR`, scrubs other `OC_HEAVY_*`, defaults the meminfo seam to a value above the floor, spawns real short children (`node -e`, `sh -c`), and kills any leftover process group in `afterEach`.
-1. A held lock is respected: a second run exits 240 while the first runs, and runs after it ends.
-2. A backgrounded build keeps the lock: `sh -c 'sleep 3 & exit 0'` holds it until the sleep ends (a second run is 240 inside that window).
-3. A killed build releases it: SIGKILL the first run's whole tree; the next run proceeds at once (no stale lock, no manual clear).
-4. Parent killed, child surviving: SIGKILL only the launcher; the surviving child keeps the lock (240).
-5. Memory boundary: meminfo at 16,777,215 kB refuses 241 and starts nothing; at 16,777,216 kB runs; unreadable is 241.
-6. Two racers on a free lock: exactly one runs, the other gets 240 (the kernel decides; run 20 times).
-7. Sidecar ownership: a run never removes a sidecar another run has written; a malformed or wrongly shaped sidecar changes nothing about who may run.
-8. Exit status: the child's non-zero exit passes through; a SIGKILLed child gives 137, not 0.
-9. Signals: SIGTERM to the launcher reaches the child.
-10. Bad arguments, refused path, missing command: 244, nothing started, no sidecar.
-11. Retry: with a short interval seam, 240 then free runs on the second attempt; six refusals end with the last code and the "goes to Lee" line.
-12. Codes 242 and 243 are never emitted (all refusal paths enumerated).
-13. A malformed release ledger in the same state dir is irrelevant to heavy-run (binding test kept).
+**Path guard:** same shape as the release tool's (`scripts/release-ledger.mjs:132-151`): state dir `~/marvin/state` unless `OC_HEAVY_STATE_DIR` is set; under `VITEST` the override is required and must resolve outside the real state dir; the override and the meminfo and interval seams are refused (244) when `VITEST` is unset. The lock and sidecar are ignored by marvin (`~/marvin/.gitignore:71`, `state/heavy-build.lock*`).
 
-Revert proofs (each mutant turns a named test red): drop `--nonblock` handling so a held lock blocks (1, 6 time out); hold the lock only in the outer process with `FD_CLOEXEC` on the command (2, 4); `<=` for `<` at the memory floor (5); pass `null` exit through as 0 (8); remove the sidecar unconditionally (7); retry on 244 (11). Recorded verbatim.
+**Stated limits:** a descendant that closes fd 3 or is started without it (Node's own children unless passed explicitly; any program that closes inherited descriptors) and outlives its parent escapes the lock; the build's own top process holds it, which covers both Python builds (neither starts subprocesses) and the `preprocess:v2` chain (it waits on its children). Per host only. The load half of the host rule is not enforced. **Never delete `heavy-build.lock`:** deleting it while a build holds it lets the next run lock a fresh file and start beside it.
+
+**Binding bookkeeping (P0b "Relay HEAVY" bullets):** lock by `O_CREAT|O_EXCL` with PID/host/start/job/startTicks/pgid: amended (kernel lock; the fields survive as the informational sidecar). Mutex beside it: moot (no mutex). State-dir override and path guard: kept. Unmeasured is heavy, known heavy jobs: kept. Under-the-mutex order (live refused, dead replaced, memory floor, lock, spawn as own group, record pgid, release): amended (kernel decides live/dead; memory floor held under the lock; own group and pgid kept). Liveness via kill -0 and start ticks: moot. Child exit passes through, refusals 240-244 with a marked stderr line: kept (242/243 reserved). Signals to the group: kept. Retry 240, 241, 243 every 10 min six times then Lee: kept for 240 and 241 (243 no longer exists). Test list: kept where the case still exists (below).
+
+## Tests (`src/test/pipeline/heavy-run.test.ts`, node environment)
+
+In `src/test/` because `vitest.config.ts` collects only `src/**`. Every test sets `VITEST`, a temp `OC_HEAVY_STATE_DIR`, scrubs other `OC_HEAVY_*`, defaults the meminfo seam above the floor, spawns real short children, synchronises on barrier files (never on sleeps), and kills leftover groups in `afterEach`.
+
+1. Held lock respected: run A holds (barrier); run B exits 240 with `REFUSED 240`; after A releases, B runs. Mutant: drop the flock call (red).
+2. Backgrounded build keeps the lock: `sh -c 'sleep 3 & exit 0'`: B is 240 while the sleep runs. Mutant: pass the descriptor by plain inheritance instead of `stdio[3]` (red, critic r2's measurement).
+3. Killed build releases: SIGKILL A's launcher and its command group; B runs at once. Regression guard.
+4. Launcher lost, command surviving: SIGKILL only the launcher (every process on the launcher side); the command keeps the lock, B is 240. Mutant: plain inheritance (red).
+5. Memory: 16,777,215 kB refuses 241, starts nothing, and releases the lock (a third run proceeds); 16,777,216 kB runs; unreadable is 241. Mutant: `<=` for `<` (red).
+6. Two racers on a free lock through a barrier: exactly one runs, the other is 240. Regression guard.
+7. Sidecar: a foreign sidecar written mid-run is not removed by this run; a malformed one changes nothing about who may run. Mutant: remove the sidecar unconditionally (red).
+8. Exit status: the command's non-zero code passes through with the `command exited` line; a SIGKILLed command gives 137, not 0. Mutant: pass `null` through as 0 (red).
+9. Signals: SIGTERM to the launcher reaches a grandchild in the command's group. Mutant: signal the direct child only (red).
+10. Arguments, path guard, unopenable lock path, missing command: 244, nothing started, no sidecar, never retried. Regression guard.
+11. Retry (interval seam): 240 then free runs on the second attempt; exactly 7 attempts then the give-up line; a 244 under `--retry` makes exactly one attempt; a command's own exit 240 is not retried; after a 241 the descriptor is released during the wait (a third caller takes the lock); SIGTERM during the wait exits. Mutants: retry on 244 (red); keep the descriptor open across the wait (red).
+12. Own refusals never use 242 or 243 (every refusal path enumerated). Regression guard.
+13. A malformed release ledger in the same state dir is irrelevant (binding test kept). Regression guard.
+14. Node-shaped command (Review Focus 5): a synchronous `node -e` command holds the lock for its run; a `node -e` that starts a detached child without fd 3 and exits does not (the documented limit). Regression guard.
+
+Revert proofs are recorded verbatim for every named mutant; tests marked "regression guard" have no mutant and say so.
 
 ## Out of scope (Parking Lot lines at close)
 
-Wrapping the npm scripts and `rebuild.sh` so they call heavy-run themselves; nesting heavy-run inside heavy-run; enforcing the load half of the host rule; other projects' builds on this host.
+Wrapping the npm scripts and `rebuild.sh` so they call heavy-run themselves; nesting heavy-run inside heavy-run (a nested call refuses itself with 240); enforcing the load half of the host rule; other projects' builds on this host.
 
 ## Docs
 
-ARCHITECTURE.md, a short "Heavy builds" paragraph beside Releases (with pointers from the layout and pipeline sections): the canonical invocation, run in the foreground or as a background shell job but never with the command itself detached from heavy-run; the refusal codes; the 16 GiB floor; why a crash never leaves a stale lock (kernel lock); how to stop a build (signal the heavy-run launcher, which forwards); and the session rule for this host, recorded as the coordinator's (2026-11-11, relayed: 1-minute load under 8 and announce to the coordinator before a 12 GB build). It is an operating note, not a DECISIONS entry (not Lee's ruling). ROADMAP: HEAVY moves from Parking Lot ("Owed in `.claude/handoff.md`") to its shipped entry at release; the hand-off's HEAVY line is removed through the writer.
+ARCHITECTURE.md, a short "Heavy builds" paragraph beside Releases (with pointers from the layout and pipeline sections): that the kernel lock supersedes the P0b mechanism; the canonical invocation, wrapping the outermost command only (a nested call refuses itself); the refusal codes and the `command exited` line; the 16 GiB floor; never delete `heavy-build.lock`; why a crash never leaves a stale lock; how to stop a build (signal the launcher, which signals the group; if the launcher is gone, `kill -TERM -- -<pgid>` with the pgid from the sidecar); what a 240 prints (the sidecar's holder, possibly stale, and `fuser -v`); and the session rule for this host, recorded as the coordinator's (2026-11-11, relayed: 1-minute load under 8 and announce to the coordinator before a 12 GB build). It is an operating note, not a DECISIONS entry (not Lee's ruling). ROADMAP: HEAVY moves from Parking Lot ("Owed in `.claude/handoff.md`") to its shipped entry at release; the hand-off's HEAVY line is removed through the writer.
 
 ## Release
 
