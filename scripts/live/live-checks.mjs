@@ -8,6 +8,8 @@
  *   node scripts/live/live-checks.mjs attach     <baseUrl> <out.json>
  *   node scripts/live/live-checks.mjs visibility <baseUrl> <out.json> [layerId=cutblocks]
  *   node scripts/live/live-checks.mjs year       <baseUrl> <out.json>
+ *   node scripts/live/live-checks.mjs interact   <baseUrl> <out.json>
+ *   node scripts/live/live-checks.mjs story      <baseUrl> <out.json>
  *
  * console:    load /map, wait 30 s; record console.error and pageerror only, normalised
  *             (query strings, hex ids and numbers stripped) and de-duplicated.
@@ -21,6 +23,11 @@
  * year:       hold every archive request 1.5 s, open the timeline, step the slider five times, and
  *             compare getGlobalState().currentYear with the slider after each step.
  *
+ * interact:   wheel-zoom and drag /map like a visitor. Pass = no uncaught pageerror AND the camera
+ *             moved (zoom or centre before != after). The URL hash is recorded, not judged (its
+ *             subscription is M1a's defect; plan .claude/plans/2026-11-react-map-gl-813.md).
+ * story:      scroll the landing page (/) through its chapters. Pass = no uncaught pageerror.
+ *
  * The comparison rules (two baseline runs, two candidate runs) live in the plan; this only measures.
  */
 import { chromium } from "playwright";
@@ -28,7 +35,7 @@ import { writeFileSync } from "node:fs";
 
 const [mode, baseUrl, outPath, layerArg] = process.argv.slice(2);
 if (!mode || !baseUrl || !outPath) {
-  console.error("usage: live-checks.mjs <console|attach|visibility|year> <baseUrl> <out.json> [layerId]");
+  console.error("usage: live-checks.mjs <console|attach|visibility|year|interact|story> <baseUrl> <out.json> [layerId]");
   process.exit(2);
 }
 const base = baseUrl.replace(/\/$/, "");
@@ -187,14 +194,15 @@ try {
     result.steps = steps;
     result.pass = steps.every((s) => s.sliderYear === s.currentYear);
   } else if (mode === "interact") {
-    // Wheel-zoom and drag the map like a visitor; count uncaught page errors and record whether
-    // the URL hash follows the camera. Pass = no pageerror and the hash changed after the moves.
     const pageErrors = [];
     page.on("pageerror", (e) => pageErrors.push(normalise(e.message)));
     await page.goto(`${base}/map`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".maplibregl-canvas", { timeout: 30_000 });
     await page.waitForTimeout(8_000);
-    const hashBefore = await page.evaluate(() => location.hash);
+    const before = await page.evaluate(() => {
+      const map = window.__ocMap?.();
+      return { hash: location.hash, zoom: map?.getZoom() ?? null, center: map ? map.getCenter().toArray() : null };
+    });
     const box = await page.locator(".maplibregl-canvas").boundingBox();
     const cx = box.x + box.width / 2;
     const cy = box.y + box.height / 2;
@@ -210,12 +218,32 @@ try {
       const map = window.__ocMap?.();
       return { hash: location.hash, zoom: map?.getZoom() ?? null, center: map ? map.getCenter().toArray() : null };
     });
-    result.hashBefore = hashBefore;
+    result.before = before;
     result.after = after;
     result.pageErrors = pageErrors;
     result.pageErrorCount = pageErrors.length;
-    result.hashFollowed = after.hash !== hashBefore && after.hash.includes("z=");
-    result.pass = pageErrors.length === 0 && result.hashFollowed;
+    result.cameraMoved = before.zoom != null && after.zoom != null &&
+      (Math.abs(after.zoom - before.zoom) > 0.01 ||
+       Math.abs(after.center[0] - before.center[0]) > 1e-6 || Math.abs(after.center[1] - before.center[1]) > 1e-6);
+    result.hashFollowed_M1a_measurement = after.hash !== before.hash && after.hash.includes("z=");
+    result.pass = pageErrors.length === 0 && result.cameraMoved;
+  } else if (mode === "story") {
+    const pageErrors = [];
+    page.on("pageerror", (e) => pageErrors.push(normalise(e.message)));
+    await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(6_000);
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    const steps = 40;
+    for (let i = 1; i <= steps; i++) {
+      await page.mouse.wheel(0, Math.ceil(height / steps));
+      await page.waitForTimeout(250);
+    }
+    await page.waitForTimeout(3_000);
+    result.scrollHeight = height;
+    result.finalScrollY = await page.evaluate(() => window.scrollY);
+    result.pageErrors = pageErrors;
+    result.pageErrorCount = pageErrors.length;
+    result.pass = pageErrors.length === 0;
   } else {
     throw new Error(`unknown mode ${mode}`);
   }
