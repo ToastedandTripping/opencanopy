@@ -18,9 +18,12 @@
  * the mock map (a fresh handle per render would re-run every map effect);
  * `maplibre-gl` mocked at module level; `fetchLayerData` controllable.
  *
- * "Emit" in tests 1-5 means: emit `load`, flip sources pending off, then emit
+ * "Emit" in tests 1-5 means: the style JSON is parsed (`style.load`, the
+ * readiness event since Amendment A), flip sources pending off, then emit
  * `sourcedata {sourceId}` (the handler adds layers only once
- * `isSourceLoaded` is true).
+ * `isSourceLoaded` is true). Tests 20-21 never emit `load` at all: style
+ * parsed, tiles pending (isStyleLoaded() false), the production condition in
+ * which `load` did not fire until the visitor interacted.
  *
  * Divergences NOT covered: a real MapLibre map (happy-dom, no WebGL), real
  * PMTiles header fetches and real tile loading. The release's agent live
@@ -106,6 +109,22 @@ const LINE: LayerDefinition = {
   },
 };
 
+const SATELLITE: LayerDefinition = {
+  id: "sat",
+  label: "Satellite",
+  category: "base",
+  description: "Test raster layer",
+  source: {
+    type: "raster",
+    url: "https://tiles.example.test/{z}/{x}/{y}.jpg",
+  },
+  style: { type: "fill", opacity: 1, paint: {} },
+  zoomRange: [0, 18],
+  defaultEnabled: false,
+  interactive: false,
+  legendItems: [],
+} as unknown as LayerDefinition;
+
 const WFS_ONLY: LayerDefinition = {
   id: "wfs-only",
   label: "WFS only",
@@ -168,11 +187,11 @@ function mount(layers: LayerProps[]) {
   };
 }
 
-/** load, then the PMTiles header resolves. */
+/** Style JSON parsed, then the PMTiles header resolves. */
 function emitReady() {
   act(() => {
     mockMap._setStyleLoaded(true);
-    mockMap._emit("load");
+    mockMap._emit("style.load");
     mockMap._setSourcesPending(false);
     mockMap._emit("sourcedata", { sourceId: PMTILES_SOURCE_ID });
   });
@@ -277,6 +296,37 @@ describe("PmtilesLayers under StrictMode with the style loaded and the header pe
     expect(added.filter((id) => id === fillId(FILL))).toHaveLength(1);
     expect(added.filter((id) => id === outlineId(FILL))).toHaveLength(1);
     expect(mockMap.getLayoutProperty(fillId(FILL), "visibility")).toBe("visible");
+  });
+});
+
+// ── Amendment A: readiness is "style JSON parsed", never `load` ──────────────
+
+describe("layers attach with the style parsed, tiles pending and no load (Amendment A)", () => {
+  beforeEach(() => {
+    mockMap._setStyleLoaded(true); // getStyle() defined
+    mockMap._setTilesPending(true); // isStyleLoaded() false
+  });
+
+  it("20: PmtilesLayers adds its layers with current visibility once the header resolves", () => {
+    mockMap._setSourcesPending(true);
+    const { rerender } = mount([{ layer: FILL, visible: false }]);
+    rerender([{ layer: FILL, visible: true }]);
+    expect(mockMap.isStyleLoaded()).toBe(false);
+    act(() => {
+      mockMap._setSourcesPending(false);
+      mockMap._emit("sourcedata", { sourceId: PMTILES_SOURCE_ID });
+    });
+    expect(mockMap.getLayer(fillId(FILL))).toBeDefined();
+    expect(mockMap.getLayoutProperty(fillId(FILL), "visibility")).toBe("visible");
+    expect(mockMap.getLayoutProperty(outlineId(FILL), "visibility")).toBe("visible");
+    expect(mockMap._listenerCount("load")).toBe(0);
+  });
+
+  it("21: SatelliteLayers adds its raster layer", () => {
+    mount([{ layer: SATELLITE, visible: true }]);
+    expect(mockMap.getLayer(`layer-${SATELLITE.id}`)).toBeDefined();
+    expect(mockMap.getPaintProperty(`layer-${SATELLITE.id}`, "raster-opacity")).toBe(1);
+    expect(mockMap._listenerCount("load")).toBe(0);
   });
 });
 

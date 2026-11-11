@@ -11,6 +11,7 @@ import { useLoadingContext } from "@/contexts/LoadingContext";
 import { pipelineLog } from "@/lib/debug/pipeline-logger";
 import { PMTILES_URL, PMTILES_SOURCE_ID, PMTILES_MAX_ZOOM } from "@/lib/layers/registry";
 import { pickDefinedPaint } from "@/lib/layers/paint";
+import { onStyleReady } from "@/lib/map/style-ready";
 import {
   buildYearExpression,
   buildYearFilter,
@@ -118,7 +119,7 @@ function SatelliteLayers({
 
   // Keep a ref to `visible` that is always current. This lets addToMap() read
   // the up-to-date visibility at the time it actually runs (which may be on the
-  // "load" event, after one or more renders have occurred since the effect fired).
+  // `style.load` event, after one or more renders have occurred since the effect fired).
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
 
@@ -166,22 +167,14 @@ function SatelliteLayers({
       pipelineLog("addLayer", layerId, { anchor: anchor ?? "append", type: "raster" });
     }
 
-    // Unified cleanup: removes the load listener AND layer/source regardless
-    // of which path was taken. This mirrors WfsLayers' unified cleanup pattern
-    // and prevents a leak on the style-pending path (WARNING-3).
-    let onLoad: (() => void) | null = null;
-
-    if (mapInstance.isStyleLoaded()) {
-      addToMap();
-    } else {
-      onLoad = () => addToMap();
-      mapInstance.on("load", onLoad);
-    }
+    // Add once the style JSON is parsed (never isStyleLoaded()/`load`:
+    // Amendment A). Unified cleanup: cancels the pending listener AND removes
+    // layer/source regardless of which path was taken, so the style-pending
+    // path cannot leak (WARNING-3).
+    const cancelStyleReady = onStyleReady(mapInstance, addToMap);
 
     return () => {
-      if (onLoad) {
-        mapInstance.off("load", onLoad);
-      }
+      cancelStyleReady();
       if (mapInstance.getLayer(layerId)) {
         mapInstance.removeLayer(layerId);
       }
@@ -408,8 +401,8 @@ function PmtilesLayers({
 
     /**
      * Bug 1 fix: after registering the source, wait for the PMTiles header
-     * to resolve before adding layers. `isStyleLoaded()` only confirms the
-     * map style, not that an async PMTiles source has its metadata ready.
+     * to resolve before adding layers. Style readiness only confirms the map
+     * style, not that an async PMTiles source has its metadata ready.
      */
     function initSource() {
       addSource();
@@ -446,23 +439,13 @@ function PmtilesLayers({
       }, 15_000);
     }
 
-    // Wait for map style to load before registering the source
-    if (mapInstance.isStyleLoaded()) {
-      initSource();
-    } else {
-      const onLoad = () => initSource();
-      mapInstance.on("load", onLoad);
-      // Store for cleanup
-      return () => {
-        mapInstance.off("load", onLoad);
-        if (sourcedataHandler) {
-          mapInstance.off("sourcedata", sourcedataHandler);
-        }
-        if (timeoutId) clearTimeout(timeoutId);
-      };
-    }
+    // Register the source once the style JSON is parsed. Not isStyleLoaded()
+    // (false while any tile loads) and not `load` (on production it did not
+    // fire until the visitor interacted): Amendment A.
+    const cancelStyleReady = onStyleReady(mapInstance, initSource);
 
     return () => {
+      cancelStyleReady();
       if (sourcedataHandler) {
         mapInstance.off("sourcedata", sourcedataHandler);
       }
@@ -899,24 +882,17 @@ function WfsLayers({
       addLayersToMap();
     }
 
-    // Wait for map style to load before registering the source
-    let onLoad: (() => void) | null = null;
-    if (mapInstance.isStyleLoaded()) {
-      init();
-    } else {
-      onLoad = () => init();
-      mapInstance.on("load", onLoad);
-    }
+    // Register the source once the style JSON is parsed (never
+    // isStyleLoaded()/`load`: Amendment A).
+    const cancelStyleReady = onStyleReady(mapInstance, init);
 
-    // Unified cleanup: handles both the "load" listener AND layer/source
-    // removal regardless of which code path was taken during setup.
+    // Unified cleanup: cancels the pending style-ready listener AND removes
+    // layer/source regardless of which code path was taken during setup.
     // `cancelled` prevents addLayersToMap from running after cleanup fires
     // (StrictMode double-invoke pattern).
     return () => {
       cancelled = true;
-      if (onLoad) {
-        mapInstance.off("load", onLoad);
-      }
+      cancelStyleReady();
       const layerIds = getWfsLayerIds(layer);
       for (const id of layerIds) {
         if (mapInstance.getLayer(id)) {
@@ -1133,9 +1109,13 @@ const DataLayer = memo(function DataLayer({ layer, visible, yearFilter, classFil
     const mapInstance = map.getMap();
 
     function updateRasterBeforeId() {
-      if (!mapInstance.isStyleLoaded()) return;
+      // Style JSON parsed, not isStyleLoaded() (false while tiles load).
+      // MapLibre's type says getStyle() always returns; at runtime it is
+      // undefined until the style is parsed.
+      const style = mapInstance.getStyle() as maplibregl.StyleSpecification | undefined;
+      if (!style) return;
       setRasterBeforeId(
-        getFirstSymbolId(mapInstance.getStyle().layers as maplibregl.LayerSpecification[])
+        getFirstSymbolId(style.layers as maplibregl.LayerSpecification[])
       );
     }
 
