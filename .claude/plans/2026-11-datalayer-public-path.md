@@ -217,7 +217,7 @@ Lane M, kind `behaviour`, through ARCHITECTURE.md Releases, steps 1-8, with the 
 
 **Who hears what (ARCHITECTURE, Halts, "Who surfaces a halt").** Under the standing yes, step 4's ask is not repeated, but what its window bought, Lee reachable while a red is possible, is kept: when the push lands, the session sends `/notify` (`~/marvin/skills/notify/send.mjs`) naming the release and the rollback target. On any `NEW HALT` from this release, the session itself tells Lee in plain words what stopped and what his choices are, and sends `/notify`. Reports to the coordinator are in addition, never instead.
 
-**Console baseline, before the push.** Script saved in the repo at `scripts/live/console-baseline.mjs` (path named in the evidence so Razor or the next session can rerun it): headless Chromium loads `/map` with no interaction and waits for map idle; captures `console.error` and `pageerror` only; normalises messages by stripping query strings, numbers and request ids. Two runs on the current known-good deploy; a message seen in only one is noise and excluded.
+**Console baseline, before the push.** Script saved in the repo at `scripts/live/live-checks.mjs` (modes `console`, `attach`, `visibility`, `year`; path named in the evidence so Razor or the next session can rerun it): headless Chromium loads `/map` with no interaction and waits 30 s; captures `console.error` and `pageerror` only; normalises messages by stripping query strings, numbers and request ids. Two runs on the current known-good deploy; a message seen in only one is noise and excluded.
 
 **Blocking guards on the new deploy:**
 - Identity: `commit_ref` equals the SHA, `state: ready`; the `oc-build` tag on `/`, `/map`, `/privacy`, each 200.
