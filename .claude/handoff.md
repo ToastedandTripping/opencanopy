@@ -26,8 +26,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Dot layer for the intro spike (Lee, 2026-10-09: swap in after Ted's mechanics land):** build first-year-encoded blue-noise dot images per dataset (VRI 1900-1999, FTEN 2000-2025, fire 2017-2025) from research/overpaint-2026-10-08/scripts (yearencode.py / province.py), decode on the CPU into a MapLibre canvas source, hand over to /map's vector cutblocks from z8. Load during the hero (~21 kB cutblocks). Disclosure line in the beat sheet.
 
-- **Measure-merge defects found 2026-10-08 (fold into the inventory+FTEN merge, before any public number changes):** (1) the 2,000 ha cap checks the area attribute, not the drawn shape: nine polygons (82,920 ha) slip under it, pushing 1991-2003 up to 15% high; cap on max(attribute, geometry). (2) the scrub total sums block areas, so overlapping blocks count twice: +1.7% in 2025. (3) /raster/* is served max-age=0; versioned paths + immutable belong to S2-pages (C1).
-
 - **Intro-film spike, state at the usage limit (2026-10-09):** branch spike/intro-animation (worktree ~/.local/share/marvin/worktrees/opencanopy/intro-spike, unpushed). Done: /intro-lab end to end, area-true dots (within 1.25% since 2001), z9-10 blank and chip fixes, 913 tests. Queued with Ted when the session stopped: (1) tuning round: ~90 s per variant, beat 3 copy now "1900 to 1959, condensed: 166,000 hectares, early logging undercounted." (Lee-approved), beat 6 = 1,009 squares from splice.json, start trigger unchanged, NO hand-off fade (palette reopened); (2) JITTER FIX: the film clock gates every frame on isPainted, so camera moves stop-start (recording: 1,089 unique of 3,672 frames, ~7.5 fps); camera must run on wall-clock, gate only at move starts and year steps; measure before/after; re-record '-smooth'. Jen is designing 2-3 'two loud, rest quiet' palettes with recoloured /map + film-ending sheets in scratchpad/palette/ (Lee picks; pick becomes a DECISIONS entry, amends ruling E). Waiting on Lee: yes/no to a Netlify DRAFT deploy of the spike for his phone (fallback basemap; MapTiler key is domain-locked). Before release: the hero's 5.8M (FTEN, since 1950) and the film's 10M (splice, since 1900) must come from the same merged measure. Videos and reports live in /tmp/claude-1000/-home-leesalo--local-share-marvin-worktrees-opencanopy-canopy/38525f5e-10fe-44aa-916f-99970f16ebe9/scratchpad (tmp; research/overpaint-2026-10-08 holds the durable copies).
 
 - **/map defects found by the palette work (2026-10-11, Jen, recoloured-capture measurements, not yet re-verified):** (1) the z4-9 forest-age raster tiles overstate logging ~1.7x (49.5% of painted pixels harvested at z6 vs 28.6% at z9), so they need an area-true rebuild along with any new palette; (2) those tiles draw above every fire and cutblock shape, so fire is invisible at z<=9 in any palette (z-order); (3) the intro's hand-off jump is the film's own doing: land and old growth fade to black below z8.8 and forest age drops from 0.82 to 0.64 opacity when /map wakes. Jen's report cites palettes.json, checks.csv and film-recolour-report.json; none exist on disk, so her colour-blind pass/fail claims are unverified.
@@ -50,11 +48,11 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **M1a after items 3 and 4:** the URL-hash subscription defect stands (useMapState reads the map handle once, before the map exists); a shared deep link now completes its flyTo and can snap late after the visitor pans; batch-0 negative controls that relied on flyTo throwing must be re-baselined. audit:live: item 4 retargeted :187 to cutblocks, replaced :243 with a direct fish-streams proxy request and made every z11 test find the map before moving the camera (no test.skip left in live-health.spec.ts); M1a keeps :118 (stale URL parser) and :130 (raster z5).
 
-- **Next (brief 2026-11-10, item 5):** measure-merge defects (2,000 ha cap on max(attribute, geometry), overlap dissolve, /raster max-age) before any public number changes.
-
 - **PMTiles header timeout on slow devices (coordinator 2026-11-11: its own item after item 5; raises the parked 'no header retry' line):** PmtilesLayers gives the shared archive header 15 s from source registration and never retries (DataLayer.tsx, initSource timeout). Measured 2026-11-11 on production under host load 16: header held 10 s plus a saturated main thread (2-6 fps) tripped the timeout and the layer never attached. On a slow enough phone the same happens to every vector layer until reload. Evidence ~/marvin/state/relay/small-routed-fixes-live/candidate-visibility-run1-header-timeout-load16.json.
 
-- **HEAVY (brief item 5, first relay), released pending guards (2026-11-11):** scripts/heavy-run.mjs, a kernel flock lock with a 16 GiB floor (ARCHITECTURE.md, Heavy builds). Every heavy job goes through it: node scripts/heavy-run.mjs --job <name> -- <command>; never delete heavy-build.lock. Host rule (coordinator, 2026-11-11): 1-minute load under 8 and announce to the coordinator before a 12 GB build. Its own ROADMAP shipped entry rides in the next release.
+- **MEASURE (brief item 5, second relay), released pending guards (2026-11-11):** logged hectares since 1950 = dissolved union of dated FTEN cutblocks under a cap on max(recorded, drawn) >= 2000 ha (scripts/lib/cutblock_area.py; evidence research/measure-2026-11/crosscheck.json): 5,731,775 ha, hero and chapter now 5.7 million (were 5.8 and nearly 6). Lee's phone check of the landing page is owed (visual release, non-blocking). Story frames regenerate in S0b; /map and the proxy cap move in T-pre. Its own ROADMAP shipped entry rides in the next release.
+
+- **Next (brief 2026-11-10):** the PMTiles header timeout on slow devices (owed above), then G1 per beta-resequence.md (OPS, M1a, S0a).
 
 ## Open questions awaiting Lee
 
@@ -76,6 +74,13 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-11-11: release 7 (HEAVY) green; MEASURE releasing
+
+Release record for the ledger (the release tool reads this full SHA here):
+- sha=1dabd1eaff9129be274444619c87af30c5eec7d8 deploy=6af41ba4be5840b641e6bae3 data_version=none guards=green (HEAVY; evidence ~/marvin/state/relay/heavy-run-live/guard-evidence-token7.md)
+
+MEASURE's union ran under heavy-run 08:33-09:05Z (load 4.69/6.76 at start, announced to the coordinator): every acceptance check passed, 5,731,775.10 ha by two independent methods, peak 1.59 GiB, 32 min. Before/after sent to the coordinator for Lee's board: hero 5.8M -> 5.7M.
 
 ### 2026-11-11: release 6 (small routed fixes) green; HEAVY releasing
 

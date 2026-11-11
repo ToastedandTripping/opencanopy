@@ -130,6 +130,7 @@ Lee before merge, as story copy is.
   Plus the reader switch (renderer keyed by tile URL) in a deploy of its own with old-link
   fixtures, per C1. Touches no `netlify.toml` or headers (if it must, it releases after S2-pages).
   The rest of T (E&N mask, big-tree subset, empty-tile manifest) stays in the beta.
+  *Amended 2026-11-11 (MEASURE):* T-pre also carries the drawn-area cap: the tiles need a drawn-area property (or the nine drawn-only boundaries removed at build) so /map's cutblocks filter and the WFS proxy's CQL cap match the story count's rule, max(recorded, drawn) >= 2000 ha (`scripts/lib/cutblock_area.py`). Until then /map and the proxy still show the nine; T-pre is the one owner.
 - **PIPE (Complex, G5; build after MAPFIX, T-pre, S1-lite, and MERGE + S1′ or S2 story half per
   L).** Its first batch packages pipelines other relays built; the new work is the single
   command, the record and the runbook. The story-product scripts (`build-scrub-tables.py`,
@@ -189,7 +190,7 @@ summing (+1.7% in 2025). They overstate, so they are serious whatever L is.
 **That collides with the 2026-10-08 measure ruling, and Lee decides it (inside decision L).** The
 ruling says the merge is "built and reconciled before any public number changes. Until then the
 public figure stays 5.8 million ha (FTEN)." The shipped total is 5,888,477 ha
-(`cutblocks-scrub.json`); the cap correction alone takes it to about 5,805,557, and the overlap
+(`cutblocks-scrub.json`); the cap correction alone takes it to about 5,805,557 [**amended 2026-11-11:** that figure subtracted the nine polygons' drawn area from a sum of recorded areas; their recorded areas total 1,619.4 ha, so it was off by 81,301 ha. MEASURE (relay measure-fix, plan `.claude/plans/2026-11-measure-fix.md`) measured the corrected count directly: 5,731,775.10 ha, dissolved union under a cap on max(recorded, drawn), evidence `research/measure-2026-11/crosscheck.json`; the hero shows 5.7 million], and the overlap
 correction (about 1.7%) very likely takes the floored figure to 5.7 million. S1-lite (G3)
 releases before MERGE (G4), so there are two ways through: (i) amend the ruling to allow a
 downward correction, so S1-lite ships the corrected FTEN figure and MERGE later changes it again
