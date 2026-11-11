@@ -73,8 +73,8 @@ A tooling-only change with no runtime effect on the site. It still ships through
 1. A backgrounded or detached-by-`&` build keeps the lock until it ends (test 2).
 2. A launcher killed with SIGKILL cannot forward signals; its surviving child keeps the lock (test 4).
 3. The path guard: the override and the seams are refused without `VITEST`, and under `VITEST` the override must sit outside the real state dir (test 10).
-4. The retry loop holds nothing while it waits (test 11, run while another test holds and releases the lock).
-5. The multi-process `preprocess:v2` case: every process that inherited the descriptor keeps the lock (test 2 is its shape; a real run is noted at first use).
+4. The retry loop holds nothing while it waits, and never retries a 244 or a command's own exit (test 11).
+5. Node-shaped and multi-process commands: a synchronous Node command holds the lock, a detached child started without fd 3 does not (test 14); the `preprocess:v2` chain holds it because it waits on its children (noted at first real use).
 
 ## Gates
 
