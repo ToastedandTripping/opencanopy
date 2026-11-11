@@ -30,7 +30,7 @@
  * checks own that.
  */
 
-import React, { StrictMode } from "react";
+import React, { StrictMode, useEffect } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup, act } from "@testing-library/react";
 import { createMockMap, type MockMap } from "../mocks/maplibre";
@@ -153,10 +153,14 @@ const lineId = (l: LayerDefinition) => `layer-${l.id}-tiles-line`;
 // ── Harness ──────────────────────────────────────────────────────────────────
 
 let mockMap: MockMap;
-let statuses: Map<string, LayerStatus> = new Map();
+const probe = { statuses: new Map<string, LayerStatus>() };
 
+/** Publishes the provider's current layerStatuses after each commit. */
 function StatusProbe() {
-  statuses = useLoadingContext().layerStatuses;
+  const { layerStatuses } = useLoadingContext();
+  useEffect(() => {
+    probe.statuses = layerStatuses;
+  }, [layerStatuses]);
   return null;
 }
 
@@ -206,7 +210,7 @@ function advance(ms: number) {
 beforeEach(() => {
   mockMap = createMockMap();
   harness.mapHandle = { getMap: () => mockMap, ...mockMap };
-  statuses = new Map();
+  probe.statuses = new Map();
   vi.mocked(fetchLayerData).mockReset();
   vi.mocked(fetchLayerData).mockImplementation(() => new Promise(() => {}));
   vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -343,11 +347,11 @@ describe("DataLayer status follows (visible, failed) on the real LoadingProvider
     const { rerender } = mount([{ layer: FILL, visible: true }]);
     advance(15_000);
     advance(300);
-    expect(statuses.get(FILL.id)).toBe("error");
+    expect(probe.statuses.get(FILL.id)).toBe("error");
 
     rerender([{ layer: FILL, visible: false }]);
     advance(300);
-    expect(statuses.has(FILL.id)).toBe(false);
+    expect(probe.statuses.has(FILL.id)).toBe(false);
   });
 
   it("7: on the shared source only the visible layer reports; showing the other reports it", () => {
@@ -357,15 +361,15 @@ describe("DataLayer status follows (visible, failed) on the real LoadingProvider
     ]);
     advance(15_000);
     advance(300);
-    expect(statuses.get(FILL.id)).toBe("error");
-    expect(statuses.has(FILL_B.id)).toBe(false);
+    expect(probe.statuses.get(FILL.id)).toBe("error");
+    expect(probe.statuses.has(FILL_B.id)).toBe(false);
 
     rerender([
       { layer: FILL, visible: true },
       { layer: FILL_B, visible: true },
     ]);
     advance(300);
-    expect(statuses.get(FILL_B.id)).toBe("error");
+    expect(probe.statuses.get(FILL_B.id)).toBe("error");
   });
 
   it("8: a clear inside the debounce window is not overtaken by the queued error", () => {
@@ -374,7 +378,7 @@ describe("DataLayer status follows (visible, failed) on the real LoadingProvider
     advance(100);
     rerender([{ layer: FILL, visible: false }]);
     advance(300);
-    expect(statuses.has(FILL.id)).toBe(false);
+    expect(probe.statuses.has(FILL.id)).toBe(false);
   });
 });
 
@@ -389,22 +393,22 @@ describe("WFS-only statuses survive the status effect (fixture; none mounted on 
     const { rerender } = mount([{ layer: WFS_ONLY, visible: true }]);
     // The WFS path's synchronous "loading" write, in the same commit as the
     // status effect, must stand: the effect has no else branch.
-    expect(statuses.get(WFS_ONLY.id)).toBe("loading");
+    expect(probe.statuses.get(WFS_ONLY.id)).toBe("loading");
 
     await act(async () => {
       await Promise.resolve();
     });
     advance(300);
-    expect(statuses.get(WFS_ONLY.id)).toBe("error");
+    expect(probe.statuses.get(WFS_ONLY.id)).toBe("error");
 
     rerender([{ layer: WFS_ONLY, visible: true }]);
     advance(300);
-    expect(statuses.get(WFS_ONLY.id)).toBe("error");
+    expect(probe.statuses.get(WFS_ONLY.id)).toBe("error");
 
     vi.mocked(fetchLayerData).mockClear();
     rerender([{ layer: WFS_ONLY, visible: false }]);
     advance(300);
-    expect(statuses.has(WFS_ONLY.id)).toBe(false);
+    expect(probe.statuses.has(WFS_ONLY.id)).toBe(false);
     expect(fetchLayerData).not.toHaveBeenCalled(); // no fetch while hidden
 
     vi.mocked(fetchLayerData).mockImplementation(() =>
@@ -415,7 +419,7 @@ describe("WFS-only statuses survive the status effect (fixture; none mounted on 
       await Promise.resolve();
     });
     advance(300);
-    expect(statuses.get(WFS_ONLY.id)).toBe("empty");
+    expect(probe.statuses.get(WFS_ONLY.id)).toBe("empty");
     expect(fetchLayerData).toHaveBeenCalled();
   });
 });
