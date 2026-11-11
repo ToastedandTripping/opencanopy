@@ -1,0 +1,12 @@
+{
+  "v": 1,
+  "events": [
+    {
+      "type": "done_add",
+      "ref": "2026-11-02:e14ac0d4",
+      "date": "2026-11-02",
+      "plain": "The release tool is live and every release now goes through it",
+      "stage": "built"
+    }
+  ]
+}
