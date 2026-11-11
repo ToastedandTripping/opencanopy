@@ -461,7 +461,7 @@ describe("refusals that start nothing", () => {
         const argv = retry ? ["--retry", ...args] : args;
         // Under VITEST a short interval keeps a wrongly retried 244 a fast red, not a timeout;
         // the cases without VITEST carry only the seam they test.
-        const interval = opts.unset?.includes("VITEST") ? {} : { OC_HEAVY_INTERVAL_MS: "10" };
+        const interval: Record<string, string> = opts.unset?.includes("VITEST") ? {} : { OC_HEAVY_INTERVAL_MS: "10" };
         const res = await run(u, argv, { ...opts, env: { ...interval, ...opts.env } });
         expect(res.code, `${label} retry=${retry}: ${res.stderr}`).toBe(244);
         expect(refusals(res.stderr), label).toHaveLength(1);
