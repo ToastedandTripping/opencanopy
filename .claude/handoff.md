@@ -56,6 +56,8 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Next (brief 2026-11-10, item 5):** measure-merge defects (2,000 ha cap on max(attribute, geometry), overlap dissolve, /raster max-age) before any public number changes.
 
+- **PMTiles header timeout on slow devices (coordinator 2026-11-11: its own item after item 5; raises the parked 'no header retry' line):** PmtilesLayers gives the shared archive header 15 s from source registration and never retries (DataLayer.tsx, initSource timeout). Measured 2026-11-11 on production under host load 16: header held 10 s plus a saturated main thread (2-6 fps) tripped the timeout and the layer never attached. On a slow enough phone the same happens to every vector layer until reload. Evidence ~/marvin/state/relay/small-routed-fixes-live/candidate-visibility-run1-header-timeout-load16.json.
+
 ## Open questions awaiting Lee
 
 | Question | Why it matters | Raised |
