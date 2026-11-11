@@ -12,10 +12,12 @@
  *   3. Map reaches idle state (generous 60s timeout)
  *   4. PMTiles file accessible on R2 (200, and 206 on a Range request)
  *   5. Forest-age raster overview renders at z5
- *   6. Forest-age vector tiles render features at z11
+ *   6. Forest-age vector tiles render features at z11, after a camera
+ *      witness proves the flyTo landed (map-not-found fails, never skips)
  *   7. Public cutblocks vector tiles render features at z11, after a camera
  *      witness proves the flyTo landed (map-not-found fails, never skips)
- *   8. old-growth-250 renders via PMTiles (z10-12 band guard)
+ *   8. old-growth-250 renders via PMTiles (z10-12 band guard), with the same
+ *      camera witness (map-not-found fails, never skips)
  *   9. fish-streams WFS proxy, requested directly: features > 0 and every
  *      feature STREAM_ORDER >= 3 (D3 deploy gate; cqlFilter layer)
  *  10. cutblocks WFS proxy, requested directly (D3 deploy gate; cqlFilter layer)
@@ -100,6 +102,35 @@ async function queryFeatureCount(page: Page, layerName: string): Promise<number>
   }, layerName);
 }
 
+/**
+ * Find the map, fly to the target, wait for idle, then assert the camera
+ * landed (zoom within 0.5, centre within 0.05 degrees). The map is found
+ * BEFORE the flyTo: production never sets window.__opencanopy_map, so a flyTo
+ * issued first is a silent no-op and any count after it runs at the default
+ * z5 camera. Map-not-found fails the test (ensureMapInstance throws).
+ */
+async function flyToWithWitness(
+  page: Page,
+  target: { lng: number; lat: number; zoom: number }
+): Promise<void> {
+  await ensureMapInstance(page, 30000);
+  await page.evaluate((t) => {
+    const map = (window as any).__opencanopy_map;
+    map.flyTo({ center: [t.lng, t.lat], zoom: t.zoom, duration: 0 });
+  }, target);
+
+  await waitForMapIdle(page, 60000);
+
+  const camera = await page.evaluate(() => {
+    const map = (window as any).__opencanopy_map;
+    const c = map.getCenter();
+    return { zoom: map.getZoom() as number, lng: c.lng as number, lat: c.lat as number };
+  });
+  expect(Math.abs(camera.zoom - target.zoom), `camera zoom ${camera.zoom} should be within 0.5 of ${target.zoom}`).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(camera.lng - target.lng), `camera lng ${camera.lng} should be within 0.05 of ${target.lng}`).toBeLessThanOrEqual(0.05);
+  expect(Math.abs(camera.lat - target.lat), `camera lat ${camera.lat} should be within 0.05 of ${target.lat}`).toBeLessThanOrEqual(0.05);
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 test('production page loads within 30s', async ({ page }) => {
@@ -163,15 +194,9 @@ test('forest-age vector tiles render features at z11 on production', async ({ pa
   await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
 
-  // Navigate to a definitely-forested area at z11 (Prince George vicinity)
-  await page.evaluate(() => {
-     
-    const map = (window as any).__opencanopy_map;
-    if (!map) return;
-    map.flyTo({ center: [-122.7, 53.9], zoom: 11, duration: 0 });
-  });
-
-  await waitForMapIdle(page, 60000);
+  // Navigate to a definitely-forested area at z11 (Prince George vicinity).
+  // Map found first, camera witnessed before the count (flyToWithWitness).
+  await flyToWithWitness(page, { lng: -122.7, lat: 53.9, zoom: 11 });
 
   let featureCount = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -180,12 +205,7 @@ test('forest-age vector tiles render features at z11 on production', async ({ pa
     if (attempt < 2) await page.waitForTimeout(10000);
   }
 
-  if (featureCount === -1) {
-    console.warn('Could not access map instance for queryRenderedFeatures check');
-    test.skip();
-    return;
-  }
-
+  // No skip: -1 (map lost) and 0 (nothing drawn) are both red.
   expect(
     featureCount,
     'forest-age vector tiles should have rendered features at z11 over a forested area'
@@ -194,33 +214,13 @@ test('forest-age vector tiles render features at z11 on production', async ({ pa
 
 test('cutblocks vector tiles render features at z11 on production', async ({ page }) => {
   // Public `cutblocks` (tile-backed, source-layer tenure-cutblocks), enabled
-  // through the hash so the page itself shows it. The map is found BEFORE the
-  // flyTo: production never sets window.__opencanopy_map, so a flyTo issued
-  // first is a silent no-op and the count would run at the default z5 camera.
+  // through the hash so the page itself shows it.
   await page.goto(`${PRODUCTION_URL}#layers=cutblocks`, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
 
-  // Map-not-found fails this test (ensureMapInstance throws on timeout).
-  await ensureMapInstance(page, 30000);
-
-  // Central interior at z11, where cutblocks are dense (Prince George vicinity)
-  const TARGET = { lng: -122.7, lat: 53.9, zoom: 11 };
-  await page.evaluate((t) => {
-    const map = (window as any).__opencanopy_map;
-    map.flyTo({ center: [t.lng, t.lat], zoom: t.zoom, duration: 0 });
-  }, TARGET);
-
-  await waitForMapIdle(page, 60000);
-
-  // Camera witness: the count below means nothing unless the flyTo landed.
-  const camera = await page.evaluate(() => {
-    const map = (window as any).__opencanopy_map;
-    const c = map.getCenter();
-    return { zoom: map.getZoom() as number, lng: c.lng as number, lat: c.lat as number };
-  });
-  expect(Math.abs(camera.zoom - TARGET.zoom), `camera zoom ${camera.zoom} should be within 0.5 of ${TARGET.zoom}`).toBeLessThanOrEqual(0.5);
-  expect(Math.abs(camera.lng - TARGET.lng), `camera lng ${camera.lng} should be within 0.05 of ${TARGET.lng}`).toBeLessThanOrEqual(0.05);
-  expect(Math.abs(camera.lat - TARGET.lat), `camera lat ${camera.lat} should be within 0.05 of ${TARGET.lat}`).toBeLessThanOrEqual(0.05);
+  // Central interior at z11, where cutblocks are dense (Prince George
+  // vicinity). Map-not-found fails; camera witnessed before the count.
+  await flyToWithWitness(page, { lng: -122.7, lat: 53.9, zoom: 11 });
 
   let featureCount = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -292,17 +292,10 @@ test('old-growth-250 renders via PMTiles across the z10-12 band', async ({ page 
   // thin-band risk: the fill must populate at z11, not just z10.
   await page.goto(`${PRODUCTION_URL}#layers=old-growth-250`, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
-  await waitForMapIdle(page, 60000);
 
   // Wells Gray area at z11 — known old-growth concentration, mid PMTiles band.
-  await page.evaluate(() => {
-     
-    const map = (window as any).__opencanopy_map;
-    if (!map) return;
-    map.flyTo({ center: [-119.9, 51.7], zoom: 11, duration: 0 });
-  });
-
-  await waitForMapIdle(page, 60000);
+  // Map found first, camera witnessed before the count (flyToWithWitness).
+  await flyToWithWitness(page, { lng: -119.9, lat: 51.7, zoom: 11 });
   await page.waitForTimeout(5000);
 
   let featureCount = 0;
@@ -312,12 +305,7 @@ test('old-growth-250 renders via PMTiles across the z10-12 band', async ({ page 
     if (attempt < 2) await page.waitForTimeout(8000);
   }
 
-  if (featureCount === -1) {
-    console.warn('old-growth-250: Could not access map instance');
-    test.skip();
-    return;
-  }
-
+  // No skip: -1 (map lost) and 0 (nothing drawn) are both red.
   expect(
     featureCount,
     'old-growth-250 fill should render via PMTiles at z11 in Wells Gray (z11 thin-band guard)'
