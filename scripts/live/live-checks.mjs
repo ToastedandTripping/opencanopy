@@ -10,6 +10,7 @@
  *   node scripts/live/live-checks.mjs year       <baseUrl> <out.json>
  *   node scripts/live/live-checks.mjs interact   <baseUrl> <out.json>
  *   node scripts/live/live-checks.mjs story      <baseUrl> <out.json>
+ *   node scripts/live/live-checks.mjs deeplink   <baseUrl> <out.json>
  *
  * console:    load /map, wait 30 s; record console.error and pageerror only, normalised
  *             (query strings, hex ids and numbers stripped) and de-duplicated.
@@ -26,16 +27,22 @@
  * interact:   wheel-zoom and drag /map like a visitor. Pass = no uncaught pageerror AND the camera
  *             moved (zoom or centre before != after). The URL hash is recorded, not judged (its
  *             subscription is M1a's defect; plan .claude/plans/2026-11-react-map-gl-813.md).
- * story:      scroll the landing page (/) through its chapters. Pass = no uncaught pageerror.
+ * interact:   (above) both gestures must move the camera on their own.
+ * story:      once the story style is loaded, scroll / at reading pace (300 px per 0.7 s) with
+ *             map.jumpTo wrapped to count calls. Pass = jumpTo reached, no pageerror, no error screen,
+ *             map still mounted. A run that never reaches jumpTo is invalid, not a pass.
+ * deeplink:   /map#lat=49.3&lng=-123.1&z=10. Pass = no pageerror; whether it landed is recorded.
+ * Every result records instrumentSha256; an instrument edit voids earlier baselines.
  *
  * The comparison rules (two baseline runs, two candidate runs) live in the plan; this only measures.
  */
 import { chromium } from "playwright";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 const [mode, baseUrl, outPath, layerArg] = process.argv.slice(2);
 if (!mode || !baseUrl || !outPath) {
-  console.error("usage: live-checks.mjs <console|attach|visibility|year|interact|story> <baseUrl> <out.json> [layerId]");
+  console.error("usage: live-checks.mjs <console|attach|visibility|year|interact|story|deeplink> <baseUrl> <out.json> [layerId]");
   process.exit(2);
 }
 const base = baseUrl.replace(/\/$/, "");
@@ -90,7 +97,10 @@ function snapshot(page, layerId) {
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await installMapFinder(page);
-const result = { mode, baseUrl: base, startedAt: new Date().toISOString() };
+const result = {
+  mode, baseUrl: base, startedAt: new Date().toISOString(),
+  instrumentSha256: createHash("sha256").update(readFileSync(new URL(import.meta.url))).digest("hex"),
+};
 
 try {
   if (mode === "console") {
@@ -199,51 +209,116 @@ try {
     await page.goto(`${base}/map`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".maplibregl-canvas", { timeout: 30_000 });
     await page.waitForTimeout(8_000);
-    const before = await page.evaluate(() => {
+    const cam = () => page.evaluate(() => {
       const map = window.__ocMap?.();
       return { hash: location.hash, zoom: map?.getZoom() ?? null, center: map ? map.getCenter().toArray() : null };
     });
+    const moved = (a, b) => a.zoom != null && b.zoom != null &&
+      (Math.abs(b.zoom - a.zoom) > 0.01 || Math.abs(b.center[0] - a.center[0]) > 1e-6 || Math.abs(b.center[1] - a.center[1]) > 1e-6);
+    const before = await cam();
     const box = await page.locator(".maplibregl-canvas").boundingBox();
     const cx = box.x + box.width / 2;
     const cy = box.y + box.height / 2;
     await page.mouse.move(cx, cy);
-    for (let i = 0; i < 5; i++) { await page.mouse.wheel(0, -300); await page.waitForTimeout(300); }
+    for (let i = 0; i < 3; i++) { await page.mouse.wheel(0, -200); await page.waitForTimeout(300); }
     await page.waitForTimeout(1_500);
+    const afterWheel = await cam();
+    const errorsAfterWheel = pageErrors.length;
     await page.mouse.move(cx, cy);
     await page.mouse.down();
     await page.mouse.move(cx + 150, cy + 80, { steps: 12 });
     await page.mouse.up();
     await page.waitForTimeout(3_000);
-    const after = await page.evaluate(() => {
-      const map = window.__ocMap?.();
-      return { hash: location.hash, zoom: map?.getZoom() ?? null, center: map ? map.getCenter().toArray() : null };
-    });
+    const after = await cam();
     result.before = before;
+    result.afterWheel = afterWheel;
     result.after = after;
+    result.errorsAfterWheel = errorsAfterWheel;
     result.pageErrors = pageErrors;
     result.pageErrorCount = pageErrors.length;
-    result.cameraMoved = before.zoom != null && after.zoom != null &&
-      (Math.abs(after.zoom - before.zoom) > 0.01 ||
-       Math.abs(after.center[0] - before.center[0]) > 1e-6 || Math.abs(after.center[1] - before.center[1]) > 1e-6);
+    // Each gesture must move the camera on its own (critic r2): the wheel changes zoom, the drag
+    // changes the centre.
+    result.wheelMoved = moved(before, afterWheel);
+    result.dragMoved = afterWheel.center != null && after.center != null &&
+      (Math.abs(after.center[0] - afterWheel.center[0]) > 1e-6 || Math.abs(after.center[1] - afterWheel.center[1]) > 1e-6);
     result.hashFollowed_M1a_measurement = after.hash !== before.hash && after.hash.includes("z=");
-    result.pass = pageErrors.length === 0 && result.cameraMoved;
+    result.pass = pageErrors.length === 0 && result.wheelMoved && result.dragMoved;
+  } else if (mode === "deeplink") {
+    // A camera deep link: /map#lat=..&lng=..&z=.. lands at the encoded camera with no pageerror.
+    const target = { lat: 49.3, lng: -123.1, z: 10 };
+    const pageErrors = [];
+    page.on("pageerror", (e) => pageErrors.push(normalise(e.message)));
+    await page.goto(`${base}/map#lat=${target.lat}&lng=${target.lng}&z=${target.z}`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector(".maplibregl-canvas", { timeout: 30_000 });
+    await page.waitForTimeout(12_000);
+    const cam = await page.evaluate(() => {
+      const map = window.__ocMap?.();
+      return { zoom: map?.getZoom() ?? null, center: map ? map.getCenter().toArray() : null };
+    });
+    result.target = target;
+    result.camera = cam;
+    result.pageErrors = pageErrors;
+    result.pageErrorCount = pageErrors.length;
+    result.landed = cam.zoom != null && Math.abs(cam.zoom - target.z) < 0.5 &&
+      Math.abs(cam.center[0] - target.lng) < 0.05 && Math.abs(cam.center[1] - target.lat) < 0.05;
+    // Blocking half: no pageerror. Landing is recorded (deep-link camera is M1a's item).
+    result.pass = pageErrors.length === 0;
   } else if (mode === "story") {
+    // Scroll / at reading pace once the story map's style is loaded, wrapping map.jumpTo to count
+    // the camera writes that reach it, and watch for Next's error page replacing the story.
     const pageErrors = [];
     page.on("pageerror", (e) => pageErrors.push(normalise(e.message)));
     await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(6_000);
+    const styleReady = await page.waitForFunction(() => {
+      const map = window.__ocMap?.();
+      return !!(map && map.getStyle && map.getStyle());
+    }, null, { timeout: 45_000 }).then(() => true).catch(() => false);
+    await page.evaluate(() => {
+      window.__ocJumps = 0;
+      const map = window.__ocMap?.();
+      if (!map) return;
+      const orig = map.jumpTo.bind(map);
+      map.jumpTo = (...a) => { window.__ocJumps += 1; return orig(...a); };
+    });
     const height = await page.evaluate(() => document.documentElement.scrollHeight);
-    const steps = 40;
-    for (let i = 1; i <= steps; i++) {
-      await page.mouse.wheel(0, Math.ceil(height / steps));
-      await page.waitForTimeout(250);
+    const step = 300;
+    const samples = [];
+    let crashedAt = null;
+    for (let y = 0, i = 0; y < height; y += step, i++) {
+      await page.mouse.wheel(0, step);
+      await page.waitForTimeout(700);
+      if (i % 8 === 0) {
+        const s = await page.evaluate(() => {
+          const map = window.__ocMap?.();
+          const text = document.body.innerText || "";
+          return {
+            scrollY: window.scrollY,
+            jumps: window.__ocJumps ?? null,
+            mapMounted: !!document.querySelector(".maplibregl-map"),
+            errorScreen: /couldn.t load|Application error|client-side exception/i.test(text),
+            zoom: map?.getZoom?.() ?? null,
+          };
+        });
+        samples.push(s);
+        if (s.errorScreen || !s.mapMounted) { crashedAt = s.scrollY; break; }
+      }
     }
-    await page.waitForTimeout(3_000);
+    await page.waitForTimeout(2_000);
+    const end = await page.evaluate(() => ({
+      jumps: window.__ocJumps ?? null,
+      mapMounted: !!document.querySelector(".maplibregl-map"),
+      errorScreen: /couldn.t load|Application error|client-side exception/i.test(document.body.innerText || ""),
+    }));
+    result.styleReady = styleReady;
     result.scrollHeight = height;
-    result.finalScrollY = await page.evaluate(() => window.scrollY);
+    result.samples = samples;
+    result.end = end;
+    result.crashedAt = crashedAt;
     result.pageErrors = pageErrors;
     result.pageErrorCount = pageErrors.length;
-    result.pass = pageErrors.length === 0;
+    // Valid only if jumpTo was actually reached; otherwise the run proves nothing.
+    result.reachedJumpTo = (end.jumps ?? 0) > 0 || crashedAt != null;
+    result.pass = result.reachedJumpTo && pageErrors.length === 0 && !end.errorScreen && end.mapMounted;
   } else {
     throw new Error(`unknown mode ${mode}`);
   }
