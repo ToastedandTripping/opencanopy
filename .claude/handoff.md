@@ -16,8 +16,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 ## Owed right now
 
-- **One relay for the three DataLayer public-path bugs** before Batch 2 (paint re-spine) edits the same effects: R1-02 timeline ticks dropped behind `isStyleLoaded()` (page.tsx:326), R1-03 stale-status clear below the tile-backed early return (DataLayer:1143), R1-05 PmtilesLayers stale-closure visibility (SatelliteLayers' `visibleRef` pattern). Ship with the rendered PmtilesLayers tests that do not exist yet (d10 harness + mock `_emit`; add `calls.setGlobalState` to the mock). Findings: `.refresh/2026-09-01-findings/findings-R1.jsonl`.
-
 - **Small routed fixes** (any session): PDF footer 'see methodology at opencanopy.ca' points at no route (pdf-generator.ts:287); `audit:live` asserts tenure-cutblocks and fish-streams, both non-public, so two monitor tests fail by construction (live-health.spec.ts:170-266); wfs-client finally-block bookkeeping race (wfs-client.ts:137-143, non-public layers only). `npm i -D @mapbox/vector-tile pbf @types/geojson` (transitive today via maplibre-gl; a MapLibre 6 bump breaks the tile audits otherwise) — classifier blocks installs from a session.
 
 - **Local checkout**: `~/Projects/opencanopy` main is behind origin (fce8c84); `git pull` there before the next worktree spawns, or it forks off stale history again (this session started on the docked dolly branch).
@@ -44,8 +42,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - M1a batch 0 retargets the two `audit:live` tests before its acceptance can pass.
 
-- P0b's post-release record: ride in the next release's first commit.
-
 - `/save` is not a release path for OpenCanopy; it stops at the pre-push hook. (Until a marvin change teaches `/save` the release path.)
 
 - **Live /map throws on wheel and drag (found 2026-11-02, production at 4bd41f0):** uncaught 'Cannot read properties of undefined (reading center)', 41 errors in one short session; react-map-gl 8.1.0 reads map.transform, undefined under maplibre-gl 6.15 (upgrade of 2026-10-22). The map still moves. The URL hash does not update on move, which may be the older M1a defect. react-map-gl 8.1.3 is out and untested. Owner: M1a, or a small fix ahead of it. Error monitoring (OPS) would have caught it.
@@ -54,7 +50,11 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Film rethink (Lee, 2026-11-02), spike done, waiting on Lee's phone:** concept 'One tree, one clock' (research: ~/marvin/research/captivating-opencanopy-landing-film-bc-forests-20261102/report.md, scan, not verified). Spike branch spike/one-tree-one-clock (local only, d776a0a + e19797b), report ~/marvin/state/relay/one-tree-spike-report.md, draft https://6ae8045f62c3a41b15f731f5--merry-queijadas-27cd31.netlify.app/film-lab (re-checked 2026-11-02: clips serve; the /r2 proxy answers 206 on the PMTiles archive and 404 off-list, so tiles load on Netlify). Verdicts: the LiDAR orbit of Big Lonely Doug reads as a tree; the clip-to-live-map seam is pixel-exact in Chrome at capture size, edges soften via 4:2:0 chroma. Open: (1) clips 8.6 MB + 7.4 MB against the 2 MB pre-interaction bar (DECISIONS 2026-10-23), Lee's ruling owed after the phone check (shrink, tap-to-play, or loosen); (2) 4-6 s frozen last frame while the map idles: mount the map ~3 s before the clip ends; (3) the z<=9 raster opening overstates logging ~1.7x and has no tiles north of 55.8 N, not shippable before the area-true rebuild; (4) iPhone Safari BT.709 colour shift at the fade untested; (5) the 2019->2023 dissolve mixes growth with 2.6x pulse density, no growth caption until separated; LiDAR height 67.8 m vs registry 66.0 m unexplained, do not quote it. Next step: Lee opens the draft on his phone and reports colour at the fade, how the hold feels, the printed idle time, and whether the tree holds on a small screen. The approved beat sheet and the clock-waits-for-paint ruling are reopened only if he picks it. Harvest-volume table must enter the repo before any 'since 1989' line ships.
 
-- **Next (brief 2026-11-10, item 2):** one relay for the three DataLayer public-path bugs, located on today's tree: R1-02 page.tsx:325 (`if (!map.isStyleLoaded()) return;` before setGlobalStateProperty, never retried); R1-03 DataLayer.tsx:1145 early return for tile-backed layers sits above the `!visible -> clearLayerStatus` at :1152; R1-05 PmtilesLayers (DataLayer.tsx:219, addLayersToMap at :262, reactive effects bail at :500) still lacks SatelliteLayers' `visibleRef` (:122). Rendered tests: mock at src/test/mocks/maplibre.ts, lifecycle pattern in src/test/pipeline/visibility-lifecycle.test.ts. Plan, critic (xhigh, max three rounds), relay, then release under Lee's standing yes (DECISIONS Deploy entry, amended 2026-11-10).
+- **DataLayer public-path relay (brief item 2), released pending guards (2026-11-10):** plan .claude/plans/2026-11-datalayer-public-path.md (critic r1+r2 CONCERN folded, amendment A from a live probe), relay/datalayer-public-path merged into marvin/canopy, Razor PASS (0 critical, 0 warning, 5 notes parked in the ROADMAP Parking Lot), 1,202 tests. Fixes R1-02 (year ticks dropped while tiles load), R1-03 (hidden layers toast and keep errors), R1-05 (toggles lost during the source wait), and the load-gated attach (MapLibre 6 fires load only inside a render; an untouched /map attached no vector layer, terrain or year for 70 s). Its own ROADMAP shipped entry and guard results ride in the next release's first commit. Live checks: scripts/live/live-checks.mjs; the known-good evidence (attach, visibility and year all fail there) is in ~/marvin/state/relay/datalayer-public-path-live/.
+
+- **Lane S follow-up:** the landing story has the same readiness pattern (StoryMap.tsx:72, :152, its onLoad; lib/story/visibility.ts:48). ROADMAP Parking Lot, 'Deferred from datalayer-public-path'.
+
+- **Next (brief 2026-11-10, item 3):** live /map throws on wheel and drag (react-map-gl 8.1.0 vs maplibre-gl 6.15; try 8.1.3, verify in a real browser), then item 4's small routed fixes.
 
 ## Open questions awaiting Lee
 
@@ -76,6 +76,10 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-11-10: DataLayer public-path relay built and reviewed; load readiness found live
+
+Plan through two critic rounds (CONCERN, folded). While building the release's live checks, a headless probe of production showed MapLibre 6's `load` never fires on an untouched /map (70 s: no PMTiles source, no year, no terrain; one repaint fired it at once), because `load` fires only inside a render where loaded() is true. Folded as amendment A: readiness is style-parsed (`onStyleReady`), never `isStyleLoaded()` or `load`. Ted: two batches plus the amendment, 19 revert rows all red then green. Razor PASS, 20/20 requirements, nine mutants re-run. ROADMAP: P0b post-release record, current/next corrected, 25 old shipped entries archived (date + first sentence), Parking Lot section for seven deferrals. Next: the release sequence for this relay under Lee's standing yes.
 
 ### 2026-11-10: brief from marvin session-f1a7d3; P0b found already closed
 
