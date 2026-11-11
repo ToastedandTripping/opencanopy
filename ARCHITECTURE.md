@@ -522,8 +522,12 @@ coordinator and sends `/notify`, as for a release halt. A 240 prints who the sid
 absent, and `fuser -v <lock>` to find the real holders. The sidecar is informational only.
 
 **Never delete `heavy-build.lock`.** Deleting it while a build holds it lets the next run lock
-a fresh file and start beside the build. To stop a build, signal the launcher (SIGINT, SIGTERM
-or SIGHUP), which signals the command's whole group. If the launcher is gone, use
+a fresh file and start beside the build. To stop a build, send SIGTERM to the launcher
+(`kill -TERM <launcher pid>`), which forwards it to the command's whole group. The launcher
+forwards SIGINT and SIGHUP the same way, so Ctrl-C from an interactive terminal is passed on,
+but a non-interactive shell starts its `&` children with SIGINT ignored, so a backgrounded
+grandchild may survive a SIGINT and keep the lock; SIGTERM is the stop that reaches it. If the
+launcher is gone, use
 `kill -TERM -- -<pgid>` with the pgid from the sidecar, or find the holders with
 `fuser -v ~/marvin/state/heavy-build.lock` when there is no sidecar (a build whose top process
 exited while its background children run leaves none).

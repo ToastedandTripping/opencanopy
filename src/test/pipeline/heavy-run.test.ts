@@ -414,6 +414,33 @@ describe("sidecar, exit status and signals", () => {
     expect(res.code, res.stderr).toBe(143);
     await waitFor("grandchild terminated", () => !alive(gc), 5_000);
   });
+
+  // The forwarded set is SIGINT, SIGTERM and SIGHUP; each member is guarded on its own. The
+  // grandchild runs in the FOREGROUND of the command's shell: a non-interactive sh starts `&`
+  // children with SIGINT ignored, which would make the SIGINT case untestable.
+  it.each([
+    ["SIGINT", 130],
+    ["SIGTERM", 143],
+    ["SIGHUP", 129],
+  ] as const)(
+    "9. %s to the launcher reaches a foreground grandchild in the command's group (mutant: forward SIGTERM only)",
+    async (sig, expected) => {
+      const u = new Universe();
+      const inner = `echo \\$\\$ > '${u.p("gc.pid")}'; exec sleep 30`; // \$ so the inner sh expands it
+      const script = `echo $$ > '${u.p("cmd.pgid")}'; sh -c "${inner}"; :`;
+      const a = launch(u, ["--job", "A", "--", "sh", "-c", script]);
+      await waitFor("grandchild", () => u.exists("gc.pid") && fs.readFileSync(u.p("gc.pid"), "utf8").trim() !== "");
+      await waitFor("sidecar", () => fs.existsSync(u.sidecar));
+      const gc = Number(fs.readFileSync(u.p("gc.pid"), "utf8"));
+      await waitFor("grandchild is sleep", () => fs.readFileSync(`/proc/${gc}/comm`, "utf8").trim() === "sleep");
+      expect(alive(gc)).toBe(true);
+
+      process.kill(a.pid, sig);
+      await waitFor(`grandchild terminated by ${sig}`, () => !alive(gc), 5_000);
+      const res = await a.done;
+      expect(res.code, res.stderr).toBe(expected);
+    },
+  );
 });
 
 /* ---------- 10, 12, 13: refusals that start nothing ---------- */
@@ -422,41 +449,90 @@ describe("refusals that start nothing", () => {
   it("10. arguments, path guard, unopenable lock path and a missing command are 244, start nothing, leave no sidecar, and are never retried (regression guard)", async () => {
     const u = new Universe();
     const marker = `touch '${u.p("started")}'`;
-    const fakeHome = fs.mkdtempSync(path.join(u.root, "home-"));
+    // Two fake HOMEs for the cases without VITEST: one whose marvin/state is missing, one whose
+    // marvin/state exists, so a seam refusal is proved to fire before anything is opened either
+    // way (with the dir present, a broken guard would open a lock there and start the command).
+    const homeBare = fs.mkdtempSync(path.join(u.root, "home-bare-"));
+    const homeFull = fs.mkdtempSync(path.join(u.root, "home-full-"));
+    fs.mkdirSync(path.join(homeFull, "marvin", "state"), { recursive: true });
+    // A fake HOME whose marvin/state really contains the override, so the inside-the-real-dir
+    // check is what refuses (the guard treats both HOME and the passwd home as real). The true
+    // ~/marvin/state is never written: the subdir lives under this temp HOME.
+    const homeInside = fs.mkdtempSync(path.join(u.root, "home-inside-"));
+    const insideOverride = path.join(homeInside, "marvin", "state", "sub");
+    fs.mkdirSync(insideOverride, { recursive: true });
     fs.mkdirSync(u.p("dirstate"));
     fs.mkdirSync(path.join(u.p("dirstate"), "heavy-build.lock"));
-    const cases: [string, string[], Env][] = [
-      ["no --job", ["--", "sh", "-c", marker], {}],
-      ["--job without a name", ["--job", "--", "sh", "-c", marker], {}],
-      ["no --", ["--job", "A", "sh", "-c", marker], {}],
-      ["no command", ["--job", "A", "--"], {}],
-      ["unknown flag", ["--job", "A", "--wait", "--", "sh", "-c", marker], {}],
-      ["VITEST without override", ["--job", "A", "--", "sh", "-c", marker], { unset: ["OC_HEAVY_STATE_DIR"] }],
+    const noVitest = (home: string, unset: string[], env: Record<string, string> = {}): Env => ({
+      unset: ["VITEST", ...unset],
+      env: { HOME: home, ...env },
+    });
+    const cases: [string, string[], Env, string][] = [
+      ["no --job", ["--", "sh", "-c", marker], {}, "--job <name> is required"],
+      ["--job without a name", ["--job", "--", "sh", "-c", marker], {}, "--job needs a name"],
+      ["no --", ["--job", "A", "sh", "-c", marker], {}, "no `--` before the command"],
+      ["no command", ["--job", "A", "--"], {}, "no command after `--`"],
+      ["unknown flag", ["--job", "A", "--wait", "--", "sh", "-c", marker], {}, "unknown argument: --wait"],
       [
-        "override inside the real state dir",
+        "VITEST without override",
+        ["--job", "A", "--", "sh", "-c", marker],
+        { unset: ["OC_HEAVY_STATE_DIR"] },
+        "VITEST is set and OC_HEAVY_STATE_DIR is absent",
+      ],
+      [
+        "override inside the real state dir (existing subdir under a temp HOME)",
+        ["--job", "A", "--", "sh", "-c", marker],
+        { env: { HOME: homeInside, OC_HEAVY_STATE_DIR: insideOverride } },
+        "OC_HEAVY_STATE_DIR resolves inside the real state dir",
+      ],
+      [
+        "override inside the true ~/marvin/state (never created)",
         ["--job", "A", "--", "sh", "-c", marker],
         { env: { OC_HEAVY_STATE_DIR: path.join(os.userInfo().homedir, "marvin", "state", "heavy-run-test-never-created") } },
+        "OC_HEAVY_STATE_DIR resolves inside the real state dir",
       ],
-      [
-        "override without VITEST",
-        ["--job", "A", "--", "sh", "-c", marker],
-        { unset: ["VITEST", "OC_HEAVY_MEMINFO"], env: { HOME: fakeHome } },
-      ],
-      [
-        "meminfo seam without VITEST",
-        ["--job", "A", "--", "sh", "-c", marker],
-        { unset: ["VITEST", "OC_HEAVY_STATE_DIR"], env: { HOME: fakeHome } },
-      ],
-      [
-        "interval seam without VITEST",
-        ["--job", "A", "--", "sh", "-c", marker],
-        { unset: ["VITEST", "OC_HEAVY_STATE_DIR", "OC_HEAVY_MEMINFO"], env: { HOME: fakeHome, OC_HEAVY_INTERVAL_MS: "10" } },
-      ],
-      ["state dir missing", ["--job", "A", "--", "sh", "-c", marker], { env: { OC_HEAVY_STATE_DIR: u.p("no-such-dir") } }],
-      ["lock path is a directory", ["--job", "A", "--", "sh", "-c", marker], { env: { OC_HEAVY_STATE_DIR: u.p("dirstate") } }],
-      ["missing command", ["--job", "A", "--", u.p("no-such-command")], {}],
     ];
-    for (const [label, args, opts] of cases) {
+    for (const [home, which] of [
+      [homeBare, "state dir missing"],
+      [homeFull, "state dir present"],
+    ] as const) {
+      cases.push(
+        [
+          `override without VITEST, ${which}`,
+          ["--job", "A", "--", "sh", "-c", marker],
+          noVitest(home, ["OC_HEAVY_MEMINFO"]),
+          "OC_HEAVY_STATE_DIR set without VITEST",
+        ],
+        [
+          `meminfo seam without VITEST, ${which}`,
+          ["--job", "A", "--", "sh", "-c", marker],
+          noVitest(home, ["OC_HEAVY_STATE_DIR"]),
+          "OC_HEAVY_MEMINFO set without VITEST",
+        ],
+        [
+          `interval seam without VITEST, ${which}`,
+          ["--job", "A", "--", "sh", "-c", marker],
+          noVitest(home, ["OC_HEAVY_STATE_DIR", "OC_HEAVY_MEMINFO"], { OC_HEAVY_INTERVAL_MS: "10" }),
+          "OC_HEAVY_INTERVAL_MS set without VITEST",
+        ],
+      );
+    }
+    cases.push(
+      [
+        "state dir missing",
+        ["--job", "A", "--", "sh", "-c", marker],
+        { env: { OC_HEAVY_STATE_DIR: u.p("no-such-dir") } },
+        `cannot open lock file ${path.join(u.p("no-such-dir"), "heavy-build.lock")}: ENOENT`,
+      ],
+      [
+        "lock path is a directory",
+        ["--job", "A", "--", "sh", "-c", marker],
+        { env: { OC_HEAVY_STATE_DIR: u.p("dirstate") } },
+        `cannot open lock file ${path.join(u.p("dirstate"), "heavy-build.lock")}: EISDIR`,
+      ],
+      ["missing command", ["--job", "A", "--", u.p("no-such-command")], {}, "cannot start command: ENOENT"],
+    );
+    for (const [label, args, opts, reason] of cases) {
       for (const retry of [false, true]) {
         const argv = retry ? ["--retry", ...args] : args;
         // Under VITEST a short interval keeps a wrongly retried 244 a fast red, not a timeout;
@@ -464,15 +540,20 @@ describe("refusals that start nothing", () => {
         const interval: Record<string, string> = opts.unset?.includes("VITEST") ? {} : { OC_HEAVY_INTERVAL_MS: "10" };
         const res = await run(u, argv, { ...opts, env: { ...interval, ...opts.env } });
         expect(res.code, `${label} retry=${retry}: ${res.stderr}`).toBe(244);
-        expect(refusals(res.stderr), label).toHaveLength(1);
-        expect(res.stderr, label).toContain("heavy-run: REFUSED 244");
+        // The REASON, not only the code: several producers share 244, so a broken guard that
+        // falls through to another 244 (the lock-file open) must still read red here.
+        expect(refusals(res.stderr), `${label} retry=${retry}`).toEqual([`heavy-run: REFUSED 244 ${reason}`]);
         expect(res.stderr, label).not.toContain("giving up");
         expect(u.exists("started"), label).toBe(false);
         expect(fs.existsSync(u.sidecar), label).toBe(false);
       }
     }
-    // The fake HOME's state dir was never created: no case reached for a default path.
-    expect(fs.existsSync(path.join(fakeHome, "marvin"))).toBe(false);
+    // No case reached for a default path: the bare HOME grew no state dir, the full HOME's and
+    // the inside HOME's state dirs hold nothing but what the test made.
+    expect(fs.existsSync(path.join(homeBare, "marvin"))).toBe(false);
+    expect(fs.readdirSync(path.join(homeFull, "marvin", "state"))).toEqual([]);
+    expect(fs.readdirSync(path.join(homeInside, "marvin", "state"))).toEqual(["sub"]);
+    expect(fs.readdirSync(insideOverride)).toEqual([]);
     // The lock stayed free throughout.
     expect(u.probe()).toBe(0);
   });
