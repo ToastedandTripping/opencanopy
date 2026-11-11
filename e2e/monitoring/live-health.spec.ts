@@ -190,8 +190,10 @@ test('forest-age raster overview renders at z5 on production', async ({ page }) 
 
 test('forest-age vector tiles render features at z11 on production', async ({ page }) => {
   // At z11, forest-age renders via PMTiles vector tiles (raster handoff at z10→z11).
-  // Use the MapLibre layer ID, not the source-layer name.
-  await page.goto(PRODUCTION_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+  // Use the MapLibre layer ID, not the source-layer name. No layer is enabled
+  // on a fresh visit (every registry layer is defaultEnabled: false), so the
+  // hash turns forest-age on; without it the fill is hidden and counts 0.
+  await page.goto(`${PRODUCTION_URL}#layers=forest-age`, { timeout: 30000, waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.maplibregl-canvas', { timeout: 30000 });
 
   // Navigate to a definitely-forested area at z11 (Prince George vicinity).
