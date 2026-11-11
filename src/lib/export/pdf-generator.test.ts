@@ -138,6 +138,12 @@ describe("pdf-generator footer (methodology pointer, band-consistent accuracy li
     const footer = footerBlock(captureReportHtml());
     expect(footer).toContain(METHODOLOGY_URL_DISPLAY);
     expect(footer).toContain(`href="${METHODOLOGY_URL}"`);
+    // The literal public pointer, as the plan fixes it: a constant that drifted
+    // back to an opencanopy.ca route would otherwise pass both lines above.
+    expect(footer).toContain(
+      'href="https://github.com/ToastedandTripping/opencanopy/blob/main/METHODOLOGY.md"'
+    );
+    expect(footer).toContain(">github.com/ToastedandTripping/opencanopy/blob/main/METHODOLOGY.md</a>.");
     expect(footer).toContain("color:inherit");
     // Not the old pointer at a methodology route opencanopy.ca does not have.
     expect(footer).not.toContain("see methodology at opencanopy.ca");
@@ -156,6 +162,9 @@ describe("pdf-generator footer (methodology pointer, band-consistent accuracy li
   it("states the accuracy in the band's own direction and percentage (1 - BAND_LOW_FACTOR)", () => {
     const footer = footerBlock(captureReportHtml());
     const pct = Math.round((1 - BAND_LOW_FACTOR) * 100);
+    // 20 today. Pinned: the percentage is public copy, and the plan routes any
+    // change to it to Lee, so a factor change must touch this line on purpose.
+    expect(pct).toBe(20);
     expect(footer).toContain(
       `The true CO&#8322; figure may be up to ${pct}% lower than the estimate in this report.`
     );
