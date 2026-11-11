@@ -191,7 +191,13 @@ try {
     });
     await page.goto(`${base}/map#layers=cutblocks`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(20_000);
-    await page.getByRole("button", { name: "Open timeline" }).click();
+    // Keyboard, not a pointer click (2026-11-11): with /map's vector layers attached, headless
+    // Chromium on a loaded host runs at 2-6 fps and Playwright's pointer click on this button
+    // timed out in 3 of 4 runs with the button visible and on top; focus + Enter does not wait on
+    // pointer hit-testing. The assertions below are unchanged.
+    const openTimeline = page.getByRole("button", { name: "Open timeline" });
+    await openTimeline.focus();
+    await page.keyboard.press("Enter");
     const slider = page.getByRole("slider", { name: "Timeline year" });
     await slider.waitFor();
     const steps = [];
