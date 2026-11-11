@@ -230,7 +230,7 @@ function PmtilesLayers({
   /**
    * Latest-ref to "re-apply current visibility + filters" (R1-05).
    *
-   * The add effect below waits for `load` and then `sourcedata` before adding
+   * The add effect below waits for the style (onStyleReady) and then `sourcedata` before adding
    * layers; the visibility and filter effects no-op while the layers do not
    * exist, so a toggle, class-filter change or timeline switch made during
    * that wait was lost. addLayersToMap calls this ref after its addLayer calls,

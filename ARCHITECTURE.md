@@ -60,7 +60,26 @@ raster overview │ PMTiles vector    │ PMTiles overzoom
   (`/raster/{class}/`), swapped by legend class filters.
 - **PMTiles** render imperatively (`PmtilesLayers`) because declarative
   react-map-gl `<Layer>` fails for async-loading remote PMTiles sources.
-  Inserted below the first basemap symbol layer.
+  Inserted below the first basemap symbol layer. The add path waits for the
+  style and then the archive header, so visibility and filters are applied by
+  `applyVisibility` / `applyFilters`, which the reactive effects call and
+  which `addLayersToMap` calls again through a latest-ref once the layers
+  exist (a toggle made during the wait is not lost). It is a ref, not
+  `useEffectEvent`: in react-dom 19.2.4 an effect event inside `memo()`
+  without a comparator, or inside `forwardRef`, keeps its mount-time props.
+  The component's `eslint-disable` lines switch off the React Compiler rules
+  for the whole component, so lint says nothing about this ref; the
+  lifecycle tests (`pmtiles-layers-lifecycle.test.tsx`) are the proof.
+- **Readiness.** Imperative map code waits for "the style JSON is parsed":
+  `onStyleReady` (`src/lib/map/style-ready.ts`), i.e. `map.getStyle()` is
+  defined, or the `style.load` event. Never `isStyleLoaded()` (false
+  whenever any tile is in flight) and never MapLibre's `load` / react-map-gl's
+  `onLoad`: in MapLibre 6, `load` fires only inside a render where
+  `loaded()` is true, and on production an untouched /map did not fire it for
+  70 s (2026-11-10), so nothing gated on it attached until the first touch.
+  `src/test/audit/global-state-writer.test.ts` guards both under
+  `src/components/map/` and `src/app/map/`. The landing story
+  (`StoryMap`, `lib/story`) still uses the old pattern (ROADMAP Parking Lot).
 - **WFS GeoJSON** renders imperatively (`WfsLayers`) for WFS-only layers;
   data arrives via the proxy on `moveend`, filtered client-side for the
   timeline. For tile-backed (dual-source) layers, PMTiles+overzoom are the
@@ -90,9 +109,17 @@ error`, surfaced by `StatusToast`. **Dual-source rule:** tile-backed layers
 report status only from the PMTiles path; WFS fetch results set status only
 for WFS-only layers (a WFS hiccup must not claim "data unavailable" while
 tiles render fine). `DataLayer` instances are always mounted (CanopyMap
-mounts every registry layer once; the P1a memo redesign), so the unmount
-cleanup that clears status never runs in practice; a status must therefore
-also be cleared when its layer is toggled off.
+mounts the public set, `LAYER_REGISTRY_AVAILABLE`, once; the P1a memo
+redesign), so the unmount cleanup that clears status never runs in practice.
+A tile-backed layer's status is therefore derived at DataLayer level from
+(visible, PMTiles failed): hidden clears it, visible and failed sets
+`error`, and there is no else branch, so WFS-written statuses survive. All
+six layers share one PMTiles source, so one header timeout fails all six,
+but only visible ones report it. `clearLayerStatus` also cancels that id's
+pending 250 ms debounced write, so a clear cannot be overtaken by an error
+queued just before it. Not covered: a WFS-only layer's fetch still in flight
+when it is hidden writes its status afterwards (no WFS-only layer is on
+/map; ROADMAP Parking Lot).
 
 ## The WFS proxy
 
@@ -123,7 +150,11 @@ Hooks own UI state; URL is the shareable source of truth. On `/map`:
 - `useTimeline` — the year. Since 2026-08-27 the year is a MapLibre
   global-state uniform: the registry's filter/opacity expressions read
   `["global-state", "currentYear"]` on the GPU and each tick is one
-  `map.setGlobalStateProperty("currentYear", …)` call from `map/page.tsx`
+  `map.setGlobalStateProperty("currentYear", …)` call. The only writer is
+  `useGlobalStateYear`, run by `MapStyleSync` (a child of `<Map>` in
+  CanopyMap): it latches on `onStyleReady`, then writes the latest year, or
+  `DEFAULT_RANGE[0]`, and every later tick; no `isStyleLoaded()` guard (that
+  dropped ticks while tiles loaded). A guard test pins the single writer.
   (`setFilter` remains only for legend class filters and WFS layers). The
   playhead is render-gated: it advances only after `map.once("idle")` (Phase
   A "honest timeline"), via a `waitForRender` injected into the hook.
