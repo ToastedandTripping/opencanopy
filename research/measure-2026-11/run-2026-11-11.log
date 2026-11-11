@@ -1,0 +1,60 @@
+start 08:33:09Z load 4.69 memavail_kB 21929016
+  repair: line 1476: dropped 1 non-polygonal part(s) (LineString)
+  repair: line 15389: dropped 1 non-polygonal part(s) (LineString)
+  repair: line 17476: dropped 1 non-polygonal part(s) (LineString)
+  repair: line 19653: dropped 1 non-polygonal part(s) (LineString)
+  repair: line 21987: dropped 1 non-polygonal part(s) (MultiLineString)
+=== scrub table: cutblocks (dissolved union of drawn area) ===
+  input: /home/leesalo/Projects/opencanopy/data/checkpoint/preprocessed/tenure-cutblocks.ndjson
+  100,000 lines read (162s)
+  150,000 lines read (249s)
+  accounting: read 220,745 = kept 183,725 + undated 36,608 + preStart 1 + postEnd 332 + boundaryRecorded 70 + boundaryDrawn 9 + zeroArea 0 + unparseable 0 (closes)
+  repair: 431 repaired, 0 empty after repair, 228 non-polygonal parts dropped, 5 repaired after projection
+  sum of drawn area, kept set: 5,875,854.39 ha; drawn-only tenure boundaries: 83,233.26 ha
+  acceptance profile: ACCEPTANCE (build-scrub-tables.py)
+  check 0 PASS: bucket counts, repairs and drawn sums equal the measured profile
+  rank union: 50,000/183,725
+  rank union: 100,000/183,725
+  rank union: 150,000/183,725
+  method 1 (rank union) done in 162s
+  method 2 (tile union, 10000 m, 5,377 tiles) done in 1439s
+  total, method 1 (rank union): 5,731,775.10 ha
+  total, method 2 (tile union): 5,731,775.10 ha
+  check 1 PASS: every year agrees within 1.0 ha (worst 2018, -0.000000 ha)
+  check 2 PASS: total below the shipped 5,888,477.44 and below the drawn sum 5,875,854.39
+  check 3 PASS: totals agree within 1.0 ha (-0.000000)
+  check 4 PASS: Fort Nelson, 2026-10-08 accuracy report 1.2 1,418.02 ha (+0.001% of 1,418.00)
+  band PASS: 5,731,775.10 within 5,650,000-5,810,000
+    by 1950:   0.0% of total
+    by 1980:   0.1% of total
+    by 2000:  10.7% of total
+    by 2017:  79.1% of total
+    by 2025: 100.0% of total
+  wrote /tmp/claude-1000/-home-leesalo--local-share-marvin-worktrees-opencanopy-canopy/4f46d222-0ca8-450e-8015-f17a5fb26b15/scratchpad/measure-run/research/measure-2026-11/crosscheck.json
+  wrote /tmp/claude-1000/-home-leesalo--local-share-marvin-worktrees-opencanopy-canopy/4f46d222-0ca8-450e-8015-f17a5fb26b15/scratchpad/measure-run/src/data/scrub/cutblocks-scrub.json (total 5,731,775.10 ha)
+  wall 1938s, peak RSS 1.59 GiB (getrusage)
+
+	Command being timed: "node scripts/heavy-run.mjs --job scrub-cutblocks -- nice -n 10 python3 scripts/build-scrub-tables.py --dataset cutblocks"
+	User time (seconds): 1466.52
+	System time (seconds): 6.71
+	Percent of CPU this job got: 75%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 32:19.70
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1670904
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 1
+	Minor (reclaiming a frame) page faults: 519723
+	Voluntary context switches: 1342
+	Involuntary context switches: 815530
+	Swaps: 0
+	File system inputs: 901064
+	File system outputs: 88
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+exit=0 end 09:05:29Z

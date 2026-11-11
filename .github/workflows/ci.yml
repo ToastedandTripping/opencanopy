@@ -29,6 +29,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The logged-hectares fixture test runs scripts/build-scrub-tables.py through
+      # python3; under CI it fails, never skips, when these are missing.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python geometry libraries
+        run: python3 -m pip install shapely==2.1.2 pyproj==3.7.2
+
       - name: Run tests
         run: npm test
 
