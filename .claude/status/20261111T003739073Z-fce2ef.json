@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "events": [
+    {
+      "type": "line",
+      "text": "Map fixes for lost timeline years, stuck error toasts and layers that wait for a touch, reviewed and releasing",
+      "roadmap_hash": "07fa762f34774721"
+    },
+    {
+      "type": "next",
+      "text": "Fix the map error on scroll and drag, then the small routed fixes",
+      "roadmap_hash": "07fa762f34774721"
+    }
+  ]
+}
