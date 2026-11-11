@@ -13,13 +13,15 @@ import Map, {
   NavigationControl,
   ScaleControl,
   GeolocateControl,
+  useMap,
   type MapRef,
   type MapLayerMouseEvent,
 } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLES, INITIAL_VIEW_STATE, TERRAIN_SOURCE } from "@/lib/mapConfig";
-import { DEFAULT_RANGE } from "@/hooks/useTimeline";
+import { useGlobalStateYear } from "@/hooks/useGlobalStateYear";
+import { onStyleReady } from "@/lib/map/style-ready";
 import { LAYER_REGISTRY_AVAILABLE, getLayer } from "@/lib/layers";
 import { initPMTiles } from "@/lib/layers/pmtiles-source";
 import { DataLayer } from "./DataLayer";
@@ -64,6 +66,45 @@ interface PopupInfo {
 }
 
 /**
+ * Everything that must happen once the map's style JSON is parsed, run from a
+ * child of `<Map>`: react-maplibre renders children only once the map
+ * instance exists, while CanopyMap's own effects can run before the async
+ * `import('maplibre-gl')` resolves.
+ *
+ * Readiness is `onStyleReady` (style JSON parsed). Not react-map-gl's
+ * `onLoad`: MapLibre fires `load` only inside a render where `loaded()` is
+ * true, and on production the last frame renders with tiles pending, so it
+ * did not fire until the visitor interacted (Amendment A, 2026-11-10).
+ */
+function MapStyleSync({ yearFilter }: { yearFilter?: number | null }) {
+  const { current: mapRef } = useMap();
+  const map = mapRef?.getMap();
+
+  // Sole writer of the `currentYear` global state (R1-02). Declared before
+  // the terrain effect so its style-ready write registers first: a throw in
+  // the terrain block cannot skip it.
+  useGlobalStateYear(map, yearFilter);
+
+  useEffect(() => {
+    if (!map) return;
+    return onStyleReady(map, () => {
+      // Add terrain source for 3D hillshade
+      if (TERRAIN_SOURCE.enabled && !map.getSource("terrain-rgb")) {
+        map.addSource("terrain-rgb", {
+          type: "raster-dem",
+          url: TERRAIN_SOURCE.url,
+          tileSize: TERRAIN_SOURCE.tileSize,
+        });
+        map.setTerrain({ source: "terrain-rgb", exaggeration: 1.2 });
+      }
+      pipelineLog("map-load", "CanopyMap ready");
+    });
+  }, [map]);
+
+  return null;
+}
+
+/**
  * Main map component for OpenCanopy.
  * Full-screen MapLibre GL map with navigation controls, terrain,
  * and dynamic data layers driven by the registry.
@@ -77,24 +118,6 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
 
   useImperativeHandle(ref, () => mapRef.current!);
 
-  const onLoad = useCallback(() => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-
-    // Add terrain source for 3D hillshade
-    if (TERRAIN_SOURCE.enabled && !map.getSource("terrain-rgb")) {
-      map.addSource("terrain-rgb", {
-        type: "raster-dem",
-        url: TERRAIN_SOURCE.url,
-        tileSize: TERRAIN_SOURCE.tileSize,
-      });
-      map.setTerrain({ source: "terrain-rgb", exaggeration: 1.2 });
-    }
-
-    map.setGlobalStateProperty("currentYear", DEFAULT_RANGE[0]);
-
-    pipelineLog("map-load", "CanopyMap ready");
-  }, []);
 
   // Expose map instance on window for e2e testing (Playwright screenshot regression).
   // Dev-only (D-fix): this previously shipped ungated to production window scope.
@@ -196,7 +219,6 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
         ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
         mapStyle={MAP_STYLES.dark}
-        onLoad={onLoad}
         onClick={onClick}
         interactiveLayerIds={interactiveLayerIds}
         cursor={cursor}
@@ -214,6 +236,9 @@ const CanopyMap = forwardRef<MapRef, CanopyMapProps>(function CanopyMap(
           showAccuracyCircle={false}
         />
         {/* Attribution collapsed by default to reduce bottom clutter */}
+
+        {/* Style-ready work: the year write and terrain (Amendment A) */}
+        <MapStyleSync yearFilter={yearFilter} />
 
         {/* Render each registered layer */}
         {LAYER_REGISTRY_AVAILABLE.map((layer) => (

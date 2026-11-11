@@ -316,15 +316,8 @@ export default function Home() {
     prefersReducedMotion,
   });
 
-  // Sync timeline year to MapLibre global state so GPU-side expressions
-  // (buildYearFilter, buildAgeGradedOpacity) self-update without re-running
-  // the DataLayer filter effect on every year tick.
-  useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || timeline.yearFilter == null) return;
-    if (!map.isStyleLoaded()) return;
-    map.setGlobalStateProperty("currentYear", timeline.yearFilter);
-  }, [timeline.yearFilter]);
+  // The timeline year reaches MapLibre's `currentYear` global state through
+  // CanopyMap (useGlobalStateYear), its single writer, via the yearFilter prop.
 
   // Auto-disable timeline when no timeline-eligible layers are enabled
   const timelineEligible = activeTimelineLayers.length > 0;
