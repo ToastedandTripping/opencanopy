@@ -40,8 +40,6 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - Relay HEAVY before S0b (G2).
 
-- M1a batch 0 retargets the two `audit:live` tests before its acceptance can pass.
-
 - `/save` is not a release path for OpenCanopy; it stops at the pre-push hook. (Until a marvin change teaches `/save` the release path.)
 
 - **Live /map throws on wheel and drag (found 2026-11-02, production at 4bd41f0):** uncaught 'Cannot read properties of undefined (reading center)', 41 errors in one short session; react-map-gl 8.1.0 reads map.transform, undefined under maplibre-gl 6.15 (upgrade of 2026-10-22). The map still moves. The URL hash does not update on move, which may be the older M1a defect. react-map-gl 8.1.3 is out and untested. Owner: M1a, or a small fix ahead of it. Error monitoring (OPS) would have caught it.
@@ -50,11 +48,15 @@ in this project has already been ruled on, usually for a reason that is not obvi
 
 - **Film rethink (Lee, 2026-11-02), spike done, waiting on Lee's phone:** concept 'One tree, one clock' (research: ~/marvin/research/captivating-opencanopy-landing-film-bc-forests-20261102/report.md, scan, not verified). Spike branch spike/one-tree-one-clock (local only, d776a0a + e19797b), report ~/marvin/state/relay/one-tree-spike-report.md, draft https://6ae8045f62c3a41b15f731f5--merry-queijadas-27cd31.netlify.app/film-lab (re-checked 2026-11-02: clips serve; the /r2 proxy answers 206 on the PMTiles archive and 404 off-list, so tiles load on Netlify). Verdicts: the LiDAR orbit of Big Lonely Doug reads as a tree; the clip-to-live-map seam is pixel-exact in Chrome at capture size, edges soften via 4:2:0 chroma. Open: (1) clips 8.6 MB + 7.4 MB against the 2 MB pre-interaction bar (DECISIONS 2026-10-23), Lee's ruling owed after the phone check (shrink, tap-to-play, or loosen); (2) 4-6 s frozen last frame while the map idles: mount the map ~3 s before the clip ends; (3) the z<=9 raster opening overstates logging ~1.7x and has no tiles north of 55.8 N, not shippable before the area-true rebuild; (4) iPhone Safari BT.709 colour shift at the fade untested; (5) the 2019->2023 dissolve mixes growth with 2.6x pulse density, no growth caption until separated; LiDAR height 67.8 m vs registry 66.0 m unexplained, do not quote it. Next step: Lee opens the draft on his phone and reports colour at the fade, how the hold feels, the printed idle time, and whether the tree holds on a small screen. The approved beat sheet and the clock-waits-for-paint ruling are reopened only if he picks it. Harvest-volume table must enter the repo before any 'since 1989' line ships.
 
-- **DataLayer public-path relay (brief item 2), released pending guards (2026-11-10):** plan .claude/plans/2026-11-datalayer-public-path.md (critic r1+r2 CONCERN folded, amendment A from a live probe), relay/datalayer-public-path merged into marvin/canopy, Razor PASS (0 critical, 0 warning, 5 notes parked in the ROADMAP Parking Lot), 1,202 tests. Fixes R1-02 (year ticks dropped while tiles load), R1-03 (hidden layers toast and keep errors), R1-05 (toggles lost during the source wait), and the load-gated attach (MapLibre 6 fires load only inside a render; an untouched /map attached no vector layer, terrain or year for 70 s). Its own ROADMAP shipped entry and guard results ride in the next release's first commit. Live checks: scripts/live/live-checks.mjs; the known-good evidence (attach, visibility and year all fail there) is in ~/marvin/state/relay/datalayer-public-path-live/.
-
 - **Lane S follow-up:** the landing story has the same readiness pattern (StoryMap.tsx:72, :152, its onLoad; lib/story/visibility.ts:48). ROADMAP Parking Lot, 'Deferred from datalayer-public-path'.
 
-- **Next (brief 2026-11-10, item 3):** live /map throws on wheel and drag (react-map-gl 8.1.0 vs maplibre-gl 6.15; try 8.1.3, verify in a real browser), then item 4's small routed fixes.
+- **react-map-gl 8.1.3 (brief item 3), built and reviewed, release waiting on Lee (2026-11-10):** plan .claude/plans/2026-11-react-map-gl-813.md went three critic rounds, all FAIL on how the release is checked, never on the fix; per the critic cap the release question went to Lee through the coordinator (recommendation: release). Razor PASS. Local A/B: 43/1/2 'center' throws on 8.1.0, 0/0/0 on 8.1.3 (interact/deeplink/story). Live baselines on 6af3b9d0 in ~/marvin/state/relay/wheel-drag-live/ (all blocking checks red today).
+
+- **M1a after item 3 ships:** the URL-hash subscription defect stands (useMapState reads the map handle once, before the map exists); a shared deep link now completes its flyTo and can snap late after the visitor pans; batch-0 negative controls that relied on flyTo throwing must be re-baselined. audit:live :187 and :243 are retargeted by item 4 (plan .claude/plans/2026-11-small-routed-fixes.md); M1a keeps :118, :130, :152, :283.
+
+- **Lane S:** StoryMap never calls jumpTo today only because every chapter shares one camera; an un-docked dolly or a chapter with its own camera meets the readiness bug and, below react-map-gl 8.1.3, the transform throw. Resize on / throws on 8.1.0 (fixed by item 3).
+
+- **Next (brief 2026-11-10, item 4):** small routed fixes, plan in critic round 2; releases after item 3.
 
 ## Open questions awaiting Lee
 
@@ -76,6 +78,14 @@ in this project has already been ruled on, usually for a reason that is not obvi
 ---
 
 ## Log (newest first)
+
+### 2026-11-10: post-release records, releases 3 and 4
+
+Release records for the ledger (sha, deploy, data version, guards; the release tool reads these full SHAs here):
+- sha=9ad701babdb9bc97c71d28dfe65600607e7a60d6 deploy=6ae8b912eaff6cd3d1f02aab data_version=none guards=green (P0b release tooling)
+- sha=4de59d712630cad7a1ebd0630d3c6516fd4b2a8a deploy=6af3b9d0647a97628cb3fffe data_version=none guards=green (DataLayer public-path relay; evidence ~/marvin/state/relay/datalayer-public-path-live/guard-evidence-token4.md)
+
+Item 3 (react-map-gl 8.1.3) built, Razor PASS, waiting on Lee past the critic cap. Item 4 planned, critic r1 FAIL folded, round 2 running.
 
 ### 2026-11-10: DataLayer public-path relay built and reviewed; load readiness found live
 
